@@ -1,0 +1,6 @@
+<RCC>
+    <qresource>
+        <file>setblack.png</file>
+        <file>setwhite.png</file>
+    </qresource>
+</RCC>
