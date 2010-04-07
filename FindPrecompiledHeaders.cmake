@@ -48,6 +48,6 @@ ADD_CUSTOM_TARGET(${_targetName}_gch
 )
 ADD_DEPENDENCIES(${_targetName} ${_targetName}_gch )
 SET_TARGET_PROPERTIES(${_targetName} 
-  PROPERTIES COMPILE_FLAGS "-include ${_name} -Winvalid-pch"
+  PROPERTIES COMPILE_FLAGS "-Winvalid-pch"
 )
 ENDMACRO(ADD_PRECOMPILED_HEADER)

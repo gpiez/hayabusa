@@ -110,8 +110,10 @@ const uint64_t PieceList::posMask[9] = { 0, 0xff, 0xffff, 0xffffff, 0xffffffff,
 	0xffffffffff, 0xffffffffffff, 0xffffffffffffff, 0xffffffffffffffff
 };
 
+/// Initialize the static tables used by BoardBase and the low level asm routines
 void BoardBase::initTables()
 {
+    //  Fill table for calculating directions from vectors
 	for (unsigned int y0 = 0; y0 < nRows; ++y0)
 	for (unsigned int x0 = 0; x0 < nFiles; ++x0)
 	for (unsigned int y1 = 0; y1 < nRows; ++y1)
@@ -130,6 +132,7 @@ void BoardBase::initTables()
 		vec2dir[8*y0+x0][8*y1+x1] = dir;
 	}
 
+	// Fill table containing one byte broadcasted to all locations in the __v16qi vector
 	for (unsigned int i = 0; i < 256; ++i)
 		broadcastTab[i] = _mm_set1_epi8(i);
 
@@ -181,9 +184,8 @@ void BoardBase::initTables()
 		}
 	}
 }
-/*
- * Empty board and initialize length tables
- */
+
+/// Empty board and initialize length tables, instead of a constructor
 void BoardBase::init() {
 	*this = (BoardBase){{{{}}}};
 
@@ -214,18 +216,10 @@ void BoardBase::print() {
 	xout << "--------------------------------" << endl;
 	for (unsigned int y = 7; y < nRows; --y) {
 		for (unsigned int x = 0; x < nFiles; ++x) {
-//			cout << "| " << "kpnqbr RBQNPK"[pieces[y * 8 + x] + 6] << ' ';
 			xout << "| " << chessPieces[pieces[y*8 + x] + 6] << ' ';
 		}
 		xout << endl << "--------------------------------" << endl;
 	}
-//	cout << "--------------------------------" << endl;
-//	for (unsigned int y = 7; y < nRows; --y) {
-//	for (unsigned int x = 0; x < nFiles; ++x) {
-//		cout << '|' << hex << qSetFieldWidth(3) << shortAttack[0][y*8 + x] << qSetFieldWidth(0) ;
-//	}
-//	cout << endl << "--------------------------------" << endl;
-//	}
 }
 
 void BoardBase::setPiece(int8_t piece, uint8_t pos) {
@@ -253,4 +247,3 @@ void BoardBase::clrPiece(const BoardBase* prev, int8_t piece, uint8_t pos) {
 	}
 	pieces[pos] = 0;
 }
-

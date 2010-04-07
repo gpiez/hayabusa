@@ -6,12 +6,15 @@ endif(COMMAND cmake_policy)
 		  
 PROJECT (hayabusa)
 
-set(CMAKE_BUILD_TYPE Release)
+if (NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Release)
+endif(NOT CMAKE_BUILD_TYPE)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 enable_language(ASM-FASM)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g  -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -Wno-parentheses")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=core2 -fno-exceptions -Winline -ffast-math -fverbose-asm -Winline")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=core2 -fno-exceptions -Winline -ffast-math -fverbose-asm")
 
 FIND_PACKAGE(Qt4 COMPONENTS QtCore REQUIRED)
 FIND_PACKAGE(PrecompiledHeaders)
@@ -46,7 +49,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 SET(hayabusa_SRCS boardbase.cpp board.cpp console.cpp workthread.cpp eval.cpp 
                   move.cpp transpositiontable.cpp setpiece.asm offsets.inc)
-SET(hayabusa_MOC_H console.h workthread.h)
+SET(hayabusa_MOC_H console.h)
 SET(hayabusa_UIS mainwindow.ui)
 SET(hayabusa_RCCS hayabusa.qrc)
 
@@ -55,6 +58,7 @@ SET(hayabusa_SRCS main.cpp ${hayabusa_SRCS})
 SET(test_MOC_H test.h ${hayabusa_MOC_H})
 
 SET(offsets_SRCS offsets.cpp)
+set_source_files_properties(offsets.cpp PROPERTIES COMPILE_FLAGS "-Wno-invalid-offsetof")
 add_executable(offsets ${offsets_SRCS})
 target_link_libraries(offsets ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
 

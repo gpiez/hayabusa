@@ -17,10 +17,10 @@ struct Bitfield {
 	static const unsigned int start = pos / ( CHAR_BIT * sizeof(T));
 	static const unsigned int startpos = pos % ( CHAR_BIT * sizeof(T));
 	static const unsigned int end = (pos+width-1)/( CHAR_BIT * sizeof(T));
-	static_assert(end == start);
 
 	T data[end+1];
 	operator T () const {
+		static_assert(end == start);
 		if (width == 1)		// T is a bool type
 			return data[start] & 1ULL<<startpos;
 		else
@@ -33,6 +33,7 @@ struct Bitfield {
 //	}
 
 	void operator |= (T value) {
+		static_assert(end == start);
 		data |= value << pos;
 	}
 };

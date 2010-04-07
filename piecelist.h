@@ -98,6 +98,7 @@ public:
 		uint64_t piecePos = getAll<piece>();
 		for (unsigned int i = count[piece]; i>0; --i, piecePos >>= 8)
 			bb |= 1ULL << (uint8_t)piecePos;	//TODO check if (uint8_t) can be omitted
+		return bb;
 	}
 	/*
 	 * Move a piece. In the piece list this basically comes down to change

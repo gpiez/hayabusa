@@ -165,4 +165,12 @@ void  ColoredBoard<C>::doMove(Move m) const {
 
 }
 
+template<Colors C>
+void  ColoredBoard<C>::search(unsigned int depth) const {
+}
+
+template<Colors C>
+void  ColoredBoard<C>::rootSearch(unsigned int depth) const {
+}
+
 #endif /* COLOREDBOARD_TCC_ */

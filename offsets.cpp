@@ -14,7 +14,7 @@ int ld(unsigned int x) {
 	return lrint(log(x)/log(2.0));
 }
 
-int main(int argc, char** argv) {
+int main(int, char**) {
 	QTextStream out(stdout);
 	use(longAttack);
 	use(shortAttack);

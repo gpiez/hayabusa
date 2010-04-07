@@ -20,10 +20,7 @@ static inline unsigned int sq(const char name[2])
 
 class Board {
 	friend class TestBoard;
-	struct {
-		ColoredBoard<White> w;
-		ColoredBoard<Black> w;
-	} boards[MAX_GAME_LENGTH];
+	BoardBase boards[MAX_GAME_LENGTH];
 	unsigned int iMove;
 	unsigned int threadID;
 	Colors color;

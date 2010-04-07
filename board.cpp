@@ -110,16 +110,16 @@ void Board::setup(QString fen) {
 
 Move* Board::generateCaptureMoves(Move* list) const {
 	if (color < 0)
-		return reinterpret_cast<const ColoredBoard<Black>*>(boards)->generateCaptureMoves(list);
+		return reinterpret_cast<const ColoredBoard<Black>*>(boards + iMove)->generateCaptureMoves(list);
 	else
-		return reinterpret_cast<const ColoredBoard<White>*>(boards)->generateCaptureMoves(list);
+		return reinterpret_cast<const ColoredBoard<White>*>(boards + iMove)->generateCaptureMoves(list);
 }
 
 Move* Board::generateMoves(Move* list) const {
 	if (color < 0)
-		return reinterpret_cast<const ColoredBoard<Black>*>(boards)->generateMoves(list);
+		return reinterpret_cast<const ColoredBoard<Black>*>(boards + iMove)->generateMoves(list);
 	else
-		return reinterpret_cast<const ColoredBoard<White>*>(boards)->generateMoves(list);
+		return reinterpret_cast<const ColoredBoard<White>*>(boards + iMove)->generateMoves(list);
 }
 
 uint64_t Board::perft(unsigned int depth) {
@@ -131,16 +131,16 @@ uint64_t Board::perft(unsigned int depth) {
 
 void Board::search(unsigned int depth) {
 	if (color < 0)
-		reinterpret_cast<ColoredBoard<Black>*>(boards)->search(depth);
+		reinterpret_cast<ColoredBoard<Black>*>(boards + iMove)->search(depth);
 	else
-		reinterpret_cast<ColoredBoard<White>*>(boards)->search(depth);
+		reinterpret_cast<ColoredBoard<White>*>(boards + iMove)->search(depth);
 }
 
 void Board::rootSearch(unsigned int depth) {
 	if (color < 0)
-		reinterpret_cast<ColoredBoard<Black>*>(boards)->rootSearch(depth);
+		reinterpret_cast<ColoredBoard<Black>*>(boards + iMove)->rootSearch(depth);
 	else
-		reinterpret_cast<ColoredBoard<White>*>(boards)->rootSearch(depth);
+		reinterpret_cast<ColoredBoard<White>*>(boards + iMove)->rootSearch(depth);
 }
 
 void Board::divide(unsigned int depth) {

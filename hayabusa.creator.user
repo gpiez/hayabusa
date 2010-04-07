@@ -12,14 +12,14 @@
   <variable>buildConfiguration-Debug</variable>
   <valuemap type="QVariantMap">
    <value key="ProjectExplorer.BuildConfiguration.DisplayName" type="QString">Debug</value>
-   <value key="buildDirectory" type="QString">/home/gpiez/src/hayabusa-git/Debug</value>
+   <value key="buildDirectory" type="QString">/home/gpiez/src/hayabusa/Debug</value>
   </valuemap>
  </data>
  <data>
   <variable>buildConfiguration-Release</variable>
   <valuemap type="QVariantMap">
    <value key="ProjectExplorer.BuildConfiguration.DisplayName" type="QString">Release</value>
-   <value key="buildDirectory" type="QString">/home/gpiez/src/hayabusa-git/Release</value>
+   <value key="buildDirectory" type="QString">/home/gpiez/src/hayabusa/Release</value>
   </valuemap>
  </data>
  <data>
