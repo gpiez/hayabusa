@@ -18,6 +18,7 @@ static inline unsigned int sq(const char name[2])
 */
 #define MAX_GAME_LENGTH 4096
 
+/// Contains all boards (moves) leading to the current position, from the beginning or a thread split point.
 class Board {
 	friend class TestBoard;
 	BoardBase boards[MAX_GAME_LENGTH];
@@ -38,9 +39,6 @@ public:
 	void rootSearch(unsigned int depth);
 	void search(unsigned int depth);
 };
-
-enum SearchFlag { null = 1 };
-typedef int16_t Score;
 
 #endif /* BOARD_H_ */
 

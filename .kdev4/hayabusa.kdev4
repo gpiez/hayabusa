@@ -9,3 +9,9 @@ CurrentBuildDir=file:///home/gpiez/src/hayabusa/Debug/
 CurrentBuildType=
 CurrentInstallDir=
 ProjectRootRelative=./
+
+[MakeBuilder]
+Number Of Jobs=2
+
+[Project]
+VersionControlSupport=kdevgit

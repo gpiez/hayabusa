@@ -15,6 +15,7 @@
 #include "attacks.h"
 #include "length.h"
 #include "transpositiontable.h"
+#include "score.h"
 
 struct BoardBase {
 	LongIndex	attVec[nDirs/2][nSquares];		//0x100
@@ -25,7 +26,7 @@ struct BoardBase {
 	PieceList 	pieceList[nColors];				//0x040
 	Key zobrist;
 	unsigned int fiftyMoves;
-	Score pieceSquare;
+	RawScore pieceSquare;
 	uint8_t enPassant;
 	struct {
 		bool q,k;

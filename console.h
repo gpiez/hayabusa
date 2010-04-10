@@ -7,8 +7,8 @@
 #ifndef CONSOLE_H_
 #define CONSOLE_H_
 
-#ifndef PGN_H
-#include <pgn.h>
+#ifndef PCH_H_
+#include <pch.h>
 #endif
 
 class WorkThread;
@@ -22,20 +22,38 @@ class Console: public QObject {
 	void perft(QStringList);
 	void divide(QStringList);
 	void tryMove(QStringList);
+	void quit(QStringList);
+	void ponderhit(QStringList);
+	void stop(QStringList);
+	void go(QStringList);
+	void position(QStringList);
+	void ucinewgame(QStringList);
+	void reg(QStringList);
+	void setoption(QStringList);
+	void isready(QStringList);
+	void uci(QStringList);
+	void debug(QStringList);
+	
 	void initWorkThreads();
 	void allocateWorkThreads();
 	void stop();
+	
+private:
+	QCoreApplication* app;
+	
 public:
 	QTextStream cin;
+	QTextStream cout;
 	QSocketNotifier *notifier;
 
-	Console(QObject* parent);
+	Console(QCoreApplication* parent);
 	virtual ~Console();
 
 public slots:
 	void dataArrived();
 	void delayedEnable();
-
+	void getResult(QString);
+	
 signals:
 	void send(QString);
 };

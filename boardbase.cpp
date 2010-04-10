@@ -5,7 +5,7 @@
  *      Author: gpiez
  */
 
-#include <pgn.h>
+#include <pch.h>
 
 #include "boardbase.h"
 
@@ -212,6 +212,7 @@ void BoardBase::init() {
 void BoardBase::print() {
 	static const QChar chessPieces[nTotalPieces] =
 		{ L'♚', L'♟', L'♞', L'♛', L'♝', L'♜', ' ', L'♖', L'♗', L'♕', L'♘', L'♙', L'♔' };
+	QTextStream xout(stderr);
 	xout.setCodec("UTF-8");
 	xout << "--------------------------------" << endl;
 	for (unsigned int y = 7; y < nRows; --y) {

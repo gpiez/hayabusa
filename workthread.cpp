@@ -55,11 +55,10 @@ void WorkThread::stop() {
 }
 
 void WorkThread::startJob(Job *j) {
+	ASSERT(j);
 	stop();
-	if (j) {
-		delete job;
-		job = j;
-	}
+	delete job;
+	job = j;
 	mutex->lock();
 	if (doStop)
 		startable.wait(mutex);	//we are somewhere at the run loop. Wait until in a defined state.
@@ -76,12 +75,13 @@ void WorkThread::end() {
 }
 
 void WorkThread::setJob(Job* j) {
+	ASSERT(j);
 	delete job;
 	job = j;
 }
 
 void* WorkThread::operator new (size_t s) {
-		void *p;
-		posix_memalign(&p, CACHE_LINE_SIZE, s);
-		return p;
+	void *p;
+	posix_memalign(&p, CACHE_LINE_SIZE, s);
+	return p;
 }

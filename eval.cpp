@@ -5,7 +5,7 @@
  *      Author: gpiez
  */
 
-#include <pgn.h>
+#include <pch.h>
 #include <xmmintrin.h>
 
 #include "eval.h"
@@ -24,17 +24,16 @@
 //		p[i] = lrint(a + r/(1.0 + exp(-t/width)));
 //	}
 //}
-QTextStream xout(stdout);
 Eval eval;
 
-Score Eval::pawn, Eval::knight, Eval::bishop, Eval::rook, Eval::queen;
-Score Eval::bishopPair;
-Score Eval::knightAlone;
-Score Eval::bishopAlone;
-Score Eval::n_p_ram[9], Eval::n_p[17];
-Score Eval::b_bad_own_p[9], Eval::b_p[17], Eval::b_p_ram[9], Eval::bpair_p[17];
-Score Eval::r_p[17];
-Score Eval::q_p[17];
+RawScore Eval::pawn, Eval::knight, Eval::bishop, Eval::rook, Eval::queen;
+RawScore Eval::bishopPair;
+RawScore Eval::knightAlone;
+RawScore Eval::bishopAlone;
+RawScore Eval::n_p_ram[9], Eval::n_p[17];
+RawScore Eval::b_bad_own_p[9], Eval::b_p[17], Eval::b_p_ram[9], Eval::bpair_p[17];
+RawScore Eval::r_p[17];
+RawScore Eval::q_p[17];
 
 Eval::Eval() {
 	pawn = 100;
@@ -58,9 +57,9 @@ Eval::Eval() {
 	sigmoid(r_p, 50, -50, 12);
 	sigmoid(q_p, 50, -50, 12);
 
-	static Score bishopGoodD;
-	static Score bishopKnightD;
-	static Score bishopRookD;
+	static RawScore bishopGoodD;
+	static RawScore bishopKnightD;
+	static RawScore bishopRookD;
 #ifndef NDEBUG
 	printSigmoid(n_p_ram, "n_p_ram"); 			// bonus for each pawn ram, max is 75
 	printSigmoid(n_p, "n_p");
@@ -76,8 +75,8 @@ Eval::Eval() {
 #endif
 }
 
-Score Eval::pieces(const PieceList& pl) {
-	Score value = 0;
+RawScore Eval::pieces(const PieceList& pl) {
+	RawScore value = 0;
 	if (pl.getCounts() == 0x01000100000000) 	//only one knight left
 		value += knightAlone;
 	if (pl.getCounts() == 0x01000000010000) 	//only one bishop left
@@ -90,8 +89,8 @@ Score Eval::pieces(const PieceList& pl) {
 	return value;
 }
 
-Score Eval::pawns(const BoardBase& b) {
-	Score value = 0;
+RawScore Eval::pawns(const BoardBase& b) {
+	RawScore value = 0;
 
 	uint64_t wp = b.pieceList[0].bitBoard<Pawn>();
 	uint64_t bp = b.pieceList[1].bitBoard<Pawn>();

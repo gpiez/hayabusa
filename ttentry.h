@@ -43,7 +43,7 @@ struct Bitfield {
  * The static consts are the shift values for components.
  */
 union TTEntry {
-	Bitfield<0, 12, Score> score;
+	Bitfield<0, 12, int> score;
 	Bitfield<12, 6, unsigned int> from;
 	Bitfield<18, 6, unsigned int> to;
 	Bitfield<24, 6, uint8_t> depth;

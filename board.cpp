@@ -5,7 +5,7 @@
  *      Author: gpiez
  */
 
-#include <pgn.h>
+#include <pch.h>
 
 #include "board.h"
 #include "board.tcc"
@@ -129,12 +129,12 @@ uint64_t Board::perft(unsigned int depth) {
 		return reinterpret_cast<ColoredBoard<White>*>(boards + iMove)->perft(depth);
 }
 
-void Board::search(unsigned int depth) {
-	if (color < 0)
-		reinterpret_cast<ColoredBoard<Black>*>(boards + iMove)->search(depth);
-	else
-		reinterpret_cast<ColoredBoard<White>*>(boards + iMove)->search(depth);
-}
+// void Board::search(unsigned int depth) {
+// 	if (color < 0)
+// 		reinterpret_cast<ColoredBoard<Black>*>(boards + iMove)->search(depth);
+// 	else
+// 		reinterpret_cast<ColoredBoard<White>*>(boards + iMove)->search(depth);
+// }
 
 void Board::rootSearch(unsigned int depth) {
 	if (color < 0)

@@ -34,7 +34,7 @@ public:
 
 private:
 	void doMove(Move m) const;
-	Score search(Score alpha, Score beta, SearchFlag flags);
+	Score<C> search(unsigned int depth, Score<C> alpha, Score<C> beta, SearchFlag flags);
 	uint8_t detectPin( unsigned int pos) const;
 	void ray(Move* &list, uint8_t from, uint8_t dir) const;
 	void rays(Move* &list, uint8_t from, uint8_t dir, uint8_t spec) const;

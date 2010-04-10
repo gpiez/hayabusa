@@ -17,7 +17,7 @@ void TestBoard::initTestCase() {
 void TestBoard::setPiece() {
 	Board b;
 	b.setup("/ w - -");
-#if 0
+#if 0	
 	QCOMPARE(b.getLen(0, d4), 4U);
 	QCOMPARE(b.getLen(4, f4), 5U);
 	b.setPiece(Queen, e4);
@@ -146,6 +146,7 @@ void TestBoard::generateCaptures() {
 		sum += (*i)[iter / 4];
 	}
 
+	QTextStream xout(stderr);
     xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << 3500*nmoves/sum << " Mmoves/s" << endl;
 	b.setup();
 //	((ColoredBoard<White>*)&b)->doMove( (Move) { h2, h4 } );

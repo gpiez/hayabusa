@@ -8,8 +8,8 @@
 #ifndef MOVE_H_
 #define MOVE_H_
 
-#ifndef PGN_H
-#include <pgn.h>
+#ifndef PCH_H_
+#include <pch.h>
 #endif
 
 #include <stdint.h>

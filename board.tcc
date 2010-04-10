@@ -1,4 +1,4 @@
-#include <pgn.h>
+#include "pch.h"
 
 #include "board.h"
 #include "coloredboard.tcc"

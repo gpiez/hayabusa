@@ -13,7 +13,7 @@ endif(NOT CMAKE_BUILD_TYPE)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 enable_language(ASM-FASM)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g  -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -Wno-parentheses")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -Wno-parentheses")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=core2 -fno-exceptions -Winline -ffast-math -fverbose-asm")
 
 FIND_PACKAGE(Qt4 COMPONENTS QtCore REQUIRED)
@@ -45,11 +45,14 @@ ELSE(USE_QTGUI)
 	SET(QT_DONT_USE_QTGUI TRUE)
 ENDIF(USE_QTGUI)
 
+ADD_DEFINITIONS(${QT_DEFINITIONS})
+INCLUDE(${QT_USE_FILE})
+
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 SET(hayabusa_SRCS boardbase.cpp board.cpp console.cpp workthread.cpp eval.cpp 
                   move.cpp transpositiontable.cpp setpiece.asm offsets.inc)
-SET(hayabusa_MOC_H console.h)
+SET(hayabusa_MOC_H console.h jobs.h)
 SET(hayabusa_UIS mainwindow.ui)
 SET(hayabusa_RCCS hayabusa.qrc)
 
@@ -62,19 +65,18 @@ set_source_files_properties(offsets.cpp PROPERTIES COMPILE_FLAGS "-Wno-invalid-o
 add_executable(offsets ${offsets_SRCS})
 target_link_libraries(offsets ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
 
+#INCLUDE_DIRECTORIES(${QT_LIBRARY_DIR})
+
 set_source_files_properties(offsets.inc PROPERTIES generated true)
 add_custom_command(
     OUTPUT offsets.inc 
     COMMAND offsets > offsets.inc
     DEPENDS ${offsets_SRCS} offsets board.h)
 
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mssse3")
 
-ADD_DEFINITIONS(${QT_DEFINITIONS})
-INCLUDE(${QT_USE_FILE})
 QT4_WRAP_CPP( hayabusa_MOC_SRCS ${hayabusa_MOC_H} )
 QT4_WRAP_CPP( test_MOC_SRCS ${test_MOC_H} )
 QT4_WRAP_UI(hayabusa_UIS_H ${hayabusa_UIS})

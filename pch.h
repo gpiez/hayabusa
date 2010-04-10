@@ -8,5 +8,9 @@
 #ifndef PCH_H_
 #define PCH_H_
 
+#include <QtCore>
+#ifdef USE_QTGUI
+#include <QtGui>
+#endif
 
 #endif /* PCH_H_ */

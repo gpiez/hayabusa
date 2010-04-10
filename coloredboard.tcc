@@ -79,6 +79,7 @@ void ColoredBoard<C>::divide(unsigned int depth) const
 	Move* end = generateMoves(list);
 
 	uint64_t sum=0;
+	QTextStream xout(stderr);
 	for (Move* i = list; i < end; ++i) {
 		doMove(*i);
 		uint64_t n;
@@ -166,11 +167,25 @@ void  ColoredBoard<C>::doMove(Move m) const {
 }
 
 template<Colors C>
-void  ColoredBoard<C>::search(unsigned int depth) const {
+Score<C>  ColoredBoard<C>::search(unsigned int /*depth*/, Score<C> alpha, Score<C> beta, SearchFlag f) {
+	return alpha;
 }
 
 template<Colors C>
 void  ColoredBoard<C>::rootSearch(unsigned int depth) const {
+	Move firstMove[nMaxMoves];
+	Move* lastMove = generateMoves(firstMove);
+
+	Score<C> alpha(-infinity);
+	Score<C> beta(infinity);
+	SearchFlag f;
+	for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
+		doMove(*currentMove);
+		Score<C> currentScore = next()->search(depth-1, beta, alpha, f);
+		if (currentScore > alpha) {
+			alpha = currentScore;
+		}
+	}
 }
 
 #endif /* COLOREDBOARD_TCC_ */

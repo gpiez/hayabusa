@@ -24,13 +24,31 @@ set(_input ${_path}/${_name})
 SET(_output "${CMAKE_CURRENT_BINARY_DIR}/${_name}.gch")
     
 STRING(TOUPPER "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}" _flags_var_name)
-SET(_compile_FLAGS ${${_flags_var_name}})
-    
-GET_DIRECTORY_PROPERTY(_directory_flags INCLUDE_DIRECTORIES)
-                
-GET_DIRECTORY_PROPERTY(_directory_flags DEFINITIONS)
-LIST(APPEND _compile_FLAGS ${_directory_flags})
+STRING(TOUPPER "COMPILE_DEFINITIONS_${CMAKE_BUILD_TYPE}" _def_var_name)
+
+GET_DIRECTORY_PROPERTY(DIRDEF COMPILE_DEFINITIONS)
+FOREACH(item ${DIRDEF})
+	LIST(APPEND _compile_FLAGS -D${item})
+ENDFOREACH(item)
+
+GET_DIRECTORY_PROPERTY(DIRDEF ${_def_var_name})
+FOREACH(item ${DIRDEF})
+	LIST(APPEND _compile_FLAGS -D${item})
+ENDFOREACH(item)
+
 LIST(APPEND _compile_FLAGS ${CMAKE_CXX_FLAGS} )
+
+LIST(APPEND _compile_FLAGS ${${_flags_var_name}})
+#MESSAGE(${_compile_FLAGS})
+
+GET_DIRECTORY_PROPERTY(DIRINC INCLUDE_DIRECTORIES)
+#MESSAGE(${DIRINC})
+FOREACH(item ${DIRINC})
+	LIST(APPEND _compile_FLAGS -I${item})
+#MESSAGE(${_compile_FLAGS})
+ENDFOREACH(item)
+
+LIST(APPEND _compile_FLAGS ${_directory_flags})
 
 SEPARATE_ARGUMENTS(_compile_FLAGS)
 

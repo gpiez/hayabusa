@@ -8,8 +8,8 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
-#ifndef PGN_H
-#include <pgn.h>
+#ifndef PCH_H_
+#include <pch.h>
 #endif
 
 #include <emmintrin.h>	//SSE2 for m128i
@@ -31,7 +31,7 @@
 #define ALIGN_CACHE __attribute__((aligned(CACHE_LINE_SIZE)))
 #define ALIGN_PAGE __attribute__((aligned(4096)))
 
-typedef int16_t Score;
+enum SearchFlag { null = 1 };
 
 enum Pieces { Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6 };
 
@@ -58,6 +58,8 @@ enum SpecialMoves {
 	disableOpponentLongCastling = 32
 };
 
+static const unsigned int nMaxMoves = 256; // maximum possible moves in a position
+static const int infinity = 10000;
 static const unsigned int nPieces = 6;
 static const unsigned int nColors = 2;
 static const unsigned int nTotalPieces = nPieces*nColors + 1;	// -King,... -Pawn, 0, Pawn,... King
@@ -133,5 +135,4 @@ static inline uint64_t popcount(uint64_t x) {
 }
 
 extern "C" __m128i broadcastTab[256] ALIGN_XMM;
-extern QTextStream xout; // definition int eval.cpp
 #endif /* CONSTANTS_H_ */

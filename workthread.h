@@ -8,15 +8,14 @@
 #ifndef WORKTHREAD_H_
 #define WORKTHREAD_H_
 
-#ifndef PGN_H
-#include <pgn.h>
+#ifndef PCH_H_
+#include <pch.h>
 #endif
 
 #include "board.h"
 class Job;
 
 class WorkThread: public QThread {
-	Board b;	//FIXME alignment
 	QWaitCondition stopped, startable, starting;
 	QMutex* mutex;
 	volatile bool doStop;
@@ -25,6 +24,8 @@ class WorkThread: public QThread {
 	Job* job;
 
 public:
+	Board b;	//FIXME alignment
+	
 	WorkThread();
 	virtual ~WorkThread();
 
