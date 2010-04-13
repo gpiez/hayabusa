@@ -167,25 +167,80 @@ void  ColoredBoard<C>::doMove(Move m) const {
 }
 
 template<Colors C>
-Score<C>  ColoredBoard<C>::search(unsigned int /*depth*/, Score<C> alpha, Score<C> beta, SearchFlag f) {
+Score<C>  ColoredBoard<C>::qsearch(Score<C> alpha, Score<C> beta) {
+	Move firstMove[nMaxMoves];
+	Move* lastMove = generateCaptureMoves(firstMove);
+
+	alpha = eval();
+	
+	for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
+			doMove(*currentMove);
+			Score<C> current = next()->qsearch(beta, alpha);
+			if (current > alpha) {
+				alpha = current;
+			}
+
+	}
+	return alpha;
+	
+}
+
+
+
+template<Colors C>
+Score<C>  ColoredBoard<C>::search(unsigned int depth, Score<C> alpha, Score<C> beta, SearchFlag f) {
+	Move firstMove[nMaxMoves];
+	Move* lastMove = generateMoves(firstMove);
+
+	for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
+			doMove(*currentMove);
+			unsigned int newDepth = depth-1;
+			Score<C> current;
+			if (newDepth == 0)
+				current = next()->search(newDepth, beta, alpha, f);
+			else
+				current = next()->qsearch(beta, alpha);
+			if (current > alpha) {
+				alpha = current;
+			}
+
+	}
 	return alpha;
 }
 
 template<Colors C>
-void  ColoredBoard<C>::rootSearch(unsigned int depth) const {
+void ColoredBoard<C>::rootSearch(unsigned int depth) const {
+
+	unsigned int timeBudget = 5*40*1000;  /// FIXME
+	unsigned int movesToDo = 40;
+	
 	Move firstMove[nMaxMoves];
 	Move* lastMove = generateMoves(firstMove);
+	Move bestMove;
 
-	Score<C> alpha(-infinity);
-	Score<C> beta(infinity);
-	SearchFlag f;
-	for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
-		doMove(*currentMove);
-		Score<C> currentScore = next()->search(depth-1, beta, alpha, f);
-		if (currentScore > alpha) {
-			alpha = currentScore;
+	QDateTime start = QDateTime::currentDateTime();
+	QDateTime softBudget = start.addMSecs( timeBudget/(2*movesToDo) );
+	QDateTime hardBudget = start.addMSecs( 2*timeBudget / (movesToDo + 1) );
+	
+	for (unsigned int depth=2; depth<maxDepth; depth++) {
+		QDateTime currentStart = QDateTime::currentDateTime();
+		Score<C> alpha(-infinity);
+		Score<C> beta(infinity);
+		SearchFlag f;
+		for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
+			doMove(*currentMove);
+			Score<C> currentScore = next()->search(depth-1, beta, alpha, f);
+			if (currentScore > alpha) {
+				alpha = currentScore;
+				bestMove = *currentMove;
+			}
 		}
+		// assume geometrically increasing time per depth
+		if (QDateTime::currentDateTime() > softBudget) break;
 	}
 }
+
+template<Colors C>
+Score<C> ColoredBoard<C>::eval() {}
 
 #endif /* COLOREDBOARD_TCC_ */
