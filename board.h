@@ -36,7 +36,6 @@ public:
 	uint64_t perft(unsigned int depth);
 	void divide(unsigned int depth);
 	void doMove(Move m);
-	void rootSearch(unsigned int depth);
 	void search(unsigned int depth);
 };
 

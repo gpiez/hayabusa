@@ -12,10 +12,10 @@
 #include <pch.h>
 #endif
 
-#include "board.h"
+#include "rootboard.h"
 #include "console.h"
 
-struct Job {
+struct Job { /// TODO remove Board* as the common parameter
 	virtual void job(Board*) = 0;
 };
 
@@ -55,10 +55,11 @@ public:
 
 class RootSearchJob: public Job {
 	unsigned int depth;
+	RootBoard* rb;
 public:
-	RootSearchJob(unsigned int depth): depth(depth) {};
-	void job(Board* b) {
-		b->rootSearch(depth);
+	RootSearchJob(unsigned int depth, RootBoard* rb): depth(depth), rb(rb) {};
+	void job(Board*) {
+		rb->rootSearch(depth);
 	}
 };
 

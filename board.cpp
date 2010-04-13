@@ -136,13 +136,6 @@ uint64_t Board::perft(unsigned int depth) {
 // 		reinterpret_cast<ColoredBoard<White>*>(boards + iMove)->search(depth);
 // }
 
-void Board::rootSearch(unsigned int depth) {
-	if (color < 0)
-		reinterpret_cast<ColoredBoard<Black>*>(boards + iMove)->rootSearch(depth);
-	else
-		reinterpret_cast<ColoredBoard<White>*>(boards + iMove)->rootSearch(depth);
-}
-
 void Board::divide(unsigned int depth) {
 	if (color < 0)
 		return reinterpret_cast<ColoredBoard<Black>*>(boards + iMove)->divide(depth);
