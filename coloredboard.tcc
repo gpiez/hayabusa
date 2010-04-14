@@ -9,6 +9,7 @@
 #define COLOREDBOARD_TCC_
 
 #include <coloredboard.h>
+#include <boardbase.tcc>
 //attacked by (opposite colored) piece.
 // if color == White, attackedBy<-King> = b
 template<Colors C>
@@ -102,14 +103,15 @@ ColoredBoard<(Colors)-C>* ColoredBoard<C>::next() const {
 template<Colors C>
 void  ColoredBoard<C>::doMove(Move m) const {
 	copyPieces(next());
-	int8_t piece = pieces[m.from];
-	next()->clrPiece(this, piece, m.from);
+	int8_t piece = C*pieces[m.from];
+	next()->copyBoardClrPiece<C>(this, piece, m.from);
 	next()->enPassant = 0;
 	next()->castling[0] = castling[0];
 	next()->castling[1] = castling[1];
 
 	next()->fiftyMoves = m.capture!=0 | piece==5 | piece==-5 ? 0:fiftyMoves+1;
-
+	ASSERT(C*m.capture <= King);
+	
 	if (m.special & disableOpponentLongCastling)
 		next()->castling[EI].q = 0;
 	else if (m.special & disableOpponentShortCastling)
@@ -131,14 +133,14 @@ void  ColoredBoard<C>::doMove(Move m) const {
 	case shortCastling:
 		next()->castling[CI].k = 0;
 		next()->castling[CI].q = 0;		//todo upper bits don't care, simplify access
-		next()->clrPiece(next(), C*Rook, pov^h1);
-		next()->setPiece(C*Rook, pov^f1);
+		next()->clrPiece<C>(Rook, pov^h1);
+		next()->setPiece<C>(Rook, pov^f1);
 		break;
 	case longCastling:
 		next()->castling[CI].k = 0;
 		next()->castling[CI].q = 0;		//todo upper bits don't casr, simplify access
-		next()->clrPiece(next(), C*Rook, pov^a1);
-		next()->setPiece(C*Rook, pov^d1);
+		next()->clrPiece<C>(Rook, pov^a1);
+		next()->setPiece<C>(Rook, pov^d1);
 		break;
 	case promoteQ:
 		piece = C*Queen;
@@ -156,13 +158,13 @@ void  ColoredBoard<C>::doMove(Move m) const {
 		next()->enPassant = m.to;
 		break;
 	case EP:
-		next()->clrPiece(next(), -piece, enPassant);
+		next()->clrPiece<(Colors)-C>(Pawn, enPassant);
 		break;
 	}
 
 	if (m.capture)
-		next()->clrPiece(next(), m.capture, m.to);
-	next()->setPiece(piece, m.to);
+		next()->clrPiece<(Colors)-C>(-C*m.capture, m.to);
+	next()->setPiece<C>(piece, m.to);
 
 }
 

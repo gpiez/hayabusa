@@ -10,6 +10,39 @@ CurrentBuildType=
 CurrentInstallDir=
 ProjectRootRelative=./
 
+[Launch]
+Launch Configurations=Launch Configuration 0,Launch Configuration 1
+
+[Launch][Launch Configuration 0]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=UnitTest
+Type=Native Application
+
+[Launch][Launch Configuration 0][Data]
+Arguments=
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependency Action=Nothing
+EnvironmentGroup=default
+Project Target=hayabusa,test
+Working Directory=file:///home/gpiez/src/hayabusa/Debug
+isExecutable=false
+
+[Launch][Launch Configuration 1]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=hayabusa
+Type=Native Application
+
+[Launch][Launch Configuration 1][Data]
+Arguments=
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependency Action=Nothing
+EnvironmentGroup=default
+Project Target=hayabusa,hayabusa
+Working Directory=file:///home/gpiez/src/hayabusa/Release
+isExecutable=false
+
 [MakeBuilder]
 Number Of Jobs=2
 

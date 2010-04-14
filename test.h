@@ -15,7 +15,7 @@ class TestBoard: public QObject {
 	Q_OBJECT
 private slots:
 	void setPiece();
-	void add();
+	void pieceList();
 	void generateCaptures();
 	void initTestCase();
 };

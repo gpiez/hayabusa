@@ -17,7 +17,7 @@
 struct Move {
 	uint8_t from;
 	uint8_t to;
-	uint8_t capture;
+	int8_t capture;			// TODO currently only a bit would suffice, otherwise this should logically be uint, for use in set/clrPiece, which also accept a uint
 	uint8_t special;
 	QString string() const;
 };

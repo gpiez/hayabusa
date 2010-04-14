@@ -16,6 +16,14 @@
 #include "length.h"
 #include "transpositiontable.h"
 #include "score.h"
+/*
+ * Global variables imported by setpiece.asm
+ */
+extern "C" {
+	extern SAttack shortAttacks[nPieces+1][nSquares][nColors][nSquares] ALIGN_PAGE;
+	extern const __v16qi vecLookup[4] ALIGN_CACHE;
+	extern int squareControl[nSquares] ALIGN_PAGE;
+}
 
 struct BoardBase {
 	LongIndex	attVec[nDirs/2][nSquares];		//0x100
@@ -43,8 +51,11 @@ struct BoardBase {
 
 	void init();
 	void print();
-	void setPiece(int8_t piece, uint8_t pos);
-	void clrPiece(const BoardBase* prev, int8_t piece, uint8_t pos);
+
+	template<Colors C> void setPiece(uint8_t piece, uint8_t pos);
+	template<Colors C> void clrPiece(uint8_t piece, uint8_t pos);
+	template<Colors C> void copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos);
+
 	void copyPieces(BoardBase* dst) const {
 		__m128i xmm0 = _mm_load_si128(((__m128i *)pieces) + 0);
 		__m128i xmm1 = _mm_load_si128(((__m128i *)pieces) + 1);
@@ -71,15 +82,5 @@ struct BoardBase {
 		};
 	}
 } ALIGN_CACHE;									//sum:	    3C0
-
-/*
- * Global variables and functions exported and imported by setpiece.asm
- */
-extern "C" {
-	extern SAttack shortAttacks[nPieces+1][nSquares][nColors][nSquares] ALIGN_PAGE;
-	extern const __v16qi vecLookup[4] ALIGN_CACHE;
-	extern int squareControl[nSquares] ALIGN_PAGE;
-
-}
 
 #endif /* BOARDBASE_H_ */

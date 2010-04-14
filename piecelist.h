@@ -13,7 +13,7 @@
 
 #include "constants.h"
 
-/*
+/**
  * Contains a list of positions and counts of pieces for a color.
  * Because one can have at most 16 pieces, all pieces a stored in
  * adjacent uint8_t for fast vector manipulation. A list of indices

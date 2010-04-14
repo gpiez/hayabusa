@@ -9,7 +9,6 @@
 #define COLOREDBOARD_H_
 
 #include "boardbase.h"
-
 /*
  * Board with <color> to move. Serves as a common template for all color-dependant functions.
  */

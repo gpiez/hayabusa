@@ -2,9 +2,11 @@
 #define ROOTBOARD_H_
 
 #include <board.h>
+#include <eval.h>
 
 class RootBoard: public Board {
 
+	Eval eval;
 	unsigned int timeBudget;
 	unsigned int movesToDo;
 

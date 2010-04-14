@@ -32,40 +32,40 @@ void Board::setup(QString fen) {
 			x += piecePlacement[p].toLatin1() - '1';
 			break;
 		case 'k':
-			boards[0].setPiece( -King, square);
+			boards[0].setPiece<Black>( King, square);
 			break;
 		case 'p':
-			boards[0].setPiece( -Pawn, square);
+			boards[0].setPiece<Black>( Pawn, square);
 			break;
 		case 'b':
-			boards[0].setPiece( -Bishop, square);
+			boards[0].setPiece<Black>( Bishop, square);
 			break;
 		case 'n':
-			boards[0].setPiece( -Knight, square);
+			boards[0].setPiece<Black>( Knight, square);
 			break;
 		case 'r':
-			boards[0].setPiece( -Rook, square);
+			boards[0].setPiece<Black>( Rook, square);
 			break;
 		case 'q':
-			boards[0].setPiece( -Queen, square);
+			boards[0].setPiece<Black>( Queen, square);
 			break;
 		case 'K':
-			boards[0].setPiece( King, square);
+			boards[0].setPiece<White>( King, square);
 			break;
 		case 'P':
-			boards[0].setPiece( Pawn, square);
+			boards[0].setPiece<White>( Pawn, square);
 			break;
 		case 'B':
-			boards[0].setPiece( Bishop, square);
+			boards[0].setPiece<White>( Bishop, square);
 			break;
 		case 'N':
-			boards[0].setPiece( Knight, square);
+			boards[0].setPiece<White>( Knight, square);
 			break;
 		case 'R':
-			boards[0].setPiece( Rook, square);
+			boards[0].setPiece<White>( Rook, square);
 			break;
 		case 'Q':
-			boards[0].setPiece( Queen, square);
+			boards[0].setPiece<White>( Queen, square);
 			break;
 		case '/':
 			x = -1;

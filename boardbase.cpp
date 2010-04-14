@@ -8,16 +8,6 @@
 #include <pch.h>
 
 #include "boardbase.h"
-
-//QTextStream cout = QTextStream(stdout);
-/*
- * Get low level routines from setpiece.asm
- */
-extern "C" {
-void setPiece(BoardBase* self, int piece, unsigned int pos);
-void chgPiece(BoardBase* self, int piece, unsigned int pos); //TODO chgPiece
-void clrPiece(const BoardBase* prev, BoardBase* self, int piece, unsigned int pos);
-}
 /*
  * Short attack table for each piece, positioned at a square, attacking a white/black board.
  */
@@ -221,30 +211,4 @@ void BoardBase::print() {
 		}
 		xout << endl << "--------------------------------" << endl;
 	}
-}
-
-void BoardBase::setPiece(int8_t piece, uint8_t pos) {
-	ASSERT(abs(piece) <= King && piece != 0);
-	ASSERT(pos < 64);
-	ASSERT(pieces[pos] == 0);
-	pieceList[(piece < 0)].add(abs(piece), pos);
-	zobrist ^= TranspositionTable::zobrist[piece + King][pos];
-	::setPiece(this, piece, pos);
-	for (unsigned int i = 0; i < 256; ++i) {
-		ASSERT(64 > ((uint8_t*)attLen)[i]);
-	}
-	pieces[pos] = piece;
-}
-
-void BoardBase::clrPiece(const BoardBase* prev, int8_t piece, uint8_t pos) {
-	ASSERT(abs(piece) <= King && piece != 0);
-	ASSERT(pos < 64);
-	ASSERT(pieces[pos] == piece);
-	pieceList[(piece < 0)].sub(abs(piece), pos); //TODO copy piecelist as well
-	zobrist = prev->zobrist ^ TranspositionTable::zobrist[piece + King][pos];
-	::clrPiece(prev, this, piece, pos);
-	for (unsigned int i = 0; i < 256; ++i) {
-		ASSERT(64 > ((uint8_t*)attLen)[i]);
-	}
-	pieces[pos] = 0;
 }

@@ -78,7 +78,7 @@ void TestBoard::setPiece() {
 #endif
 }
 
-void TestBoard::add() {
+void TestBoard::pieceList() {
 	PieceList p;
 	p.init();
 	p.add(Queen, d1);
@@ -173,7 +173,11 @@ void TestBoard::generateCaptures() {
 */
 	b.boards[0].print();
 	xout << dec;
-	((ColoredBoard<Black>*) b.boards )[0].divide(6);
+	QCOMPARE( ((ColoredBoard<White>*) b.boards )->perft(6), (uint64_t)119060324);
+	b.setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+	b.boards->print();
+	QCOMPARE( ((ColoredBoard<White>*) b.boards )->perft(5), (uint64_t)193690690);
+
 	//cout << sum << endl;
 }
 
