@@ -146,10 +146,14 @@ void TestBoard::generateCaptures() {
 		sum += (*i)[iter / 4];
 	}
 
+	b.setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+	((ColoredBoard<White>*) b.boards ) [0].doMove( (Move) { a1, b1, 0, disableLongCastling } );
+//	((ColoredBoard<Black>*) b.boards ) [1].divide(4);
+	((ColoredBoard<Black>*) b.boards ) [1].doMove( (Move) { h3, g2, Pawn } );
+	((ColoredBoard<White>*) b.boards ) [2].doMove( (Move) { e2, f1, } );
+	((ColoredBoard<Black>*) b.boards ) [3].divide(2);
 	QTextStream xout(stderr);
     xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << 3500*nmoves/sum << " Mmoves/s" << endl;
-	b.setup();
-//	((ColoredBoard<White>*)&b)->doMove( (Move) { h2, h4 } );
 //	((ColoredBoard<Black>*) b.boards ) [0] .doMove( (Move) { e7, e5 } );
 //	((ColoredBoard<White>*) b.boards ) [1] .doMove( (Move) { e2, e4 } );
 //	((ColoredBoard<Black>*) b.boards ) [2] .doMove( (Move) { d7, d5 } );
@@ -171,13 +175,16 @@ void TestBoard::generateCaptures() {
 		}
 	}
 */
+	b.setup();
 	b.boards[0].print();
 	xout << dec;
 	QCOMPARE( ((ColoredBoard<White>*) b.boards )->perft(6), (uint64_t)119060324);
 	b.setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
 	b.boards->print();
 	QCOMPARE( ((ColoredBoard<White>*) b.boards )->perft(5), (uint64_t)193690690);
-
+	b.setup("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
+	b.boards->print();
+	QCOMPARE( ((ColoredBoard<White>*) b.boards )->perft(7), (uint64_t)178633661);
 	//cout << sum << endl;
 }
 

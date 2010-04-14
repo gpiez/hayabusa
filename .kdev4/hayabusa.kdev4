@@ -22,7 +22,7 @@ Type=Native Application
 [Launch][Launch Configuration 0][Data]
 Arguments=
 Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
-Dependency Action=Nothing
+Dependency Action=Build
 EnvironmentGroup=default
 Project Target=hayabusa,test
 Working Directory=file:///home/gpiez/src/hayabusa/Debug

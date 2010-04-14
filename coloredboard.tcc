@@ -88,7 +88,7 @@ void ColoredBoard<C>::divide(unsigned int depth) const
 			n = 1;
 		else
 			n = next()->perft(depth - 1);
-		xout << i->string() << ": " << n << endl;
+		xout << i->string() << " " << n << endl;
 		sum += n;
 	}
 	xout << "Moves: " << end-list << endl << "Nodes: " << sum << endl;
@@ -103,13 +103,13 @@ ColoredBoard<(Colors)-C>* ColoredBoard<C>::next() const {
 template<Colors C>
 void  ColoredBoard<C>::doMove(Move m) const {
 	copyPieces(next());
-	int8_t piece = C*pieces[m.from];
+	uint8_t piece = C*pieces[m.from];
 	next()->copyBoardClrPiece<C>(this, piece, m.from);
 	next()->enPassant = 0;
 	next()->castling[0] = castling[0];
 	next()->castling[1] = castling[1];
 
-	next()->fiftyMoves = m.capture!=0 | piece==5 | piece==-5 ? 0:fiftyMoves+1;
+	next()->fiftyMoves = m.capture!=0 | piece==5 ? 0:fiftyMoves+1;
 	ASSERT(C*m.capture <= King);
 	
 	if (m.special & disableOpponentLongCastling)
@@ -143,16 +143,16 @@ void  ColoredBoard<C>::doMove(Move m) const {
 		next()->setPiece<C>(Rook, pov^d1);
 		break;
 	case promoteQ:
-		piece = C*Queen;
+		piece = Queen;
 		break;
 	case promoteR:
-		piece = C*Rook;
+		piece = Rook;
 		break;
 	case promoteB:
-		piece = C*Bishop;
+		piece = Bishop;
 		break;
 	case promoteN:
-		piece = C*Knight;
+		piece = Knight;
 		break;
 	case enableEP:
 		next()->enPassant = m.to;

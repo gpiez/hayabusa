@@ -13,7 +13,7 @@ QString Move::string() const
 	QString temp;
 	temp += (from & 7) + 'a';
 	temp += (from >> 3) + '1';
-	temp += capture ? 'x' : '-';
+//	temp += capture ? 'x' : '-';
 	temp += (to & 7) + 'a';
 	temp += (to >> 3) + '1';
 	switch (special & 0xf) {
