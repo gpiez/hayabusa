@@ -167,8 +167,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 template<Colors C>
 Move* ColoredBoard<C>::generateCaptureMoves( Move* list) const {
 	uint8_t to;
-	Attack a;
-
+ 	Attack a;
 	/*
 	 * Generate non-capturing queen promotions. Capturing promotions are handled in
 	 * generateTargetCaptures().

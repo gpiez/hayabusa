@@ -35,8 +35,9 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 					 * step in the move before and can be captured en passant by one of our pawns.
 					 * The move is only legal if our pawn is not pinned, since this pawn will move on
 					 * a different vector than the pin in every possible case. Avoiding a check
-					 * by moving a pawn in between with an e. p. capture is impossible */
-					if (!isValid(detectPin(from))) *list++ = (Move) { from, to, cap, EP };
+					 * by moving a pawn in between with an e. p. capture is impossible 
+					 * leave capture field empty, otherwise we would capture twice */
+					if (!isValid(detectPin(from))) *list++ = (Move) { from, to+C*8, 0, EP };
 			}
 
 		if ( a.s.PR ) {
@@ -247,10 +248,12 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 				ASSERT(kingAttacks.s.PR ^ kingAttacks.s.PL);
 				if (kingAttacks.s.PR) {
 					unsigned int to = king + dirOffsets[1 + CI * 4];
-					if (pieces[to] == -C * Pawn) generateTargetMove(list, to);
+					ASSERT(pieces[to] == -C * Pawn);
+					generateTargetMove(list, to);
 				} else {
 					unsigned int to = king + dirOffsets[3 + CI * 4];
-					if (pieces[to] == -C * Pawn) generateTargetMove(list, to);
+					ASSERT(pieces[to] == -C * Pawn);
+					generateTargetMove(list, to);
 				}
 			}
 		} else {
@@ -356,15 +359,14 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 			 * attacking piece are on one line. Although neither pawn is pinned, the capture
 			 * is illegal, since both pieces are removed and the king will be in check
 			 */
-			to = enPassant;
 			if ((attVec[0][from].lIndex != C*King & attVec[0][from].rIndex != C*King
-				|| attVec[0][to].lIndex != -C*Rook & attVec[0][to].rIndex != -C*Rook
-					& attVec[0][to].lIndex != -C*Queen & attVec[0][to].rIndex != -C*Queen)
-		    &&  (attVec[0][to].lIndex != C*King & attVec[0][to].rIndex != C*King
+				|| attVec[0][enPassant].lIndex != -C*Rook & attVec[0][enPassant].rIndex != -C*Rook
+					& attVec[0][enPassant].lIndex != -C*Queen & attVec[0][enPassant].rIndex != -C*Queen)
+		    &&  (attVec[0][enPassant].lIndex != C*King & attVec[0][enPassant].rIndex != C*King
 		    	|| attVec[0][from].lIndex != -C*Rook & attVec[0][from].rIndex != -C*Rook
 		    	    & attVec[0][from].lIndex != -C*Queen & attVec[0][from].rIndex != -C*Queen)) {
 				to = enPassant + C*8;
-				*list++ = (Move) { from, to, 0, EP};
+				*list++ = (Move) { from, to, 0, EP};	//leave capture field empty, otherwise we would capture twice
 			}
 		}
 	}
