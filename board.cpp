@@ -14,8 +14,10 @@
 
 int squareControl[nSquares];
 
-Board::Board() {
-}
+Board::Board():
+	timeBudget(40*5*10000),
+	movesToDo(40)
+	{}
 
 void Board::setup(QString fen) {
 	boards[0].init();

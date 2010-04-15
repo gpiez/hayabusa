@@ -55,6 +55,7 @@ public:
 
 	RawScore pieces(const PieceList&);
 	RawScore pawns(const BoardBase&);
+	RawScore eval(const BoardBase&);
 };
 
 template<typename T>

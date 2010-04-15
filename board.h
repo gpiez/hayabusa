@@ -9,7 +9,7 @@
 #define BOARD_H_
 
 #include "boardbase.h"
-
+#include "eval.h"
 /*
 static inline unsigned int sq(const char name[2])
 {
@@ -25,6 +25,9 @@ class Board {
 	unsigned int iMove;
 	unsigned int threadID;
 	Colors color;
+	unsigned int timeBudget;
+	unsigned int movesToDo;
+	Eval eval;
 
 public:
 	Board();
@@ -36,7 +39,7 @@ public:
 	uint64_t perft(unsigned int depth);
 	void divide(unsigned int depth);
 	void doMove(Move m);
-	void search(unsigned int depth);
+	template<Colors C> Score<C> rootSearch(unsigned int depth) const;
 };
 
 #endif /* BOARD_H_ */

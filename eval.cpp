@@ -97,3 +97,7 @@ RawScore Eval::pawns(const BoardBase& b) {
 
 	return value;
 }
+
+RawScore Eval::eval(const BoardBase& b) {
+	return 0;
+}

@@ -44,15 +44,6 @@ public:
 	}
 };
 
-class SearchJob: public Job {
-	unsigned int depth_;
-public:
-	SearchJob(unsigned int depth): depth_(depth) {};
-	void job(Board* b) {
-		b->search(depth_);
-	}
-};
-
 class RootSearchJob: public Job {
 	unsigned int depth;
 	RootBoard* rb;
