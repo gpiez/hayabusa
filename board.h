@@ -8,8 +8,7 @@
 #ifndef BOARD_H_
 #define BOARD_H_
 
-#include "boardbase.h"
-#include "eval.h"
+#include "coloredboard.h"
 /*
 static inline unsigned int sq(const char name[2])
 {
@@ -21,25 +20,16 @@ static inline unsigned int sq(const char name[2])
 /// Contains all boards (moves) leading to the current position, from the beginning or a thread split point.
 class Board {
 	friend class TestBoard;
-	BoardBase boards[MAX_GAME_LENGTH];
-	unsigned int iMove;
-	unsigned int threadID;
-	Colors color;
-	unsigned int timeBudget;
-	unsigned int movesToDo;
-	Eval eval;
-
+//	unsigned int iMove;
+//	unsigned int threadID;
+//	Colors color;
+	
 public:
 	Board();
 
-	void setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<int piece>	bool attackedBy(uint8_t pos);
 	Move* generateCaptureMoves(Move* list) const;
 	Move* generateMoves(Move* list) const;
-	uint64_t perft(unsigned int depth);
-	void divide(unsigned int depth);
-	void doMove(Move m);
-	template<Colors C> Score<C> rootSearch(unsigned int depth) const;
 };
 
 #endif /* BOARD_H_ */

@@ -14,11 +14,24 @@
 
 #include "rootboard.h"
 #include "console.h"
+#include "boardbase.h"
+#include "rootboard.tcc"
 
-struct Job { /// TODO remove Board* as the common parameter
-	virtual void job(Board*) = 0;
+struct Job {
+	virtual void job() = 0;
 };
 
+template<Colors C>
+class RootSearchJob: public Job {
+	RootBoard* rb;
+public:
+	RootSearchJob(RootBoard* rb): rb(rb) {};
+	void job() {
+		rb->rootSearch<C>();
+	}
+};
+
+/*
 class PerftJob: public QObject, public Job {
 Q_OBJECT
 	unsigned int depth;
@@ -44,15 +57,17 @@ public:
 	}
 };
 
-class RootSearchJob: public Job {
+
+class SearchJob: public Job {
 	unsigned int depth;
+	Board* parent;
+	BoardBase* current;
 	RootBoard* rb;
 public:
-	RootSearchJob(unsigned int depth, RootBoard* rb): depth(depth), rb(rb) {};
+	SearchJob(unsigned int depth, RootBoard* rb): depth(depth), rb(rb) {};
 	void job(Board*) {
 		rb->rootSearch(depth);
 	}
 };
-
-
+*/
 #endif /* JOBS_H_ */

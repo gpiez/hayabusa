@@ -50,9 +50,9 @@ INCLUDE(${QT_USE_FILE})
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
-SET(hayabusa_SRCS boardbase.cpp board.cpp console.cpp workthread.cpp eval.cpp 
+SET(hayabusa_SRCS rootboard.cpp joblist.cpp boardbase.cpp board.cpp console.cpp workthread.cpp eval.cpp 
                   move.cpp transpositiontable.cpp setpiece.asm offsets.inc)
-SET(hayabusa_MOC_H console.h jobs.h)
+SET(hayabusa_MOC_H console.h)
 SET(hayabusa_UIS mainwindow.ui)
 SET(hayabusa_RCCS hayabusa.qrc)
 

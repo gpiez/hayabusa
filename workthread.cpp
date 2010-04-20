@@ -4,6 +4,7 @@
  *  Created on: 22.09.2009
  *      Author: gpiez
  */
+#include <pch.h>
 
 #include "workthread.h"
 #include "board.h"
@@ -12,11 +13,10 @@
 WorkThread::WorkThread():
 	doStop(true),
 	keepRunning(true),
-	isStopped(true),
-	job(NULL)
+	isStopped(true)
 {
 	mutex = new QMutex;
-	b.setup();
+	board.init();
 }
 
 WorkThread::~WorkThread()
@@ -36,8 +36,8 @@ void WorkThread::run() {
 		isStopped = false;
 		mutex->unlock();
 
-		job->job(&b);
-
+		job->job();
+			
 		mutex->lock();
 		isStopped = true;
 		stopped.wakeOne();

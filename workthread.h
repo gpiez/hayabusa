@@ -11,9 +11,10 @@
 #ifndef PCH_H_
 #include <pch.h>
 #endif
+#include "coloredboard.h"
 
-#include "board.h"
 class Job;
+class RootBoard;
 
 class WorkThread: public QThread {
 	QWaitCondition stopped, startable, starting;
@@ -21,11 +22,17 @@ class WorkThread: public QThread {
 	volatile bool doStop;
 	volatile bool keepRunning;
 	volatile bool isStopped;
+	volatile int result;
+	union {
+		ColoredBoard<White> wb;
+		ColoredBoard<Black> bb;
+		BoardBase board;
+	};
+	Colors color;
 	Job* job;
-
-public:
-	Board b;	//FIXME alignment
+//	RootBoard* root;
 	
+public:
 	WorkThread();
 	virtual ~WorkThread();
 

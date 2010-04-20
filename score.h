@@ -29,7 +29,7 @@
 
 #include "constants.h"
 
-typedef uint16_t RawScore;
+typedef int16_t RawScore;
 
 template<Colors C> struct Score
 {
@@ -42,6 +42,7 @@ template<Colors C> struct Score
 	Score (const Score<White>& a) 					{ v = a.v; };
 	Score (const Score<Black>& a) 					{ v = a.v; };
 	void operator = (Score<C> a)  	{ v = a.v; };
+	void operator = (RawScore a)  	{ v = a; };
 	Score operator + (Score<C> a) const 	{ return v + a.v; };
 	Score operator - (Score<C> a) const 	{ return v - a.v; };
 	Score operator * (int a) const 		{ return v * a; };

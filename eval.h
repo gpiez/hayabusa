@@ -53,9 +53,9 @@ public:
 	unsigned int attackHash( unsigned int  pos );
 	int squareControl();
 
-	RawScore pieces(const PieceList&);
-	RawScore pawns(const BoardBase&);
-	RawScore eval(const BoardBase&);
+	RawScore pieces(const PieceList&) const;
+	RawScore pawns(const BoardBase&) const;
+	RawScore eval(const BoardBase&) const;	///TODO should be template<C>
 };
 
 template<typename T>

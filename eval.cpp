@@ -75,7 +75,7 @@ Eval::Eval() {
 #endif
 }
 
-RawScore Eval::pieces(const PieceList& pl) {
+RawScore Eval::pieces(const PieceList& pl) const {
 	RawScore value = 0;
 	if (pl.getCounts() == 0x01000100000000) 	//only one knight left
 		value += knightAlone;
@@ -89,7 +89,7 @@ RawScore Eval::pieces(const PieceList& pl) {
 	return value;
 }
 
-RawScore Eval::pawns(const BoardBase& b) {
+RawScore Eval::pawns(const BoardBase& b) const {
 	RawScore value = 0;
 
 	uint64_t wp = b.pieceList[0].bitBoard<Pawn>();
@@ -98,6 +98,6 @@ RawScore Eval::pawns(const BoardBase& b) {
 	return value;
 }
 
-RawScore Eval::eval(const BoardBase& b) {
+RawScore Eval::eval(const BoardBase& b) const {
 	return 0;
 }

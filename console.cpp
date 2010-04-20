@@ -11,7 +11,7 @@
 
 #include "console.h"
 #include "workthread.h"
-#include "jobs.h"
+#include "rootboard.h"
 
 QMap<QString, void (Console::*)(QStringList)> dispatcher;
 
@@ -22,7 +22,8 @@ Console::Console(QCoreApplication* parent):
 	cout(stdout, QIODevice::WriteOnly)
 {
 	BoardBase::initTables();
-	initWorkThreads();
+	board = new RootBoard(this);
+	
 	dispatcher["perft"] = &Console::perft;
 	dispatcher["divide"] = &Console::divide;
 	dispatcher["uci"] = &Console::uci;
@@ -74,81 +75,52 @@ void Console::tryMove(QStringList cmd) {
 
 void Console::perft(QStringList cmds) {
 //	stop();
-	workThreads.first()->startJob(new PerftJob(cmds[1].toInt(), this));
+//	board->threads.first()->startJob(new PerftJob(cmds[1].toInt(), this));
 //	workThreads.first()->startJob();
 }
 
 void Console::divide(QStringList cmds) {
 //	qDebug() << cmds;
 //	stop();
-	workThreads.first()->startJob(new DivideJob(cmds[1].toInt()));
+//	board->threads.first()->startJob(new DivideJob(cmds[1].toInt()));
 //	workThreads.first()->startJob();
 }
 
-void Console::initWorkThreads() {
-	numThreads = sysconf(_SC_NPROCESSORS_ONLN);
-	if (numThreads < 0) numThreads = 1;
-	allocateWorkThreads();
+void Console::uci(QStringList /*cmds*/) {
 }
 
-void Console::allocateWorkThreads() {
-	int i=0;
-	foreach(WorkThread* th, workThreads) {
-		if (++i > numThreads) {
-			th->stop();
-			th->wait();
-			delete th;
-		}
-	}
-
-	while (++i <= numThreads) {
-		WorkThread* th = new WorkThread;
-		th->start();
-		workThreads.append(th);
-	}
-
+void Console::debug(QStringList /*cmds*/) {
 }
 
-void Console::stop() {
-	foreach(WorkThread* th, workThreads) {
-		th->stop();
-	}
+void Console::isready(QStringList /*cmds*/) {
 }
 
-void Console::uci(QStringList cmds) {
+void Console::setoption(QStringList /*cmds*/) {
 }
 
-void Console::debug(QStringList cmds) {
+void Console::reg(QStringList /*cmds*/) {
 }
 
-void Console::isready(QStringList cmds) {
-}
-
-void Console::setoption(QStringList cmds) {
-}
-
-void Console::reg(QStringList cmds) {
-}
-
-void Console::ucinewgame(QStringList cmds) {
+void Console::ucinewgame(QStringList /*cmds*/) {
 }
 
 void Console::position(QStringList cmds) {
 	if (cmds[1] == "startpos")
-		workThreads.first()->b.setup();
+		board->setup();
 	else
-		workThreads.first()->b.setup(cmds[1]);
+		board->setup(cmds[1]);
 }
 
 void Console::go(QStringList cmds) {
+	board->go(cmds);
 }
 
-void Console::stop(QStringList cmds) {
+void Console::stop(QStringList /*cmds*/) {
 }
 
-void Console::ponderhit(QStringList cmds) {
+void Console::ponderhit(QStringList /*cmds*/) {
 }
 
-void Console::quit(QStringList cmds) {
+void Console::quit(QStringList /*cmds*/) {
 	app->quit();
 }

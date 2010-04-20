@@ -8,16 +8,37 @@
 #ifndef TEST_H_
 #define TEST_H_
 
-#include <QtCore>
-#include <QtTest/QtTest>
+#ifndef PCH_H_
+#include <pch.h>
+#endif
 
-class TestBoard: public QObject {
+#include <Qt/QtTest>
+
+class RootBoard;
+class Console;
+
+class TestRootBoard: public QObject {
 	Q_OBJECT
+	RootBoard *b;
+	Console *c;
+	
 private slots:
 	void setPiece();
 	void pieceList();
 	void generateCaptures();
 	void initTestCase();
+};
+
+class TestBoardBase: public QObject {
+	Q_OBJECT
+	RootBoard *b;
+	Console *c;
+
+private slots:
+/*	void setPiece();
+	void pieceList();
+	void generateCaptures();
+	void initTestCase();*/
 };
 
 #endif /* TEST_H_ */

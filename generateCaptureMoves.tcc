@@ -38,7 +38,7 @@ uint8_t ColoredBoard<C>::detectPin( unsigned int pos ) const {
  * and insert it in list, if it is legal.
  */
 template<Colors C>
-void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const int8_t cap, Attack a, const SpecialMoves spec) const {
+void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const int8_t cap, const Attack a, const SpecialMoves spec) const {
 	uint8_t from;
 	uint8_t pin;
 	uint8_t dir;

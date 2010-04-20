@@ -4,6 +4,11 @@
  *  Created on: 12.04.2010
  *      Author: gpiez
  */
+#ifndef BOARDBASE_TCC_
+#define BOARDBASE_TCC_
+
+#include <boardbase.h>
+
 namespace as {
 extern "C" {
 	void setPiece(BoardBase*, int, int);
@@ -43,3 +48,5 @@ template<Colors C>
 void BoardBase::clrPiece(uint8_t piece, uint8_t pos) {
 	copyBoardClrPiece<C>(this, piece, pos);	// FIXME
 }
+
+#endif

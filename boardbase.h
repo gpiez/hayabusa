@@ -56,23 +56,23 @@ struct BoardBase {
 	template<Colors C> void clrPiece(uint8_t piece, uint8_t pos);
 	template<Colors C> void copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos);
 
-	void copyPieces(BoardBase* dst) const {
+	void copyPieces(BoardBase* next) const {
 		__m128i xmm0 = _mm_load_si128(((__m128i *)pieces) + 0);
 		__m128i xmm1 = _mm_load_si128(((__m128i *)pieces) + 1);
 		__m128i xmm2 = _mm_load_si128(((__m128i *)pieces) + 2);
 		__m128i xmm3 = _mm_load_si128(((__m128i *)pieces) + 3);
-		_mm_store_si128(((__m128i *)dst->pieces) + 0, xmm0);
-		_mm_store_si128(((__m128i *)dst->pieces) + 1, xmm1);
-		_mm_store_si128(((__m128i *)dst->pieces) + 2, xmm2);
-		_mm_store_si128(((__m128i *)dst->pieces) + 3, xmm3);
+		_mm_store_si128(((__m128i *)next->pieces) + 0, xmm0);
+		_mm_store_si128(((__m128i *)next->pieces) + 1, xmm1);
+		_mm_store_si128(((__m128i *)next->pieces) + 2, xmm2);
+		_mm_store_si128(((__m128i *)next->pieces) + 3, xmm3);
 		xmm0 = _mm_load_si128(((__m128i *)pieceList) + 0);
 		xmm1 = _mm_load_si128(((__m128i *)pieceList) + 1);
 		xmm2 = _mm_load_si128(((__m128i *)pieceList) + 2);
 		xmm3 = _mm_load_si128(((__m128i *)pieceList) + 3);
-		_mm_store_si128(((__m128i *)dst->pieceList) + 0, xmm0);
-		_mm_store_si128(((__m128i *)dst->pieceList) + 1, xmm1);
-		_mm_store_si128(((__m128i *)dst->pieceList) + 2, xmm2);
-		_mm_store_si128(((__m128i *)dst->pieceList) + 3, xmm3);
+		_mm_store_si128(((__m128i *)next->pieceList) + 0, xmm0);
+		_mm_store_si128(((__m128i *)next->pieceList) + 1, xmm1);
+		_mm_store_si128(((__m128i *)next->pieceList) + 2, xmm2);
+		_mm_store_si128(((__m128i *)next->pieceList) + 3, xmm3);
 	}
 	template<unsigned int ColorIndex>
 	Attack attacks( unsigned int pos) const {

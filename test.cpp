@@ -5,18 +5,23 @@
  *      Author: gpiez
  */
 
+#include <pch.h>
 #include "test.h"
-#include "board.h"
-#include "board.tcc"
+#include "rootboard.h"
 #include "testpositions.h"
+#include "console.h"
+#include "rootboard.tcc"
+#include "generateMoves.tcc"
 
-void TestBoard::initTestCase() {
+void TestRootBoard::initTestCase() {
 	BoardBase::initTables();
+	c = new Console(QCoreApplication::instance());
+	b = new RootBoard(c);
 }
 
-void TestBoard::setPiece() {
-	Board b;
-	b.setup("/ w - -");
+void TestRootBoard::setPiece() {
+	
+	b->setup("/ w - -");
 #if 0	
 	QCOMPARE(b.getLen(0, d4), 4U);
 	QCOMPARE(b.getLen(4, f4), 5U);
@@ -78,7 +83,7 @@ void TestBoard::setPiece() {
 #endif
 }
 
-void TestBoard::pieceList() {
+void TestRootBoard::pieceList() {
 	PieceList p;
 	p.init();
 	p.add(Queen, d1);
@@ -111,12 +116,11 @@ void TestBoard::pieceList() {
 
 }
 
-void TestBoard::generateCaptures() {
+void TestRootBoard::generateCaptures() {
 	static const unsigned testCases = 200;
 	static const int iter = 200;
 	typedef QVector<uint64_t> Sample;
 	QVector<Sample> times(testCases, Sample(iter));
-	Board b;
 	Move list[256];
 	uint64_t sum=0;
 	uint64_t nmoves=0;
@@ -124,7 +128,7 @@ void TestBoard::generateCaptures() {
 	for (int j = 0; j < iter; ++j) {
 		nmoves = 0;
 		for (unsigned int i = 0; i < testCases; ++i) {
-			b.setup(testPositions[i]);
+			b->setup(testPositions[i]);
 			uint64_t a, d, tsc, overhead;
 			/*
 			 asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
@@ -135,7 +139,7 @@ void TestBoard::generateCaptures() {
 			overhead = 272;
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			tsc = (a + (d << 32));
-			end = b.generateMoves(list);
+			end = b->boards[0].wb.generateMoves(list);
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			nmoves += end - list;
 			times[i][j] = (a + (d << 32)) - tsc - overhead;
@@ -175,17 +179,17 @@ void TestBoard::generateCaptures() {
 		}
 	}
 */
-	b.setup();
-	b.boards[0].print();
+	b->setup();
+	b->boards[0].wb.print();
 	xout << dec;
-	QCOMPARE( ((ColoredBoard<White>*) b.boards )->perft(6), (uint64_t)119060324);
-	b.setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-	b.boards->print();
-	QCOMPARE( ((ColoredBoard<White>*) b.boards )->perft(5), (uint64_t)193690690);
-	b.setup("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
-	b.boards->print();
-	QCOMPARE( ((ColoredBoard<White>*) b.boards )->perft(7), (uint64_t)178633661);
+	QCOMPARE( b->perft(6U), (uint64_t)119060324);
+	b->setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+	b->boards[0].wb.print();
+	QCOMPARE( b->perft(5U), (uint64_t)193690690);
+	b->setup("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
+	b->boards->wb.print();
+	QCOMPARE( b->perft(7U), (uint64_t)178633661);
 	//cout << sum << endl;
 }
 
-QTEST_MAIN(TestBoard);
+QTEST_MAIN(TestRootBoard);

@@ -12,12 +12,10 @@
 #endif
 
 class WorkThread;
+class RootBoard;
 
 class Console: public QObject {
 	Q_OBJECT
-
-	QList<WorkThread*> workThreads;
-	int	numThreads;
 
 	void perft(QStringList);
 	void divide(QStringList);
@@ -34,12 +32,9 @@ class Console: public QObject {
 	void uci(QStringList);
 	void debug(QStringList);
 	
-	void initWorkThreads();
-	void allocateWorkThreads();
-	void stop();
-	
 private:
 	QCoreApplication* app;
+	RootBoard* board;
 	
 public:
 	QTextStream cin;
