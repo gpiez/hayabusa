@@ -124,12 +124,13 @@ void TestRootBoard::generateCaptures() {
 	Move list[256];
 	uint64_t sum=0;
 	uint64_t nmoves=0;
+	uint64_t a, d, tsc;
 	Move* end;
 	for (int j = 0; j < iter; ++j) {
 		nmoves = 0;
 		for (unsigned int i = 0; i < testCases; ++i) {
 			b->setup(testPositions[i]);
-			uint64_t a, d, tsc, overhead;
+			uint64_t  overhead;
 			/*
 			 asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			 tsc = (a + (d << 32));
@@ -151,7 +152,9 @@ void TestRootBoard::generateCaptures() {
 	}
 
 	QTextStream xout(stderr);
-    xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << 3500*nmoves/sum << " Mmoves/s" << endl;
+    xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << 3600*nmoves/sum << " Mmoves/s" << endl;
+	xout << dec;
+
 //	b.setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
 //	((ColoredBoard<White>*) b.boards ) [0].doMove( (Move) { a1, b1, 0, disableLongCastling } );
 //	((ColoredBoard<Black>*) b.boards ) [1].divide(4);
@@ -180,15 +183,17 @@ void TestRootBoard::generateCaptures() {
 	}
 */
 	b->setup();
-	b->boards[0].wb.print();
-	xout << dec;
+	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
 	QCOMPARE( b->perft(6U), (uint64_t)119060324);
+	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 119060324/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
 	b->setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-	b->boards[0].wb.print();
+	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
 	QCOMPARE( b->perft(5U), (uint64_t)193690690);
+	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 193690690/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
 	b->setup("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
-	b->boards->wb.print();
+	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
 	QCOMPARE( b->perft(7U), (uint64_t)178633661);
+	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 178633661/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
 	//cout << sum << endl;
 }
 

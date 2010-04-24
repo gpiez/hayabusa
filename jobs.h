@@ -31,21 +31,17 @@ public:
 	}
 };
 
-/*
-class PerftJob: public QObject, public Job {
-Q_OBJECT
+template<Colors C>
+class PerftJob: public Job {
+	RootBoard* rb;
+	BoardBase* b;
 	unsigned int depth;
-	Console* con;
 public:
-	PerftJob(unsigned int depth, Console* con): depth(depth), con(con) {};
-	void job(Board* b) {
-		connect(this, SIGNAL(resultAvailable(QString)), con, SLOT(getResult(QString)));
-		QString result;
-		QTextStream(&result) << b->perft(depth);
-		emit(resultAvailable(result));
+	PerftJob(RootBoard* rb, ColoredBoard<C>* b, unsigned int depth): rb(r), b(b), depth(depth) {};
+	void job() {
+		uint64_t result=rb->perft(b, depth);
+		
 	}
-signals:
-	void resultAvailable(QString);		
 };
 
 class DivideJob: public Job {

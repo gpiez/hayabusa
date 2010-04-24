@@ -50,7 +50,7 @@ INCLUDE(${QT_USE_FILE})
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
-SET(hayabusa_SRCS rootboard.cpp joblist.cpp boardbase.cpp board.cpp console.cpp workthread.cpp eval.cpp 
+SET(hayabusa_SRCS rootboard.cpp joblist.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
                   move.cpp transpositiontable.cpp setpiece.asm offsets.inc)
 SET(hayabusa_MOC_H console.h)
 SET(hayabusa_UIS mainwindow.ui)
@@ -71,7 +71,7 @@ set_source_files_properties(offsets.inc PROPERTIES generated true)
 add_custom_command(
     OUTPUT offsets.inc 
     COMMAND offsets > offsets.inc
-    DEPENDS ${offsets_SRCS} offsets board.h)
+    DEPENDS ${offsets_SRCS} offsets boardbase.h)
 
 INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 

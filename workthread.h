@@ -23,11 +23,7 @@ class WorkThread: public QThread {
 	volatile bool keepRunning;
 	volatile bool isStopped;
 	volatile int result;
-	union {
-		ColoredBoard<White> wb;
-		ColoredBoard<Black> bb;
-		BoardBase board;
-	};
+	BoardBase board;
 	Colors color;
 	Job* job;
 //	RootBoard* root;

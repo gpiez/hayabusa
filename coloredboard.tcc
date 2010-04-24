@@ -10,6 +10,11 @@
 
 #include <coloredboard.h>
 #include <boardbase.tcc>
+
+template<Colors C> ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>* prev, Move m) {
+	prev->doMove(this, m);
+}
+
 //attacked by (opposite colored) piece.
 // if color == White, attackedBy<-King> = b
 template<Colors C>

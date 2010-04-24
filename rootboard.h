@@ -31,6 +31,7 @@ class RootBoard: public Eval {
 	void initWorkThreads();
 	void allocateWorkThreads(unsigned int);
 	void stop();
+	template<Colors C> const ColoredBoard<C>* currentBoard() const;
 
 public:
 	QReadWriteLock jobsLock;
@@ -47,7 +48,7 @@ public:
 	template<Colors C> uint64_t perft(const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth) const;
 	void divide(unsigned int depth) const;
 	template<Colors C> void divide(const ColoredBoard<C>* b, unsigned int depth) const;
-    Console* console;
+	const Console* console;
 
 };
 #endif

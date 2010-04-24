@@ -46,8 +46,8 @@ const BoardBase* RootBoard::setup(QString fen) {
 
 	QString piecePlacement, activeColor, castling, enPassant;
 	QTextStream str(&fen);
-	str >> piecePlacement >> activeColor >> castling >> enPassant >> boards[0].wb.fiftyMoves >> iMove;
-
+	str >> piecePlacement >> activeColor >> castling >> enPassant;
+	
 	BoardBase* board;
 	switch ( activeColor[0].toLatin1() ) {
 	case 'b':
@@ -65,6 +65,7 @@ const BoardBase* RootBoard::setup(QString fen) {
 	}
 
 	board->init();
+	str >> board->fiftyMoves >> iMove;
 
 	unsigned int p,x,y;
 	for ( p=0, x=0, y=7; p<(unsigned int)piecePlacement.length(); p++, x++ ) {
@@ -164,4 +165,14 @@ void RootBoard::divide(unsigned int depth) const {
 		divide<White>(&boards[iMove].wb, depth);
 	else
 		divide<Black>(&boards[iMove].bb, depth);
+}
+
+template<>
+const ColoredBoard<White>* RootBoard::currentBoard<White>() const {
+	return &boards[iMove].wb;
+}
+
+template<>
+const ColoredBoard<Black>* RootBoard::currentBoard<Black>() const {
+	return &boards[iMove].bb;
 }

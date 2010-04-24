@@ -9,6 +9,7 @@
 #include "coloredboard.h"
 #include "generateMoves.tcc"
 #include "coloredboard.tcc"
+#include "perft.h"
 
 template<Colors C>
 Score<C> RootBoard::search(const ColoredBoard<(Colors)-C>* const prev, const Move m, const unsigned int depth, Score<C> alpha, const Score<C> beta, const SearchFlag f) const {
@@ -70,8 +71,7 @@ Score<C> RootBoard::qsearch(const ColoredBoard<(Colors)-C>* const prev, const Mo
 
 template<Colors C>
 Score<C> RootBoard::rootSearch() {
-
-	const ColoredBoard<C>* const b = (const ColoredBoard<C>*)boards;
+	const ColoredBoard<C>* const b = currentBoard<C>();//color == White ? &boards[iMove].wb : &boards[iMove].bb;
 
 	Move firstMove[nMaxMoves];
 	Move* lastMove = b->generateMoves(firstMove);
@@ -141,16 +141,14 @@ void RootBoard::divide(const ColoredBoard<C>* b, unsigned int depth) const {
 
 
 template<Colors C>
-uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth) const {
-	ColoredBoard<C> b;
+uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth) const {
+//	if (depth == 4) return Perft<C, 4>::perft(prev, m);
+	const ColoredBoard<C> b(prev, m);
 	Move list[256];
 
-	prev->doMove(&b, m);
-	
 	Move* end = b.generateMoves(list);
 
-	if (depth == 1)
-		return end-list;
+	if (depth == 1) return end-list;
 
 	uint64_t n=0;
 	for (Move* i = list; i<end; ++i) {

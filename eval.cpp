@@ -11,6 +11,7 @@
 #include "eval.h"
 #include "boardbase.h"
 
+int squareControl[nSquares];
 //void sigmoid(Score* p, unsigned int n, double start, double end, double dcenter, double width) {
 //	double t0 = -0.5*n-dcenter;
 //	double t1 = 0.5*n-dcenter;

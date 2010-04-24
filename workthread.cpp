@@ -7,7 +7,6 @@
 #include <pch.h>
 
 #include "workthread.h"
-#include "board.h"
 #include "jobs.h"
 
 WorkThread::WorkThread():
@@ -37,10 +36,10 @@ void WorkThread::run() {
 		mutex->unlock();
 
 		job->job();
-			
+		//TODO result broadcast etc. here, wait
 		mutex->lock();
 		isStopped = true;
-		stopped.wakeOne();
+		stopped.wakeOne();		// wake stop()
 		mutex->unlock();
 	}
 }
