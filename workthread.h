@@ -17,7 +17,7 @@ class Job;
 class RootBoard;
 
 class WorkThread: public QThread {
-	QWaitCondition stopped, startable, starting;
+	QWaitCondition startable, starting;
 	QMutex* mutex;
 	volatile bool doStop;
 	volatile bool keepRunning;
@@ -38,6 +38,7 @@ public:
 	void startJob(Job* = NULL);
 	void setJob(Job*);
 	void *operator new (size_t s);
+	bool isFree();
 };
 
 #endif /* WORKTHREAD_H_ */

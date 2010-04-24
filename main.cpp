@@ -19,7 +19,6 @@ int main(int argc, char *argv[])
 #else
     QCoreApplication app(argc, argv);
 #endif
-	qDebug() << QThread::currentThread();
     Console console(&app);
     return app.exec();
 }

@@ -27,7 +27,7 @@
 template< typename T > class Result
 {
 	T value;
-	unsigned int notReady;
+	volatile unsigned int notReady;
 	QMutex valueMutex;
 	QWaitCondition readyCond;
 	QMutex readyMutex;

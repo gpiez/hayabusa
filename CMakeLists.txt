@@ -14,7 +14,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 enable_language(ASM-FASM)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -Wno-parentheses")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=core2 -fno-exceptions -Winline -ffast-math -fverbose-asm")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=core2 -fno-exceptions -Winline")
+
+# SSSE3 (Note the additional S) is mandatory because of the pshufb instruction.
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mssse3")
 
 FIND_PACKAGE(Qt4 COMPONENTS QtCore REQUIRED)
 FIND_PACKAGE(PrecompiledHeaders)
@@ -31,12 +34,12 @@ if(HUGE_PAGES)
 	endif(HUGE_BDT)
 ENDIF(HUGE_PAGES)
 
-IF(CMAKE_COMPILER_IS_GNUCC)
-  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fmessage-length=0 -fdiagnostics-show-location=every-line")
-ENDIF(CMAKE_COMPILER_IS_GNUCC)
-IF(CMAKE_COMPILER_IS_GNUCXX)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmessage-length=0 -fdiagnostics-show-location=every-line")
-ENDIF(CMAKE_COMPILER_IS_GNUCXX)
+#IF(CMAKE_COMPILER_IS_GNUCC)
+#  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fmessage-length=0 -fdiagnostics-show-location=every-line")
+#ENDIF(CMAKE_COMPILER_IS_GNUCC)
+#IF(CMAKE_COMPILER_IS_GNUCXX)
+#  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmessage-length=0 -fdiagnostics-show-location=every-line")
+#ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 SET(USE_QTGUI FALSE CACHE BOOL "Build the QT interface")
 IF (USE_QTGUI)
@@ -52,7 +55,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 SET(hayabusa_SRCS rootboard.cpp joblist.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
                   move.cpp transpositiontable.cpp setpiece.asm offsets.inc)
-SET(hayabusa_MOC_H console.h)
+SET(hayabusa_MOC_H jobs.h console.h)
 SET(hayabusa_UIS mainwindow.ui)
 SET(hayabusa_RCCS hayabusa.qrc)
 
@@ -74,8 +77,6 @@ add_custom_command(
     DEPENDS ${offsets_SRCS} offsets boardbase.h)
 
 INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mssse3")
 
 QT4_WRAP_CPP( hayabusa_MOC_SRCS ${hayabusa_MOC_H} )
 QT4_WRAP_CPP( test_MOC_SRCS ${test_MOC_H} )

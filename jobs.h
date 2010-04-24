@@ -17,53 +17,79 @@
 #include "boardbase.h"
 #include "rootboard.tcc"
 
+template<typename T> class Result;
+
 struct Job {
 	virtual void job() = 0;
 };
 
+struct signalJob: public QObject, public Job {
+	Q_OBJECT
+signals:
+    void result(QString arg1);
+};
+
 template<Colors C>
-class RootSearchJob: public Job {
+class RootSearchJob: public signalJob {
 	RootBoard* rb;
+	
 public:
 	RootSearchJob(RootBoard* rb): rb(rb) {};
 	void job() {
-		rb->rootSearch<C>();
+		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
+		Move m = rb->rootSearch<C>();
+		emit(result(m.string()));
 	}
 };
 
 template<Colors C>
 class PerftJob: public Job {
 	RootBoard* rb;
-	BoardBase* b;
+	Result<uint64_t>* n;
+	const ColoredBoard<(Colors)-C>* b;
+	Move m;
 	unsigned int depth;
 public:
-	PerftJob(RootBoard* rb, ColoredBoard<C>* b, unsigned int depth): rb(r), b(b), depth(depth) {};
+	PerftJob(RootBoard* rb, Result<uint64_t>* n, const ColoredBoard<(Colors)-C>* b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
 	void job() {
-		uint64_t result=rb->perft(b, depth);
-		
+		rb->perft<C>(n, b, m, depth);
+	}
+};
+
+template<Colors C>
+class RootPerftJob: public signalJob {
+	RootBoard* rb;
+	unsigned int depth;
+	
+public:
+	RootPerftJob(RootBoard* rb, unsigned int depth): rb(rb), depth(depth) {};
+	void job() {
+		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
+		uint64_t n=rb->rootPerft<C>(depth);
+		emit(result(QString("%1").arg(n)));		
 	}
 };
 
 class DivideJob: public Job {
+	RootBoard* rb;
 	unsigned int depth_;
 public:
 	DivideJob(unsigned int depth): depth_(depth) {};
-	void job(Board* b) {
-		b->divide(depth_);
+	void job() {
+		rb->divide(depth_);
 	}
 };
 
 
 class SearchJob: public Job {
 	unsigned int depth;
-	Board* parent;
 	BoardBase* current;
 	RootBoard* rb;
 public:
 	SearchJob(unsigned int depth, RootBoard* rb): depth(depth), rb(rb) {};
-	void job(Board*) {
-		rb->rootSearch(depth);
+	void job() {
+//		rb->rootSearch(depth);
 	}
 };
-*/
+
 #endif /* JOBS_H_ */

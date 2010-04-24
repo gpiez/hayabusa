@@ -21,7 +21,7 @@ Type=Native Application
 
 [Launch][Launch Configuration 0][Data]
 Arguments=
-Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a\x00\x00\x00\x08\x00t\x00e\x00s\x00t)
 Dependency Action=Build
 EnvironmentGroup=default
 Project Target=hayabusa,test
@@ -36,10 +36,20 @@ Type=Native Application
 
 [Launch][Launch Configuration 1][Data]
 Arguments=
-Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
-Dependency Action=Nothing
+Debugger Shell=
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a)
+Dependency Action=Build
+Display Demangle Names=true
+Display Static Members=false
 EnvironmentGroup=default
+Floating Toolbar=false
+GDB Path=file:///usr/bin/gdb
 Project Target=hayabusa,hayabusa
+Remote GDB Config Script=
+Remote GDB Run Script=
+Remote GDB Shell Script=
+Separate Terminal For Application IO=true
+Try Setting Breakpoints On Loading Libraries=true
 Working Directory=file:///home/gpiez/src/hayabusa/Release
 isExecutable=false
 

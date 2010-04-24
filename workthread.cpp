@@ -30,46 +30,45 @@ void WorkThread::run() {
 
 		mutex->lock();
 		doStop = false;
-		startable.wakeOne();
+		isStopped = true;
+		startable.wakeAll();
 		starting.wait(mutex);
 		isStopped = false;
 		mutex->unlock();
-
-		job->job();
-		//TODO result broadcast etc. here, wait
-		mutex->lock();
-		isStopped = true;
-		stopped.wakeOne();		// wake stop()
-		mutex->unlock();
+//        qDebug() << "execute" << (const void*)job;
+        job->job();             //returning the result must have happened here.
 	}
 }
 
 void WorkThread::stop() {
 	mutex->lock();
-	if (!isStopped) {
+	while (!isStopped) {
 		doStop = true;
-		stopped.wait(mutex);	//waits until the end of the run loop is reached.
+		startable.wait(mutex);	//waits until the end of the run loop is reached.
 	}
 	mutex->unlock();
 }
 
 void WorkThread::startJob(Job *j) {
+//    qDebug() << "startJob" << (const void*)j;
 	ASSERT(j);
-	stop();
+	ASSERT(isStopped);
 	delete job;
 	job = j;
-	mutex->lock();
-	if (doStop)
-		startable.wait(mutex);	//we are somewhere at the run loop. Wait until in a defined state.
+//	mutex->lock();
+//	if (doStop)
+//		startable.wait(mutex);	//we are somewhere at the run loop. Wait until in a defined state.
 	starting.wakeOne();
-	mutex->unlock();
+//	mutex->unlock();
 }
 
 void WorkThread::end() {
 	mutex->lock();
 	keepRunning = false;
 	doStop = true;
-	stopped.wait(mutex);
+	delete job;
+//	job = new VoidJob();
+	starting.wakeOne();
 	mutex->unlock();
 }
 
@@ -83,4 +82,12 @@ void* WorkThread::operator new (size_t s) {
 	void *p;
 	posix_memalign(&p, CACHE_LINE_SIZE, s);
 	return p;
+}
+
+bool WorkThread::isFree() {
+	mutex->lock();
+	bool ret = isStopped;
+	isStopped = false;		// return true only once
+	mutex->unlock();
+	return ret;
 }

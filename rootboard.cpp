@@ -153,13 +153,22 @@ void RootBoard::go(QStringList )
 	threads.first()->startJob(job);
 }
 
-uint64_t RootBoard::perft(unsigned int depth) const {
+void RootBoard::perft(unsigned int depth) {
 	if (color == White)
-		return perft<White>(&boards[iMove].wb, depth);
+		threads.first()->startJob(new RootPerftJob<White>(this, depth));
 	else
-		return perft<Black>(&boards[iMove].bb, depth);
+		threads.first()->startJob(new RootPerftJob<Black>(this, depth));
 }
 
+/*uint64_t RootBoard::perft2(unsigned int depth) const {
+	Result<uint64_t> n=0;
+	if (color == White)
+		perft<White>(&n, &boards[iMove].wb, depth);
+	else
+		perft<Black>(&n, &boards[iMove].bb, depth);
+	return n.get();
+}
+*/
 void RootBoard::divide(unsigned int depth) const {
 	if (color == White)
 		divide<White>(&boards[iMove].wb, depth);
@@ -175,4 +184,12 @@ const ColoredBoard<White>* RootBoard::currentBoard<White>() const {
 template<>
 const ColoredBoard<Black>* RootBoard::currentBoard<Black>() const {
 	return &boards[iMove].bb;
+}
+
+WorkThread* RootBoard::findFreeThread() {
+	QMutexLocker locker(&threadsLock);
+	foreach(WorkThread* th, threads) 
+		if (th->isFree())
+			return th;
+	return 0;
 }

@@ -23,6 +23,7 @@ Console::Console(QCoreApplication* parent):
 {
 	BoardBase::initTables();
 	board = new RootBoard(this);
+	board->setup();
 	
 	dispatcher["perft"] = &Console::perft;
 	dispatcher["divide"] = &Console::divide;
@@ -74,9 +75,7 @@ void Console::tryMove(QStringList cmd) {
 }
 
 void Console::perft(QStringList cmds) {
-//	stop();
-//	board->threads.first()->startJob(new PerftJob(cmds[1].toInt(), this));
-//	workThreads.first()->startJob();
+	board->perft(cmds[1].toInt()); // should be a job
 }
 
 void Console::divide(QStringList cmds) {
