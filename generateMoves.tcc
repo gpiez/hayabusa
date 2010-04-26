@@ -72,7 +72,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 		//special case where movin a pawn blocks a check
 		//move is only legal if it is not pinned
 		from = to - C*8;
-		if ( pieces[from] == C*Pawn ) {
+		if ( from < nSquares && pieces[from] == C*Pawn ) {
 			if (!isValid(detectPin(from))) {
 				if (isPromoRank(from)) {
 					*list++ = (Move) { from, to, 0, promoteQ };
