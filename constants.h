@@ -63,6 +63,7 @@ static const unsigned int nMaxGameLength = 5000; // maximum possible moves in a 
 static const int infinity = 10000;
 static const unsigned int maxDepth = 64;
 static const unsigned int splitDepth = 3;
+static const unsigned int transpositionTableAssoc = 4;
 static const unsigned int nPieces = 6;
 static const unsigned int nColors = 2;
 static const unsigned int nTotalPieces = nPieces*nColors + 1;	// -King,... -Pawn, 0, Pawn,... King

@@ -12,18 +12,21 @@
 #include "move.h"
 #include "ttentry.h"
 
+namespace Zobrist {
 typedef Key KeyTable[nTotalPieces][nSquares];
+extern KeyTable zobrist;  //12*64*8 = 6k
+}
 
+template<class TTEntry, unsigned assoc>
 class TranspositionTable {
-	static const unsigned int assoc = 2;
-	size_t size;
-	bool usesHugePages;
-	TTEntry* table;
-	size_t nEntries;
 	uint64_t mask;
+	size_t size;
+	size_t nEntries;
+	bool usesHugePages;
+	TTEntry* table;		// TODO remove indirection level
+//	TTEntry table;		// needs custom new operator
 
 public:
-	static KeyTable zobrist;  //12*64*8 = 6k
 
 	TranspositionTable();
 	~TranspositionTable();
@@ -32,6 +35,8 @@ public:
 	Key nextKey(Key k, Move m);
 	TTEntry* retrieve(Key) const;
 	void store(Key k, TTEntry entry);
+    void freeMemory();
 };
+
 
 #endif /* TRANSPOSITIONTABLE_H_ */

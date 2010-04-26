@@ -5,11 +5,14 @@
 #include "boardbase.tcc"
 //#include "rootboard.tcc"
 #include "jobs.h"
+#include "transpositiontable.h"
+#include "transpositiontable.tcc"
 
 RootBoard::RootBoard(Console *c):
 console(c)
 {
 	initWorkThreads();
+	tt = new TranspositionTable<TTEntry, transpositionTableAssoc>;
 }
 
 void RootBoard::initWorkThreads() {

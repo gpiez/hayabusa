@@ -78,7 +78,7 @@ void Console::perft(QStringList cmds) {
 	board->perft(cmds[1].toInt()); // should be a job
 }
 
-void Console::divide(QStringList cmds) {
+void Console::divide(QStringList /*cmds*/) {
 //	qDebug() << cmds;
 //	stop();
 //	board->threads.first()->startJob(new DivideJob(cmds[1].toInt()));

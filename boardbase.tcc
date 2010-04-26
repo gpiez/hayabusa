@@ -22,7 +22,7 @@ void BoardBase::setPiece(uint8_t piece, uint8_t pos) {
 	ASSERT(pos < 64);
 	ASSERT(pieces[pos] == 0);
 	pieceList[C<0].add(piece, pos);
-	zobrist ^= TranspositionTable::zobrist[C*piece + King][pos];
+	zobrist ^= Zobrist::zobrist[C*piece + King][pos];
 	as::setPiece(this, C*piece, pos);
 	for (unsigned int i = 0; i < 256; ++i) {
 		ASSERT(64 > ((uint8_t*)attLen)[i]);
@@ -36,7 +36,7 @@ void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t 
 	ASSERT(pos < 64);
 	ASSERT(pieces[pos] == C*piece);
 	pieceList[C<0].sub(piece, pos); //TODO copy piecelist here, not in doMove()
-	zobrist = prev->zobrist ^ TranspositionTable::zobrist[C*piece + King][pos];
+	zobrist = prev->zobrist ^ Zobrist::zobrist[C*piece + King][pos];
 	as::clrPiece(prev, this, C*piece, pos);  //TODO use black and white specialized asm functions
 	for (unsigned int i = 0; i < 256; ++i) {
 		ASSERT(64 > ((uint8_t*)attLen)[i]);

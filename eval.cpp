@@ -58,9 +58,9 @@ Eval::Eval() {
 	sigmoid(r_p, 50, -50, 12);
 	sigmoid(q_p, 50, -50, 12);
 
-	static RawScore bishopGoodD;
-	static RawScore bishopKnightD;
-	static RawScore bishopRookD;
+//	static RawScore bishopGoodD;
+//	static RawScore bishopKnightD;
+//	static RawScore bishopRookD;
 #ifndef NDEBUG
 	printSigmoid(n_p_ram, "n_p_ram"); 			// bonus for each pawn ram, max is 75
 	printSigmoid(n_p, "n_p");
@@ -90,15 +90,15 @@ RawScore Eval::pieces(const PieceList& pl) const {
 	return value;
 }
 
-RawScore Eval::pawns(const BoardBase& b) const {
+RawScore Eval::pawns(const BoardBase& ) const {
 	RawScore value = 0;
 
-	uint64_t wp = b.pieceList[0].bitBoard<Pawn>();
-	uint64_t bp = b.pieceList[1].bitBoard<Pawn>();
+//	uint64_t wp = b.pieceList[0].bitBoard<Pawn>();
+//	uint64_t bp = b.pieceList[1].bitBoard<Pawn>();
 
 	return value;
 }
 
-RawScore Eval::eval(const BoardBase& b) const {
+RawScore Eval::eval(const BoardBase& ) const {
 	return 0;
 }

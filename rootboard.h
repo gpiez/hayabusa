@@ -12,6 +12,7 @@
 class WorkThread;
 class SearchJob;
 class Console;
+template<class T, unsigned int U> class TranspositionTable;
 template<class T> class Result;
 
 class RootBoard: public Eval {
@@ -25,6 +26,7 @@ class RootBoard: public Eval {
 	Colors color;
 	QMutex threadsLock;
 	QLinkedList<SearchJob*> jobs;
+	TranspositionTable<TTEntry, transpositionTableAssoc>* tt;
 
 	struct {
 		ColoredBoard<White> wb;
@@ -39,6 +41,7 @@ class RootBoard: public Eval {
 	unsigned int getAndDecAvailableThreads();
 	
 public:
+	TranspositionTable<PerftEntry, 1>* pt;
 	QReadWriteLock jobsLock;
 	QVector<WorkThread*> threads;
 	

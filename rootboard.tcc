@@ -181,13 +181,13 @@ uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, co
 
 template<Colors C>
 void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth) {
-//	if (depth == 4) return Perft<C, 4>::perft(prev, m);
 	if (depth <= splitDepth) {
 		uint64_t n =  perft<C>(prev, m, depth);
 		result->update(n);
 		result->setReady();
 		return;
 	}
+
 	const ColoredBoard<C> b(prev, m);
 	Move list[256];
 

@@ -56,4 +56,11 @@ union TTEntry {
 	void zero() { data = 0; };
 };
 
+struct PerftEntry {
+	Key upperKey;
+	uint64_t data;
+
+	void zero() { data = 0; };
+};
+
 #endif /* TTENTRY_H_ */

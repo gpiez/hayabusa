@@ -52,7 +52,6 @@ void WorkThread::stop() {
 void WorkThread::startJob(Job *j) {
 //    qDebug() << "startJob" << (const void*)j;
 	ASSERT(j);
-	ASSERT(isStopped);
 	delete job;
 	job = j;
 //	mutex->lock();
