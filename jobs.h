@@ -20,6 +20,7 @@
 template<typename T> class Result;
 
 struct Job {
+	virtual ~Job() {};			// the for calling destructor of QObject in signalJob
 	virtual void job() = 0;
 };
 
@@ -64,9 +65,11 @@ class RootPerftJob: public signalJob {
 public:
 	RootPerftJob(RootBoard* rb, unsigned int depth): rb(rb), depth(depth) {};
 	void job() {
+		rb->pt = new TranspositionTable<PerftEntry, 1>;
 		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
 		uint64_t n=rb->rootPerft<C>(depth);
-		emit(result(QString("%1").arg(n)));		
+		emit(result(QString("%1").arg(n)));
+		delete rb->pt;
 	}
 };
 
