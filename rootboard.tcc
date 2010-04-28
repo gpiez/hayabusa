@@ -161,6 +161,7 @@ void RootBoard::divide(const ColoredBoard<C>* b, unsigned int depth) const {
 	xout << "Moves: " << end-list << endl << "Nodes: " << sum << endl;
 }
 
+extern uint64_t saved;
 
 template<Colors C>
 uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth) const {
@@ -172,15 +173,35 @@ uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, co
 
 	if (depth == 1) return end-list;
 
+	uint64_t n2 = 0;
+	bool n2invalid = true;
+	Key z = b.getZobrist();
+	PerftEntry* pe = pt->retrieve(z);
+	if (pe && pe->depth == depth) {
+		saved += pe->value;
+		n2 = pe->value;
+		n2invalid = false;
+//		return pe->value;
+	}
+
 	uint64_t n=0;
 	for (Move* i = list; i<end; ++i) {
 		n += perft<(Colors)-C>(&b, *i, depth-1);
 	}
+
+	ASSERT(n2invalid || n == n2);
+	PerftEntry temp;
+	temp.zero();
+	temp.depth |= depth;
+	temp.upperKey |= z >> temp.upperShift;
+	temp.value = n;
+	pt->store(z, temp );
 	return n;
 }
 
 template<Colors C>
-void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth) {
+void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth)
+{
 	if (depth <= splitDepth) {
 		uint64_t n =  perft<C>(prev, m, depth);
 		result->update(n);
@@ -189,8 +210,21 @@ void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* 
 	}
 
 	const ColoredBoard<C> b(prev, m);
-	Move list[256];
 
+	uint64_t n2 = 0;
+	bool n2invalid = true;
+	Key z = b.getZobrist();
+	PerftEntry* pe = pt->retrieve(z);
+	if (pe && pe->depth == depth) {
+		saved += pe->value;
+		n2 = pe->value;
+		n2invalid = false;
+//		result->update(pe->value);
+//		result->setReady();
+//		return;
+	}
+	
+	Move list[256];
 	Move* end = b.generateMoves(list);
 
 	Result<uint64_t> n(0);
@@ -204,6 +238,14 @@ void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* 
 		}
 
 	}
+
+	ASSERT(n2invalid || n.get() == n2);
+	PerftEntry temp;
+	temp.zero();
+	temp.depth |= depth;
+	temp.upperKey |= z >> temp.upperShift;
+	temp.value = n.get();
+	pt->store(z, temp );
 	result->update(n);
 	result->setReady();
 }
