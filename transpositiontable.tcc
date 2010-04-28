@@ -19,7 +19,7 @@ TranspositionTable<Entry, assoc>::TranspositionTable() :
 	usesHugePages(false),
 	table(NULL)
 {
-	setSize(0x200000);
+	setSize(0x20000000);
 }
 
 template<typename Entry, unsigned int assoc>
@@ -43,25 +43,21 @@ void TranspositionTable<Entry, assoc>::freeMemory() {
 template<typename Entry, unsigned int assoc>
 Entry* TranspositionTable<Entry, assoc>::retrieve(Key k) const {
 	Entry* subTable = &table[k & mask];
-	Key upperKey = ((Entry*) &k)->upperKey;
-	for (unsigned int i = 0; i < assoc; ++i)
-		if (subTable[i].upperKey == upperKey)
+	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
+	for (unsigned int i = 0; i < assoc; ++i)		//TODO compare all keys simultaniously suing sse
+		if (subTable[i].upperKey == upperKey) {
+			//TODO rotate to first position
 			return &subTable[i];
-
+		}
 	return 0;
 }
 
 template<typename Entry, unsigned int assoc>
 void TranspositionTable<Entry, assoc>::store(Key k, Entry entry) {
 	Entry* subTable = &table[k & mask];
-	Key upperKey = ((Entry*) &k)->upperKey;
-	entry.upperKey |= upperKey;
-	unsigned int depth;
-	for (unsigned int i = 0; i < assoc; ++i)
-		if (subTable[i].data & Entry::mupperKey == upperKey)
-			if (subTable[i]->depth < entry->depth) {
-				// TODO replace
-			}
+	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
+	ASSERT(entry.upperKey == upperKey);
+	subTable[assoc-1] = entry;
 }
 
 template<typename Entry, unsigned int assoc>
@@ -79,22 +75,24 @@ void TranspositionTable<Entry, assoc>::setSize(size_t s)
 	s |= s >> 32;
 	s++;
 	s >>= 1;
-
+	size = s;
+	
 	while (!table) {
 		nEntries = s/sizeof(Entry);
 #		ifdef HAVE_HUGE_PAGES
 			table = (Entry *) get_huge_pages(s, GHP_DEFAULT);
 			usesHugePages = true;
 			if (table) break;
-			qWarning() << "Could not allocate " << size << "bytes in huge pages";
+			qWarning() << "Could not allocate" << size << "bytes in huge pages";
 #       endif
 		table = new Entry[nEntries];
 		usesHugePages = false;
 		if (table) break;
-		qWarning() << "Could not allocate " << size << "bytes";
+		qWarning() << "Could not allocate" << size << "bytes";
 		s >>= 1;
 	}
-	mask = (nEntries-assoc) * sizeof(Entry);
+	memset(table, 0, size);
+	mask = nEntries-assoc;
 }
 
 #endif
