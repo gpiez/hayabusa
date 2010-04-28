@@ -176,12 +176,13 @@ uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, co
 	uint64_t n2 = 0;
 	bool n2invalid = true;
 	Key z = b.getZobrist();
-	PerftEntry* pe = pt->retrieve(z);
-	if (pe && pe->depth == depth) {
-		saved += pe->value;
-		n2 = pe->value;
+	PerftEntry* pe = pt->getEntry(z);
+	const PerftEntry* subentry = pt->retrieve(pe, z);
+	if (subentry && subentry->depth == depth) {
+		saved += subentry->value;
+		n2 = subentry->value;
 		n2invalid = false;
-//		return pe->value;
+		return subentry->value;
 	}
 
 	uint64_t n=0;
@@ -195,7 +196,7 @@ uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, co
 	temp.depth |= depth;
 	temp.upperKey |= z >> temp.upperShift;
 	temp.value = n;
-	pt->store(z, temp );
+	pt->store(pe, temp );
 	return n;
 }
 
@@ -214,14 +215,15 @@ void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* 
 	uint64_t n2 = 0;
 	bool n2invalid = true;
 	Key z = b.getZobrist();
-	PerftEntry* pe = pt->retrieve(z);
-	if (pe && pe->depth == depth) {
-		saved += pe->value;
-		n2 = pe->value;
+	PerftEntry* pe = pt->getEntry(z);
+	const PerftEntry* subentry = pt->retrieve(pe, z);
+	if (subentry && subentry->depth == depth) {
+		saved += subentry->value;
+		n2 = subentry->value;
 		n2invalid = false;
-//		result->update(pe->value);
-//		result->setReady();
-//		return;
+		result->update(subentry->value);
+		result->setReady();
+		return;
 	}
 	
 	Move list[256];
@@ -245,7 +247,7 @@ void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* 
 	temp.depth |= depth;
 	temp.upperKey |= z >> temp.upperShift;
 	temp.value = n.get();
-	pt->store(z, temp );
+	pt->store(pe, temp );
 	result->update(n);
 	result->setReady();
 }

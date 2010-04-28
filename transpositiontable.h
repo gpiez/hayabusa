@@ -18,13 +18,13 @@ extern KeyTable zobrist;  //12*64*8 = 6k
 void initTables();
 }
 
-template<class TTEntry, unsigned assoc>
+template<class Entry, unsigned assoc>
 class TranspositionTable {
 	uint64_t mask;
 	size_t size;
 	size_t nEntries;
 	bool usesHugePages;
-	TTEntry* table;		// TODO remove indirection level
+	Entry* table;		// TODO remove indirection level
 //	TTEntry table;		// needs custom new operator
 
 public:
@@ -34,8 +34,9 @@ public:
 
 	void setSize(size_t s);
 	Key nextKey(Key k, Move m);
-	TTEntry* retrieve(Key) const;
-	void store(Key k, TTEntry entry);
+	Entry* getEntry(Key k) const;
+	const Entry* retrieve(const Entry* subTable, Key k) const;
+	void store(Entry* subTable, Entry entry) const;
     void freeMemory();
 };
 

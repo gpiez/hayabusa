@@ -5,7 +5,7 @@
 #include <pch.h>
 #endif
 
-#include <transpositiontable.h>
+#include "transpositiontable.h"
 
 #ifdef HAVE_HUGE_PAGES
 extern "C" {
@@ -41,8 +41,12 @@ void TranspositionTable<Entry, assoc>::freeMemory() {
 }
 
 template<typename Entry, unsigned int assoc>
-Entry* TranspositionTable<Entry, assoc>::retrieve(Key k) const {
-	Entry* subTable = &table[k & mask];
+Entry* TranspositionTable<Entry, assoc>::getEntry(Key k) const {
+	return &table[k & mask];
+}
+
+template<typename Entry, unsigned int assoc>
+const Entry* TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k) const {
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
 	for (unsigned int i = 0; i < assoc; ++i)		//TODO compare all keys simultaniously suing sse
 		if (subTable[i].upperKey == upperKey) {
@@ -53,10 +57,7 @@ Entry* TranspositionTable<Entry, assoc>::retrieve(Key k) const {
 }
 
 template<typename Entry, unsigned int assoc>
-void TranspositionTable<Entry, assoc>::store(Key k, Entry entry) {
-	Entry* subTable = &table[k & mask];
-	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
-	ASSERT(entry.upperKey == upperKey);
+void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry) const {
 	subTable[assoc-1] = entry;
 }
 
