@@ -22,6 +22,7 @@ Console::Console(QCoreApplication* parent):
 	cout(stdout, QIODevice::WriteOnly)
 {
 	BoardBase::initTables();
+	Zobrist::initTables();
 	board = new RootBoard(this);
 	board->setup();
 	
@@ -48,6 +49,7 @@ Console::~Console()
 }
 
 void Console::getResult(QString result) {
+	answer = result;
 	cout << result << endl;
 }
 
@@ -122,4 +124,13 @@ void Console::ponderhit(QStringList /*cmds*/) {
 
 void Console::quit(QStringList /*cmds*/) {
 	app->quit();
+}
+
+QString Console::getAnswer() {
+	answer = QString("");
+	while(answer == "") {
+		app->processEvents();
+		sleep(1);
+	}
+	return answer;
 }

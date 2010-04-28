@@ -35,6 +35,7 @@ class Console: public QObject {
 private:
 	QCoreApplication* app;
 	RootBoard* board;
+	QString answer;
 	
 public:
 	QTextStream cin;
@@ -48,6 +49,7 @@ public slots:
 	void dataArrived();
 	void delayedEnable();
 	void getResult(QString);
+	QString getAnswer();
 	
 signals:
 	void send(QString);
