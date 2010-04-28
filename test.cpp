@@ -12,6 +12,7 @@
 #include "console.h"
 #include "rootboard.tcc"
 #include "generateMoves.tcc"
+#include "transpositiontable.tcc"
 
 void TestRootBoard::initTestCase() {
 	BoardBase::initTables();
@@ -184,15 +185,20 @@ void TestRootBoard::generateCaptures() {
 */
 	b->setup();
 	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
-	QCOMPARE( b->perft<White>(b->currentBoard<White>(), 6), (uint64_t)119060324);
+	b->threads.first()->startJob(new RootPerftJob<White>(b, 6));
+	QCOMPARE( b->console->getAnswer(), QString("119060324"));
 	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 119060324/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
+
 	b->setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
 	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
-	QCOMPARE( b->perft<White>(b->currentBoard<White>(), 5), (uint64_t)193690690);
+	b->threads.first()->startJob(new RootPerftJob<White>(b, 5));
+	QCOMPARE( b->console->getAnswer(), QString("193690690"));
 	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 193690690/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
+
 	b->setup("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
 	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
-	QCOMPARE( b->perft<White>(b->currentBoard<White>(), 7), (uint64_t)178633661);
+	b->threads.first()->startJob(new RootPerftJob<White>(b, 7));
+	QCOMPARE( b->console->getAnswer(), QString("178633661"));
 	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 178633661/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
 	//cout << sum << endl;
 }
