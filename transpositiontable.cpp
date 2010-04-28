@@ -28,7 +28,7 @@ void initTables() {
 					^ (uint64_t) rand() << 40
 					^ (uint64_t) rand() << 48
 					^ (uint64_t) rand() << 56;
-				} while (popcount(r) >= 30 && popcount(r) <= 33);
+				} while (popcount(r) >= 29 && popcount(r) <= 36);
 				zobrist[p+nPieces][i] = r;
 			} else {
 				zobrist[p+nPieces][i] = 0;				
