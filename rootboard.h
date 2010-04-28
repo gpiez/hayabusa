@@ -58,7 +58,7 @@ public:
 	template<Colors C> void perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth);
 	void divide(unsigned int depth) const;
 	template<Colors C> void divide(const ColoredBoard<C>* b, unsigned int depth) const;
-	const Console* console;
+	Console* console;
 
 };
 #endif

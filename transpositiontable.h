@@ -15,6 +15,7 @@
 namespace Zobrist {
 typedef Key KeyTable[nTotalPieces][nSquares];
 extern KeyTable zobrist;  //12*64*8 = 6k
+void initTables();
 }
 
 template<class TTEntry, unsigned assoc>

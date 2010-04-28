@@ -57,6 +57,8 @@ public:
 	}
 };
 
+extern uint64_t saved;
+
 template<Colors C>
 class RootPerftJob: public signalJob {
 	RootBoard* rb;
@@ -69,6 +71,7 @@ public:
 		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
 		uint64_t n=rb->rootPerft<C>(depth);
 		emit(result(QString("%1").arg(n)));
+		qDebug() << saved;
 		delete rb->pt;
 	}
 };

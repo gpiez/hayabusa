@@ -12,7 +12,8 @@
 WorkThread::WorkThread():
 	doStop(true),
 	keepRunning(true),
-	isStopped(true)
+	isStopped(true),
+	job(NULL)
 {
 	mutex = new QMutex;
 	board.init();
