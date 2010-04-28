@@ -5,8 +5,8 @@ BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x
 BuildDirs[$e]=$HOME/src/hayabusa/Debug/,$HOME/src/hayabusa/Release
 CMakeDir=/usr/share/cmake/Modules
 Current CMake Binary=file:///usr/bin/cmake
-CurrentBuildDir=file:///home/gpiez/src/hayabusa/Debug/
-CurrentBuildType=Debug
+CurrentBuildDir=file:///home/gpiez/src/hayabusa/Release
+CurrentBuildType=Release
 CurrentInstallDir=file:///usr/local
 ProjectRootRelative=./
 

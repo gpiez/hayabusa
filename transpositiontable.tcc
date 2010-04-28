@@ -19,7 +19,7 @@ TranspositionTable<Entry, assoc>::TranspositionTable() :
 	usesHugePages(false),
 	table(NULL)
 {
-	setSize(0x20000000);
+	setSize(0x100000000);
 }
 
 template<typename Entry, unsigned int assoc>
@@ -46,8 +46,9 @@ Entry* TranspositionTable<Entry, assoc>::getEntry(Key k) const {
 }
 
 template<typename Entry, unsigned int assoc>
-const Entry* TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k) const {
+const Entry* TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k) {
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
+	QReadLocker locker(&tt);
 	for (unsigned int i = 0; i < assoc; ++i)		//TODO compare all keys simultaniously suing sse
 		if (subTable[i].upperKey == upperKey) {
 			//TODO rotate to first position
@@ -57,8 +58,12 @@ const Entry* TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, K
 }
 
 template<typename Entry, unsigned int assoc>
-void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry) const {
-	subTable[assoc-1] = entry;
+void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry) {
+	if (entry.depth >= subTable[assoc-1].depth) {
+		tt.lockForWrite();;
+		subTable[assoc-1] = entry;
+		tt.unlock();
+	}
 }
 
 template<typename Entry, unsigned int assoc>
@@ -92,7 +97,7 @@ void TranspositionTable<Entry, assoc>::setSize(size_t s)
 		qWarning() << "Could not allocate" << size << "bytes";
 		s >>= 1;
 	}
-	memset(table, 0, size);
+	//memset(table, 0, size);
 	mask = nEntries-assoc;
 }
 

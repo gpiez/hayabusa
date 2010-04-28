@@ -20,7 +20,7 @@ console(c)
 void RootBoard::initWorkThreads() {
 	numThreads = sysconf(_SC_NPROCESSORS_ONLN);
 	if (numThreads == 0) numThreads = 1;
-	allocateWorkThreads(numThreads);
+	allocateWorkThreads(numThreads-1);
 }
 
 void RootBoard::allocateWorkThreads(unsigned int numThreads) {

@@ -20,11 +20,12 @@ void initTables();
 
 template<class Entry, unsigned assoc>
 class TranspositionTable {
+	Entry* table;		// TODO remove indirection level
 	uint64_t mask;
+	QReadWriteLock tt;
 	size_t size;
 	size_t nEntries;
 	bool usesHugePages;
-	Entry* table;		// TODO remove indirection level
 //	TTEntry table;		// needs custom new operator
 
 public:
@@ -35,8 +36,8 @@ public:
 	void setSize(size_t s);
 	Key nextKey(Key k, Move m);
 	Entry* getEntry(Key k) const;
-	const Entry* retrieve(const Entry* subTable, Key k) const;
-	void store(Entry* subTable, Entry entry) const;
+	const Entry* retrieve(const Entry* subTable, Key k);
+	void store(Entry* subTable, Entry entry);
     void freeMemory();
 };
 
