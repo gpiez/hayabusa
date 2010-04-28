@@ -34,11 +34,11 @@ struct BoardBase {
 	PieceList 	pieceList[nColors];				//0x040
 	Key zobrist;
 	unsigned int fiftyMoves;
-	RawScore pieceSquare;
-	uint8_t enPassant;
 	struct {
 		bool q,k;
 	} castling[nColors];
+	RawScore pieceSquare;
+	uint8_t enPassant;
 
 	static void initTables();
 
