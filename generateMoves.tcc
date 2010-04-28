@@ -87,8 +87,8 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			from = to - C*16;
 			if ( isRank<2>(from) & pieces[from] == C*Pawn & pieces[to-C*8] == 0 )
 				if (!isValid(detectPin(from))) {
-					bool pawnadj = ((from & 7) != 7 && pieces[from+1] == -C*Pawn)
-								|| ((from & 7) != 0 && pieces[from-1] == -C*Pawn);
+					bool pawnadj = ((to & 7) != 7 && pieces[to+1] == -C*Pawn)
+								|| ((to & 7) != 0 && pieces[to-1] == -C*Pawn);
 					*list++ = (Move) { from, to, 0, pawnadj ? enableEP:nothingSpecial };
 				}
 
@@ -343,9 +343,9 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 			*list++ = (Move) {from, to, 0, 0};
 			to = from + C * 16;
 			if (isRank<2> (from) && !pieces[to]) {
-				bool pawnadj = ((from & 7) != 7 && pieces[from+1] == -C*Pawn)
- 							|| ((from & 7) != 0 && pieces[from-1] == -C*Pawn);
-				*list++ = (Move) {from, to, 0, pawnadj ? enableEP:0};
+				bool pawnadj = ((to & 7) != 7 && pieces[to+1] == -C*Pawn)
+ 							|| ((to & 7) != 0 && pieces[to-1] == -C*Pawn);
+				*list++ = (Move) {from, to, 0, pawnadj ? enableEP:nothingSpecial};
 				continue; // if a pawn has made a double step, skip the en passant check
 			}
 		}
