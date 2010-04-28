@@ -36,7 +36,8 @@ public:
 	Move* generateCaptureMoves(Move* list) const;
 	Move* generateMoves(Move* list) const;
 	void doMove(ColoredBoard<(Colors)-C>* next, Move m) const;
-
+	Key getZobrist() const;
+	
 private:
 	
 	uint8_t detectPin( unsigned int pos) const;

@@ -61,14 +61,14 @@ bool ColoredBoard<C>::attackedBy(uint8_t pos) {
 }
 
 template<Colors C>
-void  ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m) const {
+void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m) const {
 	copyPieces(next);
 	uint8_t piece = C*pieces[m.from];
 	next->copyBoardClrPiece<C>(this, piece, m.from);
 	next->enPassant = 0;
 	next->castling[0] = castling[0];
 	next->castling[1] = castling[1];
-
+	
 	next->fiftyMoves = m.capture!=0 | piece==5 ? 0:fiftyMoves+1;
 	ASSERT(C*m.capture <= King);
 	
@@ -125,7 +125,11 @@ void  ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m) const {
 	if (m.capture)
 		next->clrPiece<(Colors)-C>(-C*m.capture, m.to);
 	next->setPiece<C>(piece, m.to);
+}
 
+template<Colors C>
+Key ColoredBoard<C>::getZobrist() const {
+	return zobrist ^ castling[0].q ^ castling[1].q << 1 ^ castling[0].k << 2 ^ castling[1].k << 3 ^ enPassant << 4 ^ C;
 }
 
 #endif /* COLOREDBOARD_TCC_ */
