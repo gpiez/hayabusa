@@ -15,9 +15,9 @@ extern "C" {
 
 template<typename Entry, unsigned int assoc>
 TranspositionTable<Entry, assoc>::TranspositionTable() :
+	table(NULL),
 	size(0),
-	usesHugePages(false),
-	table(NULL)
+	usesHugePages(false)
 {
 	setSize(0x100000000);
 }
