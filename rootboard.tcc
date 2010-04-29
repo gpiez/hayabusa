@@ -185,7 +185,7 @@ uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, co
 		saved += subentry->value;
 		n2 = subentry->value;
 		n2invalid = false;
-//		return subentry->value;
+		return subentry->value;
 	}
 
 	uint64_t n=0;
@@ -224,9 +224,9 @@ void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* 
 		saved += subentry->value;
 		n2 = subentry->value;
 		n2invalid = false;
-//		result->update(subentry->value);
-//		result->setReady();
-//		return;
+		result->update(subentry->value);
+		result->setReady();
+		return;
 	}
 	
 	Move list[256];
