@@ -201,15 +201,18 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		unsigned int attDir2 = ~0;
 		/*
 		 * Test if attacked by a single piece. The king can at most be attacked by two pieces, so
-		 * here are at least one and at most two bits set. The two pieces are guaranteed to be
-		 * different, so a parity check does work in deciding if we have a double check.
+		 * here are at least one and at most two bits set. The two pieces are not guaranteed to be
+		 * different, because a pawn may uncover a check and promote to the same piece. So a parity
+		 * check does not work in deciding if we have a double check.
 		 * If so, skip to the king moves, no other moves are legal
 		 * first check for a attack from a sliding piece. in this case all moves with destination
 		 * to a square between the king and the attacking piece or destination attacking piece are
 		 * allowed.
 		 */
+		LAttack doubleAttack = { 2, 2, 2 };
+		
 		ASSERT(__builtin_popcount(kingAttacks) <= 2);
-		if (__builtin_parity(kingAttacks)) {
+		if (__builtin_parity(kingAttacks) && !(kingAttacks.l & doubleAttack) ) {
 
 			/* Test if attacked by a sliding piece. Find opposite direction of the attack.
 			 * Besides evading moves (which are genreated later), the only Legal moves are moves
