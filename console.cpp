@@ -77,14 +77,11 @@ void Console::tryMove(QStringList cmd) {
 }
 
 void Console::perft(QStringList cmds) {
-	board->perft(cmds[1].toInt()); // should be a job
+	board->perft(cmds[1].toInt()); 
 }
 
-void Console::divide(QStringList /*cmds*/) {
-//	qDebug() << cmds;
-//	stop();
-//	board->threads.first()->startJob(new DivideJob(cmds[1].toInt()));
-//	workThreads.first()->startJob();
+void Console::divide(QStringList cmds) {
+	board->divide(cmds[1].toInt());
 }
 
 void Console::uci(QStringList /*cmds*/) {
@@ -108,8 +105,10 @@ void Console::ucinewgame(QStringList /*cmds*/) {
 void Console::position(QStringList cmds) {
 	if (cmds[1] == "startpos")
 		board->setup();
-	else
-		board->setup(cmds[1]);
+	else {
+		cmds.removeFirst();
+		board->setup(cmds.join(" "));
+	}
 }
 
 void Console::go(QStringList cmds) {

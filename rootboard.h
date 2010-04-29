@@ -37,6 +37,7 @@ class RootBoard: public Eval {
 	void allocateWorkThreads(unsigned int);
 	void stop();
 	template<Colors C> const ColoredBoard<C>* currentBoard() const;
+	template<Colors C> ColoredBoard<C>* currentBoard();
     WorkThread* findFreeThread();
 	unsigned int getAndDecAvailableThreads();
 	
@@ -52,12 +53,13 @@ public:
 	template<Colors C> Score<C> search(const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth, Score<C> alpha, Score<C> beta, SearchFlag f) const;
 	template<Colors C> Score<C> qsearch(const ColoredBoard<(Colors)-C>* prev, Move m, const WorkThread*, Score<C> alpha, Score<C> beta) const;
 	void perft(unsigned int depth);
+	void divide(unsigned int depth);
 	template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
 	template<Colors C> uint64_t rootPerft(unsigned int depth);
+	template<Colors C> uint64_t rootDivide(unsigned int depth);
 	template<Colors C> uint64_t perft(const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth) const;
 	template<Colors C> void perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth);
 	void divide(unsigned int depth) const;
-	template<Colors C> void divide(const ColoredBoard<C>* b, unsigned int depth) const;
 	Console* console;
 
 };

@@ -130,7 +130,7 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
 	const ColoredBoard<C>* const b = currentBoard<C>();
 	Move* end = b->generateMoves(list);
 
-	if (depth == 1)
+	if (depth <= 1)
 		return end-list;
 
 	Result<uint64_t> n(0);
@@ -142,23 +142,26 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
 }
 
 template<Colors C>
-void RootBoard::divide(const ColoredBoard<C>* b, unsigned int depth) const {
+uint64_t RootBoard::rootDivide(unsigned int depth) {
 	Move list[256];
 
+	const ColoredBoard<C>* const b = currentBoard<C>();
 	Move* end = b->generateMoves(list);
 
-	uint64_t sum=0;
 	QTextStream xout(stderr);
-	for (Move* i = list; i < end; ++i) {
-		uint64_t n;
-		if (depth == 1)
-			n = 1;
-		else
-			n = perft<(Colors)-C>(b, *i, depth-1);
-		xout << i->string() << " " << n << endl;
-		sum += n;
+	uint64_t sum=0;
+	for (Move* i = list; i<end; ++i) {
+		Result<uint64_t> n(0);
+		if (depth == 1) {
+			n.update(1);
+		} else {
+			n.setNotReady();
+			perft<(Colors)-C>(&n, b, *i, depth-1);
+		}
+		xout << i->string() << " " << n.get() << endl;
+		sum += n.get();
 	}
-	xout << "Moves: " << end-list << endl << "Nodes: " << sum << endl;
+	return sum;
 }
 
 extern uint64_t saved;
@@ -182,7 +185,7 @@ uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, co
 		saved += subentry->value;
 		n2 = subentry->value;
 		n2invalid = false;
-		return subentry->value;
+//		return subentry->value;
 	}
 
 	uint64_t n=0;
@@ -221,9 +224,9 @@ void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* 
 		saved += subentry->value;
 		n2 = subentry->value;
 		n2invalid = false;
-		result->update(subentry->value);
-		result->setReady();
-		return;
+//		result->update(subentry->value);
+//		result->setReady();
+//		return;
 	}
 	
 	Move list[256];

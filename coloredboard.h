@@ -11,6 +11,7 @@
 #include "boardbase.h"
 
 class Eval;
+class TestRootBoard;
 /*
  * Board with <color> to move. Serves as a common template for all color-dependant functions.
  */

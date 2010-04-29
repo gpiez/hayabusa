@@ -19,7 +19,7 @@ TranspositionTable<Entry, assoc>::TranspositionTable() :
 	size(0),
 	usesHugePages(false)
 {
-	setSize(0x100000000);
+	setSize(0x1000000);
 }
 
 template<typename Entry, unsigned int assoc>

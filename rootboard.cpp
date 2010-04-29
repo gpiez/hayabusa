@@ -20,7 +20,7 @@ console(c)
 void RootBoard::initWorkThreads() {
 	numThreads = sysconf(_SC_NPROCESSORS_ONLN);
 	if (numThreads == 0) numThreads = 1;
-	allocateWorkThreads(numThreads-1);
+	allocateWorkThreads(numThreads);
 }
 
 void RootBoard::allocateWorkThreads(unsigned int numThreads) {
@@ -47,30 +47,51 @@ void RootBoard::stop() {
 	}
 }
 
+template<>
+const ColoredBoard<White>* RootBoard::currentBoard<White>() const {
+	return &boards[iMove].wb;
+}
+
+template<>
+const ColoredBoard<Black>* RootBoard::currentBoard<Black>() const {
+	return &boards[iMove].bb;
+}
+
+template<>
+ColoredBoard<White>* RootBoard::currentBoard<White>() {
+	return &boards[iMove].wb;
+}
+
+template<>
+ColoredBoard<Black>* RootBoard::currentBoard<Black>() {
+	return &boards[iMove].bb;
+}
+
 const BoardBase* RootBoard::setup(QString fen) {
 
 	QString piecePlacement, activeColor, castling, enPassant;
+	int fiftyTemp;
 	QTextStream str(&fen);
-	str >> piecePlacement >> activeColor >> castling >> enPassant;
+	str >> piecePlacement >> activeColor >> castling >> enPassant >> fiftyTemp >> iMove;
 	
 	BoardBase* board;
 	switch ( activeColor[0].toLatin1() ) {
 	case 'b':
 	case 'B':
 		color = Black;
-		board = & boards[0].bb;
+		board = currentBoard<Black>();
 		break;
 	default:
 		qWarning() << "color to move not understood, assuming white";
 	case 'w':
 	case 'W':
 		color = White;
-		board = & boards[0].wb;
+		board = currentBoard<White>();
 		break;
 	}
 
 	board->init();
-	str >> board->fiftyMoves >> iMove;
+	board->fiftyMoves = fiftyTemp;
 
 	unsigned int p,x,y;
 	for ( p=0, x=0, y=7; p<(unsigned int)piecePlacement.length(); p++, x++ ) {
@@ -165,30 +186,11 @@ void RootBoard::perft(unsigned int depth) {
 		threads.first()->startJob(new RootPerftJob<Black>(this, depth));
 }
 
-/*uint64_t RootBoard::perft2(unsigned int depth) const {
-	Result<uint64_t> n=0;
+void RootBoard::divide(unsigned int depth) {
 	if (color == White)
-		perft<White>(&n, &boards[iMove].wb, depth);
+		threads.first()->startJob(new RootDivideJob<White>(this, depth));
 	else
-		perft<Black>(&n, &boards[iMove].bb, depth);
-	return n.get();
-}
-*/
-void RootBoard::divide(unsigned int depth) const {
-	if (color == White)
-		divide<White>(&boards[iMove].wb, depth);
-	else
-		divide<Black>(&boards[iMove].bb, depth);
-}
-
-template<>
-const ColoredBoard<White>* RootBoard::currentBoard<White>() const {
-	return &boards[iMove].wb;
-}
-
-template<>
-const ColoredBoard<Black>* RootBoard::currentBoard<Black>() const {
-	return &boards[iMove].bb;
+		threads.first()->startJob(new RootDivideJob<Black>(this, depth));
 }
 
 WorkThread* RootBoard::findFreeThread() {

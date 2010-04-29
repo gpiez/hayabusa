@@ -76,16 +76,22 @@ public:
 	}
 };
 
-class DivideJob: public Job {
+template<Colors C>
+class RootDivideJob: public signalJob {
 	RootBoard* rb;
-	unsigned int depth_;
+	unsigned int depth;
+
 public:
-	DivideJob(unsigned int depth): depth_(depth) {};
+	RootDivideJob(RootBoard* rb, unsigned int depth): rb(rb), depth(depth) {};
 	void job() {
-		rb->divide(depth_);
+		rb->pt = new TranspositionTable<PerftEntry, 1>;
+		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
+		uint64_t n=rb->rootDivide<C>(depth);
+		emit(result(QString("%1").arg(n)));
+		qDebug() << saved;
+		delete rb->pt;
 	}
 };
-
 
 class SearchJob: public Job {
 	unsigned int depth;
