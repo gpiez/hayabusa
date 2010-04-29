@@ -15,6 +15,7 @@
  */
 template<Colors C>
 void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
+	ASSERT(to < nSquares);
 	Attack a = attacks<CI>( to );
 	int cap = pieces[to];
 	uint8_t dir;
@@ -167,7 +168,7 @@ void ColoredBoard<C>::ray(Move* &list, uint8_t from, uint8_t dir) const {
 	unsigned int l = length(dir, from);
 	if (!l) return;
 	uint8_t to = from + dirOffsets[dir];
-	for (unsigned int i=l; i>1; --i) {
+	for (unsigned int i=l; i>1; --i) {			//TODO vecotrize and put 4 moves at once?
 		*list++ = (Move) { from, to, 0, 0 };
 		to += dirOffsets[dir];
 	}
@@ -298,7 +299,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		if (isPromoRank(from)) {
 			to = from + C * 9;
 			cap = pieces[to];
-			if (C * cap < 0 && (!isValid(pin) | pin == 1)) {
+			if (C * cap < 0 & ((from&7) != 7*EI) && (!isValid(pin) | pin == 1)) {
 				SpecialMoves spec;
 				if (to == (pov^h8) & castling[EI].k)
 					spec = disableOpponentShortCastling;
@@ -313,7 +314,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 
 			to = from + C * 7;
 			cap = pieces[to];
-			if (C * cap < 0 && (!isValid(pin) | pin == 3)) {
+			if (C * cap < 0 & ((from&7) != 7*CI) && (!isValid(pin) | pin == 3)) {
 				SpecialMoves spec;
 				if (to == (pov^h8) & castling[EI].k)
 					spec = disableOpponentShortCastling;
@@ -441,8 +442,8 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 	for (unsigned int i = 0; i<pieceList[CI][Knight]; ++i) {
 		from = pieceList[CI].get(Knight, i);
 		pin = detectPin(from);
-		if (!isValid(pin)) {
-			to = from + 10;
+		if (!isValid(pin)) {	//TODO this are 2^8 = 256 possible move combinations, depending on the 8 pieces[to] and from. replace by a table?
+			to = from + 10;		// get whole board in 4 xmms, mask according to from, pshufb
 			if (to < 64 && isKnightDistance(from, to) & !pieces[to])
 				*list++ = (Move) { from, to, 0, 0 };
 			to = from + 17;
