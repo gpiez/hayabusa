@@ -184,10 +184,16 @@ void TestRootBoard::generateCaptures() {
 	}
 
 */
+	b->setup("5n1n/4kPPP/////pppK4/N1N5 w - - 0 1");
+	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
+	b->threads.first()->startJob(new RootPerftJob<White>(b, 6));
+	QCOMPARE( b->console->getAnswer(), QString("71179139"));
+	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 119060324/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
+
 	b->setup("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1");
 	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
 	b->threads.first()->startJob(new RootPerftJob<Black>(b, 6));
-	QCOMPARE( b->console->getAnswer(), QString("74977083"));
+	QCOMPARE( b->console->getAnswer(), QString("71179139"));
 	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 119060324/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
 
 	b->setup();
