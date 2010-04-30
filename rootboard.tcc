@@ -13,7 +13,7 @@
 #include "result.h"
 #include "workthread.h"
 #include "jobs.h"
-template<Colors> class PerftJob;
+template<Colors,typename> class PerftJob;
 
 template<Colors C>
 Score<C> RootBoard::search(const ColoredBoard<(Colors)-C>* const /*prev*/, const Move /*m*/, const unsigned int /*depth*/, Score<C> alpha, const Score<C> /*beta*/, const SearchFlag /*f*/) const {
@@ -108,22 +108,6 @@ Move RootBoard::rootSearch() {
 }
 
 template<Colors C>
-uint64_t RootBoard::perft(const ColoredBoard<C>* b, unsigned int depth) const {
-	Move list[256];
-
-	Move* end = b->generateMoves(list);
-
-	if (depth == 1)
-		return end-list;
-
-	uint64_t n=0;
-	for (Move* i = list; i<end; ++i) {
-		n += perft<(Colors)-C>(b, *i, depth-1);
-	}
-	return n;
-}
-
-template<Colors C>
 uint64_t RootBoard::rootPerft(unsigned int depth) {
 	Move list[256];
 	
@@ -136,9 +120,9 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
 	Result<uint64_t> n(0);
 	for (Move* i = list; i<end; ++i) {
 		n.setNotReady();
-		perft<(Colors)-C>(&n, b, *i, depth-1);
+		perft<(Colors)-C, trunk>(n, b, *i, depth-1);
 	}
-	return n.get();
+	return n;
 }
 
 template<Colors C>
@@ -156,104 +140,144 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
 			n.update(1);
 		} else {
 			n.setNotReady();
-			perft<(Colors)-C>(&n, b, *i, depth-1);
+			perft<(Colors)-C, trunk>(n, b, *i, depth-1);
 		}
-		xout << i->string() << " " << n.get() << endl;
-		sum += n.get();
+		xout << i->string() << " " << (uint64_t)n << endl;
+		sum += n;
 	}
 	return sum;
 }
 
-extern uint64_t saved;
+void updateAndReady(Result<uint64_t>& r, Result<uint64_t>& v);
+void updateAndReady(Result<uint64_t>& r, uint64_t v);
+void updateAndReady(uint64_t& r, uint64_t v);
 
-template<Colors C>
-uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth) const {
-//	if (depth == 4) return Perft<C, 4>::perft(prev, m);
-	const ColoredBoard<C> b(prev, m);
-	Move list[256];
+template<typename ResultType> void setNotReady(ResultType&) {};
 
-	Move* end = b.generateMoves(list);
-
-	if (depth == 1) return end-list;
-
-	uint64_t n2 = 0;
-	bool n2invalid = true;
-	Key z = b.getZobrist();
-	PerftEntry* pe = pt->getEntry(z);
-	const PerftEntry* subentry = pt->retrieve(pe, z);
-	if (subentry && subentry->depth == depth) {
-		saved += subentry->value;
-		n2 = subentry->value;
-		n2invalid = false;
-		return subentry->value;
-	}
-
-	uint64_t n=0;
-	for (Move* i = list; i<end; ++i) {
-		n += perft<(Colors)-C>(&b, *i, depth-1);
-	}
-
-	ASSERT(n2invalid || n == n2);
-	PerftEntry temp;
-	temp.zero();
-	temp.depth |= depth;
-	temp.upperKey |= z >> temp.upperShift;
-	temp.value = n;
-	pt->store(pe, temp );
-	return n;
-}
-
-template<Colors C>
-void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth)
-{
-	if (depth <= splitDepth) {
-		uint64_t n =  perft<C>(prev, m, depth);
-		result->update(n);
-		result->setReady();
+template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultType& result, const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth) {
+	if (P == trunk && depth <= splitDepth) {
+		uint64_t n=0;
+		perft<C, tree>(n, prev, m, depth);
+		updateAndReady(result, n);
 		return;
 	}
 
 	const ColoredBoard<C> b(prev, m);
 
-	uint64_t n2 = 0;
-	bool n2invalid = true;
 	Key z = b.getZobrist();
 	PerftEntry* pe = pt->getEntry(z);
-	const PerftEntry* subentry = pt->retrieve(pe, z);
-	if (subentry && subentry->depth == depth) {
-		saved += subentry->value;
-		n2 = subentry->value;
-		n2invalid = false;
-		result->update(subentry->value);
-		result->setReady();
+	PerftEntry subentry;
+	
+	if (pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
+		updateAndReady(result, subentry.value);
+		return;
+	}
+
+	Move list[256];
+	Move* end = b.generateMoves(list);
+	if (depth == 1) {
+		updateAndReady(result, end-list);
 		return;
 	}
 	
-	Move list[256];
-	Move* end = b.generateMoves(list);
-
-	Result<uint64_t> n(0);
+	ResultType n(0);
 	for (Move* i = list; i<end; ++i) {
-		if (WorkThread* th = findFreeThread()) {
-			n.setNotReady();
-			th->startJob(new PerftJob<(Colors)-C>(this, &n, &b, *i, depth-1));
+		WorkThread* th;
+		if (P == trunk && !!(th = findFreeThread())) {
+			setNotReady(n);
+			th->startJob(new PerftJob<(Colors)-C, ResultType>(this, n, &b, *i, depth-1));
 		} else {
-			n.setNotReady();
-			perft<(Colors)-C>(&n, &b, *i, depth-1);			
+			setNotReady(n);
+			perft<(Colors)-C, trunk>(n, &b, *i, depth-1);
 		}
 
 	}
 
-	ASSERT(n2invalid || n.get() == n2);
-	PerftEntry temp;
-	temp.zero();
-	temp.depth |= depth;
-	temp.upperKey |= z >> temp.upperShift;
-	temp.value = n.get();
-	pt->store(pe, temp );
-	result->update(n);
-	result->setReady();
+	PerftEntry stored;
+	stored.zero();
+	stored.depth |= depth;
+	stored.upperKey |= z >> stored.upperShift;
+	stored.value = (uint64_t)n;
+	pt->store(pe, stored);
+	updateAndReady(result, n);
 }
 
+
+// template<Colors C>
+// uint64_t RootBoard::perft(const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth) const {
+// 	const ColoredBoard<C> b(prev, m);
+// 	Move list[256];
+// 
+// 	Move* end = b.generateMoves(list);
+// 
+// 	if (depth == 1) return end-list;
+// 
+// 	Key z = b.getZobrist();
+// 	PerftEntry* pe = pt->getEntry(z);
+// 	PerftEntry subentry;
+// 	
+// 	if (pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
+// 		return subentry.value;
+// 	}
+// 
+// 	uint64_t n=0;
+// 	for (Move* i = list; i<end; ++i) {
+// 		n += perft<(Colors)-C>(&b, *i, depth-1);
+// 	}
+// 
+// 	PerftEntry temp;
+// 	temp.zero();
+// 	temp.depth |= depth;
+// 	temp.upperKey |= z >> temp.upperShift;
+// 	temp.value = n;
+// 	pt->store(pe, temp );
+// 	return n;
+// }
+// 
+// template<Colors C>
+// void RootBoard::perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth)
+// {
+// 	if (depth <= splitDepth) {
+// 		uint64_t n =  perft<C>(prev, m, depth);
+// 		result->update(n);
+// 		result->setReady();
+// 		return;
+// 	}
+// 
+// 	const ColoredBoard<C> b(prev, m);
+// 
+// 	Key z = b.getZobrist();
+// 	PerftEntry* pe = pt->getEntry(z);
+// 	PerftEntry subentry;
+// 	if ( pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
+// 		result->update(subentry.value);
+// 		result->setReady();
+// 		return;
+// 	}
+// 	
+// 	Move list[256];
+// 	Move* end = b.generateMoves(list);
+// 
+// 	Result<uint64_t> n(0);
+// 	for (Move* i = list; i<end; ++i) {
+// 		if (WorkThread* th = findFreeThread()) {
+// 			n.setNotReady();
+// 			th->startJob(new PerftJob<(Colors)-C, Result<uint64_t> >(this, n, &b, *i, depth-1));
+// 		} else {
+// 			n.setNotReady();
+// 			perft<(Colors)-C>(&n, &b, *i, depth-1);			
+// 		}
+// 
+// 	}
+// 
+// 	PerftEntry temp;
+// 	temp.zero();
+// 	temp.depth |= depth;
+// 	temp.upperKey |= z >> temp.upperShift;
+// 	temp.value = (uint64_t)n;
+// 	pt->store(pe, temp );
+// 	result->update(n);
+// 	result->setReady();
+// }
 
 #endif

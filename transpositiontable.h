@@ -36,7 +36,7 @@ public:
 	void setSize(size_t s);
 	Key nextKey(Key k, Move m);
 	Entry* getEntry(Key k) const;
-	const Entry* retrieve(const Entry* subTable, Key k);
+	bool retrieve(const Entry* subTable, Key k, Entry&);
 	void store(Entry* subTable, Entry entry);
     void freeMemory();
 };

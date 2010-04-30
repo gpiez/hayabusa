@@ -32,9 +32,9 @@ void WorkThread::run() {
 		mutex->lock();
 		doStop = false;
 		isStopped = true;
-		startable.wakeAll();
-		starting.wait(mutex);
-		isStopped = false;
+		startable.wakeAll();	//wake stop() function
+		while(isStopped)		//isStopped is resetted by startJob() and free()
+			starting.wait(mutex);//starting is signalled by StartJob()
 		mutex->unlock();
 //        qDebug() << "execute" << (const void*)job;
         job->job();             //returning the result must have happened here.
@@ -51,15 +51,13 @@ void WorkThread::stop() {
 }
 
 void WorkThread::startJob(Job *j) {
-//    qDebug() << "startJob" << (const void*)j;
 	ASSERT(j);
 	delete job;
 	job = j;
-//	mutex->lock();
-//	if (doStop)
-//		startable.wait(mutex);	//we are somewhere at the run loop. Wait until in a defined state.
+	mutex->lock();
+	isStopped = false;
 	starting.wakeOne();
-//	mutex->unlock();
+	mutex->unlock();
 }
 
 void WorkThread::end() {
@@ -84,7 +82,7 @@ void* WorkThread::operator new (size_t s) {
 	return p;
 }
 
-bool WorkThread::isFree() {
+bool WorkThread::isFree() { // TODO merge into startJob
 	mutex->lock();
 	bool ret = isStopped;
 	isStopped = false;		// return true only once

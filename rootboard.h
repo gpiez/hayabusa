@@ -57,6 +57,7 @@ public:
 	template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
 	template<Colors C> uint64_t rootPerft(unsigned int depth);
 	template<Colors C> uint64_t rootDivide(unsigned int depth);
+	template<Colors C, Phase P, typename ResultType> void perft(ResultType& result, const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth);
 	template<Colors C> uint64_t perft(const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth) const;
 	template<Colors C> void perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth);
 	void divide(unsigned int depth) const;

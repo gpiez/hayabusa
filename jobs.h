@@ -43,21 +43,19 @@ public:
 	}
 };
 
-template<Colors C>
+template<Colors C, typename T>
 class PerftJob: public Job {
 	RootBoard* rb;
-	Result<uint64_t>* n;
+	T& n;
 	const ColoredBoard<(Colors)-C>* b;
 	Move m;
 	unsigned int depth;
 public:
-	PerftJob(RootBoard* rb, Result<uint64_t>* n, const ColoredBoard<(Colors)-C>* b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
+	PerftJob(RootBoard* rb, T& n, const ColoredBoard<(Colors)-C>* b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
 	void job() {
-		rb->perft<C>(n, b, m, depth);
+		rb->perft<C, root>(n, b, m, depth);
 	}
 };
-
-extern uint64_t saved;
 
 template<Colors C>
 class RootPerftJob: public signalJob {
@@ -71,7 +69,6 @@ public:
 		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
 		uint64_t n=rb->rootPerft<C>(depth);
 		emit(result(QString("%1").arg(n)));
-		qDebug() << saved;
 		delete rb->pt;
 	}
 };
@@ -88,7 +85,6 @@ public:
 		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
 		uint64_t n=rb->rootDivide<C>(depth);
 		emit(result(QString("%1").arg(n)));
-		qDebug() << saved;
 		delete rb->pt;
 	}
 };

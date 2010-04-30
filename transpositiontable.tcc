@@ -19,7 +19,7 @@ TranspositionTable<Entry, assoc>::TranspositionTable() :
 	size(0),
 	usesHugePages(false)
 {
-	setSize(0x100000000);
+	setSize(0x10000000);
 }
 
 template<typename Entry, unsigned int assoc>
@@ -46,24 +46,25 @@ Entry* TranspositionTable<Entry, assoc>::getEntry(Key k) const {
 }
 
 template<typename Entry, unsigned int assoc>
-const Entry* TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k) {
+bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, Entry& ret) {
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
 	QReadLocker locker(&tt);
 	for (unsigned int i = 0; i < assoc; ++i)		//TODO compare all keys simultaniously suing sse
 		if (subTable[i].upperKey == upperKey) {
 			//TODO rotate to first position
-			return &subTable[i];
+			ret = subTable[i];
+			return true;
 		}
-	return 0;
+	return false;
 }
 
 template<typename Entry, unsigned int assoc>
 void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry) {
+	tt.lockForWrite();
 	if (entry.depth >= subTable[assoc-1].depth) {
-		tt.lockForWrite();;
 		subTable[assoc-1] = entry;
-		tt.unlock();
 	}
+	tt.unlock();
 }
 
 template<typename Entry, unsigned int assoc>

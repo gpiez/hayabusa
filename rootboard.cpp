@@ -8,8 +8,6 @@
 #include "transpositiontable.h"
 #include "transpositiontable.tcc"
 
-uint64_t saved;
-
 RootBoard::RootBoard(Console *c):
 console(c)
 {
@@ -199,4 +197,20 @@ WorkThread* RootBoard::findFreeThread() {
 		if (th->isFree())
 			return th;
 	return 0;
+}
+
+void updateAndReady(uint64_t& r, uint64_t v) {
+	r += v;
+}
+void updateAndReady(Result<uint64_t>& r, uint64_t v) {
+	r.update(v);
+	r.setReady();
+}
+void updateAndReady(Result<uint64_t>& r, Result<uint64_t>& v) {
+	r.update(v);
+	r.setReady();
+}
+
+template<> void setNotReady<Result<uint64_t> >(Result<uint64_t>& r) {
+	r.setNotReady();
 }

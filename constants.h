@@ -58,6 +58,8 @@ enum SpecialMoves {
 	disableOpponentLongCastling = 32
 };
 
+enum Phase { root, trunk, tree, leaf };
+
 static const unsigned int nMaxMoves = 256; // maximum possible moves in a position
 static const unsigned int nMaxGameLength = 5000; // maximum possible moves in a position
 static const int infinity = 10000;

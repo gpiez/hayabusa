@@ -42,7 +42,7 @@ public:
 		value = x;
 	}
 	
-	T get() {
+	operator T () {
 		readyMutex.lock();
 		while (notReady)
 			readyCond.wait(&readyMutex);
@@ -51,7 +51,7 @@ public:
 	}
 
 	void update(Result<T>& data) {
-		T dataValue = data.get();
+		T dataValue = data;
 		QMutexLocker locker(&valueMutex);
 		value += dataValue;
 	}
