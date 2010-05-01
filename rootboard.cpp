@@ -46,50 +46,49 @@ void RootBoard::stop() {
 }
 
 template<>
-const ColoredBoard<White>* RootBoard::currentBoard<White>() const {
-	return &boards[iMove].wb;
+const ColoredBoard<White>& RootBoard::currentBoard<White>() const {
+	return boards[iMove].wb;
 }
 
 template<>
-const ColoredBoard<Black>* RootBoard::currentBoard<Black>() const {
-	return &boards[iMove].bb;
+const ColoredBoard<Black>& RootBoard::currentBoard<Black>() const {
+	return boards[iMove].bb;
 }
 
 template<>
-ColoredBoard<White>* RootBoard::currentBoard<White>() {
-	return &boards[iMove].wb;
+ColoredBoard<White>& RootBoard::currentBoard<White>() {
+	return boards[iMove].wb;
 }
 
 template<>
-ColoredBoard<Black>* RootBoard::currentBoard<Black>() {
-	return &boards[iMove].bb;
+ColoredBoard<Black>& RootBoard::currentBoard<Black>() {
+	return boards[iMove].bb;
 }
 
-const BoardBase* RootBoard::setup(QString fen) {
+const BoardBase& RootBoard::setup(QString fen) {
 
 	QString piecePlacement, activeColor, castling, enPassant;
 	int fiftyTemp;
 	QTextStream str(&fen);
 	str >> piecePlacement >> activeColor >> castling >> enPassant >> fiftyTemp >> iMove;
 	
-	BoardBase* board;
 	switch ( activeColor[0].toLatin1() ) {
 	case 'b':
 	case 'B':
 		color = Black;
-		board = currentBoard<Black>();
 		break;
 	default:
 		qWarning() << "color to move not understood, assuming white";
 	case 'w':
 	case 'W':
 		color = White;
-		board = currentBoard<White>();
 		break;
 	}
+	
+	BoardBase& board = color == White ? (BoardBase&)currentBoard<White>() : (BoardBase&)currentBoard<Black>();
 
-	board->init();
-	board->fiftyMoves = fiftyTemp;
+	board.init();
+	board.fiftyMoves = fiftyTemp;
 
 	unsigned int p,x,y;
 	for ( p=0, x=0, y=7; p<(unsigned int)piecePlacement.length(); p++, x++ ) {
@@ -99,40 +98,40 @@ const BoardBase* RootBoard::setup(QString fen) {
 			x += piecePlacement[p].toLatin1() - '1';
 			break;
 		case 'k':
-			board->setPiece<Black>( King, square);
+			board.setPiece<Black>( King, square);
 			break;
 		case 'p':
-			board->setPiece<Black>( Pawn, square);
+			board.setPiece<Black>( Pawn, square);
 			break;
 		case 'b':
-			board->setPiece<Black>( Bishop, square);
+			board.setPiece<Black>( Bishop, square);
 			break;
 		case 'n':
-			board->setPiece<Black>( Knight, square);
+			board.setPiece<Black>( Knight, square);
 			break;
 		case 'r':
-			board->setPiece<Black>( Rook, square);
+			board.setPiece<Black>( Rook, square);
 			break;
 		case 'q':
-			board->setPiece<Black>( Queen, square);
+			board.setPiece<Black>( Queen, square);
 			break;
 		case 'K':
-			board->setPiece<White>( King, square);
+			board.setPiece<White>( King, square);
 			break;
 		case 'P':
-			board->setPiece<White>( Pawn, square);
+			board.setPiece<White>( Pawn, square);
 			break;
 		case 'B':
-			board->setPiece<White>( Bishop, square);
+			board.setPiece<White>( Bishop, square);
 			break;
 		case 'N':
-			board->setPiece<White>( Knight, square);
+			board.setPiece<White>( Knight, square);
 			break;
 		case 'R':
-			board->setPiece<White>( Rook, square);
+			board.setPiece<White>( Rook, square);
 			break;
 		case 'Q':
-			board->setPiece<White>( Queen, square);
+			board.setPiece<White>( Queen, square);
 			break;
 		case '/':
 			x = -1;
@@ -146,21 +145,21 @@ const BoardBase* RootBoard::setup(QString fen) {
 	for ( unsigned int p=0; p<(unsigned int)castling.length(); p++ )
 		switch ( castling[p].toLatin1() ) {
 		case 'Q':
-			board->castling[0].q = true;
+			board.castling[0].q = true;
 			break;
 		case 'K':
-			board->castling[0].k = true;
+			board.castling[0].k = true;
 			break;
 		case 'q':
-			board->castling[1].q = true;
+			board.castling[1].q = true;
 			break;
 		case 'k':
-			board->castling[1].k = true;
+			board.castling[1].k = true;
 			break;
 		}
 
 	if ( enPassant.length() == 2 && enPassant[0] >= 'a' && enPassant[0] <= 'h' && ( enPassant[1] == '3' || enPassant[1] == '6' ) )
-		board->enPassant = 8 * ((enPassant[1].toLatin1() - '3' )/3 + 3) + enPassant[0].toLatin1() - 'a';
+		board.enPassant = 8 * ((enPassant[1].toLatin1() - '3' )/3 + 3) + enPassant[0].toLatin1() - 'a';
 	else if ( enPassant != "-" )
 		qWarning() << "error importing e. p. move " << enPassant;
 

@@ -33,7 +33,7 @@ class ColoredBoard: public BoardBase {
 
 public:
 	ColoredBoard() {};
-	ColoredBoard(const ColoredBoard<(Colors)-C>* prev, Move m);
+	ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m);
 	Move* generateCaptureMoves(Move* list) const;
 	Move* generateMoves(Move* list) const;
 	void doMove(ColoredBoard<(Colors)-C>* next, Move m) const;

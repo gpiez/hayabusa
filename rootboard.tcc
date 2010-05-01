@@ -16,7 +16,7 @@
 template<Colors,typename> class PerftJob;
 
 template<Colors C>
-Score<C> RootBoard::search(const ColoredBoard<(Colors)-C>* const /*prev*/, const Move /*m*/, const unsigned int /*depth*/, Score<C> alpha, const Score<C> /*beta*/, const SearchFlag /*f*/) const {
+Score<C> RootBoard::search(const ColoredBoard<(Colors)-C>& /*prev*/, const Move /*m*/, const unsigned int /*depth*/, Score<C> alpha, const Score<C> /*beta*/, const SearchFlag /*f*/) const {
 //	ColoredBoard<C> b;
 //	Move firstMove[nMaxMoves];
 //	Move* lastMove = b.generateMoves(firstMove);
@@ -54,7 +54,7 @@ Score<C> RootBoard::search(const ColoredBoard<(Colors)-C>* const /*prev*/, const
 }
 
 template<Colors C>
-Score<C> RootBoard::qsearch(const ColoredBoard<(Colors)-C>* const prev, const Move m, const WorkThread*, Score<C> alpha, const Score<C> beta) const {
+Score<C> RootBoard::qsearch(const ColoredBoard<(Colors)-C>& prev, const Move m, const WorkThread*, Score<C> alpha, const Score<C> beta) const {
 	ColoredBoard<C> b;
 	Move firstMove[nMaxMoves];
 	Move* lastMove = b.generateCaptureMoves(firstMove);
@@ -75,10 +75,10 @@ Score<C> RootBoard::qsearch(const ColoredBoard<(Colors)-C>* const prev, const Mo
 
 template<Colors C>
 Move RootBoard::rootSearch() {
-	const ColoredBoard<C>* const b = currentBoard<C>();//color == White ? &boards[iMove].wb : &boards[iMove].bb;
+	const ColoredBoard<C>& b = currentBoard<C>();//color == White ? &boards[iMove].wb : &boards[iMove].bb;
 
 	Move firstMove[nMaxMoves];
-	Move* lastMove = b->generateMoves(firstMove);
+	Move* lastMove = b.generateMoves(firstMove);
 	Move bestMove;
 
 	QDateTime start = QDateTime::currentDateTime();
@@ -94,8 +94,7 @@ Move RootBoard::rootSearch() {
 		for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
 			xout << depth << ":" << currentMove->string() << endl;
 			Score<C> currentScore = search<(Colors)-C>(b, *currentMove, depth-1, beta, alpha, f);
-			if (currentScore > alpha) {
-				alpha = currentScore;
+			if (alpha.max(currentScore)) {
 				bestMove = *currentMove;
 			}
 			if (QDateTime::currentDateTime() > hardBudget) break;
@@ -111,8 +110,8 @@ template<Colors C>
 uint64_t RootBoard::rootPerft(unsigned int depth) {
 	Move list[256];
 	
-	const ColoredBoard<C>* const b = currentBoard<C>();
-	Move* end = b->generateMoves(list);
+	const ColoredBoard<C>& b = currentBoard<C>();
+	Move* end = b.generateMoves(list);
 
 	if (depth <= 1)
 		return end-list;
@@ -129,8 +128,8 @@ template<Colors C>
 uint64_t RootBoard::rootDivide(unsigned int depth) {
 	Move list[256];
 
-	const ColoredBoard<C>* const b = currentBoard<C>();
-	Move* end = b->generateMoves(list);
+	const ColoredBoard<C>& b = currentBoard<C>();
+	Move* end = b.generateMoves(list);
 
 	QTextStream xout(stderr);
 	uint64_t sum=0;
@@ -154,7 +153,7 @@ void updateAndReady(uint64_t& r, uint64_t v);
 
 template<typename ResultType> void setNotReady(ResultType&) {};
 
-template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultType& result, const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth) {
+template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth) {
 	if (P == trunk && depth <= splitDepth) {
 		uint64_t n=0;
 		perft<C, tree>(n, prev, m, depth);
@@ -185,10 +184,10 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 		WorkThread* th;
 		if (P == trunk && !!(th = findFreeThread())) {
 			setNotReady(n);
-			th->startJob(new PerftJob<(Colors)-C, ResultType>(this, n, &b, *i, depth-1));
+			th->startJob(new PerftJob<(Colors)-C, ResultType>(this, n, b, *i, depth-1));
 		} else {
 			setNotReady(n);
-			perft<(Colors)-C, trunk>(n, &b, *i, depth-1);
+			perft<(Colors)-C, trunk>(n, b, *i, depth-1);
 		}
 
 	}

@@ -36,29 +36,35 @@ template<Colors C> struct Score
 	RawScore v;	//Absolute score. Less is good for black, more is good for white.
 
 	Score() {};
-	explicit Score (int a) 						{ v = C*a; };
+	explicit Score (int a) 							{ v = C*a; };
 	// Returns a relative score. More is better for the current side.
 	//operator int () 			{ return C*v; };
 	Score (const Score<White>& a) 					{ v = a.v; };
 	Score (const Score<Black>& a) 					{ v = a.v; };
-	void operator = (Score<C> a)  	{ v = a.v; };
-	void operator = (RawScore a)  	{ v = a; };
-	Score operator + (Score<C> a) const 	{ return v + a.v; };
-	Score operator - (Score<C> a) const 	{ return v - a.v; };
-	Score operator * (int a) const 		{ return v * a; };
-	bool operator > (Score<C> a) const {
-		if (C > 0)
-			return v > a.v;
-		else 
-			return v < a.v;
-	};
-	bool operator < (Score<C> a) const {
-		if (C > 0)
-			return v < a.v;
+	void operator = (const Score<C>& a)  			{ v = a.v; };
+	void operator = (RawScore a)  					{ v = a; };
+	Score operator + (const Score<C>& a) const 		{ return v + a.v; };
+	Score operator - (const Score<C>& a) const 		{ return v - a.v; };
+	Score operator * (int a) const 					{ return v * a; };
+	bool operator < (const Score<C>& a) const {
+		if ( C==White )
+			return v<a.v;
 		else
-			return v > a.v;
-	};
-	bool operator == (Score<C> a) const 	{ return v == a.v; };
+			return v>a.v;
+	}
+	bool operator <= (const Score<C>& a) const {
+		if ( C==White )
+			return v<=a.v;
+		else
+			return v>=a.v;
+	}
+	bool max(const Score<C>& b) 		{
+		if (*this < b) {
+			v = b.v;
+			return true;
+		}
+		return false;
+	}
 };
 
 #endif // SCORE_H

@@ -47,12 +47,14 @@ template<Colors C, typename T>
 class PerftJob: public Job {
 	RootBoard* rb;
 	T& n;
-	const ColoredBoard<(Colors)-C>* b;
+	const ColoredBoard<(Colors)-C>& b;
 	Move m;
 	unsigned int depth;
 public:
-	PerftJob(RootBoard* rb, T& n, const ColoredBoard<(Colors)-C>* b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
+	PerftJob(RootBoard* rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
 	void job() {
+		QTextStream xout(stderr);
+		xout << depth;
 		rb->perft<C, root>(n, b, m, depth);
 	}
 };
