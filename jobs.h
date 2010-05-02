@@ -15,9 +15,7 @@
 #include "rootboard.h"
 #include "console.h"
 #include "boardbase.h"
-#include "rootboard.tcc"
-
-template<typename T> class Result;
+//#include "rootboard.tcc"
 
 struct Job {
 	virtual ~Job() {};			// the for calling destructor of QObject in signalJob
@@ -28,6 +26,23 @@ struct signalJob: public QObject, public Job {
 	Q_OBJECT
 signals:
     void result(QString arg1);
+};
+
+template<Colors C, typename A, typename B>
+class SearchJob: public Job {
+	RootBoard* rb;
+	const ColoredBoard<(Colors)-C>& b;
+	Move m;
+	unsigned int depth;
+	A& alpha;
+	const B& beta;
+public:
+	SearchJob(RootBoard* rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, A& alpha, const B& beta): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {};
+	void job() {
+		//QTextStream xout(stderr);
+		//xout << depth;
+		rb->search<C, root>(b, m, depth, alpha, beta);
+	}
 };
 
 template<Colors C>
@@ -54,7 +69,7 @@ public:
 	PerftJob(RootBoard* rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
 	void job() {
 		QTextStream xout(stderr);
-		xout << depth;
+		//xout << depth;
 		rb->perft<C, root>(n, b, m, depth);
 	}
 };
@@ -88,17 +103,6 @@ public:
 		uint64_t n=rb->rootDivide<C>(depth);
 		emit(result(QString("%1").arg(n)));
 		delete rb->pt;
-	}
-};
-
-class SearchJob: public Job {
-	unsigned int depth;
-	BoardBase* current;
-	RootBoard* rb;
-public:
-	SearchJob(unsigned int depth, RootBoard* rb): depth(depth), rb(rb) {};
-	void job() {
-//		rb->rootSearch(depth);
 	}
 };
 

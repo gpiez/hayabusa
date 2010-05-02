@@ -11,6 +11,7 @@
 #ifndef PCH_H_
 #include <pch.h>
 #endif
+
 #include "coloredboard.h"
 
 class Job;

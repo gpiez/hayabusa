@@ -20,6 +20,10 @@
 #ifndef PERFT_H
 #define PERFT_H
 
+#ifndef PCH_H_
+#include <pch.h>
+#endif
+
 #include "coloredboard.h"
 
 template<Colors C, unsigned int Depth>

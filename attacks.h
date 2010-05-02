@@ -8,7 +8,11 @@
 #ifndef ATTACKS_H_
 #define ATTACKS_H_
 
-#include <stdint.h>
+#ifndef PCH_H_
+#include <pch.h>
+#endif
+
+#include "constants.h"
 /*
  * Structure which contains the number of rooks, bishops, queens
  * which do long range attacks on this square/piece.

@@ -32,11 +32,11 @@ template< typename T > class Result
 	QWaitCondition readyCond;
 	QMutex readyMutex;
 
-	Result() {}
+	Result();
 	Result(const Result&);
 	
 public:
-	Result(T x):
+	explicit Result(T x):
 		notReady(0)
 	{
 		value = x;

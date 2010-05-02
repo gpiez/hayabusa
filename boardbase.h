@@ -8,12 +8,15 @@
 #ifndef BOARDBASE_H_
 #define BOARDBASE_H_
 
+#ifndef PCH_H_
+#include <pch.h>
+#endif
+
 #include <emmintrin.h>
 
-#include "constants.h"
-#include "piecelist.h"
 #include "attacks.h"
 #include "length.h"
+#include "piecelist.h"
 #include "transpositiontable.h"
 #include "score.h"
 /*

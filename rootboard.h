@@ -10,7 +10,6 @@
 #include "result.h"
 
 class WorkThread;
-class SearchJob;
 class Console;
 template<class T, unsigned int U> class TranspositionTable;
 template<class T> class Result;
@@ -25,7 +24,6 @@ class RootBoard: public Eval {
 	unsigned int iMove;
 	Colors color;
 	QMutex threadsLock;
-	QLinkedList<SearchJob*> jobs;
 	TranspositionTable<TTEntry, transpositionTableAssoc>* tt;
 
 	struct {
@@ -50,16 +48,15 @@ public:
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<Colors C> Move rootSearch();
-	template<Colors C> Score<C> search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, Score<C> alpha, Score<C> beta, SearchFlag f) const;
-	template<Colors C> Score<C> qsearch(const ColoredBoard<(Colors)-C>& prev, Move m, const WorkThread*, Score<C> alpha, Score<C> beta) const;
+	template<Colors C, Phase P, typename A, typename B> void search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, A& alpha, const B& beta);
 	void perft(unsigned int depth);
 	void divide(unsigned int depth);
 	template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
 	template<Colors C> uint64_t rootPerft(unsigned int depth);
 	template<Colors C> uint64_t rootDivide(unsigned int depth);
 	template<Colors C, Phase P, typename ResultType> void perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth);
-	template<Colors C> uint64_t perft(const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth) const;
-	template<Colors C> void perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth);
+//	template<Colors C> uint64_t perft(const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth) const;
+//	template<Colors C> void perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth);
 	void divide(unsigned int depth) const;
 	Console* console;
 

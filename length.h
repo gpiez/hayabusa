@@ -8,6 +8,11 @@
 #ifndef LENGTH_H_
 #define LENGTH_H_
 
+#ifndef PCH_H_
+#include <pch.h>
+#endif
+
+#include "constants.h"
 /*
  * Structure which hold attacking ray length for the eight long
  * range directions. The target piece is always counted in.

@@ -8,6 +8,10 @@
 #ifndef TTENTRY_H_
 #define TTENTRY_H_
 
+#ifndef PCH_H_
+#include <pch.h>
+#endif
+
 #include <stdint.h>
 
 typedef uint64_t Key;

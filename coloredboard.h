@@ -8,6 +8,10 @@
 #ifndef COLOREDBOARD_H_
 #define COLOREDBOARD_H_
 
+#ifndef PCH_H_
+#include <pch.h>
+#endif
+
 #include "boardbase.h"
 
 class Eval;

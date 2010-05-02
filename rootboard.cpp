@@ -1,9 +1,9 @@
 #include <pch.h>
 #include "rootboard.h"
+#include "rootboard.tcc"
 #include "workthread.h"
 #include "console.h"
 #include "boardbase.tcc"
-//#include "rootboard.tcc"
 #include "jobs.h"
 #include "transpositiontable.h"
 #include "transpositiontable.tcc"
