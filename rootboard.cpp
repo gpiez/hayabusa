@@ -9,7 +9,10 @@
 #include "transpositiontable.tcc"
 
 RootBoard::RootBoard(Console *c):
-console(c)
+	
+	timeBudget(300),
+	movesToDo(40),
+	console(c)
 {
 	initWorkThreads();
 	tt = new TranspositionTable<TTEntry, transpositionTableAssoc>;

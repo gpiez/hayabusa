@@ -60,6 +60,7 @@ union TTEntry {
 	Bitfield<31, 1, bool> hiBound;
 	Bitfield<32, 1, bool> expired;
 	Bitfield<33, 31, Key> upperKey;
+	enum { upperShift = 33 };
 	uint64_t data;
 
 	void zero() { data = 0; };

@@ -42,7 +42,7 @@ template<Colors C> struct Score
 	Score() {};
 	explicit Score (int a) 							{ v = C*a; };
 	// Returns a relative score. More is better for the current side.
-	int get()							 			{ return C*v; };
+	int get() const						 			{ return C*v; };
 //	Score (const Score<White>& a) 					{ v = a.v; };
 //	Score (const Score<Black>& a) 					{ v = a.v; };
 	void operator = (const Score<C>& a)  			{ v = a.v; };

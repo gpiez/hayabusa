@@ -29,7 +29,7 @@ Move RootBoard::rootSearch() {
 	for (unsigned int depth=2; depth<maxDepth; depth++) {
 		QDateTime currentStart = QDateTime::currentDateTime();
 		Score<C> alpha(-infinity);
-		Score<(Colors)-C> beta(infinity);
+		Score<(Colors)-C> beta(-infinity);	//both alpha and beta are lower limits, viewed from th color to move
 //		SearchFlag f = null;
 		QTextStream xout(stderr);
 		for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
@@ -52,17 +52,18 @@ Move RootBoard::rootSearch() {
  * beta is the return value, it is updated at the end
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
-template<Colors C, Phase P, typename A, typename B> void RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
+template<Colors C, Phase P, typename A, typename B>
+bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
 	const ColoredBoard<C> b(prev, m);
 
 	Key z = b.getZobrist();
-	PerftEntry* pe = pt->getEntry(z);
-	PerftEntry subentry;
+	TTEntry* te = tt->getEntry(z);
+	TTEntry subentry;
 
-	if (pt->retrieve(pe, z, subentry) && subentry.depth >= depth) {
-		beta = subentry.value;
-		beta.setReady();
-		return;
+	if (tt->retrieve(te, z, subentry) && subentry.depth >= depth) {
+//		beta = subentry.score;
+//		beta.setReady();
+//		return;
 	}
 
 	Move list[256];
@@ -74,14 +75,20 @@ template<Colors C, Phase P, typename A, typename B> void RootBoard::search(const
 	} else
 		end = b.generateMoves(list);
 
+	QTextStream xout(stderr);
+	QString indentation;
+	for (unsigned int i = depth; i<10; i++)
+		indentation += "  ";
+//	xout << indentation << alpha.get() << "," << beta.get();
 	for (Move* i = list; i<end; ++i) {
+		xout << indentation << depth << ":" << i->string() << endl;
 		if (P == leaf || !depth) {
 			search<(Colors)-C, leaf, B, A>(b, *i, 0, beta, current);
 		} else if (P == tree || (P == trunk && depth <= splitDepth)) {
 			search<(Colors)-C, tree, B, A>(b, *i, depth-1, beta, current);
 		} else {
 			WorkThread* th;
-			if ((th = findFreeThread())) {
+			if (0 && (th = findFreeThread())) {
 				setNotReady(current);
 				th->startJob(new SearchJob<(Colors)-C, B, A>(this, b, *i, depth-1, beta, current));
 			} else {
@@ -93,15 +100,15 @@ template<Colors C, Phase P, typename A, typename B> void RootBoard::search(const
 			break;
 	}
 
-	PerftEntry stored;
+	TTEntry stored;
 	stored.zero();
 	stored.depth |= depth;
 	stored.upperKey |= z >> stored.upperShift;
-	stored.value = current.get();
-	pt->store(pe, stored);
+	stored.score |= current.get();
+	tt->store(te, stored);
 	current.setReady();
 
-	beta.max(current);
+	return beta.max(current);
 }
 
 template<Colors C>

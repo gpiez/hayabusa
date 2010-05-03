@@ -42,6 +42,15 @@ Console::Console(QCoreApplication* parent):
 	
 	notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
 	connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
+
+	QStringList cmds = QCoreApplication::arguments();
+	cmds.removeFirst();
+	if (!cmds.isEmpty())
+		if (dispatcher.contains(cmds[0])) {
+			(this->*(dispatcher[cmds[0]]))(cmds);
+		} else {
+			tryMove(cmds);
+		}
 }
 
 Console::~Console()

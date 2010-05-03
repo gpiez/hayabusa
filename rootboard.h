@@ -14,7 +14,7 @@ class Console;
 template<class T, unsigned int U> class TranspositionTable;
 template<class T> class Result;
 
-class RootBoard: public Eval {
+class RootBoard: private Eval {
 	friend class TestRootBoard;
 	
 	unsigned int timeBudget;
@@ -41,14 +41,13 @@ class RootBoard: public Eval {
 	
 public:
 	TranspositionTable<PerftEntry, 1>* pt;
-	QReadWriteLock jobsLock;
 	QVector<WorkThread*> threads;
 	
 	RootBoard(Console*);
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<Colors C> Move rootSearch();
-	template<Colors C, Phase P, typename A, typename B> void search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta);
+	template<Colors C, Phase P, typename A, typename B> bool search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta);
 	void perft(unsigned int depth);
 	void divide(unsigned int depth);
 	template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
