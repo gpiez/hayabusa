@@ -74,7 +74,6 @@ template<Colors C> struct Score
 		}
 		return false;
 	}
-	
 };
 
 template<Colors C> struct SharedScore: private Score<C>
@@ -84,14 +83,14 @@ template<Colors C> struct SharedScore: private Score<C>
 	QMutex valueMutex;
 	QWaitCondition readyCond;
 	QMutex readyMutex;
-	SharedScore* depending;
+	SharedScore<C>* depending;
 
 private:
 	SharedScore();
 	SharedScore(const SharedScore&);
 
 public:	
-	void operator = (const SharedScore<C>& a)  				{ v = a.v; };
+//	void operator = (const SharedScore<C>& a)  				{ v = a.v; };
 	void operator = (RawScore a)  							{ v = a; };
 	SharedScore operator + (const SharedScore<C>& a) const 	{ return v + a.v; };
 	SharedScore operator - (const SharedScore<C>& a) const 	{ return v - a.v; };
@@ -99,10 +98,19 @@ public:
 	unsigned int shares()									{ return notReady; };
 	
 	explicit SharedScore (int a):
-		notReady(0)
+		notReady(0),
+		valueMutex(QMutex::Recursive),
+		depending(0)
 	{
 		v = C*a;
 	};
+
+	// construct a shared score depending on the parameter
+	// if the parameter score gets a better value, a new
+	// maximum is calculated for this score, and if it changes
+	// for its depending scores too.
+	explicit SharedScore(SharedScore&);
+
 	// Returns a relative score. More is better for the current side.
 	int get() {
 		QMutexLocker lock(&readyMutex);
@@ -126,26 +134,21 @@ public:
 		readyMutex.unlock();
 	}
 
-	bool operator < (const SharedScore<C>& a) const {
-		if ( C==White )
-			return v<a.v;
-		else
-			return v>a.v;
+	bool operator >= (const SharedScore<(Colors)-C>& a) const {
+		QMutexLocker lock(&valueMutex);
+		return (Score<C>)*this >= (Score<(Colors)-C>)a; 
 	}
-	bool operator <= (const SharedScore<C>& a) const {
-		if ( C==White )
-			return v<=a.v;
-		else
-			return v>=a.v;
-	}
-	bool max(const SharedScore<C>& b) 		{
-		if (*this < b) {
-			v = b.v;
+	
+	bool max(const SharedScore<-C>& a) 		{
+		QMutexLocker lock(&valueMutex);
+		if (((Score<C>)*this).max((Score<(Colors)-C>)a)) {
+			for ( SharedScore<C>** i = &depending; *i; ++i ) {
+				(*i)->max((Score<(Colors)-C>)a);
+			}
 			return true;
 		}
 		return false;
 	}
-
 };
 
 

@@ -34,10 +34,10 @@ class SearchJob: public Job {
 	const ColoredBoard<(Colors)-C>& b;
 	Move m;
 	unsigned int depth;
-	A& alpha;
-	const B& beta;
+	const A& alpha;
+	B& beta;
 public:
-	SearchJob(RootBoard* rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, A& alpha, const B& beta): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {};
+	SearchJob(RootBoard* rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {};
 	void job() {
 		//QTextStream xout(stderr);
 		//xout << depth;

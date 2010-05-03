@@ -37,6 +37,8 @@ void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 
 class PieceList;
 class BoardBase;
 class Eval {
+	RawScore pieceSquare[nTotalPieces][nSquares];
+	
 	static RawScore pawn, knight, bishop, rook, queen;
 	static RawScore bishopPair;
 	static RawScore knightAlone;
@@ -50,6 +52,13 @@ class Eval {
 
 public:
 	Eval();
+	RawScore getPS(int8_t piece, uint8_t square) {
+		ASSERT(square < nSquares);
+		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
+		return pieceSquare[piece+nPieces][square];
+	}
+	void initPS();
+	
 	unsigned int attackHash( unsigned int  pos );
 	int squareControl();
 

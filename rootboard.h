@@ -48,7 +48,7 @@ public:
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<Colors C> Move rootSearch();
-	template<Colors C, Phase P, typename A, typename B> void search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, A& alpha, const B& beta);
+	template<Colors C, Phase P, typename A, typename B> void search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta);
 	void perft(unsigned int depth);
 	void divide(unsigned int depth);
 	template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;

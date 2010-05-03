@@ -34,11 +34,11 @@ Move RootBoard::rootSearch() {
 		QTextStream xout(stderr);
 		for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
 			xout << depth << ":" << currentMove->string() << endl;
-			Score<(Colors)-C> currentScore = beta;
-			search<(Colors)-C, tree>(b, *currentMove, depth-1, currentScore, alpha);
-			if (alpha.max(currentScore)) {
+			Score<C> currentScore = alpha;
+			search<(Colors)-C, tree>(b, *currentMove, depth-1, beta, currentScore);
+//			if (alpha.max(currentScore)) {
 				bestMove = *currentMove;
-			}
+//			}
 			if (QDateTime::currentDateTime() > hardBudget) break;
 		}
 		// assume geometrically increasing time per depth
@@ -49,10 +49,10 @@ Move RootBoard::rootSearch() {
 }
 /*
  * Search with color C to move, executing a -C colored move m from a board prev.
- * alpha is the return value.
+ * beta is the return value, it is updated at the end
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
-template<Colors C, Phase P, typename A, typename B> void RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, A& alpha, const B& beta) {
+template<Colors C, Phase P, typename A, typename B> void RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
 	const ColoredBoard<C> b(prev, m);
 
 	Key z = b.getZobrist();
@@ -60,40 +60,48 @@ template<Colors C, Phase P, typename A, typename B> void RootBoard::search(const
 	PerftEntry subentry;
 
 	if (pt->retrieve(pe, z, subentry) && subentry.depth >= depth) {
-		alpha = subentry.value;
-		alpha.setReady();
+		beta = subentry.value;
+		beta.setReady();
 		return;
 	}
 
 	Move list[256];
-	Move* end = b.generateMoves(list);
+	Move* end;
+	A current(alpha);	// current is always the maximum of (alpha, current), a out of thread lowered beta may lower ret, but ret has no influence on beta.
+	if (P == leaf) {
+		current.max(Score<(Colors)-C>(eval(b)));
+		end = b.generateCaptureMoves(list);
+	} else
+		end = b.generateMoves(list);
 
 	for (Move* i = list; i<end; ++i) {
-		B ret = beta;	// ret is always the minimum of (beta, ret), a out of thread lowered beta may lower ret, but ret has no influence on beta.
-		if (P == tree || (P == trunk && depth <= splitDepth)) {		
-			search<(Colors)-C, tree, B, A>(b, *i, depth-1, ret, alpha);
+		if (P == leaf || !depth) {
+			search<(Colors)-C, leaf, B, A>(b, *i, 0, beta, current);
+		} else if (P == tree || (P == trunk && depth <= splitDepth)) {
+			search<(Colors)-C, tree, B, A>(b, *i, depth-1, beta, current);
 		} else {
 			WorkThread* th;
 			if ((th = findFreeThread())) {
-				setNotReady(ret);
-				th->startJob(new SearchJob<(Colors)-C, B, A>(this, b, *i, depth-1, ret, alpha));
+				setNotReady(current);
+				th->startJob(new SearchJob<(Colors)-C, B, A>(this, b, *i, depth-1, beta, current));
 			} else {
-				setNotReady(ret);
-				search<(Colors)-C, P>(b, *i, depth-1, ret, alpha);
+				setNotReady(current);
+				search<(Colors)-C, P>(b, *i, depth-1, beta, current);
 			}
 		}
-		alpha.max(ret);
-		
-
+		if (current >= beta)
+			break;
 	}
 
 	PerftEntry stored;
 	stored.zero();
 	stored.depth |= depth;
 	stored.upperKey |= z >> stored.upperShift;
-	stored.value = alpha.get();
+	stored.value = current.get();
 	pt->store(pe, stored);
-	alpha.setReady();
+	current.setReady();
+
+	beta.max(current);
 }
 
 template<Colors C>
