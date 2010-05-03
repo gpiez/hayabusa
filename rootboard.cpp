@@ -10,7 +10,7 @@
 
 RootBoard::RootBoard(Console *c):
 	
-	timeBudget(300),
+	timeBudget(300000),
 	movesToDo(40),
 	console(c)
 {
@@ -194,7 +194,7 @@ void RootBoard::divide(unsigned int depth) {
 }
 
 WorkThread* RootBoard::findFreeThread() {
-	QMutexLocker locker(&threadsLock);
+//	QMutexLocker locker(&threadsLock);
 	foreach(WorkThread* th, threads) 
 		if (th->isFree())
 			return th;

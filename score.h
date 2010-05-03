@@ -32,13 +32,26 @@
 #endif
 
 #include "constants.h"
+#include "move.h"
 
 typedef int16_t RawScore;
 
+struct MoveRawScore {
+	Move m;
+	RawScore r;
+	operator RawScore () const {
+		return r;
+	}
+	void operator = (RawScore a) {
+		r = a;
+	}
+};
+
 template<Colors C> struct Score
 {
+	Move m;
 	RawScore v;	//Absolute score. Less is good for black, more is good for white.
-
+	
 	Score() {};
 	explicit Score (int a) 							{ v = C*a; };
 	// Returns a relative score. More is better for the current side.
@@ -60,15 +73,46 @@ template<Colors C> struct Score
 		else
 			return v<=a.v;
 	}
+	bool operator > (const Score& a) const {
+		if ( C==White )
+			return v>a.v;
+		else
+			return v<a.v;
+	}
+	bool operator < (const Score<(Colors)-C>& a) const {
+		if ( C==White )
+			return v<a.v;
+		else
+			return v>a.v;
+	}
+	bool max(const RawScore b) 		{
+		if ( C==White ) {
+			if (b > v) {
+				v = b;
+				return true;
+			}
+		} else {
+			if (b < v) {
+				v = b;
+				return true;
+			}
+		}
+		return false;
+	}
 	bool max(const Score<(Colors)-C>& b) 		{
+		return max(b.v);
+	}
+	bool max(const Score<(Colors)-C>& b, const Move n) 		{
 		if ( C==White ) {
 			if (b.v > v) {
 				v = b.v;
+				m = n;
 				return true;
 			}
 		} else {
 			if (b.v < v) {
 				v = b.v;
+				m = n;
 				return true;
 			}
 		}
@@ -139,9 +183,9 @@ public:
 		return (Score<C>)*this >= (Score<(Colors)-C>)a; 
 	}
 	
-	bool max(const SharedScore<-C>& a) 		{
+	bool max(const SharedScore<-C>& a, const Move n) 		{
 		QMutexLocker lock(&valueMutex);
-		if (((Score<C>)*this).max((Score<(Colors)-C>)a)) {
+		if (((Score<C>)*this).max((Score<(Colors)-C>)a, n)) {
 			for ( SharedScore<C>** i = &depending; *i; ++i ) {
 				(*i)->max((Score<(Colors)-C>)a);
 			}
