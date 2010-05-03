@@ -182,38 +182,30 @@ void TestRootBoard::generateCaptures() {
 			cout << "At " << hex << i << " " << ((uint8_t*)&b)[i] << " is " << ((uint8_t*)&b2.boards[0])[i] << endl;
 		}
 	}
-
 */
+	b->setup("r3k2r/B1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1");
+	b->threads.first()->startJob(new RootPerftJob<Black>(b, 5));
+	QCOMPARE( b->console->getAnswer(), QString("176577789"));
+	
 	b->setup("5n1n/4kPPP/////pppK4/N1N5 w - - 0 1");
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
 	b->threads.first()->startJob(new RootPerftJob<White>(b, 6));
 	QCOMPARE( b->console->getAnswer(), QString("71179139"));
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 119060324/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
 
 	b->setup("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1");
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
 	b->threads.first()->startJob(new RootPerftJob<Black>(b, 6));
 	QCOMPARE( b->console->getAnswer(), QString("71179139"));
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 119060324/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
 
 	b->setup();
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
 	b->threads.first()->startJob(new RootPerftJob<White>(b, 6));
 	QCOMPARE( b->console->getAnswer(), QString("119060324"));
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 119060324/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
 
 	b->setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
 	b->threads.first()->startJob(new RootPerftJob<White>(b, 5));
 	QCOMPARE( b->console->getAnswer(), QString("193690690"));
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 193690690/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
 
 	b->setup("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); tsc = (a + (d << 32));
 	b->threads.first()->startJob(new RootPerftJob<White>(b, 7));
 	QCOMPARE( b->console->getAnswer(), QString("178633661"));
-	asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx"); xout << 178633661/(((a + (d << 32)) - tsc)/3.6e9) << endl;;
-	//cout << sum << endl;
 }
 
 QTEST_MAIN(TestRootBoard);

@@ -427,9 +427,9 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		 */
 		if (!isValid(pin)) {
 			uint8_t spec=0;
-			if (castling[CI].k && from == (pov^a1))
+			if (from == (pov^a1))
 				spec = disableLongCastling;
-			if (castling[CI].q && from == (pov^h1))
+			if (from == (pov^h1))
 				spec = disableShortCastling;
 			rays(list, from, 0, spec);
 			rays(list, from, 4, spec);
