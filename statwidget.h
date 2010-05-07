@@ -24,15 +24,22 @@
 #include <pch.h>
 #endif
 
+#ifdef QT_GUI_LIB
+
 #include "ui_stats.h"
 
-#ifdef QT_GUI_LIB
-class StatWidget: public Ui::Stats
-{
-	StatWidget();
-	~StatWidget();
+class RootBoard;
 
+class StatWidget: public QWidget, private Ui::Statsui
+{
+	Q_OBJECT
+	const RootBoard& rb;
+private slots:
+	void update();
+	
 public:
+	StatWidget(const RootBoard&);
+	virtual ~StatWidget();
 	
 };
 #endif // QT_GUI_LIB

@@ -77,7 +77,7 @@ Working Directory=file:///home/gpiez/src/hayabusa/Debug
 isExecutable=false
 
 [MakeBuilder]
-Number Of Jobs=2
+Number Of Jobs=4
 
 [Project]
 VersionControlSupport=kdevgit

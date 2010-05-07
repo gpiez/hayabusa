@@ -8,42 +8,52 @@
 #include "eval.h"
 #include "coloredboard.h"
 #include "result.h"
+#ifdef QT_GUI_LIB
+#include "statwidget.h"
+#endif
 
 class WorkThread;
 class Console;
 template<class T, unsigned int U> class TranspositionTable;
 template<class T> class Result;
 
+/* Board representing a position with history, color to move, castling and en
+ * passant status. Has an associated Eval object and holds multiple worker
+ * threads. Contains information about the time budget.
+ */
 class RootBoard: private Eval {
 	friend class TestRootBoard;
 	
-	unsigned int timeBudget;
-	unsigned int movesToDo;
-	unsigned int numThreads;
-	unsigned int availableThreads;
-	unsigned int iMove;
-	Colors color;
-	QMutex threadsLock;
-	TranspositionTable<TTEntry, transpositionTableAssoc>* tt;
-
 	struct {
 		ColoredBoard<White> wb;
 		ColoredBoard<Black> bb;
 	} boards[nMaxGameLength];
+	#ifdef QT_GUI_LIB
+    StatWidget* statWidget;
+	#endif
+
+	unsigned int timeBudget;
+	unsigned int movesToDo;
+	unsigned int numThreads;
+	unsigned int iMove;				// current half move index
+	QMutex threadsLock;
 
 	void initWorkThreads();
 	void allocateWorkThreads(unsigned int);
 	void stop();
-	template<Colors C> const ColoredBoard<C>& currentBoard() const;
 	template<Colors C> ColoredBoard<C>& currentBoard();
     WorkThread* findFreeThread();
 	unsigned int getAndDecAvailableThreads();
 	
 public:
+	TranspositionTable<TTEntry, transpositionTableAssoc>* tt;
 	TranspositionTable<PerftEntry, 1>* pt;
+	Colors color;
+	Move bestMove;
 	QVector<WorkThread*> threads;
 	
 	RootBoard(Console*);
+	template<Colors C> const ColoredBoard<C>& currentBoard() const;
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<Colors C> Move rootSearch();

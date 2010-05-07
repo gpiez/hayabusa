@@ -17,16 +17,45 @@
 
 */
 #include <pch.h>
+#include "stats.h"
+
+Stats stats;
+
 #ifdef QT_GUI_LIB
-
 #include "statwidget.h"
+#include "rootboard.h"
+#include "transpositiontable.tcc"
 
-StatWidget::StatWidget()
+StatWidget::StatWidget(const RootBoard& rb):
+	rb(rb)
 {
+	setupUi(this);
+	QTimer* t = new QTimer(this);
+	connect(t, SIGNAL(timeout()), this, SLOT(update()));
+	t->setInterval(1000);
+	t->start();
 }
 
 StatWidget::~StatWidget()
 {
+}
 
+#define DISPLAYNUM(x) n##x->setText(QString::number(prev.last().x)); if (prev.size() > 1) v##x->setText(QString::number((prev.last().x - prev.first().x) / prev.size()));
+/* Store the last 10 stats for a sliding average */
+void StatWidget::update()
+{
+	static QList<Stats> prev;
+	prev.append(stats);
+	if (prev.size() > 10)
+		prev.removeFirst();
+
+	label->setText(rb.tt->bestLine(rb));
+
+	DISPLAYNUM(node)
+	DISPLAYNUM(eval)
+	DISPLAYNUM(tthit)
+	DISPLAYNUM(ttuse)
+	DISPLAYNUM(ttfree)
+	
 }
 #endif // QT_GUI_LIB

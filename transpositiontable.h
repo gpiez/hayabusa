@@ -8,9 +8,16 @@
 #ifndef TRANSPOSITIONTABLE_H_
 #define TRANSPOSITIONTABLE_H_
 
+#ifndef PCH_H_
+#include <pch.h>
+#endif
+
 #include "constants.h"
 #include "move.h"
 #include "ttentry.h"
+
+template<Colors C> class ColoredBoard;
+class RootBoard;
 
 namespace Zobrist {
 typedef Key KeyTable[nTotalPieces][nSquares];
@@ -18,11 +25,11 @@ extern KeyTable zobrist;  //12*64*8 = 6k
 void initTables();
 }
 
-template<class Entry, unsigned assoc>
+template<typename Entry, unsigned assoc>
 class TranspositionTable {
 	Entry* table;		// TODO remove indirection level
 	uint64_t mask;
-	QReadWriteLock tt;
+	QReadWriteLock lock;
 	size_t size;
 	size_t nEntries;
 	bool usesHugePages;
@@ -39,6 +46,8 @@ public:
 	bool retrieve(const Entry* subTable, Key k, Entry&);
 	void store(Entry* subTable, Entry entry);
     void freeMemory();
+	QString bestLine(const RootBoard& );
+	template<Colors C> QString bestLineNext(const ColoredBoard<(Colors)-C>&, Move);
 };
 
 

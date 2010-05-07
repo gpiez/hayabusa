@@ -11,11 +11,9 @@
 
 int main(int argc, char *argv[])
 {
-#ifdef USE_QTGUI
-	Q_INIT_RESOURCE(application);
+#ifdef QT_GUI_LIB
+	Q_INIT_RESOURCE(hayabusa);
     QApplication app(argc, argv);
-    MainWindow mainWin;
-    mainWin.show();
 #else
     QCoreApplication app(argc, argv);
 #endif

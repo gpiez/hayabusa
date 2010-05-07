@@ -6,6 +6,9 @@
 #endif
 
 #include "transpositiontable.h"
+#include "rootboard.h"
+#include "stats.h"
+#include "coloredboard.tcc"
 
 #ifdef HAVE_HUGE_PAGES
 extern "C" {
@@ -47,24 +50,48 @@ Entry* TranspositionTable<Entry, assoc>::getEntry(Key k) const {
 
 template<typename Entry, unsigned int assoc>
 bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, Entry& ret) {
+	union EntryUnion {
+		Entry temp;
+		volatile __m128i xmm;
+	} atomic_entry ALIGN_XMM;
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
-	QReadLocker locker(&tt);
-	for (unsigned int i = 0; i < assoc; ++i)		//TODO compare all keys simultaniously suing sse
-		if (subTable[i].upperKey == upperKey) {
-			//TODO rotate to first position
-			ret = subTable[i];
+	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
+		atomic_entry.xmm = ((EntryUnion) { subTable[i] }).xmm;
+		if (atomic_entry.temp.upperKey == upperKey) {		//only lock if a possible match is found
+//			QReadLocker locker(&tt);
+				//TODO rotate to first position
+			ret = atomic_entry.temp;
 			return true;
+			
 		}
+	}
 	return false;
 }
 
 template<typename Entry, unsigned int assoc>
 void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry) {
-	tt.lockForWrite();
-	if (entry.depth >= subTable[assoc-1].depth) {
-		subTable[assoc-1] = entry;
+	QWriteLocker l(&lock);
+
+	// look if the position is already stored. if it is, but the new depth
+	// isn't sufficient, don't write anything.
+	for (unsigned int i = 0; i < assoc; ++i) 		//TODO compare all keys simultaniously suing sse
+		if (subTable[i].upperKey == entry.upperKey) {
+			if (entry.depth >= subTable[i].depth)
+				subTable[i] = entry;
+			return;
+		}
+
+	if (subTable[assoc-1].data == 0)
+		stats.ttuse++;
+	unsigned int i;
+	for (i = 0; i < assoc-1; ++i)				// TODO possibly checking only assoc/2 and a LRU in retrieve would be better
+		if (entry.depth > subTable[i].depth)
+			break;
+
+	for (unsigned j = assoc-1; j>i; --j) {
+		subTable[j] = subTable[j-1];
 	}
-	tt.unlock();
+	subTable[i] = entry;
 }
 
 template<typename Entry, unsigned int assoc>
@@ -100,6 +127,45 @@ void TranspositionTable<Entry, assoc>::setSize(size_t s)
 	}
 	//memset(table, 0, size);
 	mask = nEntries-assoc;
+}
+
+template<typename Entry, unsigned assoc>
+template<Colors C>
+QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m) {
+	QString line = m.string();
+	const ColoredBoard<C> b(prev, m);
+	Key key = b.getZobrist();
+	TTEntry* te = getEntry(key);
+	TTEntry subentry;
+
+	Move ttMove = {0};
+	if (retrieve(te, key, subentry) ) {
+		ttMove.from = subentry.from;
+		ttMove.to = subentry.to;
+	}
+
+	Move list[256];
+	Move* const end = b.generateMoves(list);
+	if ((uint32_t&)ttMove)
+		for (Move *i=list; i<end; ++i) {
+			if (i->from == ttMove.from && i->to == ttMove.to) {
+				line += " " + bestLineNext<(Colors)-C>(b, *i);
+				break;
+			}
+		}
+
+	return line;
+}
+
+template<typename Entry, unsigned assoc>
+QString TranspositionTable<Entry, assoc>::bestLine(const RootBoard& b) {
+	if (!(uint32_t&)b.bestMove) return QString();
+	if (b.color == White) {
+		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove);
+	} else {
+		return bestLineNext<White>(b.currentBoard<Black>(), b.bestMove);
+	}
+
 }
 
 #endif

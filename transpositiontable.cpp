@@ -4,6 +4,7 @@
  *  Created on: Dec 9, 2009
  *      Author: gpiez
  */
+#include <pch.h>
 
 #include <cstdlib>
 #include "transpositiontable.h"
@@ -35,3 +36,4 @@ void initTables() {
 			}
 		}
 }
+

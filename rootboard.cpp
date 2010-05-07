@@ -7,6 +7,9 @@
 #include "jobs.h"
 #include "transpositiontable.h"
 #include "transpositiontable.tcc"
+#ifdef QT_GUI_LIB
+#include "statwidget.h"
+#endif
 
 RootBoard::RootBoard(Console *c):
 	
@@ -16,6 +19,10 @@ RootBoard::RootBoard(Console *c):
 {
 	initWorkThreads();
 	tt = new TranspositionTable<TTEntry, transpositionTableAssoc>;
+	#ifdef QT_GUI_LIB
+	statWidget = new StatWidget(*this);
+	statWidget->show();
+	#endif
 }
 
 void RootBoard::initWorkThreads() {

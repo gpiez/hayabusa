@@ -5,14 +5,15 @@
 #include <pch.h>
 #endif
 
-namespace Stats {
-	uint64_t	nodes;
-	uint64_t	internalNodes;
+#include <stdint.h>
+
+extern struct Stats {
+	uint64_t	node;
+	uint64_t	internalNode;
+	uint64_t	eval;
 	uint64_t	ttuse;
 	uint64_t	ttfree;
-	uint64_t	tthits;
-	
-	
-};
+	uint64_t	tthit;
+} stats;
 
 #endif

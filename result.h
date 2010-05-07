@@ -41,7 +41,6 @@ public:
 	{
 		value = x;
 	}
-	
 	operator T () {
 		readyMutex.lock();
 		while (notReady)
@@ -64,10 +63,9 @@ public:
 	void setReady() {
 		readyMutex.lock();
 		--notReady;
-		readyMutex.unlock();
-		readyCond.wakeOne();
-
-	}
+		readyCond.wakeOne();	// if the wakeup happens after the unlocking, this Result
+		readyMutex.unlock();	// may be destroyed after the signaling the condition
+	}							// but before .wakeOne() is completly done.
 
 	void setNotReady() {
 		readyMutex.lock();
