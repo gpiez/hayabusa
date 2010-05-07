@@ -1,6 +1,6 @@
 /*
-    <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) <year>  <name of author>
+    hayabusa, chess engine
+    Copyright (C) 2009-2010 Gunther Piez
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,6 +16,5 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
 #include "perft.h"
 
