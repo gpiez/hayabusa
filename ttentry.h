@@ -63,12 +63,12 @@ struct Bitfield {
  * The static consts are the shift values for components.
  */
 union TTEntry {
-	Bitfield<0, 12, int> score;
-	Bitfield<12, 6, unsigned int> from;
-	Bitfield<18, 6, unsigned int> to;
-	Bitfield<24, 6, uint8_t> depth;
-	Bitfield<30, 1, bool> loBound;
-	Bitfield<31, 1, bool> hiBound;
+	Bitfield<0, 6, unsigned int> from;
+	Bitfield<6, 6, unsigned int> to;
+	Bitfield<12, 6, unsigned int> depth;
+	Bitfield<18, 1, bool> loBound;
+	Bitfield<19, 1, bool> hiBound;
+	Bitfield<20, 12, int> score;
 	Bitfield<32, 1, bool> expired;
 	Bitfield<33, 31, Key> upperKey;
 	enum { upperShift = 33 };
