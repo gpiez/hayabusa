@@ -34,9 +34,12 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 	uint8_t pin;
 	unsigned int nAttacks;
 	uint64_t sources;
+	SpecialMoves spec = nothingSpecial;
 	/*
 	 * If we are capturing, we need a special treatment if the captured piece is a pawn which
 	 * has made a doublestep, because we can escape from a check by capturing e.p.
+	 * Special treatment is also needed for pawn captures, they may be promotions
+	 * And for captured rooks, as this may disable castling for the opponent
 	 */
 	if ( cap ) {
 		if ( enPassant == to )
@@ -52,17 +55,24 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 					if (!isValid(detectPin(from))) *list++ = (Move) { from, to+C*8, 0, EP };
 			}
 
+		if (cap == -C*Rook) {
+			if (/*castling[EI].k && */to == (pov^h8)) 
+				spec = disableOpponentShortCastling;
+			else if (/*castling[EI].q && */to == (pov^a8))
+				spec = disableOpponentLongCastling;
+		}
+
 		if ( a.s.PR ) {
 			from = to-C*9;
 			ASSERT(pieces[from] == C*Pawn);
 			if (!isValid(detectPin(from))) {
 				if (isPromoRank(from)) {
-					*list++ = (Move) { from, to, cap, promoteQ };
-					*list++ = (Move) { from, to, cap, promoteN };
-					*list++ = (Move) { from, to, cap, promoteR };
-					*list++ = (Move) { from, to, cap, promoteB };
+					*list++ = (Move) { from, to, cap, promoteQ + spec };
+					*list++ = (Move) { from, to, cap, promoteN + spec };
+					*list++ = (Move) { from, to, cap, promoteR + spec };
+					*list++ = (Move) { from, to, cap, promoteB + spec };
 				} else
-					*list++ = (Move) { from, to, cap, 0 };
+					*list++ = (Move) { from, to, cap, spec };
 			}
 		}
 
@@ -71,12 +81,12 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			ASSERT(pieces[from] == C*Pawn);
 			if (!isValid(detectPin(from))) {
 				if (isPromoRank(from)) {
-					*list++ = (Move) { from, to, cap, promoteQ };
-					*list++ = (Move) { from, to, cap, promoteN };
-					*list++ = (Move) { from, to, cap, promoteR };
-					*list++ = (Move) { from, to, cap, promoteB };
+					*list++ = (Move) { from, to, cap, promoteQ + spec };
+					*list++ = (Move) { from, to, cap, promoteN + spec };
+					*list++ = (Move) { from, to, cap, promoteR + spec };
+					*list++ = (Move) { from, to, cap, promoteB + spec };
 				} else
-					*list++ = (Move) { from, to, cap, 0 };
+					*list++ = (Move) { from, to, cap, spec };
 			}
 		}
 
@@ -116,7 +126,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			from = sources;
 			sources >>= 8;
 			if (isKnightDistance(from, to)) {
-				if (!isValid(detectPin(from))) *list++ = (Move) {from, to, cap, 0};
+				if (!isValid(detectPin(from))) *list++ = (Move) {from, to, cap, spec};
 				if (!--nAttacks) break;
 			}
 		}
@@ -133,7 +143,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			dir = vec2dir[from][to];
 			if (isValid(dir) & dir & 1 && length(dir^4, to)*dirOffsets[dir] + from == to) {
 				pin = detectPin(from);
-				if (!isValid(pin))	*list++ = (Move) {from, to, cap, 0};
+				if (!isValid(pin))	*list++ = (Move) {from, to, cap, spec};
 				if (!--nAttacks) break;
 			}
 		}
@@ -149,8 +159,15 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			sources >>= 8;
 			dir = vec2dir[from][to];
 			if (~dir & 1 && length(dir^4, to)*dirOffsets[dir] + from == to) {
+				SpecialMoves spec2 = nothingSpecial;
+				if (/*castling[CI].q && */from == (pov^a1)) {
+					spec2 = disableLongCastling;
+				}
+				if (/*castling[CI].k && */from == (pov^h1)) {
+					spec2 = disableShortCastling;
+				}
 				pin = detectPin(from);
-				if (!isValid(pin)) *list++ = (Move) {from, to, cap, 0};
+				if (!isValid(pin)) *list++ = (Move) {from, to, cap, spec + spec2};
 				if (!--nAttacks) break;
 			}
 		}
@@ -167,7 +184,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			dir = vec2dir[from][to];
 			if (isValid(dir) && from + length(dir^4, to)*dirOffsets[dir] == to) {
 				pin = detectPin(from);
-				if (!isValid(pin) | pin==dir&3)	*list++ = (Move) {from, to, cap, 0};
+				if (!isValid(pin) | pin==dir&3)	*list++ = (Move) {from, to, cap, spec};
 				if (!--nAttacks) break;
 			}
 		}
