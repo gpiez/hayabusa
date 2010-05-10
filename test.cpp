@@ -194,6 +194,14 @@ void TestRootBoard::generateCaptures() {
 		}
 	}
 */
+//  	b->setup("4k2r/8/8/8/8/6nB/8/4K2R w Kk - 0 1");
+//  	b->threads.first()->startJob(new RootPerftJob<White>(b, 8));
+//  	QCOMPARE( b->console->getAnswer(), QString("9941334384"));
+// 
+ 	b->setup("rnbqk2r/pppp1Np1/8/2b4p/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 1");
+ 	b->threads.first()->startJob(new RootPerftJob<White>(b, 6));
+ 	QCOMPARE( b->console->getAnswer(), QString("1273001810"));
+
 	b->setup("r3k2r/B1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1");
 	b->threads.first()->startJob(new RootPerftJob<Black>(b, 5));
 	QCOMPARE( b->console->getAnswer(), QString("176577789"));
