@@ -34,7 +34,6 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 	uint8_t pin;
 	unsigned int nAttacks;
 	uint64_t sources;
-	SpecialMoves spec = nothingSpecial;
 	/*
 	 * If we are capturing, we need a special treatment if the captured piece is a pawn which
 	 * has made a doublestep, because we can escape from a check by capturing e.p.
@@ -45,7 +44,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 		if ( enPassant == to )
 			for ( unsigned int i=0; i<pieceList[CI][Pawn]; ++i ) {
 				from = pieceList[CI].getPawn(i);
-				if ( from == to + 1 | from == to - 1 )
+				if ( (from == to + 1) | (from == to - 1) )
 					/* The situation is now that a pawn is giving us check. This pawn has made a double
 					 * step in the move before and can be captured en passant by one of our pawns.
 					 * The move is only legal if our pawn is not pinned, since this pawn will move on
@@ -55,24 +54,17 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 					if (!isValid(detectPin(from))) *list++ = (Move) { from, to+C*8, 0, EP };
 			}
 
-// 		if (cap == -C*Rook) {
-// 			if (/*castling[EI].k && */to == (pov^h8)) 
-// 				spec = disableOpponentShortCastling;
-// 			else if (/*castling[EI].q && */to == (pov^a8))
-// 				spec = disableOpponentLongCastling;
-// 		}
-
 		if ( a.s.PR ) {
 			from = to-C*9;
 			ASSERT(pieces[from] == C*Pawn);
 			if (!isValid(detectPin(from))) {
 				if (isPromoRank(from)) {
-					*list++ = (Move) { from, to, cap, promoteQ + spec };
-					*list++ = (Move) { from, to, cap, promoteN + spec };
-					*list++ = (Move) { from, to, cap, promoteR + spec };
-					*list++ = (Move) { from, to, cap, promoteB + spec };
+					*list++ = (Move) { from, to, cap, promoteQ };
+					*list++ = (Move) { from, to, cap, promoteN };
+					*list++ = (Move) { from, to, cap, promoteR };
+					*list++ = (Move) { from, to, cap, promoteB };
 				} else
-					*list++ = (Move) { from, to, cap, spec };
+					*list++ = (Move) { from, to, cap, nothingSpecial };
 			}
 		}
 
@@ -81,12 +73,12 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			ASSERT(pieces[from] == C*Pawn);
 			if (!isValid(detectPin(from))) {
 				if (isPromoRank(from)) {
-					*list++ = (Move) { from, to, cap, promoteQ + spec };
-					*list++ = (Move) { from, to, cap, promoteN + spec };
-					*list++ = (Move) { from, to, cap, promoteR + spec };
-					*list++ = (Move) { from, to, cap, promoteB + spec };
+					*list++ = (Move) { from, to, cap, promoteQ };
+					*list++ = (Move) { from, to, cap, promoteN };
+					*list++ = (Move) { from, to, cap, promoteR };
+					*list++ = (Move) { from, to, cap, promoteB };
 				} else
-					*list++ = (Move) { from, to, cap, spec };
+					*list++ = (Move) { from, to, cap, nothingSpecial };
 			}
 		}
 
@@ -107,7 +99,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			}
 		} else {
 			from = to - C*16;
-			if ( isRank<2>(from) & pieces[from] == C*Pawn & pieces[to-C*8] == 0 )
+			if ( isRank<2>(from) & (pieces[from] == C*Pawn) & (pieces[to-C*8] == 0) )
 				if (!isValid(detectPin(from))) {
 					bool pawnadj = ((to & 7) != 7 && pieces[to+1] == -C*Pawn)
 								|| ((to & 7) != 0 && pieces[to-1] == -C*Pawn);
@@ -126,7 +118,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			from = sources;
 			sources >>= 8;
 			if (isKnightDistance(from, to)) {
-				if (!isValid(detectPin(from))) *list++ = (Move) {from, to, cap, spec};
+				if (!isValid(detectPin(from))) *list++ = (Move) {from, to, cap, nothingSpecial};
 				if (!--nAttacks) break;
 			}
 		}
@@ -143,7 +135,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			dir = vec2dir[from][to];
 			if (isValid(dir) & dir & 1 && length(dir^4, to)*dirOffsets[dir] + from == to) {
 				pin = detectPin(from);
-				if (!isValid(pin))	*list++ = (Move) {from, to, cap, spec};
+				if (!isValid(pin))	*list++ = (Move) {from, to, cap, nothingSpecial};
 				if (!--nAttacks) break;
 			}
 		}
@@ -159,17 +151,8 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			sources >>= 8;
 			dir = vec2dir[from][to];
 			if (~dir & 1 && length(dir^4, to)*dirOffsets[dir] + from == to) {
-				SpecialMoves spec2 = nothingSpecial;
-				#if 0
-				if (/*castling[CI].q && */from == (pov^a1)) {
-					spec2 = disableLongCastling;
-				}
-				if (/*castling[CI].k && */from == (pov^h1)) {
-					spec2 = disableShortCastling;
-				}
-				#endif
 				pin = detectPin(from);
-				if (!isValid(pin)) *list++ = (Move) {from, to, cap, spec + spec2};
+				if (!isValid(pin)) *list++ = (Move) {from, to, cap, nothingSpecial};
 				if (!--nAttacks) break;
 			}
 		}
@@ -186,7 +169,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			dir = vec2dir[from][to];
 			if (isValid(dir) && from + length(dir^4, to)*dirOffsets[dir] == to) {
 				pin = detectPin(from);
-				if (!isValid(pin) | pin==dir&3)	*list++ = (Move) {from, to, cap, spec};
+				if (!isValid(pin)) *list++ = (Move) {from, to, cap, nothingSpecial};
 				if (!--nAttacks) break;
 			}
 		}
@@ -333,31 +316,17 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 			to = from + C * 9;
 			cap = pieces[to];
 			if ((C*cap < 0) & ((from&7) != 7*EI) && (!isValid(pin) | (pin == 1))) {
-				SpecialMoves spec;
-/*				if (to == (pov^h8) & castling.castling[EI].k)
-					spec = disableOpponentShortCastling;
-				else if (to == (pov^a8) & castling.castling[EI].q)
-					spec = disableOpponentLongCastling;
-				else*/
-					spec = nothingSpecial;
-				*list++ = (Move) {from, to, cap, promoteN + spec};
-				*list++ = (Move) {from, to, cap, promoteR + spec};
-				*list++ = (Move) {from, to, cap, promoteB + spec};
+				*list++ = (Move) {from, to, cap, promoteN};
+				*list++ = (Move) {from, to, cap, promoteR};
+				*list++ = (Move) {from, to, cap, promoteB};
 			}
 
 			to = from + C * 7;
 			cap = pieces[to];
-			if (C * cap < 0 & ((from&7) != 7*CI) && (!isValid(pin) | pin == 3)) {
-				SpecialMoves spec;
-/*				if (to == (pov^h8) & castling.castling[EI].k)
-					spec = disableOpponentShortCastling;
-				else if (to == (pov^a8) & castling.castling[EI].q)
-					spec = disableOpponentLongCastling;
-				else*/
-					spec = nothingSpecial;
-				*list++ = (Move) {from, to, cap, promoteN+spec};
-				*list++ = (Move) {from, to, cap, promoteR+spec};
-				*list++ = (Move) {from, to, cap, promoteB+spec};
+			if ((C*cap < 0) & ((from&7) != 7*CI) && (!isValid(pin) | (pin == 3))) {
+				*list++ = (Move) {from, to, cap, promoteN};
+				*list++ = (Move) {from, to, cap, promoteR};
+				*list++ = (Move) {from, to, cap, promoteB};
 			}
 
 			to = from + C * 8;
@@ -373,7 +342,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		//if the pawn is pinned, it is allowed to move if the pin is from direction 2 or 6 (vertically)
 		//if there is an uncovered check, it can only be from an direction other than 2 or 6
 		to = from + C * 8;
-		if (!pieces[to] & (!isValid(pin) | pin == 2)) {
+		if ((!pieces[to]) & (!isValid(pin) | (pin == 2))) {
 			*list++ = (Move) {from, to, 0, 0};
 			to = from + C * 16;
 			if (isRank<2> (from) && !pieces[to]) {
@@ -391,19 +360,19 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
  * if we made two moves in a row and the last move was a double step of our own pawn
  */
 		if ( enPassant && isRank<5>(from))
-		if (((( from+(int8_t)C == enPassant ) && ( !isValid(pin) | pin == 1 ))
-		|| (( from-(int8_t)C == enPassant ) && ( !isValid(pin) | pin == 3 )))) {
+		if (((( from+(int8_t)C == enPassant ) && ( !isValid(pin) | (pin == 1)))
+		|| (( from-(int8_t)C == enPassant ) && ( !isValid(pin) | (pin == 3))))) {
 			/*
 			 * Handle special case, where king, capturing pawn, captured pawn and horizontal
 			 * attacking piece are on one line. Although neither pawn is pinned, the capture
 			 * is illegal, since both pieces are removed and the king will be in check
 			 */
-			if ((attVec[0][from].lIndex != C*King & attVec[0][from].rIndex != C*King
-				|| attVec[0][enPassant].lIndex != -C*Rook & attVec[0][enPassant].rIndex != -C*Rook
-					& attVec[0][enPassant].lIndex != -C*Queen & attVec[0][enPassant].rIndex != -C*Queen)
-		    &&  (attVec[0][enPassant].lIndex != C*King & attVec[0][enPassant].rIndex != C*King
-		    	|| attVec[0][from].lIndex != -C*Rook & attVec[0][from].rIndex != -C*Rook
-		    	    & attVec[0][from].lIndex != -C*Queen & attVec[0][from].rIndex != -C*Queen)) {
+			if (((attVec[0][from].lIndex != C*King) & (attVec[0][from].rIndex != C*King)
+				|| (attVec[0][enPassant].lIndex != -C*Rook) & (attVec[0][enPassant].rIndex != -C*Rook)
+					& (attVec[0][enPassant].lIndex != -C*Queen) & (attVec[0][enPassant].rIndex != -C*Queen))
+		    &&  ((attVec[0][enPassant].lIndex != C*King) & (attVec[0][enPassant].rIndex != C*King)
+		    	|| (attVec[0][from].lIndex != -C*Rook) & (attVec[0][from].rIndex != -C*Rook)
+		    	    & (attVec[0][from].lIndex != -C*Queen) & (attVec[0][from].rIndex != -C*Queen))) {
 				to = enPassant + C*8;
 				*list++ = (Move) { from, to, 0, EP};	//leave capture field empty, otherwise we would capture twice
 			}

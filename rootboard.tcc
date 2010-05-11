@@ -124,7 +124,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	// move best move from tt / history to front
 	if ((uint32_t&)ttMove)
 		for (Move* i = list; i<end; ++i) 
-			if (ttMove.from == i->from & ttMove.to == i->to) {
+			if ((ttMove.from == i->from) & (ttMove.to == i->to)) {
 				ttMove = *i;
 				*i = *list;
 				*list = ttMove;

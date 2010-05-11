@@ -39,36 +39,17 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootB
 	next->enPassant = 0;
 	next->castling.data = castling.data & castlingMask[m.from].data & castlingMask[m.to].data;
 	
-	next->fiftyMoves = m.capture!=0 | piece==5 ? 0:fiftyMoves+1;
+	next->fiftyMoves = (m.capture!=0) | (piece==5) ? 0:fiftyMoves+1;
 	ASSERT(C*m.capture <= King);
 	
-// 	if (m.special & disableOpponentLongCastling)
-// 		next->castling.castling[EI].q = 0;
-// 	else if (m.special & disableOpponentShortCastling)
-// 		next->castling.castling[EI].k = 0;
-
 	switch (m.special & 0xf) {
 	case 0:
 		break;
-	case disableCastling:
-/*		next->castling.castling[CI].k = 0;
-		next->castling.castling[CI].q = 0;		//todo upper bits don't care, simplify access*/
-		break;
-	case disableShortCastling:
-// 		next->castling.castling[CI].k = 0;
-		break;
-	case disableLongCastling:
-// 		next->castling.castling[CI].q = 0;
-		break;
 	case shortCastling:
-/*		next->castling.castling[CI].k = 0;
-		next->castling.castling[CI].q = 0;		//todo upper bits don't care, simplify access*/
 		next->clrPiece<C>(Rook, pov^h1, rb);
 		next->setPiece<C>(Rook, pov^f1, rb);
 		break;
 	case longCastling:
-/*		next->castling.castling[CI].k = 0;
-		next->castling.castling[CI].q = 0;		//todo upper bits don't casr, simplify access*/
 		next->clrPiece<C>(Rook, pov^a1, rb);
 		next->setPiece<C>(Rook, pov^d1, rb);
 		break;

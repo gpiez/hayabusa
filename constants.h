@@ -61,12 +61,9 @@ enum Square {
 
 enum SpecialMoves {
 	nothingSpecial=0,
-	disableCastling, disableShortCastling, disableLongCastling,
 	shortCastling, longCastling,
 	promoteQ, promoteR, promoteB, promoteN,
-	enableEP, EP,
-	disableOpponentShortCastling = 16,
-	disableOpponentLongCastling = 32
+	enableEP, EP
 };
 
 enum Phase { root, trunk, tree, leaf };

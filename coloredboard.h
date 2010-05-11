@@ -60,7 +60,7 @@ private:
 	void ray(Move* &list, uint8_t from, uint8_t dir) const;
 	void rays(Move* &list, uint8_t from, uint8_t dir, uint8_t spec) const;
 	void generateTargetMove(Move* &list, uint8_t to) const;
-	void generateTargetCapture(Move* &list, uint8_t to, int8_t cap, Attack a, SpecialMoves spec) const;
+	void generateTargetCapture(Move* &list, uint8_t to, int8_t cap, Attack a) const;
 	uint64_t perft(unsigned int depth) const;
 	void divide(unsigned int depth) const;
 
@@ -71,7 +71,7 @@ private:
 	template<uint8_t R>
 	bool isRank(uint8_t pos) const {
 		static_assert( R>=1 && R<=8 );
-		return pos >= 28-C*36+C*R*8 & pos < 36-C*36+C*R*8;
+		return (pos >= 28-C*36+C*R*8) & (pos < 36-C*36+C*R*8);
 	}
 	int8_t index( unsigned int dir, unsigned int pos) const {
 		return dir<4 ? attVec[dir&3][pos].rIndex : attVec[dir&3][pos].lIndex;
@@ -86,7 +86,7 @@ private:
 	}
 
 	bool isLongAttack( unsigned int dir, unsigned int pos) const {
-		return index(dir, pos) == -C*3 | index(dir, pos) == -C*(int)((dir&1)+1);
+		return (index(dir, pos) == -C*3) | (index(dir, pos) == -C*(int)((dir&1)+1));
 	}
 
 public:

@@ -49,7 +49,7 @@ uint8_t ColoredBoard<C>::detectPin( unsigned int pos ) const {
  * and insert it in list, if it is legal.
  */
 template<Colors C>
-void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const int8_t cap, const Attack a, const SpecialMoves spec) const {
+void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const int8_t cap, const Attack a) const {
 	uint8_t from;
 	uint8_t pin;
 	uint8_t dir;
@@ -63,10 +63,8 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 		from = to - C*9;
 		ASSERT(pieces[from] == C*Pawn);
 		pin = detectPin(from);
-		if ( !isValid(pin) | pin==dir ) {
-			SpecialMoves sm = spec;
-			if (isPromoRank(from)) sm = (SpecialMoves)(spec + promoteQ);
-			*list++ = (Move) { from, to, cap, sm};
+		if ( !isValid(pin) | (pin==dir) ) {
+			*list++ = (Move) { from, to, cap, isPromoRank(from) ? promoteQ : nothingSpecial };
 		}
 	}
 	/*
@@ -77,10 +75,8 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 		from = to - C*7;
 		ASSERT(pieces[from] == C*Pawn);
 		pin = detectPin(from);
-		if (  !isValid(pin) | pin==dir ) {
-			SpecialMoves sm = spec;
-			if (isPromoRank(from)) sm = (SpecialMoves)(spec + promoteQ);
-			*list++ = (Move) { from, to, cap, sm};
+		if ( !isValid(pin) | (pin==dir) ) {
+			*list++ = (Move) { from, to, cap, isPromoRank(from) ? promoteQ : nothingSpecial };
 		}
 	}
 	/*
@@ -95,7 +91,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 			from = sources;
 			sources >>= 8;
 			if (isKnightDistance(from, to)) {
-				if (!isValid(detectPin(from))) *list++ = (Move) {from, to, cap, spec};
+				if (!isValid(detectPin(from))) *list++ = (Move) {from, to, cap, nothingSpecial};
 				if (!--nAttacks) break;
 			}
 		}
@@ -107,7 +103,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 	if ( a.s.K )
 		if (!(attacks<EI>(to) & attackMask)) {
 			from = pieceList[CI].getKing();
-			*list++ = (Move) {from, to, cap, nothingSpecial/*castling.castling[CI].k|castling.castling[CI].q ? disableCastling : spec*/};
+			*list++ = (Move) {from, to, cap, nothingSpecial};
 		}
 
 	if (a.l.B) {
@@ -121,14 +117,13 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 			dir = vec2dir[from][to];
 			if (isValid(dir) & dir & 1 && length(dir, from)*dirOffsets[dir] + from == to) {
 				pin = detectPin(from);
-				if (!isValid(pin) | pin==(dir&3))	*list++ = (Move) {from, to, cap, spec};
+				if (!isValid(pin) | (pin==(dir&3))) *list++ = (Move) {from, to, cap, nothingSpecial};
 				if (!--nAttacks) break;
 			}
 		}
 	}
 	/*
-	 * Rook captures something. Check if it is a castling-rook and disable castling in that case.
-	 * Always add spec, it could capture the other rook and siable castling for the opponent.
+	 * Rook captures something.
 	 */
 	if (a.l.R) {
 		nAttacks = a.l.R;
@@ -140,13 +135,8 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 			sources >>= 8;
 			dir = vec2dir[from][to];
 			if (~dir & 1 && length(dir, from)*dirOffsets[dir] + from == to) {
-				SpecialMoves sm = spec;
-/*				if (castling.castling[CI].q && from == (pov^a1))
-					sm = (SpecialMoves)(spec + disableLongCastling);
-				else if (castling.castling[CI].k && from == (pov^h1)) 
-					sm = (SpecialMoves)(spec + disableShortCastling);*/
 				pin = detectPin(from);
-				if (!isValid(pin) | pin==(dir&3)) *list++ = (Move) {from, to, cap, sm};
+				if (!isValid(pin) | (pin==(dir&3))) *list++ = (Move) {from, to, cap, nothingSpecial};
 				if (!--nAttacks) break;
 			}
 		}
@@ -163,7 +153,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 			dir = vec2dir[from][to];
 			if (isValid(dir) && from + length(dir, from)*dirOffsets[dir] == to) {
 				pin = detectPin(from);
-				if (!isValid(pin) | pin==(dir&3)) *list++ = (Move) {from, to, cap, spec};
+				if (!isValid(pin) | (pin==(dir&3))) *list++ = (Move) {from, to, cap, nothingSpecial};
 				if (!--nAttacks) break;
 			}
 		}
@@ -199,42 +189,33 @@ Move* ColoredBoard<C>::generateCaptureMoves( Move* list) const {
 	for (unsigned int i = 0; i < pieceList[EI][Queen]; ++i) {
 		to = pieceList[EI].get(Queen, i);
 		a = attacks<CI>(to);
-		if (a) generateTargetCapture(list, to, -C*Queen, a, nothingSpecial);
+		if (a) generateTargetCapture(list, to, -C*Queen, a);
 	}
 	/*
-	 * A rook can be captured. Detect if it is a castling-rook and set disableOpponentCastling.
+	 * A rook can be captured
 	 */
 	for (unsigned int i = 0; i < pieceList[EI][Rook]; ++i) {
 		to = pieceList[EI].get(Rook, i);
 		a = attacks<CI>(to);
-		if (a) {
-			SpecialMoves spec;
-/*			if (to == (pov^h8) & castling.castling[EI].k)
-				spec = disableOpponentShortCastling;
-			else if (to == (pov^a8) & castling.castling[EI].q)
-				spec = disableOpponentLongCastling;
-			else*/
-				spec = nothingSpecial;
-			generateTargetCapture(list, to, -C*Rook, a, spec);
-		}
+		if (a) generateTargetCapture(list, to, -C*Rook, a);
 	}
 
 	for (unsigned int i = 0; i < pieceList[EI][Bishop]; ++i) {
 		to = pieceList[EI].get(Bishop, i);
 		a = attacks<CI>(to);
-		if (a) generateTargetCapture(list, to, -C*Bishop, a,  nothingSpecial);
+		if (a) generateTargetCapture(list, to, -C*Bishop, a);
 	}
 
 	for (unsigned int i = 0; i < pieceList[EI][Knight]; ++i) {
 		to = pieceList[EI].get(Knight, i);
 		a = attacks<CI>(to);
-		if (a) generateTargetCapture(list, to, -C*Knight, a,  nothingSpecial);
+		if (a) generateTargetCapture(list, to, -C*Knight, a);
 	}
 
 	for (unsigned int i = 0; i < pieceList[EI][Pawn]; ++i) {
 		to = pieceList[EI].get(Pawn, i);
 		a = attacks<CI>(to);
-		if (a) generateTargetCapture(list, to, -C*Pawn, a,  nothingSpecial);
+		if (a) generateTargetCapture(list, to, -C*Pawn, a);
 	}
 
 	return list;
