@@ -13,26 +13,14 @@ endif(NOT CMAKE_BUILD_TYPE)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 enable_language(ASM-FASM)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -Wno-parentheses")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=core2 -fno-exceptions -Winline")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=core2 -fno-exceptions -Winline -Wuninitialized")
 
 # SSSE3 (Note the additional S) is mandatory because of the pshufb instruction.
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mssse3")
 
 FIND_PACKAGE(Qt4 COMPONENTS QtCore REQUIRED)
 FIND_PACKAGE(PrecompiledHeaders)
-
-find_library(HUGE_PAGES hugetlbfs)
-
-if(HUGE_PAGES)
-    SET(HUGE_BDT FALSE CACHE BOOL "Link BSS, DATA, TEXT into huge pages")
-	ADD_DEFINITIONS(-DHAVE_HUGE_PAGES)
-	TARGET_LINK_LIBRARIES(hayabusa hugetlbfs)
-	find_path(HUGETLBFS_LD_PATH ld.hugetlbfs PATH_SUFFIXES share/libhugetlbfs)
-	if(HUGE_BDT)
-	    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -B ${HUGETLBFS_LD_PATH} -Wl,--hugetlbfs-link=BDT")
-	endif(HUGE_BDT)
-ENDIF(HUGE_PAGES)
 
 #IF(CMAKE_COMPILER_IS_GNUCC)
 #  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fmessage-length=0 -fdiagnostics-show-location=every-line")
@@ -87,6 +75,19 @@ ADD_EXECUTABLE(hayabusa ${hayabusa_SRCS} ${hayabusa_UIS_H} ${hayabusa_RCC_SRCS} 
 add_precompiled_header(hayabusa pch.h)
 
 TARGET_LINK_LIBRARIES (hayabusa ${QT_LIBRARIES})
+
+find_library(HUGE_PAGES hugetlbfs)
+
+if(HUGE_PAGES)
+    SET(HUGE_BDT FALSE CACHE BOOL "Link BSS, DATA, TEXT into huge pages")
+	ADD_DEFINITIONS(-DHAVE_HUGE_PAGES)
+	TARGET_LINK_LIBRARIES(hayabusa hugetlbfs)
+	find_path(HUGETLBFS_LD_PATH ld.hugetlbfs PATH_SUFFIXES share/libhugetlbfs)
+	if(HUGE_BDT)
+	    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -B ${HUGETLBFS_LD_PATH} -Wl,--hugetlbfs-link=BDT")
+	endif(HUGE_BDT)
+ENDIF(HUGE_PAGES)
+
 
 ADD_EXECUTABLE(test ${test_SRCS} ${test_MOC_SRCS})
 set_source_files_properties(test.cpp PROPERTIES COMPILE_FLAGS "-DQT_TEST")

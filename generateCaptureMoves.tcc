@@ -107,7 +107,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 	if ( a.s.K )
 		if (!(attacks<EI>(to) & attackMask)) {
 			from = pieceList[CI].getKing();
-			*list++ = (Move) {from, to, cap, castling[CI].k|castling[CI].q ? disableCastling : spec};
+			*list++ = (Move) {from, to, cap, nothingSpecial/*castling.castling[CI].k|castling.castling[CI].q ? disableCastling : spec*/};
 		}
 
 	if (a.l.B) {
@@ -141,10 +141,10 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 			dir = vec2dir[from][to];
 			if (~dir & 1 && length(dir, from)*dirOffsets[dir] + from == to) {
 				SpecialMoves sm = spec;
-				if (castling[CI].q && from == (pov^a1))
+/*				if (castling.castling[CI].q && from == (pov^a1))
 					sm = (SpecialMoves)(spec + disableLongCastling);
-				else if (castling[CI].k && from == (pov^h1))
-					sm = (SpecialMoves)(spec + disableShortCastling);
+				else if (castling.castling[CI].k && from == (pov^h1)) 
+					sm = (SpecialMoves)(spec + disableShortCastling);*/
 				pin = detectPin(from);
 				if (!isValid(pin) | pin==(dir&3)) *list++ = (Move) {from, to, cap, sm};
 				if (!--nAttacks) break;
@@ -209,11 +209,11 @@ Move* ColoredBoard<C>::generateCaptureMoves( Move* list) const {
 		a = attacks<CI>(to);
 		if (a) {
 			SpecialMoves spec;
-			if (to == (pov^h8) & castling[EI].k)
+/*			if (to == (pov^h8) & castling.castling[EI].k)
 				spec = disableOpponentShortCastling;
-			else if (to == (pov^a8) & castling[EI].q)
+			else if (to == (pov^a8) & castling.castling[EI].q)
 				spec = disableOpponentLongCastling;
-			else
+			else*/
 				spec = nothingSpecial;
 			generateTargetCapture(list, to, -C*Rook, a, spec);
 		}

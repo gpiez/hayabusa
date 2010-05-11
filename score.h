@@ -44,12 +44,10 @@ template<Colors C> struct Score
 	Move m;
 	RawScore v;	//Absolute score. Less is good for black, more is good for white.
 	
-	Score() {};
+	//Score() {};
 	explicit Score (int a) 							{ v = C*a; };
 	// Returns a relative score. More is better for the current side.
 	int get() const						 			{ return C*v; };
-//	Score (const Score<White>& a) 					{ v = a.v; };
-//	Score (const Score<Black>& a) 					{ v = a.v; };
 	void operator = (const Score<C>& a)  			{ v = a.v; };
 	void operator = (RawScore a)  					{ v = a; };
 	Score operator + (const Score<C>& a) const 		{ return v + a.v; };
@@ -77,23 +75,25 @@ template<Colors C> struct Score
 		else
 			return v>a.v;
 	}
-	bool max(const RawScore b) 		{
+	bool max(const RawScore b, const Move n) 		{
 		if ( C==White ) {
 			if (b > v) {
 				v = b;
+				m = n;
 				return true;
 			}
 		} else {
 			if (b < v) {
 				v = b;
+				m = n;
 				return true;
 			}
 		}
 		return false;
 	}
-	bool max(const Score<(Colors)-C>& b) 		{
-		return max(b.v);
-	}
+//	bool max(const Score<(Colors)-C>& b) 		{
+		//return max(b.v);
+//	}
 	bool max(const Score<(Colors)-C>& b, const Move n) 		{
 		if ( C==White ) {
 			if (b.v > v) {

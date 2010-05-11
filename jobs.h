@@ -81,7 +81,7 @@ public:
 	void job() {
 		QTextStream xout(stderr);
 		//xout << depth;
-		rb->perft<C, root>(n, b, m, depth);
+		rb->perft<C, trunk>(n, b, m, depth);
 	}
 };
 

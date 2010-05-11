@@ -39,6 +39,15 @@ extern "C" {
 	extern int squareControl[nSquares] ALIGN_PAGE;
 }
 
+union Castling {
+	struct {
+		bool q,k;
+	} castling[nColors];
+	uint32_t data;
+};
+
+class RootBoard;
+
 struct BoardBase {
 	LongIndex	attVec[nDirs/2][nSquares];		//0x100
 	Length		attLen[nDirs/2][nSquares];		//0x100
@@ -48,11 +57,10 @@ struct BoardBase {
 	PieceList 	pieceList[nColors];				//0x040
 	Key zobrist;
 	unsigned int fiftyMoves;
-	struct {
-		bool q,k;
-	} castling[nColors];
+	Castling castling;
 	RawScore pieceSquare;
 	uint8_t enPassant;
+	static Castling castlingMask[nSquares];
 
 	static void initTables();
 
@@ -66,10 +74,11 @@ struct BoardBase {
 	void init();
 	void print();
 
-	template<Colors C> void setPiece(uint8_t piece, uint8_t pos);
-	template<Colors C> void clrPiece(uint8_t piece, uint8_t pos);
-	template<Colors C> void copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos);
+	template<Colors C> void setPiece(uint8_t piece, uint8_t pos, const RootBoard&);
+	template<Colors C> void clrPiece(uint8_t piece, uint8_t pos, const RootBoard&);
+	template<Colors C> void copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const RootBoard&);
 
+	// copy pieces and pieceList
 	void copyPieces(BoardBase* next) const {
 		__m128i xmm0 = _mm_load_si128(((__m128i *)pieces) + 0);
 		__m128i xmm1 = _mm_load_si128(((__m128i *)pieces) + 1);

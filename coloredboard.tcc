@@ -19,11 +19,87 @@
 #ifndef COLOREDBOARD_TCC_
 #define COLOREDBOARD_TCC_
 
-#include <coloredboard.h>
-#include <boardbase.tcc>
+#include "coloredboard.h"
+#include "boardbase.tcc"
+#include "rootboard.h"
 
-template<Colors C> ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m) {
-	prev.doMove(this, m);
+/* Execute move m from position prev, both of the previous (opposite) color
+ * to construct a board with C to move
+ */
+template<Colors C>
+ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard& rb) {
+	prev.doMove(this, m, rb);
+}
+
+template<Colors C>
+void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootBoard& rb) const {
+	copyPieces(next);
+	uint8_t piece = C*pieces[m.from];
+	next->copyBoardClrPiece<C>(this, piece, m.from, rb);
+	next->enPassant = 0;
+	next->castling.data = castling.data & castlingMask[m.from].data & castlingMask[m.to].data;
+	
+	next->fiftyMoves = m.capture!=0 | piece==5 ? 0:fiftyMoves+1;
+	ASSERT(C*m.capture <= King);
+	
+// 	if (m.special & disableOpponentLongCastling)
+// 		next->castling.castling[EI].q = 0;
+// 	else if (m.special & disableOpponentShortCastling)
+// 		next->castling.castling[EI].k = 0;
+
+	switch (m.special & 0xf) {
+	case 0:
+		break;
+	case disableCastling:
+/*		next->castling.castling[CI].k = 0;
+		next->castling.castling[CI].q = 0;		//todo upper bits don't care, simplify access*/
+		break;
+	case disableShortCastling:
+// 		next->castling.castling[CI].k = 0;
+		break;
+	case disableLongCastling:
+// 		next->castling.castling[CI].q = 0;
+		break;
+	case shortCastling:
+/*		next->castling.castling[CI].k = 0;
+		next->castling.castling[CI].q = 0;		//todo upper bits don't care, simplify access*/
+		next->clrPiece<C>(Rook, pov^h1, rb);
+		next->setPiece<C>(Rook, pov^f1, rb);
+		break;
+	case longCastling:
+/*		next->castling.castling[CI].k = 0;
+		next->castling.castling[CI].q = 0;		//todo upper bits don't casr, simplify access*/
+		next->clrPiece<C>(Rook, pov^a1, rb);
+		next->setPiece<C>(Rook, pov^d1, rb);
+		break;
+	case promoteQ:
+		piece = Queen;
+		break;
+	case promoteR:
+		piece = Rook;
+		break;
+	case promoteB:
+		piece = Bishop;
+		break;
+	case promoteN:
+		piece = Knight;
+		break;
+	case enableEP:
+		next->enPassant = m.to;
+		break;
+	case EP:
+		next->clrPiece<(Colors)-C>(Pawn, enPassant, rb);
+		break;
+	}
+
+	if (m.capture)
+		next->clrPiece<(Colors)-C>(-C*m.capture, m.to, rb);
+	next->setPiece<C>(piece, m.to, rb);
+}
+
+template<Colors C>
+Key ColoredBoard<C>::getZobrist() const {
+	return zobrist ^ castling.castling[0].q ^ castling.castling[1].q << 1 ^ castling.castling[0].k << 2 ^ castling.castling[1].k << 3 ^ enPassant << 4 ^ C;
 }
 
 //attacked by (opposite colored) piece.
@@ -69,78 +145,6 @@ bool ColoredBoard<C>::attackedBy(uint8_t pos) {
 		return longAttack[1][pos] & attackMaskR;
 		break;
 	}
-}
-
-template<Colors C>
-void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m) const {
-	copyPieces(next);
-	uint8_t piece = C*pieces[m.from];
-	next->copyBoardClrPiece<C>(this, piece, m.from);
-	next->enPassant = 0;
-	next->castling[0] = castling[0];
-	next->castling[1] = castling[1];
-	
-	next->fiftyMoves = m.capture!=0 | piece==5 ? 0:fiftyMoves+1;
-	ASSERT(C*m.capture <= King);
-	
-	if (m.special & disableOpponentLongCastling)
-		next->castling[EI].q = 0;
-	else if (m.special & disableOpponentShortCastling)
-		next->castling[EI].k = 0;
-
-	switch (m.special & 0xf) {
-	case 0:
-		break;
-	case disableCastling:
-		next->castling[CI].k = 0;
-		next->castling[CI].q = 0;		//todo upper bits don't care, simplify access
-		break;
-	case disableShortCastling:
-		next->castling[CI].k = 0;
-		break;
-	case disableLongCastling:
-		next->castling[CI].q = 0;
-		break;
-	case shortCastling:
-		next->castling[CI].k = 0;
-		next->castling[CI].q = 0;		//todo upper bits don't care, simplify access
-		next->clrPiece<C>(Rook, pov^h1);
-		next->setPiece<C>(Rook, pov^f1);
-		break;
-	case longCastling:
-		next->castling[CI].k = 0;
-		next->castling[CI].q = 0;		//todo upper bits don't casr, simplify access
-		next->clrPiece<C>(Rook, pov^a1);
-		next->setPiece<C>(Rook, pov^d1);
-		break;
-	case promoteQ:
-		piece = Queen;
-		break;
-	case promoteR:
-		piece = Rook;
-		break;
-	case promoteB:
-		piece = Bishop;
-		break;
-	case promoteN:
-		piece = Knight;
-		break;
-	case enableEP:
-		next->enPassant = m.to;
-		break;
-	case EP:
-		next->clrPiece<(Colors)-C>(Pawn, enPassant);
-		break;
-	}
-
-	if (m.capture)
-		next->clrPiece<(Colors)-C>(-C*m.capture, m.to);
-	next->setPiece<C>(piece, m.to);
-}
-
-template<Colors C>
-Key ColoredBoard<C>::getZobrist() const {
-	return zobrist ^ castling[0].q ^ castling[1].q << 1 ^ castling[0].k << 2 ^ castling[1].k << 3 ^ enPassant << 4 ^ C;
 }
 
 #endif /* COLOREDBOARD_TCC_ */

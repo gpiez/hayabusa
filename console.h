@@ -23,12 +23,16 @@
 #include <pch.h>
 #endif
 
+#include <stdint.h>
+#include "move.h"
+#include "score.h"
+
 class WorkThread;
 class RootBoard;
 
 class Console: public QObject {
 	Q_OBJECT
-
+	friend class TestRootBoard;
 	void perft(QStringList);
 	void divide(QStringList);
 	void tryMove(QStringList);
@@ -43,6 +47,8 @@ class Console: public QObject {
 	void isready(QStringList);
 	void uci(QStringList);
 	void debug(QStringList);
+private slots:
+	void privateSend(QString);
 	
 private:
 	QCoreApplication* app;
@@ -56,6 +62,11 @@ public:
 
 	Console(QCoreApplication* parent);
 	virtual ~Console();
+    void iterationDone(unsigned int depth, uint64_t nodes, QString line, int bestScore);
+	void info(int depth, int seldepth, uint64_t time, uint64_t nodes,
+						 QString pv, RawScore score, Move currMove, int currMoveNumber,
+						 int hashfull, int nps, int tbhits, int cpuload, QString currline);
+	void send(QString);
 
 public slots:
 	void dataArrived();
@@ -64,7 +75,11 @@ public slots:
 	QString getAnswer();
 	
 signals:
-	void send(QString);
+	void signalSend(QString);
+	void signalInfo(int depth, int seldepth, uint64_t time, uint64_t nodes,
+						 QString pv, RawScore score, Move currMove, int currMoveNumber,
+						 int hashfull, int nps, int tbhits, int cpuload, QString currline);						 
+    void signalIterationDone(unsigned int depth, uint64_t nodes, QString line, int bestScore);
 };
 
 #endif /* CONSOLE_H_ */

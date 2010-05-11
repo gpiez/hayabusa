@@ -19,14 +19,11 @@
 #ifndef TEST_H_
 #define TEST_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
-#include <Qt/QtTest>
-
 class RootBoard;
 class Console;
+
+#include <QtCore>
+#include <Qt/QtTest>
 
 class TestRootBoard: public QObject {
 	Q_OBJECT
@@ -34,10 +31,11 @@ class TestRootBoard: public QObject {
 	Console *c;
 	
 private slots:
+	void initTestCase();
 	void setPiece();
 	void pieceList();
 	void generateCaptures();
-	void initTestCase();
+	void perft();
 };
 
 class TestBoardBase: public QObject {

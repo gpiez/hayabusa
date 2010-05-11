@@ -20,6 +20,7 @@
 #define BOARDBASE_TCC_
 
 #include <boardbase.h>
+#include "rootboard.h"
 
 namespace as {
 extern "C" {
@@ -29,12 +30,13 @@ extern "C" {
 }
 
 template<Colors C>
-void BoardBase::setPiece(uint8_t piece, uint8_t pos) {
+void BoardBase::setPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
 	ASSERT(piece <= King && piece > 0);
 	ASSERT(pos < 64);
 	ASSERT(pieces[pos] == 0);
 	pieceList[C<0].add(piece, pos);
 	zobrist ^= Zobrist::zobrist[C*piece + nPieces][pos];
+	pieceSquare += rb.getPS(C*piece, pos);
 	as::setPiece(this, C*piece, pos);
 	for (unsigned int i = 0; i < 256; ++i) {
 		ASSERT(64 > ((uint8_t*)attLen)[i]);
@@ -43,12 +45,13 @@ void BoardBase::setPiece(uint8_t piece, uint8_t pos) {
 }
 
 template<Colors C>
-void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos) {
+void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const RootBoard& rb) {
 	ASSERT(piece <= King && piece > 0);
 	ASSERT(pos < 64);
 	ASSERT(pieces[pos] == C*piece);
 	pieceList[C<0].sub(piece, pos); //TODO copy piecelist here, not in doMove()
 	zobrist = prev->zobrist ^ Zobrist::zobrist[C*piece + nPieces][pos];
+	pieceSquare = prev->pieceSquare - rb.getPS(C*piece, pos);
 	as::clrPiece(prev, this, C*piece, pos);  //TODO use black and white specialized asm functions
 	for (unsigned int i = 0; i < 256; ++i) {
 		ASSERT(64 > ((uint8_t*)attLen)[i]);
@@ -57,8 +60,8 @@ void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t 
 }
 
 template<Colors C>
-void BoardBase::clrPiece(uint8_t piece, uint8_t pos) {
-	copyBoardClrPiece<C>(this, piece, pos);	// FIXME
+void BoardBase::clrPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
+	copyBoardClrPiece<C>(this, piece, pos, rb);	// FIXME
 }
 
 #endif

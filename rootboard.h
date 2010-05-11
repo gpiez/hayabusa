@@ -39,7 +39,7 @@ template<class T> class Result;
  * passant status. Has an associated Eval object and holds multiple worker
  * threads. Contains information about the time budget.
  */
-class RootBoard: private Eval {
+class RootBoard: public Eval {
 	friend class TestRootBoard;
 	
 	struct {
@@ -54,6 +54,7 @@ class RootBoard: private Eval {
 	unsigned int movesToDo;
 	unsigned int numThreads;
 	unsigned int iMove;				// current half move index
+	QDateTime startTime;
 	QMutex threadsLock;
 /*
     hayabusa, chess engine
@@ -82,8 +83,10 @@ class RootBoard: private Eval {
 	unsigned int getAndDecAvailableThreads();
 	
 public:
+	unsigned int depth;
 	TranspositionTable<TTEntry, transpositionTableAssoc>* tt;
 	TranspositionTable<PerftEntry, 1>* pt;
+	Console* console;
 	Colors color;
 	Move bestMove;
 	QVector<WorkThread*> threads;
@@ -103,7 +106,6 @@ public:
 //	template<Colors C> uint64_t perft(const ColoredBoard<(Colors)-C>* prev, Move m, unsigned int depth) const;
 //	template<Colors C> void perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth);
 	void divide(unsigned int depth) const;
-	Console* console;
-
+	uint64_t getTime() const;
 };
 #endif

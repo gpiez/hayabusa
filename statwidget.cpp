@@ -25,13 +25,19 @@ Stats stats;
 #include "statwidget.h"
 #include "rootboard.h"
 #include "transpositiontable.tcc"
+#include "console.h"
 
 StatWidget::StatWidget(const RootBoard& rb):
 	rb(rb)
 {
 	setupUi(this);
+	QFont fixed;
+	fixed.setFamily("Consolas");
+	bestLine->setFont(fixed);
 	QTimer* t = new QTimer(this);
 	connect(t, SIGNAL(timeout()), this, SLOT(update()));
+	qRegisterMetaType<uint64_t>("uint64_t");
+	connect(rb.console, SIGNAL(signalIterationDone(unsigned int, uint64_t, QString, int)), this, SLOT(updateLine(unsigned int, uint64_t, QString, int)));
 	t->setInterval(1000);
 	t->start();
 }
@@ -40,6 +46,19 @@ StatWidget::~StatWidget()
 {
 }
 
+void StatWidget::updateLine(unsigned int depth, uint64_t nodes, QString line, int bestScore)
+{
+	static QString oldBestLine;
+	static unsigned int oldDepth;
+	
+	if (line != oldBestLine || depth != oldDepth) {
+		oldBestLine = line;
+		oldDepth = depth;
+		//bestLine->moveCursor(QTextCursor::Start);
+		bestLine->appendPlainText(QString("%1 %2 %3 %4 %5").arg(depth, 2).arg(nodes, 15).arg(rb.getTime(), 15).arg(bestScore/100.0, 6, 'f', 2).arg(line));
+		Ui_Statsui::depth->setText("Depth: " + QString::number(depth));
+	}
+}
 #define DISPLAYNUM(x) n##x->setText(QString::number(prev.last().x)); if (prev.size() > 1) v##x->setText(QString::number((prev.last().x - prev.first().x) / prev.size()));
 /* Store the last 10 stats for a sliding average */
 void StatWidget::update()
@@ -49,13 +68,14 @@ void StatWidget::update()
 	if (prev.size() > 10)
 		prev.removeFirst();
 
-	label->setText(rb.tt->bestLine(rb));
-
+	
 	DISPLAYNUM(node)
 	DISPLAYNUM(eval)
 	DISPLAYNUM(tthit)
 	DISPLAYNUM(ttuse)
 	DISPLAYNUM(ttfree)
+	DISPLAYNUM(ttalpha)
+	DISPLAYNUM(ttbeta)
 	
 }
 #endif // QT_GUI_LIB

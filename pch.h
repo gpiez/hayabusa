@@ -18,10 +18,9 @@
 */
 #ifndef PCH_H_
 #define PCH_H_
-#ifndef QT_GUI_LIB
-#define QT_GUI_LIB
-#endif
+
 #include <QtCore>
+
 #ifdef QT_GUI_LIB
 #include <QtGui>
 #endif

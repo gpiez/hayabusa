@@ -111,6 +111,8 @@ const uint64_t PieceList::posMask[9] = { 0, 0xff, 0xffff, 0xffffff, 0xffffffff,
 	0xffffffffff, 0xffffffffffff, 0xffffffffffffff, 0xffffffffffffffff
 };
 
+Castling BoardBase::castlingMask[nSquares];
+
 /// Initialize the static tables used by BoardBase and the low level asm routines
 void BoardBase::initTables()
 {
@@ -178,15 +180,31 @@ void BoardBase::initTables()
 		int yt = y + ys;
 
 		if ( xt>=0 && xt<=7 && yt>=0 && yt<=7) {
-			if (xs>0 ^ c)
+			if ((xs>0) ^ c)
 				shortAttacks[p][y*8+x][c][yt*8+xt] = (SAttack[nPieces+1]){ {}, {}, {}, {}, attackN, attackPR, attackK }[p];
 			else
 				shortAttacks[p][y*8+x][c][yt*8+xt] = (SAttack[nPieces+1]){ {}, {}, {}, {}, attackN, attackPL, attackK }[p];
 		}
 	}
+
+	// if a piece is moved from or to a position in this table, the castling status
+	// is disabled if the appropriate rook or king squares match.
+	for (unsigned int sq=0; sq<nSquares; ++sq) {
+		castlingMask[sq].data = ~0;
+		if (sq == a1 || sq == e1)
+			castlingMask[sq].castling[0].q = 0;
+		if (sq == h1 || sq == e1)
+			castlingMask[sq].castling[0].k = 0;
+		if (sq == a8 || sq == e8)
+			castlingMask[sq].castling[1].q = 0;
+		if (sq == h8 || sq == e8)
+			castlingMask[sq].castling[1].k = 0;
+	}
 }
 
-/// Empty board and initialize length tables, instead of a constructor
+// Empty board and initialize length tables, instead of a constructor
+// The default constructor should not be initialized, because the contents
+// of the constructed object are generated anyway.
 void BoardBase::init() {
 	*this = (BoardBase){{{{}}}};
 

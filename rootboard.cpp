@@ -117,7 +117,8 @@ const BoardBase& RootBoard::setup(QString fen) {
 
 	board.init();
 	board.fiftyMoves = fiftyTemp;
-
+	board.pieceSquare = 0;
+	
 	unsigned int p,x,y;
 	for ( p=0, x=0, y=7; p<(unsigned int)piecePlacement.length(); p++, x++ ) {
 		unsigned int square = x + 8*y;
@@ -126,40 +127,40 @@ const BoardBase& RootBoard::setup(QString fen) {
 			x += piecePlacement[p].toLatin1() - '1';
 			break;
 		case 'k':
-			board.setPiece<Black>( King, square);
+			board.setPiece<Black>( King, square, *this);
 			break;
 		case 'p':
-			board.setPiece<Black>( Pawn, square);
+			board.setPiece<Black>( Pawn, square, *this);
 			break;
 		case 'b':
-			board.setPiece<Black>( Bishop, square);
+			board.setPiece<Black>( Bishop, square, *this);
 			break;
 		case 'n':
-			board.setPiece<Black>( Knight, square);
+			board.setPiece<Black>( Knight, square, *this);
 			break;
 		case 'r':
-			board.setPiece<Black>( Rook, square);
+			board.setPiece<Black>( Rook, square, *this);
 			break;
 		case 'q':
-			board.setPiece<Black>( Queen, square);
+			board.setPiece<Black>( Queen, square, *this);
 			break;
 		case 'K':
-			board.setPiece<White>( King, square);
+			board.setPiece<White>( King, square, *this);
 			break;
 		case 'P':
-			board.setPiece<White>( Pawn, square);
+			board.setPiece<White>( Pawn, square, *this);
 			break;
 		case 'B':
-			board.setPiece<White>( Bishop, square);
+			board.setPiece<White>( Bishop, square, *this);
 			break;
 		case 'N':
-			board.setPiece<White>( Knight, square);
+			board.setPiece<White>( Knight, square, *this);
 			break;
 		case 'R':
-			board.setPiece<White>( Rook, square);
+			board.setPiece<White>( Rook, square, *this);
 			break;
 		case 'Q':
-			board.setPiece<White>( Queen, square);
+			board.setPiece<White>( Queen, square, *this);
 			break;
 		case '/':
 			x = -1;
@@ -173,16 +174,16 @@ const BoardBase& RootBoard::setup(QString fen) {
 	for ( unsigned int p=0; p<(unsigned int)castling.length(); p++ )
 		switch ( castling[p].toLatin1() ) {
 		case 'Q':
-			board.castling[0].q = true;
+			board.castling.castling[0].q = true;
 			break;
 		case 'K':
-			board.castling[0].k = true;
+			board.castling.castling[0].k = true;
 			break;
 		case 'q':
-			board.castling[1].q = true;
+			board.castling.castling[1].q = true;
 			break;
 		case 'k':
-			board.castling[1].k = true;
+			board.castling.castling[1].k = true;
 			break;
 		}
 
@@ -240,4 +241,9 @@ void updateAndReady(Result<uint64_t>& r, Result<uint64_t>& v) {
 
 template<> void setNotReady<Result<uint64_t> >(Result<uint64_t>& r) {
 	r.setNotReady();
+}
+
+uint64_t RootBoard::getTime() const {
+	return startTime.time().msecsTo(QDateTime::currentDateTime().time()) +
+	86400000*(startTime.daysTo(QDateTime::currentDateTime()));
 }

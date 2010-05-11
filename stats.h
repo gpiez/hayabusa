@@ -32,6 +32,8 @@ extern struct Stats {
 	uint64_t	ttuse;
 	uint64_t	ttfree;
 	uint64_t	tthit;
+	uint64_t	ttalpha;
+	uint64_t	ttbeta;
 } stats;
 
 #endif

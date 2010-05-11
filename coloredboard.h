@@ -33,7 +33,7 @@ class TestRootBoard;
 template<Colors C>
 class ColoredBoard: public BoardBase {
 
-	template<Colors D> friend class ColoredBoard;
+	//template<Colors D> friend class ColoredBoard;
 	friend class TestRootBoard;
 
 	static const unsigned int CI = (White-C)/(White-Black);	// ColorIndex, 0 for White, 1 for Black
@@ -48,10 +48,10 @@ class ColoredBoard: public BoardBase {
 
 public:
 	ColoredBoard() {};
-	ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m);
+	ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard&);
 	Move* generateCaptureMoves(Move* list) const;
 	Move* generateMoves(Move* list) const;
-	void doMove(ColoredBoard<(Colors)-C>* next, Move m) const;
+	void doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootBoard&) const;
 	Key getZobrist() const;
 	
 private:

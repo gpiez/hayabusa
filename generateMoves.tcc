@@ -55,12 +55,12 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 					if (!isValid(detectPin(from))) *list++ = (Move) { from, to+C*8, 0, EP };
 			}
 
-		if (cap == -C*Rook) {
-			if (/*castling[EI].k && */to == (pov^h8)) 
-				spec = disableOpponentShortCastling;
-			else if (/*castling[EI].q && */to == (pov^a8))
-				spec = disableOpponentLongCastling;
-		}
+// 		if (cap == -C*Rook) {
+// 			if (/*castling[EI].k && */to == (pov^h8)) 
+// 				spec = disableOpponentShortCastling;
+// 			else if (/*castling[EI].q && */to == (pov^a8))
+// 				spec = disableOpponentLongCastling;
+// 		}
 
 		if ( a.s.PR ) {
 			from = to-C*9;
@@ -160,12 +160,14 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 			dir = vec2dir[from][to];
 			if (~dir & 1 && length(dir^4, to)*dirOffsets[dir] + from == to) {
 				SpecialMoves spec2 = nothingSpecial;
+				#if 0
 				if (/*castling[CI].q && */from == (pov^a1)) {
 					spec2 = disableLongCastling;
 				}
 				if (/*castling[CI].k && */from == (pov^h1)) {
 					spec2 = disableShortCastling;
 				}
+				#endif
 				pin = detectPin(from);
 				if (!isValid(pin)) *list++ = (Move) {from, to, cap, spec + spec2};
 				if (!--nAttacks) break;
@@ -310,7 +312,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 			unsigned int to = king + dirOffsets[i];
 			if (!isKingDistance(king, to)) continue;
 			int cap = pieces[to];
-			if (i != attDir && i != attDir2 && C * cap <= 0 && !(longAttack[EI][to] & attackMaskLong | shortAttack[EI][to] & attackMaskShort)) *list++ = (Move) {king, to, cap, disableCastling};
+			if (i != attDir && i != attDir2 && C * cap <= 0 && !((longAttack[EI][to] & attackMaskLong) | (shortAttack[EI][to] & attackMaskShort))) *list++ = (Move) {king, to, cap, /*disableCastling*/ nothingSpecial};
 		}
 		return list;
 	}
@@ -330,13 +332,13 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		if (isPromoRank(from)) {
 			to = from + C * 9;
 			cap = pieces[to];
-			if (C * cap < 0 & ((from&7) != 7*EI) && (!isValid(pin) | pin == 1)) {
+			if ((C*cap < 0) & ((from&7) != 7*EI) && (!isValid(pin) | (pin == 1))) {
 				SpecialMoves spec;
-				if (to == (pov^h8) & castling[EI].k)
+/*				if (to == (pov^h8) & castling.castling[EI].k)
 					spec = disableOpponentShortCastling;
-				else if (to == (pov^a8) & castling[EI].q)
+				else if (to == (pov^a8) & castling.castling[EI].q)
 					spec = disableOpponentLongCastling;
-				else
+				else*/
 					spec = nothingSpecial;
 				*list++ = (Move) {from, to, cap, promoteN + spec};
 				*list++ = (Move) {from, to, cap, promoteR + spec};
@@ -347,11 +349,11 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 			cap = pieces[to];
 			if (C * cap < 0 & ((from&7) != 7*CI) && (!isValid(pin) | pin == 3)) {
 				SpecialMoves spec;
-				if (to == (pov^h8) & castling[EI].k)
+/*				if (to == (pov^h8) & castling.castling[EI].k)
 					spec = disableOpponentShortCastling;
-				else if (to == (pov^a8) & castling[EI].q)
+				else if (to == (pov^a8) & castling.castling[EI].q)
 					spec = disableOpponentLongCastling;
-				else
+				else*/
 					spec = nothingSpecial;
 				*list++ = (Move) {from, to, cap, promoteN+spec};
 				*list++ = (Move) {from, to, cap, promoteR+spec};
@@ -455,10 +457,10 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		 */
 		if (!isValid(pin)) {
 			uint8_t spec=0;
-			if (from == (pov^a1))
+/*			if (from == (pov^a1))
 				spec = disableLongCastling;
 			if (from == (pov^h1))
-				spec = disableShortCastling;
+				spec = disableShortCastling;*/
 			rays(list, from, 0, spec);
 			rays(list, from, 4, spec);
 			rays(list, from, 2, spec);
@@ -508,7 +510,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 	if there is a rook (it might have been captured and the flags are still live)
 	so castling is still not handled correctly (the king rook might be captured, the queenrook moves to the place
 	of the king rook and kingside castling is still possible*/
-	if ( castling[CI].q && length(0, pov^a1) == 4
+	if ( castling.castling[CI].q && length(0, pov^a1) == 4
 	&& !(shortAttack[EI][pov^c1] & attackMaskShort)
 	&& !(shortAttack[EI][pov^d1] & attackMaskShort)
 	&& !(longAttack[EI][pov^c1] & attackMaskLong)
@@ -518,7 +520,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		*list++ = (Move) { pov^e1, pov^c1, 0, longCastling };
 	}
 
-	if ( castling[CI].k && length(0, pov^e1) == 3
+	if ( castling.castling[CI].k && length(0, pov^e1) == 3
 	&& !(shortAttack[EI][pov^f1] & attackMaskShort)
 	&& !(shortAttack[EI][pov^g1] & attackMaskShort)
 	&& !(longAttack[EI][pov^f1] & attackMaskLong)
@@ -529,7 +531,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 	}
 
 	from = pieceList[CI].getKing();
-	uint8_t spec = castling[CI].k|castling[CI].q ? disableCastling:0;
+	uint8_t spec = nothingSpecial;//castling.castling[CI].k|castling.castling[CI].q ? disableCastling:0;
 
 	to = from + dirOffsets[0];
 	if (isKingDistance(from, to) & !pieces[to] & !(shortAttack[EI][to] & attackMaskShort) & !(longAttack[EI][to] & attackMaskLong))

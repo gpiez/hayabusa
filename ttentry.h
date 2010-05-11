@@ -37,9 +37,9 @@ struct Bitfield {
 	T data[end+1];
 	operator T () const {
 		static_assert(end == start);
-		if (width == 1)		// T is a bool type
+/*		if (width == 1)		// T is a bool type
 			return data[start] & (T)1 << startpos;
-		else {
+		else*/ {
 			T unmasked = data[start] >> startpos;
 			if (width + startpos != tBits)
 				unmasked &= ((T)1 << width) - 1;
@@ -54,7 +54,7 @@ struct Bitfield {
 
 	void operator |= (T value) {
 		static_assert(end == start);
-		data[start] |= value << pos;
+		data[start] |= value << startpos;
 	}
 };
 
@@ -66,10 +66,10 @@ union TTEntry {
 	Bitfield<0, 6, unsigned int> from;
 	Bitfield<6, 6, unsigned int> to;
 	Bitfield<12, 6, unsigned int> depth;
-	Bitfield<18, 1, bool> loBound;
-	Bitfield<19, 1, bool> hiBound;
+	Bitfield<18, 1, unsigned int> loBound;
+	Bitfield<19, 1, unsigned int> hiBound;
 	Bitfield<20, 12, int> score;
-	Bitfield<32, 1, bool> expired;
+	Bitfield<32, 1, unsigned int> expired;
 	Bitfield<33, 31, Key> upperKey;
 	enum { upperShift = 33 };
 	uint64_t data;

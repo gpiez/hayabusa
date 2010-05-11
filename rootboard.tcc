@@ -40,27 +40,33 @@ Move RootBoard::rootSearch() {
 	Move firstMove[nMaxMoves];
 	Move* lastMove = b.generateMoves(firstMove);
 
-	QDateTime start = QDateTime::currentDateTime();
-	QDateTime softBudget = start.addMSecs( timeBudget/(2*movesToDo) );
-	QDateTime hardBudget = start.addMSecs( 2*timeBudget / (movesToDo + 1) );
+	startTime = QDateTime::currentDateTime();
+	QDateTime softBudget = startTime.addMSecs( timeBudget/(2*movesToDo) );
+	QDateTime hardBudget = startTime.addMSecs( 2*timeBudget / (movesToDo + 1) );
 
-	for (unsigned int depth=1; depth<maxDepth; depth++) {
+	for (depth=1; depth<maxDepth; depth++) {
 		QDateTime currentStart = QDateTime::currentDateTime();
 		Score<C> alpha(-infinity);
+		alpha.m = (Move) {0};
 		Score<(Colors)-C> beta(-infinity);	//both alpha and beta are lower limits, viewed from th color to move
+		beta.m = (Move) {0};
 //		SearchFlag f = null;
 		QTextStream xout(stderr);
 		Score<C> bestScore = alpha;
+		
 		for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
-			xout << depth << ":" << currentMove->string();
+			//xout << depth << ":" << currentMove->string();
 			if (search<(Colors)-C, tree>(b, *currentMove, depth-1, beta, bestScore)) {
 				bestMove = *currentMove;
 				*currentMove = *firstMove;
 				*firstMove = bestMove;
 			}
-			xout << " bm: " << bestScore.get() << " "<< bestMove.string() << endl;
+			QString newBestLine = tt->bestLine(*this);
+			emit console->iterationDone(depth, stats.node, newBestLine, bestScore.get());
 			//if (QDateTime::currentDateTime() > hardBudget) break;
 		}
+		emit console->send(QString("depth %1 time %2 nodes %3 score %4 pv %5")
+		.arg(depth).arg(getTime()).arg(stats.node).arg(bestScore.get()).arg(tt->bestLine(*this)));
 		// assume geometrically increasing time per depth
 		//if (QDateTime::currentDateTime() > softBudget) break;
 	}
@@ -74,22 +80,29 @@ Move RootBoard::rootSearch() {
  */
 template<Colors C, Phase P, typename A, typename B>
 bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
-	const ColoredBoard<C> b(prev, m);
+	const ColoredBoard<C> b(prev, m, *this);
 	stats.node++;
 	
 	Key z = b.getZobrist();
 	TTEntry* te = tt->getEntry(z);
 	TTEntry subentry;
 
-	Move ttMove;
+	Move ttMove = {0};
+	unsigned int ttDepth = 0;
 	A current(alpha);	// current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
+	current.m = (Move) {0};
 	if (tt->retrieve(te, z, subentry) ) {
 		stats.tthit++;
+		ttDepth = subentry.depth;
 		if (subentry.depth >= depth) {
-			if (subentry.loBound)
-				current.max(subentry.score);
-			if (subentry.hiBound)
-				beta.max(subentry.score);
+			if (subentry.loBound) {
+				stats.ttalpha++;
+				current.max(subentry.score, (Move){0});
+			}
+			if (subentry.hiBound) {
+				stats.ttbeta++;
+				beta.max(subentry.score, m);
+			}
 			if (current >= beta) {
 				beta.setReady();
 				return false;
@@ -103,7 +116,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	Move* end;
 	if (P == leaf) {
 		stats.eval++;
-		current.max(eval(b));
+		current.max(eval(b), (Move){0});
 		end = b.generateCaptureMoves(list);
 	} else
 		end = b.generateMoves(list);
@@ -123,6 +136,16 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	for (unsigned int i = depth; i<10; i++)
 		indentation += "  ";*/
 //	xout << indentation << alpha.get() << "," << beta.get();
+	for (unsigned int d = ttDepth+1; d < depth; ++d) {
+		for (Move* i = list; i<end; ++i) {
+			search<(Colors)-C, tree, B, A>(b, *i, d-1, beta, current);
+			if ((uint32_t&)current.m == (uint32_t&)*i) {
+				*i = *list;
+				*list = current.m;
+			}
+		}
+		current.v = alpha.v;
+	}
 	for (Move* i = list; i<end; ++i) {
 //		xout << indentation << depth << ":" << i->string() << endl;
 		if (P == leaf || !depth) {
@@ -213,7 +236,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 		return;
 	}
 
-	const ColoredBoard<C> b(prev, m);
+	const ColoredBoard<C> b(prev, m, *this);
 
 	Key z = b.getZobrist();
 	PerftEntry* pe = pt->getEntry(z);
@@ -223,7 +246,6 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 		updateAndReady(result, subentry.value);
 		return;
 	}
-
 	Move list[256];
 	Move* end = b.generateMoves(list);
 	if (depth == 1) {
@@ -239,7 +261,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 			th->startJob(new (PerftJob<(Colors)-C, ResultType>)(this, n, b, *i, depth-1));
 		} else {
 			setNotReady(n);
-			perft<(Colors)-C, trunk>(n, b, *i, depth-1);
+			perft<(Colors)-C, P>(n, b, *i, depth-1);
 		}
 
 	}

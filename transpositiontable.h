@@ -65,7 +65,7 @@ public:
 	void store(Entry* subTable, Entry entry);
     void freeMemory();
 	QString bestLine(const RootBoard& );
-	template<Colors C> QString bestLineNext(const ColoredBoard<(Colors)-C>&, Move);
+	template<Colors C> QString bestLineNext(const ColoredBoard<(Colors)-C>&, Move, const RootBoard&);
 };
 
 

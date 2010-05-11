@@ -53,7 +53,8 @@ Console::Console(QCoreApplication* parent):
 	
 	notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
 	connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
-
+	connect(this, SIGNAL(signalSend(QString)), this, SLOT(privateSend(QString)));
+	
 	QStringList cmds = QCoreApplication::arguments();
 	cmds.removeFirst();
 	if (!cmds.isEmpty())
@@ -152,4 +153,25 @@ QString Console::getAnswer() {
 		sleep(1);
 	}
 	return answer;
+}
+
+void Console::info(int depth, int seldepth, uint64_t time, uint64_t nodes,
+				   QString pv, RawScore score, Move currMove, int currMoveNumber,
+				   int hashfull, int nps, int tbhits, int cpuload, QString currline) {
+	emit signalInfo(depth, seldepth, time, nodes,
+				   pv, score, currMove, currMoveNumber,
+				   hashfull, nps, tbhits, cpuload, currline);
+}
+
+void Console::iterationDone(unsigned int depth, uint64_t nodes, QString line, int bestScore) {
+	emit signalIterationDone(depth, nodes, line, bestScore);
+}
+
+void Console::privateSend(QString str)
+{
+	cout << str << endl;
+}
+
+void Console::send(QString str) {
+	emit signalSend(str);
 }

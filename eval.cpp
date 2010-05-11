@@ -182,7 +182,6 @@ void Eval::initPS() {
 }
 
 RawScore Eval::pieces(const PieceList& pl, int C) const {
-    RawScore value = 0;
 // 	if (pl.getCounts() == 0x01000100000000) 	//only one knight left
 // 		value += knightAlone;
 // 	if (pl.getCounts() == 0x01000000010000) 	//only one bishop left
@@ -191,38 +190,13 @@ RawScore Eval::pieces(const PieceList& pl, int C) const {
 // 		value += bishopPair;
 //
 // 	value += b_p[pl[Pawn]];
-    uint8_t king = pl.getKing();
-    value += getPS(C*King, king);
-    for (uint8_t i = pl[Pawn]; i > 0;) {
-        --i;
-        uint8_t pawn = pl.getPawn(i);
-        value += getPS(C*Pawn, pawn);
-    }
-    for (uint8_t i = pl[Rook]; i > 0;) {
-        --i;
-        uint8_t rook = pl.get(Rook, i);
-        value += getPS(C*Rook, rook);
-    }
-    for (uint8_t i = pl[Bishop]; i > 0;) {
-        --i;
-        uint8_t bishop = pl.get(Bishop, i);
-        value += getPS(C*Bishop, bishop);
-    }
-    for (uint8_t i = pl[Knight]; i > 0;) {
-        --i;
-        uint8_t knight = pl.get(Knight, i);
-        value += getPS(C*Knight, knight);
-    }
-    for (uint8_t i = pl[Queen]; i > 0;) {
-        --i;
-        uint8_t queen = pl.get(Queen, i);
-        value += getPS(C*Queen, queen);
-    }
+	RawScore value = 0;
 
     return value;
 }
 
 RawScore Eval::pawns(const BoardBase& ) const {
+
     RawScore value = 0;
 
 //	uint64_t wp = b.pieceList[0].bitBoard<Pawn>();
@@ -232,5 +206,40 @@ RawScore Eval::pawns(const BoardBase& ) const {
 }
 
 RawScore Eval::eval(const BoardBase& b) const {
-    return pieces(b.pieceList[0], 1) + pieces(b.pieceList[1], -1);
+#if 1//defined(MYDEBUG)
+    RawScore value = 0;
+	for (int pi = 0; pi <= 1; ++pi) {
+		int C = 1-pi*2;
+		uint8_t king = b.pieceList[pi].getKing();
+		value += getPS(C*King, king);
+		for (uint8_t i = b.pieceList[pi][Pawn]; i > 0;) {
+			--i;
+			uint8_t pawn = b.pieceList[pi].getPawn(i);
+			value += getPS(C*Pawn, pawn);
+		}
+		for (uint8_t i = b.pieceList[pi][Rook]; i > 0;) {
+			--i;
+			uint8_t rook = b.pieceList[pi].get(Rook, i);
+			value += getPS(C*Rook, rook);
+		}
+		for (uint8_t i = b.pieceList[pi][Bishop]; i > 0;) {
+			--i;
+			uint8_t bishop = b.pieceList[pi].get(Bishop, i);
+			value += getPS(C*Bishop, bishop);
+		}
+		for (uint8_t i = b.pieceList[pi][Knight]; i > 0;) {
+			--i;
+			uint8_t knight = b.pieceList[pi].get(Knight, i);
+			value += getPS(C*Knight, knight);
+		}
+		for (uint8_t i = b.pieceList[pi][Queen]; i > 0;) {
+			--i;
+			uint8_t queen = b.pieceList[pi].get(Queen, i);
+			value += getPS(C*Queen, queen);
+		}
+	}
+	if (value != b.pieceSquare) asm("int3");
+
+#endif
+	return b.pieceSquare;
 }

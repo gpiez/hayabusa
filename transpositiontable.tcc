@@ -86,6 +86,7 @@ bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, En
 	return false;
 }
 
+#pragma GCC diagnostic ignored "-Wtype-limits"
 template<typename Entry, unsigned int assoc>
 void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry) {
 	QWriteLocker l(&lock);
@@ -143,15 +144,15 @@ void TranspositionTable<Entry, assoc>::setSize(size_t s)
 		qWarning() << "Could not allocate" << size << "bytes";
 		s >>= 1;
 	}
-	//memset(table, 0, size);
+	memset(table, 0, size);	// not strictly neccessary, but allocating pages
 	mask = nEntries-assoc;
 }
 
 template<typename Entry, unsigned assoc>
 template<Colors C>
-QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m) {
+QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard& rb) {
 	QString line = m.string();
-	const ColoredBoard<C> b(prev, m);
+	const ColoredBoard<C> b(prev, m, rb);
 	Key key = b.getZobrist();
 	TTEntry* te = getEntry(key);
 	TTEntry subentry;
@@ -167,7 +168,7 @@ QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Color
 	if ((uint32_t&)ttMove)
 		for (Move *i=list; i<end; ++i) {
 			if (i->from == ttMove.from && i->to == ttMove.to) {
-				line += " " + bestLineNext<(Colors)-C>(b, *i);
+				line += " " + bestLineNext<(Colors)-C>(b, *i, rb);
 				break;
 			}
 		}
@@ -179,9 +180,9 @@ template<typename Entry, unsigned assoc>
 QString TranspositionTable<Entry, assoc>::bestLine(const RootBoard& b) {
 	if (!(uint32_t&)b.bestMove) return QString();
 	if (b.color == White) {
-		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove);
+		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, b);
 	} else {
-		return bestLineNext<White>(b.currentBoard<Black>(), b.bestMove);
+		return bestLineNext<White>(b.currentBoard<Black>(), b.bestMove, b);
 	}
 
 }

@@ -63,11 +63,6 @@ class Eval {
 
 protected:
 	Eval();
-	RawScore getPS(int8_t piece, uint8_t square) const {
-		ASSERT(square < nSquares);
-		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
-		return pieceSquare[piece+nPieces][square];
-	}
 	void initPS();
 	
 	unsigned int attackHash( unsigned int  pos );
@@ -76,6 +71,13 @@ protected:
 	RawScore pieces(const PieceList&, int) const;
 	RawScore pawns(const BoardBase&) const;
 	RawScore eval(const BoardBase&) const;	///TODO should be template<C>
+
+public:
+	RawScore getPS(int8_t piece, uint8_t square) const {
+		ASSERT(square < nSquares);
+		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
+		return pieceSquare[piece+nPieces][square];
+	}
 };
 
 template<typename T>
