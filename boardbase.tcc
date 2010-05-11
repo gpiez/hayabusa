@@ -24,8 +24,12 @@
 
 namespace as {
 extern "C" {
-	void setPiece(BoardBase*, int, int);
-	void clrPiece(const BoardBase*, BoardBase*, int, int);
+	void setPieceW(BoardBase*, int, int);
+	void setPieceB(BoardBase*, int, int);
+	void clrPieceAndCopyW(const BoardBase*, BoardBase*, int, int);
+	void clrPieceAndCopyB(const BoardBase*, BoardBase*, int, int);
+	void clrPieceW(BoardBase*, BoardBase*, int, int);
+	void clrPieceB(BoardBase*, BoardBase*, int, int);
 }
 }
 
@@ -37,7 +41,10 @@ void BoardBase::setPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
 	pieceList[C<0].add(piece, pos);
 	zobrist ^= Zobrist::zobrist[C*piece + nPieces][pos];
 	pieceSquare += rb.getPS(C*piece, pos);
-	as::setPiece(this, C*piece, pos);
+	if (C==White)
+		as::setPieceW(this, C*piece, pos);
+	else
+		as::setPieceB(this, C*piece, pos);
 	for (unsigned int i = 0; i < 256; ++i) {
 		ASSERT(64 > ((uint8_t*)attLen)[i]);
 	}
@@ -52,7 +59,10 @@ void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t 
 	pieceList[C<0].sub(piece, pos); //TODO copy piecelist here, not in doMove()
 	zobrist = prev->zobrist ^ Zobrist::zobrist[C*piece + nPieces][pos];
 	pieceSquare = prev->pieceSquare - rb.getPS(C*piece, pos);
-	as::clrPiece(prev, this, C*piece, pos);  //TODO use black and white specialized asm functions
+	if (C==White)
+		as::clrPieceAndCopyW(prev, this, C*piece, pos);
+	else
+		as::clrPieceAndCopyB(prev, this, C*piece, pos);
 	for (unsigned int i = 0; i < 256; ++i) {
 		ASSERT(64 > ((uint8_t*)attLen)[i]);
 	}
@@ -61,7 +71,20 @@ void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t 
 
 template<Colors C>
 void BoardBase::clrPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
-	copyBoardClrPiece<C>(this, piece, pos, rb);	// FIXME
+	ASSERT(piece <= King && piece > 0);
+	ASSERT(pos < 64);
+	ASSERT(pieces[pos] == C*piece);
+	pieceList[C<0].sub(piece, pos);
+	zobrist ^= Zobrist::zobrist[C*piece + nPieces][pos];
+	pieceSquare -= rb.getPS(C*piece, pos);
+	if (C==White)
+		as::clrPieceW(this, this, C*piece, pos);
+	else
+		as::clrPieceB(this, this, C*piece, pos);
+	for (unsigned int i = 0; i < 256; ++i) {
+		ASSERT(64 > ((uint8_t*)attLen)[i]);
+	}
+	pieces[pos] = 0;
 }
 
 #endif

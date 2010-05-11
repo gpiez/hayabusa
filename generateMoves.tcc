@@ -190,19 +190,6 @@ void ColoredBoard<C>::ray(Move* &list, uint8_t from, uint8_t dir) const {
 }
 
 template<Colors C>
-void ColoredBoard<C>::rays(Move* &list, uint8_t from, uint8_t dir, uint8_t spec) const {
-	unsigned int l = length(dir, from);
-	if (!l) return;
-	uint8_t to = from + dirOffsets[dir];
-	for (unsigned int i=l; i>1; --i) {
-		*list++ = (Move) { from, to, 0, spec };
-		to += dirOffsets[dir];
-	}
-	if (!pieces[to])
-		*list++ = (Move) { from, to, 0, spec };
-}
-
-template<Colors C>
 Move* ColoredBoard<C>::generateMoves(Move* list) const {
 
 	unsigned int king = pieceList[CI].getKing();
@@ -420,20 +407,12 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 	for (unsigned int i = 0; i<pieceList[CI][Rook]; ++i) {
 		from = pieceList[CI].get(Rook, i);
 		pin = detectPin(from);
-		/*
-		 * If the rook is pinned, it can not be standig on the initial position
-		 * So disabling castling is only necessary on the non pinned rook.
-		 */
+
 		if (!isValid(pin)) {
-			uint8_t spec=0;
-/*			if (from == (pov^a1))
-				spec = disableLongCastling;
-			if (from == (pov^h1))
-				spec = disableShortCastling;*/
-			rays(list, from, 0, spec);
-			rays(list, from, 4, spec);
-			rays(list, from, 2, spec);
-			rays(list, from, 6, spec);
+			ray(list, from, 0);
+			ray(list, from, 4);
+			ray(list, from, 2);
+			ray(list, from, 6);
 		} else if (~pin & 1) {
 			ray(list, from, pin);
 			ray(list, from, pin+4);
