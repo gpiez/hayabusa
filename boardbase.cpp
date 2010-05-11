@@ -181,9 +181,9 @@ void BoardBase::initTables()
 
 		if ( xt>=0 && xt<=7 && yt>=0 && yt<=7) {
 			if ((xs>0) ^ c)
-				shortAttacks[p][y*8+x][c][yt*8+xt] = (SAttack[nPieces+1]){ {}, {}, {}, {}, attackN, attackPR, attackK }[p];
+				shortAttacks[p][y*8+x][c][yt*8+xt] = (SAttack[nPieces+1]){ {}, {}, {}, {}, attackN_, attackPR_, attackK_ }[p];
 			else
-				shortAttacks[p][y*8+x][c][yt*8+xt] = (SAttack[nPieces+1]){ {}, {}, {}, {}, attackN, attackPL, attackK }[p];
+				shortAttacks[p][y*8+x][c][yt*8+xt] = (SAttack[nPieces+1]){ {}, {}, {}, {}, attackN_, attackPL_, attackK_ }[p];
 		}
 	}
 

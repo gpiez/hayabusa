@@ -181,7 +181,7 @@ void Eval::initPS() {
 
 }
 
-RawScore Eval::pieces(const PieceList& pl, int C) const {
+RawScore Eval::pieces(const PieceList&, int ) const {
 // 	if (pl.getCounts() == 0x01000100000000) 	//only one knight left
 // 		value += knightAlone;
 // 	if (pl.getCounts() == 0x01000000010000) 	//only one bishop left
