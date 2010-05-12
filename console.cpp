@@ -56,13 +56,14 @@ Console::Console(QCoreApplication* parent):
 	connect(this, SIGNAL(signalSend(QString)), this, SLOT(privateSend(QString)));
 	
 	QStringList cmds = QCoreApplication::arguments();
-	cmds.removeFirst();
-	if (!cmds.isEmpty())
-		if (dispatcher.contains(cmds[0])) {
+	cmds.removeFirst(); 
+	if (!cmds.isEmpty()) {
+		if (dispatcher.contains(cmds[0])) 
 			(this->*(dispatcher[cmds[0]]))(cmds);
-		} else {
+		else
 			tryMove(cmds);
-		}
+		
+	}
 }
 
 Console::~Console()
