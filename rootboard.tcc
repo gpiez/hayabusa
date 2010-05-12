@@ -83,17 +83,20 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	stats.node++;
 	
 	Key z = b.getZobrist();
-	TTEntry* te = tt->getEntry(z);
+	QReadWriteLock* l;
+	TTEntry* te;
+	if (P != leaf) te = tt->getEntry(z, l);
 	TTEntry subentry;
 
 	Move ttMove = {0};
 	unsigned int ttDepth = 0;
 	A current(alpha);	// current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
 	current.m = (Move) {0};
-	if (tt->retrieve(te, z, subentry) ) {
+	if (P != leaf && tt->retrieve(te, z, subentry, l) ) {
 		stats.tthit++;
 		ttDepth = subentry.depth;
 		if (subentry.depth >= depth) {
+			ASSERT( subentry.loBound || subentry.hiBound );
 			if (subentry.loBound) {
 				stats.ttalpha++;
 				current.max(subentry.score, (Move){0});
@@ -147,7 +150,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	}
 	for (Move* i = list; i<end; ++i) {
 //		xout << indentation << depth << ":" << i->string() << endl;
-		if (P == leaf || !depth) {
+		if (P == leaf || depth <= 1) {
 			search<(Colors)-C, leaf, B, A>(b, *i, 0, beta, current);
 		} else if (P == tree || (P == trunk && depth <= splitDepth)) {
 			search<(Colors)-C, tree, B, A>(b, *i, depth-1, beta, current);
@@ -165,17 +168,18 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 			break;
 	}
 
-	TTEntry stored;
-	stored.zero();
-	stored.depth |= depth;
-	stored.upperKey |= z >> stored.upperShift;
-	stored.score |= current.get();
-	stored.loBound |= current > alpha;
-	stored.hiBound |= current < beta;
-	stored.from |= current.m.from;
-	stored.to |= current.m.to;
-	tt->store(te, stored);
-	
+	if (P != leaf) {
+		TTEntry stored;
+		stored.zero();
+		stored.depth |= depth;
+		stored.upperKey |= z >> stored.upperShift;
+		stored.score |= current.get();
+		stored.loBound |= current > alpha;
+		stored.hiBound |= current < beta;
+		stored.from |= current.m.from;
+		stored.to |= current.m.to;
+		tt->store(te, stored, l);
+	}
 	beta.setReady();
 	return beta.max(current, m);
 }
@@ -238,10 +242,11 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 	const ColoredBoard<C> b(prev, m, *this);
 
 	Key z = b.getZobrist();
-	PerftEntry* pe = pt->getEntry(z);
+	QReadWriteLock* l;
+	PerftEntry* pe = pt->getEntry(z, l);
 	PerftEntry subentry;
 	
-	if (pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
+	if (pt->retrieve(pe, z, subentry, l) && subentry.depth == depth) {
 		updateAndReady(result, subentry.value);
 		return;
 	}
@@ -270,7 +275,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 	stored.depth |= depth;
 	stored.upperKey |= z >> stored.upperShift;
 	stored.value = (uint64_t)n;
-	pt->store(pe, stored);
+	pt->store(pe, stored, l);
 	updateAndReady(result, n);
 }
 

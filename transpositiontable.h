@@ -47,7 +47,7 @@ template<typename Entry, unsigned assoc>
 class TranspositionTable {
 	Entry* table;		// TODO remove indirection level
 	uint64_t mask;
-	QReadWriteLock lock;
+	QReadWriteLock lock[nTTLocks];
 	size_t size;
 	size_t nEntries;
 	bool usesHugePages;
@@ -60,9 +60,9 @@ public:
 
 	void setSize(size_t s);
 	Key nextKey(Key k, Move m);
-	Entry* getEntry(Key k) const;
-	bool retrieve(const Entry* subTable, Key k, Entry&);
-	void store(Entry* subTable, Entry entry);
+	Entry* getEntry( Key k, QReadWriteLock*& l);
+	bool retrieve(const Entry* subTable, Key k, Entry&, QReadWriteLock*);
+	void store(Entry* subTable, Entry entry, QReadWriteLock*);
     void freeMemory();
 	QString bestLine(const RootBoard& );
 	template<Colors C> QString bestLineNext(const ColoredBoard<(Colors)-C>&, Move, const RootBoard&);

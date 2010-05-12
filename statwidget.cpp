@@ -25,7 +25,7 @@
 #include "transpositiontable.tcc"
 #include "console.h"
 
-__thread Stats stats;
+Stats stats;
 StatWidget::StatWidget(const RootBoard& rb):
 	rb(rb)
 {
@@ -75,6 +75,8 @@ void StatWidget::update()
 	DISPLAYNUM(ttfree)
 	DISPLAYNUM(ttalpha)
 	DISPLAYNUM(ttbeta)
-	
+	DISPLAYNUM(ttoverwrite)
+	DISPLAYNUM(ttinsufficient)
+	DISPLAYNUM(ttstore)
 }
 #endif // QT_GUI_LIB

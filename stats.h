@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 
-extern __thread struct Stats {			//TODO Making stats thread local would avoid cache line sharing, so maybe its faster?
+extern struct Stats {			//TODO Making stats thread local would avoid cache line sharing, so maybe its faster?
 	uint64_t	node;
 	uint64_t	internalNode;
 	uint64_t	eval;
@@ -34,6 +34,9 @@ extern __thread struct Stats {			//TODO Making stats thread local would avoid ca
 	uint64_t	tthit;
 	uint64_t	ttalpha;
 	uint64_t	ttbeta;
+	uint64_t	ttoverwrite;
+	uint64_t	ttinsufficient;
+	uint64_t	ttstore;
 } stats;
 
 #endif
