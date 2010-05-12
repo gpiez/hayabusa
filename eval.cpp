@@ -206,7 +206,7 @@ RawScore Eval::pawns(const BoardBase& ) const {
 }
 
 RawScore Eval::eval(const BoardBase& b) const {
-#if 1//defined(MYDEBUG)
+#if defined(MYDEBUG)
     RawScore value = 0;
 	for (int pi = 0; pi <= 1; ++pi) {
 		int C = 1-pi*2;

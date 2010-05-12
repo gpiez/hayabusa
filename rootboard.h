@@ -26,6 +26,7 @@
 #include "eval.h"
 #include "coloredboard.h"
 #include "result.h"
+#include "stats.h"
 #ifdef QT_GUI_LIB
 #include "statwidget.h"
 #endif

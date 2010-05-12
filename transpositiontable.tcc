@@ -25,7 +25,6 @@
 
 #include "transpositiontable.h"
 #include "rootboard.h"
-#include "stats.h"
 #include "coloredboard.tcc"
 
 #ifdef HAVE_HUGE_PAGES
@@ -73,10 +72,10 @@ bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, En
 		volatile __m128i xmm;
 	} atomic_entry ALIGN_XMM;
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
+	QReadLocker locker(&lock);
 	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
 		atomic_entry.xmm = ((EntryUnion) { subTable[i] }).xmm;
 		if (atomic_entry.temp.upperKey == upperKey) {		//only lock if a possible match is found
-//			QReadLocker locker(&tt);
 				//TODO rotate to first position
 			ret = atomic_entry.temp;
 			return true;
@@ -100,8 +99,8 @@ void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry) {
 			return;
 		}
 
-	if (subTable[assoc-1].data == 0)
-		stats.ttuse++;
+//	if (subTable[assoc-1].data == 0)
+//		stats.ttuse++;
 	unsigned int i;
 	for (i = 0; i < assoc-1; ++i)				// TODO possibly checking only assoc/2 and a LRU in retrieve would be better
 		if (entry.depth > subTable[i].depth)

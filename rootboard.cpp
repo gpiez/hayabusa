@@ -199,24 +199,24 @@ void RootBoard::go(QStringList )
 {
 	Job* job;
 	if (color == White)
-		job = new RootSearchJob<White>(this);
+		job = new RootSearchJob<White>(*this);
 	else
-		job = new RootSearchJob<Black>(this);
+		job = new RootSearchJob<Black>(*this);
 	threads.first()->startJob(job);
 }
 
 void RootBoard::perft(unsigned int depth) {
 	if (color == White)
-		threads.first()->startJob(new RootPerftJob<White>(this, depth));
+		threads.first()->startJob(new RootPerftJob<White>(*this, depth));
 	else
-		threads.first()->startJob(new RootPerftJob<Black>(this, depth));
+		threads.first()->startJob(new RootPerftJob<Black>(*this, depth));
 }
 
 void RootBoard::divide(unsigned int depth) {
 	if (color == White)
-		threads.first()->startJob(new RootDivideJob<White>(this, depth));
+		threads.first()->startJob(new RootDivideJob<White>(*this, depth));
 	else
-		threads.first()->startJob(new RootDivideJob<Black>(this, depth));
+		threads.first()->startJob(new RootDivideJob<Black>(*this, depth));
 }
 
 WorkThread* RootBoard::findFreeThread() {

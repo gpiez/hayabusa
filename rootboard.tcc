@@ -31,7 +31,6 @@
 #include "result.h"
 #include "workthread.h"
 #include "jobs.h"
-#include "stats.h"
 
 template<Colors C>
 Move RootBoard::rootSearch() {
@@ -156,7 +155,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 			WorkThread* th;
 			if (0 && (th = findFreeThread())) {
 				setNotReady(current);
-				th->startJob(new SearchJob<(Colors)-C, B, A>(this, b, *i, depth-1, beta, current));
+				th->startJob(new SearchJob<(Colors)-C, B, A>(*this, b, *i, depth-1, beta, current));
 			} else {
 				setNotReady(current);
 				search<(Colors)-C, P>(b, *i, depth-1, beta, current);
@@ -258,7 +257,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 		WorkThread* th;
 		if (P == trunk && !!(th = findFreeThread())) {
 			setNotReady(n);
-			th->startJob(new (PerftJob<(Colors)-C, ResultType>)(this, n, b, *i, depth-1));
+			th->startJob(new (PerftJob<(Colors)-C, ResultType>)(*this, n, b, *i, depth-1));
 		} else {
 			setNotReady(n);
 			perft<(Colors)-C, P>(n, b, *i, depth-1);

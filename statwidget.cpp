@@ -19,14 +19,13 @@
 #include <pch.h>
 #include "stats.h"
 
-Stats stats;
-
 #ifdef QT_GUI_LIB
 #include "statwidget.h"
 #include "rootboard.h"
 #include "transpositiontable.tcc"
 #include "console.h"
 
+__thread Stats stats;
 StatWidget::StatWidget(const RootBoard& rb):
 	rb(rb)
 {

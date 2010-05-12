@@ -57,7 +57,7 @@ class SearchJob: public Job {
 public:
 	SearchJob(RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {};
 	void job() {
-		rb->search<C, trunk>(b, m, depth, alpha, beta);
+		rb.search<C, trunk>(b, m, depth, alpha, beta);
 	}
 };
 
@@ -68,8 +68,8 @@ class RootSearchJob: public signalJob {
 public:
 	RootSearchJob(RootBoard& rb): rb(rb) {};
 	void job() {
-		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
-		Move m = rb->rootSearch<C>();
+		connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
+		Move m = rb.rootSearch<C>();
 		emit(result(m.string()));
 	}
 };
@@ -84,7 +84,7 @@ class PerftJob: public Job {
 public:
 	PerftJob(RootBoard& rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
 	void job() {
-		rb->perft<C, trunk>(n, b, m, depth);
+		rb.perft<C, trunk>(n, b, m, depth);
 	}
 };
 
@@ -96,27 +96,27 @@ class RootPerftJob: public signalJob {
 public:
 	RootPerftJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
 	void job() {
-		rb->pt = new TranspositionTable<PerftEntry, 1>;
-		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
-		uint64_t n=rb->rootPerft<C>(depth);
-		emit(result(QString("%1").arg(n)));
-		delete rb->pt;
+		rb.pt = new TranspositionTable<PerftEntry, 1>;
+		connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
+		uint64_t n=rb.rootPerft<C>(depth);
+		emit(result(QString::number(n)));
+		delete rb.pt;
 	}
 };
 
 template<Colors C>
 class RootDivideJob: public signalJob {
-	RootBoard* rb;
+	RootBoard& rb;
 	unsigned int depth;
 
 public:
-	RootDivideJob(RootBoard* rb, unsigned int depth): rb(rb), depth(depth) {};
+	RootDivideJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
 	void job() {
-		rb->pt = new TranspositionTable<PerftEntry, 1>;
-		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
-		uint64_t n=rb->rootDivide<C>(depth);
+		rb.pt = new TranspositionTable<PerftEntry, 1>;
+		connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
+		uint64_t n=rb.rootDivide<C>(depth);
 		emit(result(QString("%1").arg(n)));
-		delete rb->pt;
+		delete rb.pt;
 	}
 };
 
