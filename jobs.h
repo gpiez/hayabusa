@@ -26,13 +26,20 @@
 #include "rootboard.h"
 #include "console.h"
 #include "boardbase.h"
-//#include "rootboard.tcc"
 
+// Abstract base class for functions called to be executed by a different thread
+// To execute a function in a different thread, create a ***Job object with the
+// function parameters given in the constructor. The constructor returns
+// immediatly and the job() member is executed by the WorkThread run loop
+// functions started this way can not have a return value, instead parameters
+// by reference have to be used, with appropriate means of joining/synching
 struct Job {
 	virtual ~Job() {};			// the for calling destructor of QObject in signalJob
 	virtual void job() = 0;
 };
 
+// Base class for jobs which need to deliver signals, usually the root threads
+// started by the main thread.
 struct signalJob: public QObject, public Job {
 	Q_OBJECT
 signals:
@@ -41,27 +48,25 @@ signals:
 
 template<Colors C, typename A, typename B>
 class SearchJob: public Job {
-	RootBoard* rb;
+	RootBoard& rb;
 	const ColoredBoard<(Colors)-C>& b;
 	Move m;
 	unsigned int depth;
 	const A& alpha;
 	B& beta;
 public:
-	SearchJob(RootBoard* rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {};
+	SearchJob(RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {};
 	void job() {
-		//QTextStream xout(stderr);
-		//xout << depth;
-		rb->search<C, root>(b, m, depth, alpha, beta);
+		rb->search<C, trunk>(b, m, depth, alpha, beta);
 	}
 };
 
 template<Colors C>
 class RootSearchJob: public signalJob {
-	RootBoard* rb;
+	RootBoard& rb;
 	
 public:
-	RootSearchJob(RootBoard* rb): rb(rb) {};
+	RootSearchJob(RootBoard& rb): rb(rb) {};
 	void job() {
 		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
 		Move m = rb->rootSearch<C>();
@@ -71,27 +76,25 @@ public:
 
 template<Colors C, typename T>
 class PerftJob: public Job {
-	RootBoard* rb;
+	RootBoard& rb;
 	T& n;
 	const ColoredBoard<(Colors)-C>& b;
 	Move m;
 	unsigned int depth;
 public:
-	PerftJob(RootBoard* rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
+	PerftJob(RootBoard& rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
 	void job() {
-		QTextStream xout(stderr);
-		//xout << depth;
 		rb->perft<C, trunk>(n, b, m, depth);
 	}
 };
 
 template<Colors C>
 class RootPerftJob: public signalJob {
-	RootBoard* rb;
+	RootBoard& rb;
 	unsigned int depth;
 	
 public:
-	RootPerftJob(RootBoard* rb, unsigned int depth): rb(rb), depth(depth) {};
+	RootPerftJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
 	void job() {
 		rb->pt = new TranspositionTable<PerftEntry, 1>;
 		connect(this, SIGNAL(result(QString)), rb->console, SLOT(getResult(QString)));
