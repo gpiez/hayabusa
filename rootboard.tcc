@@ -43,7 +43,7 @@ Move RootBoard::rootSearch() {
 	QDateTime softBudget = startTime.addMSecs( timeBudget/(2*movesToDo) );
 	QDateTime hardBudget = startTime.addMSecs( 2*timeBudget / (movesToDo + 1) );
 
-	for (depth=1; depth<maxDepth; depth++) {
+	for (depth=2; depth<maxDepth; depth++) {
 		QDateTime currentStart = QDateTime::currentDateTime();
 		Score<C> alpha(-infinity);
 		alpha.m = (Move) {0};
@@ -55,7 +55,7 @@ Move RootBoard::rootSearch() {
 		
 		for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
 			//xout << depth << ":" << currentMove->string();
-			if (search<(Colors)-C, tree>(b, *currentMove, depth-1, beta, bestScore)) {
+			if (search<(Colors)-C, trunk>(b, *currentMove, depth-1, beta, bestScore)) {
 				bestMove = *currentMove;
 				*currentMove = *firstMove;
 				*firstMove = bestMove;
@@ -145,6 +145,8 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 				*i = *list;
 				*list = current.m;
 			}
+			if (current >= beta)
+				break;
 		}
 		current.v = alpha.v;
 	}
@@ -176,12 +178,14 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		stored.score |= current.get();
 		stored.loBound |= current > alpha;
 		stored.hiBound |= current < beta;
+		ASSERT( stored.loBound || stored.hiBound );
 		stored.from |= current.m.from;
 		stored.to |= current.m.to;
 		tt->store(te, stored, l);
 	}
+	bool newBM = beta.max(current, m);
 	beta.setReady();
-	return beta.max(current, m);
+	return newBM;
 }
 
 template<Colors C>
