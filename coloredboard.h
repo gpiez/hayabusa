@@ -58,7 +58,7 @@ private:
 	
 	uint8_t detectPin( unsigned int pos) const;
 	void ray(Move* &list, uint8_t from, uint8_t dir) const;
-	void rays(Move* &list, uint8_t from, uint8_t dir, uint8_t spec) const;
+	void ray_vectorized(Move* &list, uint8_t from, uint8_t dir) const;
 	void generateTargetMove(Move* &list, uint8_t to) const;
 	void generateTargetCapture(Move* &list, uint8_t to, int8_t cap, Attack a) const;
 	uint64_t perft(unsigned int depth) const;

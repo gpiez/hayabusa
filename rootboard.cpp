@@ -244,6 +244,7 @@ template<> void setNotReady<Result<uint64_t> >(Result<uint64_t>& r) {
 }
 
 uint64_t RootBoard::getTime() const {
-	return startTime.time().msecsTo(QDateTime::currentDateTime().time()) +
+	QTime temp = startTime.time();
+	return temp.msecsTo(QTime::currentTime()) +
 	86400000*(startTime.daysTo(QDateTime::currentDateTime()));
 }

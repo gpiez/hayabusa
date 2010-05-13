@@ -176,17 +176,46 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 	}
 }
 
+// template<Colors C>
+// void ColoredBoard<C>::ray_vectorized(Move* &list, uint8_t from, uint8_t dir) const {
+// 	uint8_t l = attLen[dir][from];
+// 	LongIndex li = attVec[dir][from];	// contains next piece in left or right direction dir, or 0 if border
+// 	l -= borderTab[(uint8_t&)li];		// subract one from l, if the vec hits a piece
+// 	__m128i moveFrom = moveFromTab[from];	// contains 4* { from, from, 0, 0 }
+// 	__m128i move0123 = _mm_add_epi8(moveOffsetTab[l][dir].m0123, moveFrom);
+// 	__m128i move456 = _mm_add_epi8(moveOffsetTab[l][dir].m456, moveFrom);
+// 	((__m128*)list)[0] = move0123;
+// 	((__m128*)list)[1] = move456;
+// 	list += totalLenTab[(uint8_t&)li];
+// }
+
+// template<Colors C>
+// void ColoredBoard<C>::ray(Move* &list, uint8_t from, uint8_t dir) const {
+// 	unsigned int l = length(dir, from);
+// 	if (!l) return;
+// 	uint8_t to = from + dirOffsets[dir];
+// 	for (unsigned int i=l; i>1; --i) {			//TODO vecotrize and put 4 moves at once?
+// 		*list++ = (Move) { from, to, 0, 0 };
+// 		to += dirOffsets[dir];
+// 	}
+// 	if (!pieces[to])
+// 		*list++ = (Move) { from, to, 0, 0 };
+// }
+
+// using this pragma causes a miscompilation
+// #pragma GCC optimize "-fno-tree-vectorize"
 template<Colors C>
 void ColoredBoard<C>::ray(Move* &list, uint8_t from, uint8_t dir) const {
 	unsigned int l = length(dir, from);
 	if (!l) return;
-	uint8_t to = from + dirOffsets[dir];
-	for (unsigned int i=l; i>1; --i) {			//TODO vecotrize and put 4 moves at once?
-		*list++ = (Move) { from, to, 0, 0 };
-		to += dirOffsets[dir];
+	uint32_t to = from + dirOffsets[dir];
+	uint32_t m = from + ( to << 8 );
+	for (unsigned int i=l; i>1; --i) {
+		*(uint32_t*)list++ = m;
+		m += dirOffsets[dir] << 8;
 	}
-	if (!pieces[to])
-		*list++ = (Move) { from, to, 0, 0 };
+	*(uint32_t*)list = m;
+	list += !pieces[m >> 8];
 }
 
 template<Colors C>
@@ -479,35 +508,31 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 	}
 
 	from = pieceList[CI].getKing();
-	uint8_t spec = nothingSpecial;//castling.castling[CI].k|castling.castling[CI].q ? disableCastling:0;
 
 	to = from + dirOffsets[0];
-	if (isKingDistance(from, to) & !pieces[to] & !(shortAttack[EI][to] & attackMaskShort) & !(longAttack[EI][to] & attackMaskLong))
-		*list++ = (Move) { from, to, 0, spec };
+	if (length(0, from) && !(pieces[to] | (shortAttack[EI][to] & attackMaskShort) | (longAttack[EI][to] & attackMaskLong)))
+		*list++ = (Move) { from, to, 0, 0 };
 	to = from + dirOffsets[1];
-	if (isKingDistance(from, to) & !pieces[to] & !(shortAttack[EI][to] & attackMaskShort) & !(longAttack[EI][to] & attackMaskLong))
-		*list++ = (Move) { from, to, 0, spec };
+	if (length(1, from) && !(pieces[to] | (shortAttack[EI][to] & attackMaskShort) | (longAttack[EI][to] & attackMaskLong)))
+		*list++ = (Move) { from, to, 0, 0 };
 	to = from + dirOffsets[2];
-	if (isKingDistance(from, to) & !pieces[to] & !(shortAttack[EI][to] & attackMaskShort) & !(longAttack[EI][to] & attackMaskLong))
-		*list++ = (Move) { from, to, 0, spec };
+	if (length(2, from) && !(pieces[to] | (shortAttack[EI][to] & attackMaskShort) | (longAttack[EI][to] & attackMaskLong)))
+		*list++ = (Move) { from, to, 0, 0 };
 	to = from + dirOffsets[3];
-	if (isKingDistance(from, to) & !pieces[to] & !(shortAttack[EI][to] & attackMaskShort) & !(longAttack[EI][to] & attackMaskLong))
-		*list++ = (Move) { from, to, 0, spec };
+	if (length(3, from) && !(pieces[to] | (shortAttack[EI][to] & attackMaskShort) | (longAttack[EI][to] & attackMaskLong)))
+		*list++ = (Move) { from, to, 0, 0 };
 	to = from + dirOffsets[4];
-	if (isKingDistance(from, to) & !pieces[to] & !(shortAttack[EI][to] & attackMaskShort) & !(longAttack[EI][to] & attackMaskLong))
-		*list++ = (Move) { from, to, 0, spec };
+	if (length(4, from) && !(pieces[to] | (shortAttack[EI][to] & attackMaskShort) | (longAttack[EI][to] & attackMaskLong)))
+		*list++ = (Move) { from, to, 0, 0 };
 	to = from + dirOffsets[5];
-	if (isKingDistance(from, to) & !pieces[to] & !(shortAttack[EI][to] & attackMaskShort) & !(longAttack[EI][to] & attackMaskLong))
-		*list++ = (Move) { from, to, 0, spec };
+	if (length(5, from) && !(pieces[to] | (shortAttack[EI][to] & attackMaskShort) | (longAttack[EI][to] & attackMaskLong)))
+		*list++ = (Move) { from, to, 0, 0 };
 	to = from + dirOffsets[6];
-	if (isKingDistance(from, to) & !pieces[to] & !(shortAttack[EI][to] & attackMaskShort) & !(longAttack[EI][to] & attackMaskLong))
-		*list++ = (Move) { from, to, 0, spec };
+	if (length(6, from) && !(pieces[to] | (shortAttack[EI][to] & attackMaskShort) | (longAttack[EI][to] & attackMaskLong)))
+		*list++ = (Move) { from, to, 0, 0 };
 	to = from + dirOffsets[7];
-	if (isKingDistance(from, to) & !pieces[to] & !(shortAttack[EI][to] & attackMaskShort) & !(longAttack[EI][to] & attackMaskLong))
-		*list++ = (Move) { from, to, 0, spec };
-
-	//king move is a uncovered check, iff the king is not moving in the direction of
-	//the attack or in the opposite. in this case, (ucheckdir-i) & 3 becames 0.
+	if (length(7, from) && !(pieces[to] | (shortAttack[EI][to] & attackMaskShort) | (longAttack[EI][to] & attackMaskLong)))
+		*list++ = (Move) { from, to, 0, 0 };
 
 	return list;
 }
