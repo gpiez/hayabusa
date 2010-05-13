@@ -39,12 +39,12 @@ class ColoredBoard: public BoardBase {
 	static const unsigned int CI = (White-C)/(White-Black);	// ColorIndex, 0 for White, 1 for Black
 	static const unsigned int EI = (C-Black)/(White-Black);	// EnemyIndex, 1 for White, 0 for Black
 	static const uint8_t pov = CI*56;	//for xoring square values to the other side
-	static bool isKnightDistance(int from, int to) {
+/*	static bool isKnightDistance(int from, int to) {
 		return abs( (from&7) - (to&7) )	* abs( (from&0x38) - (to&0x38) ) == 16;
-	}
-	static bool isKingDistance(int8_t from, int8_t to) {
-		return (abs( (from&7) - (to&7) ) | (abs( (from & 0x38) - (to & 0x38) ) >> 3)) == 1;
-	}
+	}*/
+// 	static bool isKingDistance(int8_t from, int8_t to) {
+// 		return (abs( (from&7) - (to&7) ) | (abs( (from & 0x38) - (to & 0x38) ) >> 3)) == 1;
+// 	}
 
 public:
 	ColoredBoard() {};

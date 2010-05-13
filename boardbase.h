@@ -61,9 +61,17 @@ struct BoardBase {
 	RawScore pieceSquare;
 	uint8_t enPassant;
 	static Castling castlingMask[nSquares];
-
+	static uint64_t knightDistanceTable[nSquares];
+	static uint64_t kingDistanceTable[nSquares];
+	
 	static void initTables();
 
+	static bool isKnightDistance(int from, int to) {
+		return knightDistanceTable[from] >> to & 1;
+	}
+	static bool isKingDistance(int from, int to) {
+		return kingDistanceTable[from] >> to & 1;
+	}
 	unsigned int getLen(unsigned int dir, unsigned int pos) {
 		if (dir<4)
 			return attLen[dir][pos].right;

@@ -480,28 +480,29 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		}
 	}
 
-	/*castling
-	test the castling flags,
-	if there is enough free space besides the king (ATTACKLEN)
-	if the king-squares are not under attack
-	if there is a rook (it might have been captured and the flags are still live)
-	so castling is still not handled correctly (the king rook might be captured, the queenrook moves to the place
-	of the king rook and kingside castling is still possible*/
+	/* castling
+	 * test the castling flags,
+	 * if there is enough free space besides the king (ATTACKLEN)
+	 * if the king-squares are not under attack, a test if we are in check is
+	 * not neccessary, we won't ever get here because of check evasion
+	 */
 	if ( castling.castling[CI].q && length(0, pov^a1) == 4
-	&& !(shortAttack[EI][pov^c1] & attackMaskShort)
-	&& !(shortAttack[EI][pov^d1] & attackMaskShort)
-	&& !(longAttack[EI][pov^c1] & attackMaskLong)
-	&& !(longAttack[EI][pov^d1] & attackMaskLong)) {
+	&& !((shortAttack[EI][pov^c1] & attackMaskShort) |
+		 (shortAttack[EI][pov^d1] & attackMaskShort) |
+	     (longAttack[EI][pov^c1] & attackMaskLong) |
+		 (longAttack[EI][pov^d1] & attackMaskLong)))
+	{
 		ASSERT(pieces[pov^a1] == C*Rook);
 		ASSERT(pieces[pov^e1] == C*King);
 		*list++ = (Move) { pov^e1, pov^c1, 0, longCastling };
 	}
 
 	if ( castling.castling[CI].k && length(0, pov^e1) == 3
-	&& !(shortAttack[EI][pov^f1] & attackMaskShort)
-	&& !(shortAttack[EI][pov^g1] & attackMaskShort)
-	&& !(longAttack[EI][pov^f1] & attackMaskLong)
-	&& !(longAttack[EI][pov^g1] & attackMaskLong)) {
+	&& !((shortAttack[EI][pov^f1] & attackMaskShort) |
+		 (shortAttack[EI][pov^g1] & attackMaskShort) |
+		 (longAttack[EI][pov^f1] & attackMaskLong) |
+		 (longAttack[EI][pov^g1] & attackMaskLong)))
+	{
 		ASSERT(pieces[pov^h1] == C*Rook);
 		ASSERT(pieces[pov^e1] == C*King);
 		*list++ = (Move) { pov^e1, pov^g1, 0, shortCastling };

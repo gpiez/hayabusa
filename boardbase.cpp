@@ -112,6 +112,8 @@ const uint64_t PieceList::posMask[9] = { 0, 0xff, 0xffff, 0xffffff, 0xffffffff,
 };
 
 Castling BoardBase::castlingMask[nSquares];
+uint64_t BoardBase::knightDistanceTable[nSquares] = {0};
+uint64_t BoardBase::kingDistanceTable[nSquares] = {0};
 
 /// Initialize the static tables used by BoardBase and the low level asm routines
 void BoardBase::initTables()
@@ -199,6 +201,15 @@ void BoardBase::initTables()
 			castlingMask[sq].castling[1].q = 0;
 		if (sq == h8 || sq == e8)
 			castlingMask[sq].castling[1].k = 0;
+	}
+
+	for (unsigned int a=0; a<nSquares; ++a) 
+	for (unsigned int b=0; b<nSquares; ++b) {
+		if (abs( (a&7) - (b&7) ) * abs( (a&0x38) - (b&0x38) ) == 16) 
+			knightDistanceTable[a] |= 1ULL << b;
+
+		if ((abs( (a&7) - (b&7) ) | (abs( (a & 0x38) - (b & 0x38) ) >> 3)) == 1) 
+			kingDistanceTable[a] |= 1ULL << b;
 	}
 }
 
