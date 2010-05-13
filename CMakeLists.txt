@@ -32,6 +32,7 @@ FIND_PACKAGE(PrecompiledHeaders)
 SET(USE_QTGUI FALSE CACHE BOOL "Build the QT interface")
 IF (USE_QTGUI)
 	SET(QT_DONT_USE_QTGUI FALSE)
+	SET(hayabusa_UIS stats.ui)
 ELSE(USE_QTGUI)
 	SET(QT_DONT_USE_QTGUI TRUE)
 ENDIF(USE_QTGUI)
@@ -44,7 +45,6 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 SET(hayabusa_SRCS rootboard.cpp joblist.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
                   move.cpp transpositiontable.cpp setpiece.asm offsets.inc statwidget.cpp)
 SET(hayabusa_MOC_H jobs.h console.h statwidget.h)
-SET(hayabusa_UIS stats.ui)
 SET(hayabusa_RCCS hayabusa.qrc)
 
 SET(test_SRCS test.cpp ${hayabusa_SRCS})
@@ -89,6 +89,6 @@ if(HUGE_PAGES)
 ENDIF(HUGE_PAGES)
 
 
-ADD_EXECUTABLE(test ${test_SRCS} ${test_MOC_SRCS})
+ADD_EXECUTABLE(test ${test_SRCS} ${test_MOC_SRCS} ${hayabusa_UIS_H} ${hayabusa_RCC_SRCS} )
 set_source_files_properties(test.cpp PROPERTIES COMPILE_FLAGS "-DQT_TEST")
 TARGET_LINK_LIBRARIES (test ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})

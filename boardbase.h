@@ -63,6 +63,8 @@ struct BoardBase {
 	static Castling castlingMask[nSquares];
 	static uint64_t knightDistanceTable[nSquares];
 	static uint64_t kingDistanceTable[nSquares];
+	static uint8_t vec2pin[nSquares][nSquares];
+	static bool attPinTable[256][256];
 	
 	static void initTables();
 

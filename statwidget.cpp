@@ -38,6 +38,7 @@ StatWidget::StatWidget(const RootBoard& rb):
 	qRegisterMetaType<uint64_t>("uint64_t");
 	connect(rb.console, SIGNAL(signalIterationDone(unsigned int, uint64_t, QString, int)), this, SLOT(updateLine(unsigned int, uint64_t, QString, int)));
 	t->setInterval(1000);
+	update();
 	t->start();
 }
 
@@ -58,7 +59,7 @@ void StatWidget::updateLine(unsigned int depth, uint64_t nodes, QString line, in
 		Ui_Statsui::depth->setText("Depth: " + QString::number(depth));
 	}
 }
-#define DISPLAYNUM(x) n##x->setText(QString::number(prev.last().x)); if (prev.size() > 1) v##x->setText(QString::number((prev.last().x - prev.first().x) / prev.size()));
+#define DISPLAYNUM(x) n##x->setText(QString::number(prev.last().x)); if (prev.size() > 1) v##x->setText(QString::number((prev.last().x - prev.first().x) / (prev.size()-1)));
 /* Store the last 10 stats for a sliding average */
 void StatWidget::update()
 {

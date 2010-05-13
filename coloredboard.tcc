@@ -128,4 +128,25 @@ bool ColoredBoard<C>::attackedBy(uint8_t pos) {
 	}
 }
 
+template<Colors C>
+uint8_t ColoredBoard<C>::diaPinTable[nDirs][256];
+
+template<Colors C>
+void ColoredBoard<C>::initTables() {
+	for (unsigned int dir = 0; dir<nDirs; dir++)
+	for (int l = -King; l<=King; ++l)
+	for (int r = -King; r<=King; ++r) {
+		LongIndex i = { l, r };
+		diaPinTable[dir][(uint8_t&)i] = ~0;
+		if ( (dir&1) && l == C*King && (r == -C*Bishop || r == -C*Queen) )
+			diaPinTable[dir][(uint8_t&)i] = dir;
+		if ( (dir&1) && r == C*King && (l == -C*Bishop || l == -C*Queen) )
+			diaPinTable[dir][(uint8_t&)i] = dir;
+		if ( !(dir&1) && l == C*King && (r == -C*Rook || r == -C*Queen) )
+			diaPinTable[dir][(uint8_t&)i] = dir;
+		if ( !(dir&1) && r == C*King && (l == -C*Rook || l == -C*Queen) )
+			diaPinTable[dir][(uint8_t&)i] = dir;
+	}
+}
+
 #endif /* COLOREDBOARD_TCC_ */

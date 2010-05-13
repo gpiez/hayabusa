@@ -45,10 +45,12 @@ class ColoredBoard: public BoardBase {
 // 	static bool isKingDistance(int8_t from, int8_t to) {
 // 		return (abs( (from&7) - (to&7) ) | (abs( (from & 0x38) - (to & 0x38) ) >> 3)) == 1;
 // 	}
-
+	static uint8_t diaPinTable[nDirs][256];
+	
 public:
 	ColoredBoard() {};
 	ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard&);
+	static void initTables();
 	Move* generateCaptureMoves(Move* list) const;
 	Move* generateMoves(Move* list) const;
 	void doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootBoard&) const;

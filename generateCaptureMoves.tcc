@@ -34,14 +34,19 @@ uint8_t ColoredBoard<C>::detectPin( unsigned int pos ) const {
 	 * Pin by a rook/queen: (own & checkR) && (opp & attackMaskRQ), possible dirs 04 26
 	 * Pin by a bish/queen: (own & checkB) && (opp & attackMaskB) | attackMaskQ), possible dirs 15 37
 	 */
-	if ( !(longAttack[CI][pos] & (checkKB|checkKR)) | !(longAttack[EI][pos]&attackMaskLong) )
-		return ~0;
-	uint8_t dir = vec2dir[pos][pieceList[CI].getKing()];
-	ASSERT( dir <8 );
-
-	if ( isLongAttack(dir, pos) )
-		return dir&3;
+	// This condition isn't neccessary, but very likely to be true, so in the
+	// end the branch version ist faster than the branchless version below alone.
+//	if ( attPinTable[longAttack[CI][pos]][longAttack[EI][pos]] ) {
+	if ( !!(longAttack[CI][pos] & (checkKB|checkKR)) & !!(longAttack[EI][pos]&attackMaskLong) ) {
+/*	if (( !!(longAttack[CI][pos] & checkKB) & !!(longAttack[EI][pos] & (attackMaskQ | attackMaskB)) ) |
+	    ( !!(longAttack[CI][pos] & checkKR) & !!(longAttack[EI][pos] & (attackMaskQ | attackMaskR)) )) {*/
+		
+		uint8_t king = pieceList[CI].getKing();
+		uint8_t dir2 = vec2pin[pos][king];
+		return diaPinTable[dir2][(uint8_t&)attVec[dir2][pos]];
+	}
 	return ~0;
+
 }
 /*
  * Check if to is attacked by a pawn. If so, iterate through both possible from positions.

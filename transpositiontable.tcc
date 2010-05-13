@@ -67,7 +67,7 @@ Entry* TranspositionTable<Entry, assoc>::getEntry(Key k, QReadWriteLock* &l) {
 }
 
 template<typename Entry, unsigned int assoc>
-bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, Entry& ret, QReadWriteLock* l) {
+bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, Entry& ret, QReadWriteLock* ) {
 	union EntryUnion {
 		Entry temp;
 		volatile __m128i xmm;
@@ -88,7 +88,7 @@ bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, En
 
 #pragma GCC diagnostic ignored "-Wtype-limits"
 template<typename Entry, unsigned int assoc>
-void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry, QReadWriteLock* l) {
+void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry, QReadWriteLock* ) {
 //	QWriteLocker locker(l);
 	stats.ttstore++;
 	// look if the position is already stored. if it is, but the new depth

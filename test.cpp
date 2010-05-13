@@ -135,7 +135,7 @@ void TestRootBoard::generateCaptures() {
 	if( sched_setaffinity( 0, sizeof(mask), &mask ) == -1 )
 		qDebug() << "Could not set CPU Affinity" << endl;
 	static const unsigned testCases = 200;
-	static const int iter = 16*256;
+	static const int iter = 256;
 	typedef QVector<uint64_t> Sample;
 	QVector<Sample> times(testCases, Sample(iter));
 	QVector<Sample> movetimes(testCases, Sample(iter));

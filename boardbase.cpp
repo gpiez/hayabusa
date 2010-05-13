@@ -65,6 +65,8 @@ __m128i broadcastTab[256];
  * Table containing the direction from first index to 2nd index or 0xff
  */
 uint8_t vec2dir[nSquares][nSquares];
+uint8_t BoardBase::vec2pin[nSquares][nSquares];
+bool BoardBase::attPinTable[0x100][0x100];
 /*
  * lookup table from converting piece indices, which are signed 4-bit integers, to attack patterns
  * four tables, for white/black in straight/diagonal directions
@@ -135,6 +137,9 @@ void BoardBase::initTables()
 				dir = ~0;
 		}
 		vec2dir[8*y0+x0][8*y1+x1] = dir;
+		vec2pin[8*y0+x0][8*y1+x1] = dir & 3;	// 3 in case there is no valid dir.
+		// this doesn't matter, because it is used for determining a possible pin
+		// if there is none, the second pin lookup will return 0
 	}
 
 	// Fill table containing one byte broadcasted to all locations in the __v16qi vector
@@ -210,6 +215,12 @@ void BoardBase::initTables()
 
 		if ((abs( (a&7) - (b&7) ) | (abs( (a & 0x38) - (b & 0x38) ) >> 3)) == 1) 
 			kingDistanceTable[a] |= 1ULL << b;
+	}
+
+	for (unsigned int a=0; a<0x100; ++a)
+	for (unsigned int b=0; b<0x100; ++b) {
+		attPinTable[a][b] = ( !!(a & checkKB) & !!(b & (attackMaskQ | attackMaskB)) ) |
+							( !!(a & checkKR) & !!(b & (attackMaskQ | attackMaskR)) );
 	}
 }
 

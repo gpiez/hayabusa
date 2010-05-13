@@ -23,6 +23,7 @@
 #include "console.h"
 #include "workthread.h"
 #include "rootboard.h"
+#include "coloredboard.tcc"
 
 QMap<QString, void (Console::*)(QStringList)> dispatcher;
 
@@ -33,6 +34,8 @@ Console::Console(QCoreApplication* parent):
 	cout(stdout, QIODevice::WriteOnly)
 {
 	BoardBase::initTables();
+	ColoredBoard<White>::initTables();
+	ColoredBoard<Black>::initTables();
 	Zobrist::initTables();
 	board = new RootBoard(this);
 	board->setup();
