@@ -250,8 +250,8 @@ void BoardBase::initTables()
 		Length len = { right, left };
 		totalLen[(uint8_t&)len] = left + right;
 	}
-	for (unsigned int dir=0; dir<4; ++dir)
-	for (unsigned int r = 0; r < 8; ++r) {
+	for (int dir=0; dir<4; ++dir)
+	for (int r = 0; r < 8; ++r) {
 		for (int i = 0;  i < r; ++i)
 		{
 			Move m = { 0, (i+1)*dirOffsets[dir] };

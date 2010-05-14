@@ -40,7 +40,7 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootB
 	next->castling.data = castling.data & castlingMask[m.from].data & castlingMask[m.to].data;
 	
 	next->fiftyMoves = (m.capture!=0) | (piece==5) ? 0:fiftyMoves+1;
-	ASSERT(C*m.capture <= King);
+	ASSERT(C*m.capture < King);
 	
 	switch (m.special & 0xf) {
 	case 0:
@@ -74,8 +74,10 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootB
 	}
 
 	if (m.capture)
-		next->clrPiece<(Colors)-C>(-C*m.capture, m.to, rb);
-	next->setPiece<C>(piece, m.to, rb);
+//		next->clrPiece<(Colors)-C>(-C*m.capture, m.to, rb);
+		next->chgPiece<C>(-C*m.capture, piece, m.to, rb);
+	else
+		next->setPiece<C>(piece, m.to, rb);
 }
 
 template<Colors C>

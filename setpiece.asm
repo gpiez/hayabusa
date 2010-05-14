@@ -168,30 +168,30 @@ macro		clrpieceline dir, s, longAttW, longAttB {
 
 			movdqa	xmm5, wlkup								;restore lookuptable, pshufb destroys it
 			pshufb	xmm5, xmm2								;lookup white right 
-			paddb	longAttW, xmm5							;subtract right white attacks
+			paddb	longAttW, xmm5							;restore previously blocked right white attacks
 
 			movdqa	xmm5, blkup
 			pshufb	xmm5, xmm2								;lookup black right
-			paddb	longAttB, xmm5							;subtract right black attacks
+			paddb	longAttB, xmm5							;restore previously blocked black attacks
 
 			movdqa	xmm5, wlkup							;restore lookuptable, pshufb destroys it
 			pshufb	xmm5, xmm3								;lookup left dir
-			paddb	longAttW, xmm5							;update longAttack.w.0 with white left dir attacks
+			paddb	longAttW, xmm5							;restore previously blocked white left dir attacks
 
 			movdqa	xmm5, blkup								;black
 			pshufb	xmm5, xmm3								;lookup left
-			paddb	longAttB, xmm5							;update longAttack.b.0 with black left attack
+			paddb	longAttB, xmm5							;restore previously blocked black left attack
 
 			andps	mask, [rdx]								;rdi broadcasted into all 32 halfbytes
 			psubb	xmm7, mask								;new attVecIndex.0
 
 			movdqa	[rsi + attVecPtr - $80], xmm7; <xmm7 free      save back attVec.0
 
-			movdqa	xmm3, mask								;move upper 4 bits in each byte to lower 4 bits.
-			psrlw	xmm3, 4
+			movdqa	xmm3, mask								;move upper 4 bits in each byte
+			psrlw	xmm3, 4									;to lower 4 bits.
 			movdqa	xmm5, wlkup								;restore lookuptable, pshufb destroys it
-			paddb	xmm3, mask
-			pand	xmm3, low4bits
+			paddb	xmm3, mask								;add upper 4 and lower 4 bits, this works because either lower4 or upper 4 bits are set but never both
+			pand	xmm3, low4bits							;clear out upper (previously lower) bits wrongly shifted int
 			movdqa	xmm2, blkup
 
 			pshufb	xmm5, xmm3
@@ -222,63 +222,50 @@ macro		clrpiecedir dir {
 			}
 
 macro		chgpieceline dir, s, longAttW, longAttB {
-			attLenPtr = (dir shl attDir) + (s shl attSlice) + attLen
 			attVecPtr = (dir shl attDir) + (s shl attSlice) + attVec
 			maskOff	= (dir shl maskDir) + (s shl maskSlice)
-			movdqa	xmm3, [rdi + attLenPtr]					;old attLen.0
+
 			movdqa	mask, [rbp + maskOff + $40]				;LenMask.mask.0
-			movdqa	xmm2, [rax]								;broadcast attVec[pos]
-			movdqa	xmm7, [rdi + attVecPtr]					;old attVec.0
-			paddb	xmm3, [rbp + maskOff]					;LenMask.len.0
+			movdqa	xmm2, [rdx]								;broadcast piece
+			movdqa	xmm3, [rsi]								;broadcasted oldpiece
+			movdqa	xmm7, [rdi + attVecPtr]			;old attVec.0
 
 			andps	xmm2, mask								;diff to be removed = masked attVec[pos]
-			paddb	xmm7, xmm2								;remove old attVecIndex
-
-			movdqa	[rdi + attLenPtr], xmm3					;save new attLen.0
-
-			movdqa	xmm3, xmm2
-			andps	xmm2, low4bits							;lower 4 bits (right direction)
-			psrlw	xmm3, 4									;shift diff 4 bits to the right
-			andps	xmm3, low4bits							;upper 4 bits (left dir) of diff now in lower 4 bits of each byte
+			andps	xmm3, mask
+			paddb	xmm7, xmm2								;change old attVecIndex to new
+			psubb	xmm7, xmm3
+			movdqa	[rdi + attVecPtr], xmm7; <xmm7 free      save back attVec.0
 
 		if dir=0
 			movdqa	longAttW, [rdi+longAttack + s*$10]
 			movdqa  longAttB, [rdi+$40+longAttack + s*$10]
 		end if
 
-			movdqa	xmm5, wlkup								;restore lookuptable, pshufb destroys it
-			pshufb	xmm5, xmm2								;lookup white right
-			paddb	longAttW, xmm5							;subtract right white attacks
+			movdqa	xmm7, xmm3			;move upper 4 bits in each byte
+			psrlw	xmm7, 4				;to lower 4 bits.
+			paddb	xmm3, xmm7	 		;add upper 4 and lower 4 bits, this works because either lower4 or upper 4 bits are set but never both
+			pand	xmm3, low4bits		;clear out upper (previously lower) bits wrongly shifted int
 
-			movdqa	xmm5, blkup
-			pshufb	xmm5, xmm2								;lookup black right
-			paddb	longAttB, xmm5							;subtract right black attacks
+			movdqa	xmm5, xmm2			;move upper 4 bits in each byte
+			psrlw	xmm5, 4				;to lower 4 bits.
+			paddb	xmm2, xmm5	 		;add upper 4 and lower 4 bits, this works because either lower4 or upper 4 bits are set but never both
+			pand	xmm2, low4bits		;clear out upper (previously lower) bits wrongly shifted int
 
-			movdqa	xmm5, wlkup							;restore lookuptable, pshufb destroys it
-			pshufb	xmm5, xmm3								;lookup left dir
-			paddb	longAttW, xmm5							;update longAttack.w.0 with white left dir attacks
+			movdqa	xmm7, wlkup			;restore lookuptable, pshufb destroys it
+			pshufb	xmm7, xmm3
+			psubb	longAttW, xmm7		;remove old piece bits from longAttack.w.0
 
-			movdqa	xmm5, blkup								;black
-			pshufb	xmm5, xmm3								;lookup left
-			paddb	longAttB, xmm5							;update longAttack.b.0 with black left attack
+			movdqa	xmm7, wlkup			;restore lookuptable, pshufb destroys it
+			pshufb	xmm7, xmm2
+			paddb	longAttW, xmm7		;add new piece bits longAttack.w.0
 
-			andps	mask, [rdx]								;rdi broadcasted into all 32 halfbytes
-			psubb	xmm7, mask								;new attVecIndex.0
-
-			movdqa	[rdi + attVecPtr], xmm7; <xmm7 free      save back attVec.0
-
-			movdqa	xmm3, mask								;move upper 4 bits in each byte to lower 4 bits.
-			psrlw	xmm3, 4
-			movdqa	xmm5, wlkup								;restore lookuptable, pshufb destroys it
-			paddb	xmm3, mask
-			pand	xmm3, low4bits
-			movdqa	xmm2, blkup
-
+			movdqa	xmm5, blkup			;restore lookuptable, pshufb destroys it
 			pshufb	xmm5, xmm3
-			psubb	longAttW, xmm5							;sum up longAttack.w.0
+			psubb	longAttB, xmm5		;remove old piece bits from longAttack.b.0
 
-			pshufb	xmm2, xmm3
-			psubb	longAttB, xmm2							;sum up longAttack.b.0
+			movdqa	xmm5, blkup			;restore lookuptable, pshufb destroys it
+			pshufb	xmm5, xmm2
+			paddb	longAttB, xmm5		;add new piece bits longAttack.w.0
 
 		if dir=3
 			movdqa	[rdi+longAttack + s*$10], longAttW			;longAttack[white].0
@@ -289,17 +276,15 @@ macro		chgpieceline dir, s, longAttW, longAttB {
 
 macro		chgpiecedir dir {
 			movzx	eax, byte [rdi+rcx+ (dir shl attDir) + attLen]	;l/len len[pos]
-			shl		eax, maskLen						;len * dizeof(mask[])
+			shl		eax, maskLen						;len * sizeof(mask[])
 			lea		rbp, [rbx + rax]			;masks[len][][pos][]
-			movzx	eax, byte[rdi+rcx+ (dir shl attDir) + attVec]	;old attVecIndex[pos]
-			shl		eax, 4
-			lea		rax, [rax + broadcastTab]
 
 			chgpieceline dir, 0, xmm8, xmm12
 			chgpieceline dir, 1, xmm9, xmm13
 			chgpieceline dir, 2, xmm10, xmm14
 			chgpieceline dir, 3, xmm11, xmm15
 			}
+
 
 ;			Place a piece piece at position pos in board this
 ;			Can only be used after the board has been copied (by clrPiece)
@@ -487,14 +472,14 @@ clrPieceCommon:
 
 ;			this in rdi
 ;			oldpiece in rsi
-;			piece in edx <- rsi
-;			pos in ecx <- edx
+;			piece in edx
+;			pos in ecx 
 
 chgPiece:	mov		r10, rbp
 			mov		r11, rbx
 
 			mov		ebp, esi
-			and		ebp, shortColor						;offset for black shortAtt if piece<0
+			and		ebp, shortColor						;offset for black shortAtt if oldpiece<0
 
 			mov		ebx, esi							;oldpiece
 			sar		ebx, 31								;(piece<0) ? -1:0
@@ -502,42 +487,45 @@ chgPiece:	mov		r10, rbp
 			xor		eax, ebx							;(piece<0) ? ~piece:piece
 			sub		eax, ebx							;abs(piece)
 			shl		eax, shortPiece						;offset for abs(oldpiece)
-
-			mov		ebx, edx							;piece
-			sar		ebx, 31								;(piece<0) ? -1:0
-			mov		r15d, edx							;piece
-			xor		r15d, ebx							;(piece<0) ? ~piece:piece
-			sub		r15d, ebx							;abs(piece)
-			shl		r15d, shortPiece					;offset for abs(piece)
-
+			
 			mov		ebx, ecx							;pos
 			shl		ebx, shortPos
-			lea 	r15, [rbx + r15 + shortAttacks]		;offest for [piece][pos][]
-			lea		rbx, [rbx + rax + shortAttacks]		;offest for [oldpiece][pos][]
-			
+			lea		rax, [rbx + rax + shortAttacks]		;offset for [oldpiece][pos][]
 
-			movdqa	xmm0, [rdi + rbp + shortAttack]					;now rdi+rbp points at shortAttack[color]
-			psubb	xmm0, [rbx + rbp]
+			movdqa	xmm0, [rdi + rbp + shortAttack]		;now rdi+rbp points at shortAttack[oldcolor]
+			psubb	xmm0, [rax + rbp]
 			movdqa	xmm1, [rdi + rbp + shortAttack + $10]
-			psubb	xmm1, [rbx + rbp + $10]
+			psubb	xmm1, [rax + rbp + $10]
 			movdqa	xmm2, [rdi + rbp + shortAttack + $20]
-			psubb	xmm2, [rbx + rbp + $20]
+			psubb	xmm2, [rax + rbp + $20]
 			movdqa	xmm3, [rdi + rbp + shortAttack + $30]
-			psubb	xmm3, [rbx + rbp + $30]
+			psubb	xmm3, [rax + rbp + $30]
 			movdqa  [rdi + rbp + shortAttack], xmm0
 			movdqa  [rdi + rbp + shortAttack + $10], xmm1
 			movdqa  [rdi + rbp + shortAttack + $20], xmm2
 			movdqa  [rdi + rbp + shortAttack + $30], xmm3
 
 			xor		ebp, shortColor
-			movdqa	xmm0, [rdi + rbp + shortAttack]					;now rdi+rbp points at shortAttack[oppodite color]
-			paddb	xmm0, [r15 + rbp]
+			
+			mov		ebx, edx							;piece
+			sar		ebx, 31								;(piece<0) ? -1:0
+			mov		eax, edx							;piece
+			xor		eax, ebx							;(piece<0) ? ~piece:piece
+			sub		eax, ebx							;abs(piece)
+			shl		eax, shortPiece					;offset for abs(piece)
+			
+			mov		ebx, ecx							;pos
+			shl		ebx, shortPos
+			lea 	rax, [rbx + rax + shortAttacks]		;offset for [piece][pos][]
+			
+			movdqa	xmm0, [rdi + rbp + shortAttack]		;now rdi+rbp points at shortAttack[newcolor]
+			paddb	xmm0, [rax + rbp]
 			movdqa	xmm1, [rdi + rbp + shortAttack + $10]
-			paddb	xmm0, [r15 + rbp + $10]
+			paddb	xmm1, [rax + rbp + $10]
 			movdqa	xmm2, [rdi + rbp + shortAttack + $20]
-			paddb	xmm0, [r15 + rbp + $20]
+			paddb	xmm2, [rax + rbp + $20]
 			movdqa	xmm3, [rdi + rbp + shortAttack + $30]
-			paddb	xmm0, [r15 + rbp + $30]
+			paddb	xmm3, [rax + rbp + $30]
 			movdqa  [rdi + rbp + shortAttack], xmm0
 			movdqa  [rdi + rbp + shortAttack + $10], xmm1
 			movdqa  [rdi + rbp + shortAttack + $20], xmm2
@@ -548,7 +536,6 @@ chgPiece:	mov		r10, rbp
 			mov		ebx, ecx				;pos
 			shl		ebx, maskPos			;pos * dxzeof(mask[][][])
 			lea		rbx, [rbx + masks]		;masks[][][pos]
-			lea 	r15, [r15 + masks]
 
 			and		esi, 0xf				;oldpiece, clear upper 28 bits, now we have a dxgned halfbyte zero extended
 			imul	esi, 100010000b			;mul by 16 for the broadcastTab index, mul by 10001b to get the halfbyte to the lower and upper half

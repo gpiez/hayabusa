@@ -97,7 +97,6 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 		while (true) {
 			ASSERT(++n <= pieceList[CI][Knight]);
 			from = sources;
-			sources >>= 8;
 			if (isKnightDistance(from, to)) {
 				if (!isValid(detectPin(from))) {
 				//	*list++ = (Move) {from, to, cap, nothingSpecial};
@@ -105,6 +104,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 				}
 				if (!--nAttacks) break;
 			}
+			sources >>= 8;
 		}
 	}
 	/*
@@ -125,7 +125,6 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 		while(true) {
 			ASSERT(++n <= pieceList[CI][Bishop]);
 			from = sources;
-			sources >>= 8;
 			dir = vec2dir[from][to];
 			if (isValid(dir) & dir & 1 && length(dir, from)*dirOffsets[dir] + from == to) {
 				pin = detectPin(from);
@@ -135,6 +134,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 				}
 				if (!--nAttacks) break;
 			}
+			sources >>= 8;
 		}
 	}
 	/*
@@ -147,7 +147,6 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 		while(true) {
 			ASSERT(++n <= pieceList[CI][Rook]);
 			from = sources;
-			sources >>= 8;
 			dir = vec2dir[from][to];
 			if (~dir & 1 && length(dir, from)*dirOffsets[dir] + from == to) {
 				pin = detectPin(from);
@@ -157,6 +156,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 				}
 				if (!--nAttacks) break;
 			}
+			sources >>= 8;
 		}
 	}
 
@@ -167,7 +167,6 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 		while(true) {
 			ASSERT(++n <= pieceList[CI][Queen]);
 			from = sources;
-			sources >>= 8;
 			dir = vec2dir[from][to];
 			if (isValid(dir) && from + length(dir, from)*dirOffsets[dir] == to) {
 				pin = detectPin(from);
@@ -177,6 +176,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, const uint8_t to, const
 				}
 				if (!--nAttacks) break;
 			}
+			sources >>= 8;
 		}
 	}
 	return;

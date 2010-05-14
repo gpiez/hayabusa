@@ -99,6 +99,7 @@ struct BoardBase {
 
 	template<Colors C> void setPiece(uint8_t piece, uint8_t pos, const RootBoard&);
 	template<Colors C> void clrPiece(uint8_t piece, uint8_t pos, const RootBoard&);
+	template<Colors C> void chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const RootBoard&);
 	template<Colors C> void copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const RootBoard&);
 
 	// copy pieces and pieceList
