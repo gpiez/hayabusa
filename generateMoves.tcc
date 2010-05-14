@@ -176,36 +176,32 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 	}
 }
 
-// template<Colors C>
-// void ColoredBoard<C>::ray_vectorized(Move* &list, uint8_t from, uint8_t dir) const {
-// 	uint8_t l = attLen[dir][from];
-// 	LongIndex li = attVec[dir][from];	// contains next piece in left or right direction dir, or 0 if border
-// 	l -= borderTab[(uint8_t&)li];		// subract one from l, if the vec hits a piece
-// 	__m128i moveFrom = moveFromTab[from];	// contains 4* { from, from, 0, 0 }
-// 	__m128i move0123 = _mm_add_epi8(moveOffsetTab[l][dir].m0123, moveFrom);
-// 	__m128i move456 = _mm_add_epi8(moveOffsetTab[l][dir].m456, moveFrom);
-// 	((__m128*)list)[0] = move0123;
-// 	((__m128*)list)[1] = move456;
-// 	list += totalLenTab[(uint8_t&)li];
-// }
-
-// template<Colors C>
-// void ColoredBoard<C>::ray(Move* &list, uint8_t from, uint8_t dir) const {
-// 	unsigned int l = length(dir, from);
-// 	if (!l) return;
-// 	uint8_t to = from + dirOffsets[dir];
-// 	for (unsigned int i=l; i>1; --i) {			//TODO vecotrize and put 4 moves at once?
-// 		*list++ = (Move) { from, to, 0, 0 };
-// 		to += dirOffsets[dir];
-// 	}
-// 	if (!pieces[to])
-// 		*list++ = (Move) { from, to, 0, 0 };
-// }
-
-// using this pragma causes a miscompilation
-// #pragma GCC optimize "-fno-tree-vectorize"
 template<Colors C>
 void ColoredBoard<C>::ray(Move* &list, uint8_t from, uint8_t dir) const {
+	ASSERT (dir < 4);
+	Length len = attLen[dir][from];
+//	len.right -= attVec[dir][from].lIndex != 0;	// contains next piece right direction dir, or 0 if border
+	(uint8_t&)len -= (uint8_t&)borderTable[(uint8_t&)attVec[dir][from]];
+	__m128i moveFrom = moveFromTable[from].m0123;	// contains 4* { from, from, 0, 0 }
+	__m128i move0123 = _mm_add_epi8(moveOffsetTable[len.right][dir].m0123, moveFrom);
+	_mm_storeu_si128( (__m128i*)&list[0], move0123);
+	uint8_t totalLen = len.left + len.right;
+	if (totalLen > 4) {
+		__m128i move456 = _mm_add_epi8(moveOffsetTable[len.right][dir].m456, moveFrom);
+		_mm_storeu_si128( (__m128i*)&list[4], move456);
+	}
+	list += totalLen;
+}
+
+/*template<Colors C>
+void ColoredBoard<C>::ray(Move* &list, uint8_t from, uint8_t dir) const {
+	ray_nonvectorized(list, from, dir);
+	ray_nonvectorized(list, from, dir+4);
+}
+*/
+
+template<Colors C>
+void ColoredBoard<C>::ray_vectorized(Move* &list, uint8_t from, uint8_t dir) const {
 	unsigned int l = length(dir, from);
 	if (!l) return;
 	uint32_t to = from + dirOffsets[dir];
@@ -405,16 +401,11 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 
 		if (!isValid(pin)) {
 			ray(list, from, 0);
-			ray(list, from, 4);
 			ray(list, from, 1);
-			ray(list, from, 5);
 			ray(list, from, 2);
-			ray(list, from, 6);
 			ray(list, from, 3);
-			ray(list, from, 7);
 		} else {
 			ray(list, from, pin);
-			ray(list, from, pin+4);
 		}
 	}
 
@@ -424,12 +415,9 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 
 		if (!isValid(pin)) {
 			ray(list, from, 1);
-			ray(list, from, 5);
 			ray(list, from, 3);
-			ray(list, from, 7);
 		} else if (pin & 1) {
 			ray(list, from, pin);
-			ray(list, from, pin+4);
 		}
 	}
 
@@ -439,12 +427,9 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 
 		if (!isValid(pin)) {
 			ray(list, from, 0);
-			ray(list, from, 4);
 			ray(list, from, 2);
-			ray(list, from, 6);
 		} else if (~pin & 1) {
 			ray(list, from, pin);
-			ray(list, from, pin+4);
 		}
 	}
 

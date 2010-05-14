@@ -55,6 +55,19 @@ struct BoardBase {
 	SAttack		shortAttack[nColors][nSquares];	//0x080
 	int8_t		pieces[nSquares];				//0x040
 	PieceList 	pieceList[nColors];				//0x040
+	static union SevenMoves {
+		struct {
+			__m128i m0123;
+			__m128i m456;
+		};
+		Move single[7];
+	} moveOffsetTable[nSquares][4];
+	static union FourMoves {
+		__m128i m0123;
+		Move single[4];
+	} moveFromTable[nSquares];
+	static uint8_t totalLen[64];
+	static Length borderTable[0x100];
 	Key zobrist;
 	unsigned int fiftyMoves;
 	Castling castling;

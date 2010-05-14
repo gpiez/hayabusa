@@ -116,6 +116,10 @@ const uint64_t PieceList::posMask[9] = { 0, 0xff, 0xffff, 0xffffff, 0xffffffff,
 Castling BoardBase::castlingMask[nSquares];
 uint64_t BoardBase::knightDistanceTable[nSquares] = {0};
 uint64_t BoardBase::kingDistanceTable[nSquares] = {0};
+BoardBase::FourMoves BoardBase::moveFromTable[nSquares];
+BoardBase::SevenMoves BoardBase::moveOffsetTable[nSquares][4];
+uint8_t BoardBase::totalLen[64];
+Length BoardBase::borderTable[0x100];
 
 /// Initialize the static tables used by BoardBase and the low level asm routines
 void BoardBase::initTables()
@@ -221,6 +225,43 @@ void BoardBase::initTables()
 	for (unsigned int b=0; b<0x100; ++b) {
 		attPinTable[a][b] = ( !!(a & checkKB) & !!(b & (attackMaskQ | attackMaskB)) ) |
 							( !!(a & checkKR) & !!(b & (attackMaskQ | attackMaskR)) );
+	}
+
+	for (uint8_t from = 0; from<nSquares; ++from) {
+		Move m = { from, from };
+		for (unsigned int i=0; i<7; i++) {
+			moveFromTable[from].single[i] = m;
+		}
+	}
+	
+	LongIndex l;
+	for (l.lIndex = -King; l.lIndex <= King; l.lIndex++)
+	for (l.rIndex = -King; l.rIndex <= King; l.rIndex++) {
+		Length len = { 0, 0};
+		if (l.rIndex)
+			len.left = 1;
+		if (l.lIndex)
+			len.right = 1;
+		borderTable[(uint8_t&)l] = len;
+	}
+
+	for (int left = 0; left < 8; left++)
+	for (int right = 0; right < 8; right++) {
+		Length len = { right, left };
+		totalLen[(uint8_t&)len] = left + right;
+	}
+	for (unsigned int dir=0; dir<4; ++dir)
+	for (unsigned int r = 0; r < 8; ++r) {
+		for (int i = 0;  i < r; ++i)
+		{
+			Move m = { 0, (i+1)*dirOffsets[dir] };
+			moveOffsetTable[r][dir].single[i] = m;
+		}
+		for (int i = r;  i < 7; ++i)
+		{
+			Move m = { 0, (r-i-1)*dirOffsets[dir] };
+			moveOffsetTable[r][dir].single[i] = m;
+		}
 	}
 }
 
