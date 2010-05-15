@@ -75,6 +75,12 @@ template<Colors C> struct Score
 		else
 			return v>a.v;
 	}
+	bool operator < (RawScore a) const {
+		if ( C==White )
+			return v<a;
+		else
+			return v>a;
+	}
 	bool max(const RawScore b, const Move n) 		{
 		if ( C==White ) {
 			if (b > v) {

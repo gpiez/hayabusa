@@ -58,10 +58,15 @@ Console::Console(QCoreApplication* parent):
 	connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
 	connect(this, SIGNAL(signalSend(QString)), this, SLOT(privateSend(QString)));
 	
-	QStringList cmds = QCoreApplication::arguments();
-	cmds.removeFirst(); 
-	if (!cmds.isEmpty()) {
-		if (dispatcher.contains(cmds[0])) 
+	QStringList args = QCoreApplication::arguments();
+	args.removeFirst();
+	QString argStr = args.join(" ");
+	QStringList cmdsList = argStr.split(":");
+	foreach(QString cmdStr, cmdsList) {
+		cmdStr = cmdStr.simplified();
+		QStringList cmds = cmdStr.split(" ");
+		if (cmds.isEmpty()) break;
+		if (dispatcher.contains(cmds[0]))
 			(this->*(dispatcher[cmds[0]]))(cmds);
 		else
 			tryMove(cmds);

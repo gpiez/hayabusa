@@ -52,8 +52,7 @@ union Castling {
 union CastlingAndEP {
 	struct {
 		Castling castling;
-		uint8_t enPassant;
-		uint8_t color;
+		int enPassant;
 	};
 	uint64_t data8;
 };

@@ -372,8 +372,8 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
  * if we made two moves in a row and the last move was a double step of our own pawn
  */
 		if ( cep.enPassant && isRank<5>(from))
-		if (((( from+(int8_t)C == cep.enPassant ) && ( !isValid(pin) | (pin == 1)))
-		|| (( from-(int8_t)C == cep.enPassant ) && ( !isValid(pin) | (pin == 3))))) {
+		if (((( from+C == cep.enPassant ) && ( !isValid(pin) | (pin == 1)))
+		|| (( from-C == cep.enPassant ) && ( !isValid(pin) | (pin == 3))))) {
 			/*
 			 * Handle special case, where king, capturing pawn, captured pawn and horizontal
 			 * attacking piece are on one line. Although neither pawn is pinned, the capture

@@ -79,8 +79,15 @@ Move RootBoard::rootSearch() {
  */
 template<Colors C, Phase P, typename A, typename B>
 bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
-	const ColoredBoard<C> b(prev, m, *this);
 	stats.node++;
+	if (P == leaf) {
+		A current(alpha);
+		current.max(prev.estimatedEval(m, *this), (Move){0});
+		if (current >= beta)
+			return false;
+	}
+	const ColoredBoard<C> b(prev, m, *this);
+	ASSERT(b.pieceSquare == prev.estimatedEval(m, *this));
 	
 	Key z = b.getZobrist();
 	QReadWriteLock* l;
@@ -151,9 +158,14 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		current.v = alpha.v;
 	}
 	for (Move* i = list; i<end; ++i) {
-//		xout << indentation << depth << ":" << i->string() << endl;
+		if (current >= beta)
+			break;
 		if (P == leaf || depth <= 1) {
-			search<(Colors)-C, leaf, B, A>(b, *i, 0, beta, current);
+			// The leaf search always starts with the piece square value and
+			// will return a value worse
+//			if (current < b.estimatedEval(m, *this))
+				search<(Colors)-C, leaf, B, A>(b, *i, 0, beta, current);
+			
 		} else if (P == tree || (P == trunk && depth <= splitDepth)) {
 			search<(Colors)-C, tree, B, A>(b, *i, depth-1, beta, current);
 		} else {
@@ -166,8 +178,6 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 				search<(Colors)-C, P>(b, *i, depth-1, beta, current);
 			}
 		}
-		if (current >= beta)
-			break;
 	}
 
 	if (P != leaf) {

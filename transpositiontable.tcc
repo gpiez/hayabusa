@@ -149,10 +149,12 @@ void TranspositionTable<Entry, assoc>::setSize(size_t s)
 
 template<typename Entry, unsigned assoc>
 template<Colors C>
-QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard& rb) {
+QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard& rb, QSet<Key>& visited) {
 	QString line = m.string();
 	const ColoredBoard<C> b(prev, m, rb);
 	Key key = b.getZobrist();
+	if (visited.contains(key)) return "";
+	visited << key;
 	QReadWriteLock* l;
 	TTEntry* te = getEntry(key, l);
 	TTEntry subentry;
@@ -168,7 +170,7 @@ QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Color
 	if ((uint32_t&)ttMove)
 		for (Move *i=list; i<end; ++i) {
 			if (i->from == ttMove.from && i->to == ttMove.to) {
-				line += " " + bestLineNext<(Colors)-C>(b, *i, rb);
+				line += " " + bestLineNext<(Colors)-C>(b, *i, rb, visited);
 				break;
 			}
 		}
@@ -179,10 +181,11 @@ QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Color
 template<typename Entry, unsigned assoc>
 QString TranspositionTable<Entry, assoc>::bestLine(const RootBoard& b) {
 	if (!(uint32_t&)b.bestMove) return QString();
+	QSet<Key> visited;
 	if (b.color == White) {
-		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, b);
+		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, b, visited);
 	} else {
-		return bestLineNext<White>(b.currentBoard<Black>(), b.bestMove, b);
+		return bestLineNext<White>(b.currentBoard<Black>(), b.bestMove, b, visited);
 	}
 
 }
