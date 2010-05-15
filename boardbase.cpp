@@ -201,15 +201,15 @@ void BoardBase::initTables()
 	// if a piece is moved from or to a position in this table, the castling status
 	// is disabled if the appropriate rook or king squares match.
 	for (unsigned int sq=0; sq<nSquares; ++sq) {
-		castlingMask[sq].data = ~0;
+		castlingMask[sq].data4 = ~0;
 		if (sq == a1 || sq == e1)
-			castlingMask[sq].castling[0].q = 0;
+			castlingMask[sq].color[0].q = 0;
 		if (sq == h1 || sq == e1)
-			castlingMask[sq].castling[0].k = 0;
+			castlingMask[sq].color[0].k = 0;
 		if (sq == a8 || sq == e8)
-			castlingMask[sq].castling[1].q = 0;
+			castlingMask[sq].color[1].q = 0;
 		if (sq == h8 || sq == e8)
-			castlingMask[sq].castling[1].k = 0;
+			castlingMask[sq].color[1].k = 0;
 	}
 
 	for (unsigned int a=0; a<nSquares; ++a) 

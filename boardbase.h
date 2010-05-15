@@ -42,8 +42,20 @@ extern "C" {
 union Castling {
 	struct {
 		bool q,k;
-	} castling[nColors];
-	uint32_t data;
+	} color[nColors];
+	uint32_t data4;
+};
+
+// Puts castling flags and e. p. square together in one struct, to make xoring
+// with the zobrist key faster. Strictly 7 bits are suffient, 3 for the e. p.
+// row and 4 for the bits, but this simplfies access.
+union CastlingAndEP {
+	struct {
+		Castling castling;
+		uint8_t enPassant;
+		uint8_t color;
+	};
+	uint64_t data8;
 };
 
 class RootBoard;
@@ -70,9 +82,8 @@ struct BoardBase {
 	static Length borderTable[0x100];
 	Key zobrist;
 	unsigned int fiftyMoves;
-	Castling castling;
+	CastlingAndEP cep;
 	RawScore pieceSquare;
-	uint8_t enPassant;
 	static Castling castlingMask[nSquares];
 	static uint64_t knightDistanceTable[nSquares];
 	static uint64_t kingDistanceTable[nSquares];

@@ -174,21 +174,21 @@ const BoardBase& RootBoard::setup(QString fen) {
 	for ( unsigned int p=0; p<(unsigned int)castling.length(); p++ )
 		switch ( castling[p].toLatin1() ) {
 		case 'Q':
-			board.castling.castling[0].q = true;
+			board.cep.castling.color[0].q = true;
 			break;
 		case 'K':
-			board.castling.castling[0].k = true;
+			board.cep.castling.color[0].k = true;
 			break;
 		case 'q':
-			board.castling.castling[1].q = true;
+			board.cep.castling.color[1].q = true;
 			break;
 		case 'k':
-			board.castling.castling[1].k = true;
+			board.cep.castling.color[1].k = true;
 			break;
 		}
 
 	if ( enPassant.length() == 2 && enPassant[0] >= 'a' && enPassant[0] <= 'h' && ( enPassant[1] == '3' || enPassant[1] == '6' ) )
-		board.enPassant = 8 * ((enPassant[1].toLatin1() - '3' )/3 + 3) + enPassant[0].toLatin1() - 'a';
+		board.cep.enPassant = 8 * ((enPassant[1].toLatin1() - '3' )/3 + 3) + enPassant[0].toLatin1() - 'a';
 	else if ( enPassant != "-" )
 		qWarning() << "error importing e. p. move " << enPassant;
 

@@ -68,17 +68,12 @@ Entry* TranspositionTable<Entry, assoc>::getEntry(Key k, QReadWriteLock* &l) {
 
 template<typename Entry, unsigned int assoc>
 bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, Entry& ret, QReadWriteLock* ) {
-	union EntryUnion {
-		Entry temp;
-		volatile __m128i xmm;
-	} atomic_entry ALIGN_XMM;
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
 //	QReadLocker locker(l);
 	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
-		atomic_entry.xmm = ((EntryUnion) { subTable[i] }).xmm;
-		if (atomic_entry.temp.upperKey == upperKey) {		//only lock if a possible match is found
+		if (subTable[i].upperKey == upperKey) {		//only lock if a possible match is found
 				//TODO rotate to first position
-			ret = atomic_entry.temp;
+			ret = subTable[i];
 			return true;
 			
 		}

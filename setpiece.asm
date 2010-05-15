@@ -18,7 +18,8 @@
 			
 			public  clrPieceW
 			public  clrPieceB
-			public	chgPiece
+			public	chgPieceW
+			public  chgPieceB
 			public  setPieceW
 			public  setPieceB
 			public	clrPieceAndCopyW
@@ -228,17 +229,17 @@ macro		chgpieceline dir, s, longAttW, longAttB {
 			movdqa	mask, [rbp + maskOff + $40]				;LenMask.mask.0
 			movdqa	xmm2, [rdx]								;broadcast piece
 			movdqa	xmm3, [rsi]								;broadcasted oldpiece
-			movdqa	xmm7, [rdi + attVecPtr]			;old attVec.0
+			movdqa	xmm7, [rdi + attVecPtr - $80]			;old attVec.0
 
 			andps	xmm2, mask								;diff to be removed = masked attVec[pos]
 			andps	xmm3, mask
 			paddb	xmm7, xmm2								;change old attVecIndex to new
 			psubb	xmm7, xmm3
-			movdqa	[rdi + attVecPtr], xmm7; <xmm7 free      save back attVec.0
+			movdqa	[rdi + attVecPtr - $80], xmm7; <xmm7 free      save back attVec.0
 
 		if dir=0
-			movdqa	longAttW, [rdi+longAttack + s*$10]
-			movdqa  longAttB, [rdi+$40+longAttack + s*$10]
+			movdqa	longAttW, [rdi+longAttack + s*$10 - $80]
+			movdqa  longAttB, [rdi+$40+longAttack + s*$10 - $80]
 		end if
 
 			movdqa	xmm7, xmm3			;move upper 4 bits in each byte
@@ -268,14 +269,14 @@ macro		chgpieceline dir, s, longAttW, longAttB {
 			paddb	longAttB, xmm5		;add new piece bits longAttack.w.0
 
 		if dir=3
-			movdqa	[rdi+longAttack + s*$10], longAttW			;longAttack[white].0
-			movdqa  [rdi+$40+longAttack + s*$10], longAttB		;longAttack[black].0
+			movdqa	[rdi+longAttack + s*$10 - $80], longAttW			;longAttack[white].0
+			movdqa  [rdi+$40+longAttack + s*$10 - $80], longAttB		;longAttack[black].0
 		end if
 
 			}
 
 macro		chgpiecedir dir {
-			movzx	eax, byte [rdi+rcx+ (dir shl attDir) + attLen]	;l/len len[pos]
+			movzx	eax, byte [rdi+rcx+ (dir shl attDir) + attLen - $80]	;l/len len[pos]
 			shl		eax, maskLen						;len * sizeof(mask[])
 			lea		rbp, [rbx + rax]			;masks[len][][pos][]
 
@@ -353,28 +354,26 @@ setPieceCommon:
 ;			remove a piece from this
 
 ;			this in rdi
-;			signed piece in rsi
-;			pos in edx
+;			signed piece in edx
+;			pos in ecx
 
-clrPieceW:
-clrPieceB:	mov		r10, rbp
-			mov		r11, rbx
+clrPieceW:	mov		r10, rbp
 
-			;mov		ecx, edx							;pos
-			;mov		edx, esi							;piece
-			;mov     esi, edi							;this = prev
+			mov		ebp, shortAttack
 
-			mov		ebp, edx
-			and		ebp, shortColor						;offset for black shortAtt if piece<0
-			add		ebp, shortAttack
-
-			mov		ebx, edx							;piece
-			sar		ebx, 31								;(piece<0) ? -1:0
 			mov		eax, edx							;piece
-			xor		eax, ebx							;(piece<0) ? ~piece:piece
-			sub		eax, ebx							;abs(piece)
+			shl		eax, shortPiece						;offset for abs(piece)
+			jmp		clrPiece
+			
+clrPieceB:	mov		r10, rbp
+
+			mov		ebp, shortAttack + shortColor
+
+			mov		eax, edx							;piece
+			neg		eax
 			shl		eax, shortPiece						;offset for abs(piece)
 
+clrPiece:	mov		r11, rbx
 			mov		ebx, ecx							;pos
 			shl		ebx, shortPos
 			lea		rbx, [rbx + rax + shortAttacks - shortAttack]		;offest for [piece][pos][]
@@ -475,62 +474,64 @@ clrPieceCommon:
 ;			piece in edx
 ;			pos in ecx 
 
-chgPiece:	mov		r10, rbp
+chgPieceB:	mov		r10, rbp
 			mov		r11, rbx
 
-			mov		ebp, esi
-			and		ebp, shortColor						;offset for black shortAtt if oldpiece<0
+			mov		ebp, shortAttack		;offset for shortAtt is 0, oldpiece is white
+											;preadd offset "shortAttack"
+			mov		eax, esi				;oldpiece
 
-			mov		ebx, esi							;oldpiece
-			sar		ebx, 31								;(piece<0) ? -1:0
-			mov		eax, esi							;piece
-			xor		eax, ebx							;(piece<0) ? ~piece:piece
-			sub		eax, ebx							;abs(piece)
-			shl		eax, shortPiece						;offset for abs(oldpiece)
+			mov		ebx, edx				;piece
+			neg		ebx						;positive now
+			jmp		chgPieceCommon
 			
-			mov		ebx, ecx							;pos
-			shl		ebx, shortPos
-			lea		rax, [rbx + rax + shortAttacks]		;offset for [oldpiece][pos][]
+			
+chgPieceW:	mov		r10, rbp
+			mov		r11, rbx
 
-			movdqa	xmm0, [rdi + rbp + shortAttack]		;now rdi+rbp points at shortAttack[oldcolor]
+			mov		ebp, shortColor + shortAttack	;offset for black shortAtt, oldpiece<0
+
+			mov		eax, esi						;oldpiece
+			neg		eax
+			
+			mov 	ebx, edx
+
+chgPieceCommon:
+			shl		eax, shortPiece					;offset for abs(oldpiece)
+			shl		ebx, shortPiece
+			shl		ecx, shortPos
+			lea		rax, [rcx + rax + shortAttacks - shortAttack]	;offset for [oldpiece][pos][]
+			lea		rbx, [rcx + rbx + shortAttacks - shortAttack]	;subtract preadded offset
+			shr		ecx, shortPos
+			
+			movdqa	xmm0, [rdi + rbp]		;now rdi+rbp points at shortAttack[oldcolor]
 			psubb	xmm0, [rax + rbp]
-			movdqa	xmm1, [rdi + rbp + shortAttack + $10]
+			movdqa	xmm1, [rdi + rbp + $10]
 			psubb	xmm1, [rax + rbp + $10]
-			movdqa	xmm2, [rdi + rbp + shortAttack + $20]
+			movdqa	xmm2, [rdi + rbp + $20]
 			psubb	xmm2, [rax + rbp + $20]
-			movdqa	xmm3, [rdi + rbp + shortAttack + $30]
+			movdqa	xmm3, [rdi + rbp + $30]
 			psubb	xmm3, [rax + rbp + $30]
-			movdqa  [rdi + rbp + shortAttack], xmm0
-			movdqa  [rdi + rbp + shortAttack + $10], xmm1
-			movdqa  [rdi + rbp + shortAttack + $20], xmm2
-			movdqa  [rdi + rbp + shortAttack + $30], xmm3
+			movdqa  [rdi + rbp      ], xmm0
+			movdqa  [rdi + rbp + $10], xmm1
+			movdqa  [rdi + rbp + $20], xmm2
+			movdqa  [rdi + rbp + $30], xmm3
 
 			xor		ebp, shortColor
 			
-			mov		ebx, edx							;piece
-			sar		ebx, 31								;(piece<0) ? -1:0
-			mov		eax, edx							;piece
-			xor		eax, ebx							;(piece<0) ? ~piece:piece
-			sub		eax, ebx							;abs(piece)
-			shl		eax, shortPiece					;offset for abs(piece)
-			
-			mov		ebx, ecx							;pos
-			shl		ebx, shortPos
-			lea 	rax, [rbx + rax + shortAttacks]		;offset for [piece][pos][]
-			
-			movdqa	xmm0, [rdi + rbp + shortAttack]		;now rdi+rbp points at shortAttack[newcolor]
-			paddb	xmm0, [rax + rbp]
-			movdqa	xmm1, [rdi + rbp + shortAttack + $10]
-			paddb	xmm1, [rax + rbp + $10]
-			movdqa	xmm2, [rdi + rbp + shortAttack + $20]
-			paddb	xmm2, [rax + rbp + $20]
-			movdqa	xmm3, [rdi + rbp + shortAttack + $30]
-			paddb	xmm3, [rax + rbp + $30]
-			movdqa  [rdi + rbp + shortAttack], xmm0
-			movdqa  [rdi + rbp + shortAttack + $10], xmm1
-			movdqa  [rdi + rbp + shortAttack + $20], xmm2
-			movdqa  [rdi + rbp + shortAttack + $30], xmm3
-
+			movdqa	xmm0, [rdi + rbp]		;now rdi+rbp points at shortAttack[newcolor]
+			paddb	xmm0, [rbx + rbp]
+			movdqa	xmm1, [rdi + rbp + $10]
+			paddb	xmm1, [rbx + rbp + $10]
+			movdqa	xmm2, [rdi + rbp + $20]
+			paddb	xmm2, [rbx + rbp + $20]
+			movdqa	xmm3, [rdi + rbp + $30]
+			paddb	xmm3, [rbx + rbp + $30]
+			movdqa  [rdi + rbp      ], xmm0
+			movdqa  [rdi + rbp + $10], xmm1
+			movdqa  [rdi + rbp + $20], xmm2
+			movdqa  [rdi + rbp + $30], xmm3
+			lea		rdi, [rdi + $80]		;preadd offset to allow more short offsets later
 			movdqa	low4bits, [low4bitsMask]
 
 			mov		ebx, ecx				;pos
@@ -574,7 +575,7 @@ movePiece:
 ;			prev in rsi	
 ;			from in edx
 ;			to in ecx
-
+ 
 			movsx	eax, byte [rdx + rdi]				;piece
 			
 			mov		rbx, [rax*8 + pieceList + 6*8]	;get 8 positions at once

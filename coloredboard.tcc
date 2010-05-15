@@ -36,8 +36,8 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootB
 	copyPieces(next);
 	uint8_t piece = C*pieces[m.from];
 	next->copyBoardClrPiece<C>(this, piece, m.from, rb);
-	next->enPassant = 0;
-	next->castling.data = castling.data & castlingMask[m.from].data & castlingMask[m.to].data;
+	next->cep.enPassant = 0;
+	next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from].data4 & castlingMask[m.to].data4;
 	
 	next->fiftyMoves = (m.capture!=0) | (piece==5) ? 0:fiftyMoves+1;
 	ASSERT(C*m.capture < King);
@@ -66,10 +66,10 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootB
 		piece = Knight;
 		break;
 	case enableEP:
-		next->enPassant = m.to;
+		next->cep.enPassant = m.to;
 		break;
 	case EP:
-		next->clrPiece<(Colors)-C>(Pawn, enPassant, rb);
+		next->clrPiece<(Colors)-C>(Pawn, cep.enPassant, rb);
 		break;
 	}
 
@@ -82,7 +82,7 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootB
 
 template<Colors C>
 Key ColoredBoard<C>::getZobrist() const {
-	return zobrist ^ castling.castling[0].q ^ castling.castling[1].q << 1 ^ castling.castling[0].k << 2 ^ castling.castling[1].k << 3 ^ enPassant << 4 ^ C;
+	return zobrist + cep.data8 + (C+1);
 }
 
 //attacked by (opposite colored) piece.

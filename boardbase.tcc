@@ -30,7 +30,8 @@ extern "C" {
 	void clrPieceAndCopyB(const BoardBase*, BoardBase*, int, int);
 	void clrPieceW(BoardBase*, BoardBase*, int, int);
 	void clrPieceB(BoardBase*, BoardBase*, int, int);
-	void chgPiece(BoardBase*, int, int, int);
+	void chgPieceW(BoardBase*, int, int, int);
+	void chgPieceB(BoardBase*, int, int, int);
 }
 }
 
@@ -99,13 +100,9 @@ void BoardBase::chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const Roo
 	zobrist ^= Zobrist::zobrist[-C*oldpiece + nPieces][pos] ^ Zobrist::zobrist[C*piece + nPieces][pos];
 	pieceSquare += rb.getPS(C*piece, pos) - rb.getPS(-C*oldpiece, pos);	
 	if (C==White) {
-//		as::clrPieceW(this, this, -C*oldpiece, pos);
-//		as::setPieceW(this, C*piece, pos);
-		as::chgPiece(this, -C*oldpiece, C*piece, pos);
+		as::chgPieceW(this, -C*oldpiece, C*piece, pos);
 	} else {
-//		as::clrPieceB(this, this, -C*oldpiece, pos);
-//		as::setPieceB(this, C*piece, pos);
-		as::chgPiece(this, -C*oldpiece, C*piece, pos);
+		as::chgPieceB(this, -C*oldpiece, C*piece, pos);
 	}
 	for (unsigned int i = 0; i < 256; ++i) {
 		ASSERT(64 > ((uint8_t*)attLen)[i]);

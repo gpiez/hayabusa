@@ -41,7 +41,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 	 * And for captured rooks, as this may disable castling for the opponent
 	 */
 	if ( cap ) {
-		if ( enPassant == to )
+		if ( cep.enPassant == to )
 			for ( unsigned int i=0; i<pieceList[CI][Pawn]; ++i ) {
 				from = pieceList[CI].getPawn(i);
 				if ( (from == to + 1) | (from == to - 1) )
@@ -371,21 +371,21 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
  * Additionally check if we have reached the 5th rank, else we might capture our own pawn,
  * if we made two moves in a row and the last move was a double step of our own pawn
  */
-		if ( enPassant && isRank<5>(from))
-		if (((( from+(int8_t)C == enPassant ) && ( !isValid(pin) | (pin == 1)))
-		|| (( from-(int8_t)C == enPassant ) && ( !isValid(pin) | (pin == 3))))) {
+		if ( cep.enPassant && isRank<5>(from))
+		if (((( from+(int8_t)C == cep.enPassant ) && ( !isValid(pin) | (pin == 1)))
+		|| (( from-(int8_t)C == cep.enPassant ) && ( !isValid(pin) | (pin == 3))))) {
 			/*
 			 * Handle special case, where king, capturing pawn, captured pawn and horizontal
 			 * attacking piece are on one line. Although neither pawn is pinned, the capture
 			 * is illegal, since both pieces are removed and the king will be in check
 			 */
 			if (((attVec[0][from].lIndex != C*King) & (attVec[0][from].rIndex != C*King)
-				|| (attVec[0][enPassant].lIndex != -C*Rook) & (attVec[0][enPassant].rIndex != -C*Rook)
-					& (attVec[0][enPassant].lIndex != -C*Queen) & (attVec[0][enPassant].rIndex != -C*Queen))
-		    &&  ((attVec[0][enPassant].lIndex != C*King) & (attVec[0][enPassant].rIndex != C*King)
+				|| (attVec[0][cep.enPassant].lIndex != -C*Rook) & (attVec[0][cep.enPassant].rIndex != -C*Rook)
+					& (attVec[0][cep.enPassant].lIndex != -C*Queen) & (attVec[0][cep.enPassant].rIndex != -C*Queen))
+		    &&  ((attVec[0][cep.enPassant].lIndex != C*King) & (attVec[0][cep.enPassant].rIndex != C*King)
 		    	|| (attVec[0][from].lIndex != -C*Rook) & (attVec[0][from].rIndex != -C*Rook)
 		    	    & (attVec[0][from].lIndex != -C*Queen) & (attVec[0][from].rIndex != -C*Queen))) {
-				to = enPassant + C*8;
+				to = cep.enPassant + C*8;
 				*list++ = (Move) { from, to, 0, EP};	//leave capture field empty, otherwise we would capture twice
 			}
 		}
@@ -471,7 +471,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 	 * if the king-squares are not under attack, a test if we are in check is
 	 * not neccessary, we won't ever get here because of check evasion
 	 */
-	if ( castling.castling[CI].q && length(0, pov^a1) == 4
+	if ( cep.castling.color[CI].q && length(0, pov^a1) == 4
 	&& !((shortAttack[EI][pov^c1] & attackMaskShort) |
 		 (shortAttack[EI][pov^d1] & attackMaskShort) |
 	     (longAttack[EI][pov^c1] & attackMaskLong) |
@@ -482,7 +482,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		*list++ = (Move) { pov^e1, pov^c1, 0, longCastling };
 	}
 
-	if ( castling.castling[CI].k && length(0, pov^e1) == 3
+	if ( cep.castling.color[CI].k && length(0, pov^e1) == 3
 	&& !((shortAttack[EI][pov^f1] & attackMaskShort) |
 		 (shortAttack[EI][pov^g1] & attackMaskShort) |
 		 (longAttack[EI][pov^f1] & attackMaskLong) |
