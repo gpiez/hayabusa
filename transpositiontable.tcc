@@ -61,21 +61,38 @@ void TranspositionTable<Entry, assoc>::freeMemory() {
 }
 
 template<typename Entry, unsigned int assoc>
-Entry* TranspositionTable<Entry, assoc>::getEntry(Key k, QReadWriteLock* &l) {
-	l = lock + ((k>>4) & (nTTLocks-1));
-	return &table[k & mask];
+bool TranspositionTable<Entry, assoc>::retrieveAndLock(SubTable* subTable, Key k, Entry& ret, QReadWriteLock*, bool &alreadyLocked ) {
+	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
+//	QReadLocker locker(l);
+	alreadyLocked = subTable->entries[0].lock;
+	subTable->entries[0].lock |= true;
+	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
+		if (subTable->entries[i].upperKey == upperKey) {		//only lock if a possible match is found
+				//TODO rotate to first position
+			if (alreadyLocked) {
+				ret.zero();
+				ret.loBound |= true;
+				ret.hiBound |= true;
+				ret.depth |= maxDepth-1;
+			} else {
+				ret = subTable->entries[i];
+			}
+
+			return true;
+		}
+	}
+	return false;
 }
 
 template<typename Entry, unsigned int assoc>
-bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, Entry& ret, QReadWriteLock* ) {
+bool TranspositionTable<Entry, assoc>::retrieve(SubTable* subTable, Key k, Entry& ret, QReadWriteLock* ) {
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
 //	QReadLocker locker(l);
 	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
-		if (subTable[i].upperKey == upperKey) {		//only lock if a possible match is found
+		if (subTable->entries[i].upperKey == upperKey) {		//only lock if a possible match is found
 				//TODO rotate to first position
-			ret = subTable[i];
+			ret = subTable->entries[i];
 			return true;
-			
 		}
 	}
 	return false;
@@ -83,33 +100,64 @@ bool TranspositionTable<Entry, assoc>::retrieve(const Entry* subTable, Key k, En
 
 #pragma GCC diagnostic ignored "-Wtype-limits"
 template<typename Entry, unsigned int assoc>
-void TranspositionTable<Entry, assoc>::store(Entry* subTable, Entry entry, QReadWriteLock* ) {
+void TranspositionTable<Entry, assoc>::storeAndRelease(SubTable* subTable, Entry entry, QReadWriteLock* ) {
 //	QWriteLocker locker(l);
 	stats.ttstore++;
 	// look if the position is already stored. if it is, but the new depth
 	// isn't sufficient, don't write anything.
+	subTable->entries[0].lock.reset();
 	for (unsigned int i = 0; i < assoc; ++i) 		//TODO compare all keys simultaniously suing sse
-		if (subTable[i].upperKey == entry.upperKey) {
-			if (entry.depth >= subTable[i].depth) {
+		if (subTable->entries[i].upperKey == entry.upperKey) {
+			if (entry.depth >= subTable->entries[i].depth) {
 				stats.ttoverwrite++;
 				stats.ttinsufficient--;
-				subTable[i] = entry;
+				subTable->entries[i] = entry;
 			}
 			stats.ttinsufficient++;
 			return;
 		}
 
-	if (subTable[assoc-1].data == 0)
+	if (subTable->entries[assoc-1].data == 0)
 		stats.ttuse++;
 	unsigned int i;
 	for (i = 0; i < assoc-1; ++i)				// TODO possibly checking only assoc/2 and a LRU in retrieve would be better
-		if (entry.depth >= subTable[i].depth)
+		if (entry.depth >= subTable->entries[i].depth)
 			break;
 
 	for (unsigned j = assoc-1; j>i; --j) {
-		subTable[j] = subTable[j-1];
+		subTable->entries[j] = subTable->entries[j-1];
 	}
-	subTable[i] = entry;
+	subTable->entries[i] = entry;
+}
+
+template<typename Entry, unsigned int assoc>
+void TranspositionTable<Entry, assoc>::store(SubTable* subTable, Entry entry, QReadWriteLock* ) {
+//	QWriteLocker locker(l);
+	stats.ttstore++;
+	// look if the position is already stored. if it is, but the new depth
+	// isn't sufficient, don't write anything.
+	for (unsigned int i = 0; i < assoc; ++i) 		//TODO compare all keys simultaniously suing sse
+		if (subTable->entries[i].upperKey == entry.upperKey) {
+			if (entry.depth >= subTable->entries[i].depth) {
+				stats.ttoverwrite++;
+				stats.ttinsufficient--;
+				subTable->entries[i] = entry;
+			}
+			stats.ttinsufficient++;
+			return;
+		}
+
+	if (subTable->entries[assoc-1].data == 0)
+		stats.ttuse++;
+	unsigned int i;
+	for (i = 0; i < assoc-1; ++i)				// TODO possibly checking only assoc/2 and a LRU in retrieve would be better
+		if (entry.depth >= subTable->entries[i].depth)
+			break;
+
+	for (unsigned j = assoc-1; j>i; --j) {
+		subTable->entries[j] = subTable->entries[j-1];
+	}
+	subTable->entries[i] = entry;
 }
 
 template<typename Entry, unsigned int assoc>
@@ -137,14 +185,14 @@ void TranspositionTable<Entry, assoc>::setSize(size_t s)
 			if (table) break;
 			qWarning() << "Could not allocate" << size << "bytes in huge pages";
 #       endif
-		table = new Entry[nEntries];
+		table = new SubTable[nEntries];
 		usesHugePages = false;
 		if (table) break;
 		qWarning() << "Could not allocate" << size << "bytes";
 		s >>= 1;
 	}
 	memset(table, 0, size);	// not strictly neccessary, but allocating pages
-	mask = nEntries-assoc;
+	mask = nEntries-1;
 }
 
 template<typename Entry, unsigned assoc>
@@ -156,7 +204,7 @@ QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Color
 	if (visited.contains(key)) return "";
 	visited << key;
 	QReadWriteLock* l;
-	TTEntry* te = getEntry(key, l);
+	SubTable* te = getSubTable(key, l);
 	TTEntry subentry;
 
 	Move ttMove = {0};

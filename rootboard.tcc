@@ -93,15 +93,16 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	
 	Key z = b.getZobrist();
 	QReadWriteLock* l;
-	TTEntry* te;
-	if (P != leaf) te = tt->getEntry(z, l);
+	TranspositionTable<TTEntry, transpositionTableAssoc>::SubTable* te;
+	if (P != leaf) te = tt->getSubTable(z, l);
 	TTEntry subentry;
 
 	Move ttMove = {0};
 	unsigned int ttDepth = 0;
 	A current(alpha);	// current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
 	current.m = (Move) {0};
-	if (P != leaf && tt->retrieve(te, z, subentry, l) ) {
+	bool alreadyLocked;
+	if (P != leaf && tt->retrieveAndLock(te, z, subentry, l, alreadyLocked) ) {
 		stats.tthit++;
 		ttDepth = subentry.depth;
 		if (subentry.depth >= depth) {
@@ -116,6 +117,8 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 			}
 			if (current >= beta) {
 				beta.setReady();
+				if (!alreadyLocked)
+					tt->unlock(te);
 				return false;
 			}
 		}
@@ -182,7 +185,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		}
 	}
 
-	if (P != leaf) {
+	if (P != leaf && !alreadyLocked) {
 		TTEntry stored;
 		stored.zero();
 		stored.depth |= depth;
@@ -193,7 +196,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		ASSERT( stored.loBound || stored.hiBound );
 		stored.from |= current.m.from;
 		stored.to |= current.m.to;
-		tt->store(te, stored, l);
+		tt->storeAndRelease(te, stored, l);
 	}
 	bool newBM = beta.max(current, m);
 	beta.setReady();
@@ -259,9 +262,9 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 
 	Key z = b.getZobrist();
 	QReadWriteLock* l;
-	PerftEntry* pe = pt->getEntry(z, l);
+	TranspositionTable<PerftEntry,1>::SubTable* pe = pt->getSubTable(z, l);
 	PerftEntry subentry;
-	
+
 	if (pt->retrieve(pe, z, subentry, l) && subentry.depth == depth) {
 		updateAndReady(result, subentry.value);
 		return;

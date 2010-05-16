@@ -56,6 +56,10 @@ struct Bitfield {
 		static_assert(end == start);
 		data[start] |= value << startpos;
 	}
+	void reset() {
+		static_assert(end == start);
+		data[start] &= ~ (((1<<width)-1) << startpos);
+	}
 };
 
 /*
@@ -69,7 +73,7 @@ union TTEntry {
 	Bitfield<18, 1, unsigned int> loBound;
 	Bitfield<19, 1, unsigned int> hiBound;
 	Bitfield<20, 12, int> score;
-	Bitfield<32, 1, unsigned int> expired;
+	Bitfield<32, 1, unsigned int> lock;
 	Bitfield<33, 31, Key> upperKey;
 	enum { upperShift = 33 };
 	uint64_t data;
