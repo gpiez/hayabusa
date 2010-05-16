@@ -83,8 +83,10 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	if (P == leaf) {
 		A current(alpha);
 		current.max(prev.estimatedEval(m, *this), (Move){0});
-		if (current >= beta)
+		if (current >= beta) {
+			stats.leafcut++;
 			return false;
+		}
 	}
 	const ColoredBoard<C> b(prev, m, *this);
 	ASSERT(b.keyScore.score == prev.estimatedEval(m, *this));

@@ -37,6 +37,7 @@ extern struct Stats {			//TODO Making stats thread local would avoid cache line 
 	uint64_t	ttoverwrite;
 	uint64_t	ttinsufficient;
 	uint64_t	ttstore;
+	uint64_t	leafcut;
 } stats;
 
 #endif

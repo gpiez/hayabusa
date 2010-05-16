@@ -79,5 +79,6 @@ void StatWidget::update()
 	DISPLAYNUM(ttoverwrite)
 	DISPLAYNUM(ttinsufficient)
 	DISPLAYNUM(ttstore)
+	DISPLAYNUM(leafcut);
 }
 #endif // QT_GUI_LIB
