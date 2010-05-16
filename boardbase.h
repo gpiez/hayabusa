@@ -30,6 +30,7 @@
 #include "piecelist.h"
 #include "transpositiontable.h"
 #include "score.h"
+#include "eval.h"
 /*
  * Global variables imported by setpiece.asm
  */
@@ -79,10 +80,9 @@ struct BoardBase {
 	} moveFromTable[nSquares];
 	static uint8_t totalLen[64];
 	static Length borderTable[0x100];
-	Key zobrist;
+	KeyScore keyScore;
 	unsigned int fiftyMoves;
 	CastlingAndEP cep;
-	RawScore pieceSquare;
 	static Castling castlingMask[nSquares];
 	static uint64_t knightDistanceTable[nSquares];
 	static uint64_t kingDistanceTable[nSquares];

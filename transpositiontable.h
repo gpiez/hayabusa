@@ -30,15 +30,6 @@
 template<Colors C> class ColoredBoard;
 class RootBoard;
 
-/* Global table with random 64 bit keys, for each piece of each color and for
- * each square.
- */
-namespace Zobrist {
-typedef Key KeyTable[nTotalPieces][nSquares];
-extern KeyTable zobrist;  //12*64*8 = 6k
-void initTables();
-}
-
 /* Hashtable for storing diagrams which are visited twice and for move ordering
  * The assoc parameter gives the number of different keys stored at the same
  * adress

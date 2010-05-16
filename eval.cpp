@@ -69,6 +69,8 @@ Eval::Eval() {
     sigmoid(q_p, 50, -50, 12);
 
     initPS();
+	initZobrist();
+
 //	static RawScore bishopGoodD;
 //	static RawScore bishopKnightD;
 //	static RawScore bishopRookD;
@@ -150,35 +152,57 @@ void Eval::initPS() {
     };
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        pieceSquare[nPieces + Pawn][sq] = Eval::pawn + pawn[sq ^ 0x38];
-        pieceSquare[nPieces - Pawn][sq] = -Eval::pawn - pawn[sq];
+        getPS( Pawn, sq) = Eval::pawn + pawn[sq ^ 0x38];
+        getPS(-Pawn, sq)  = -Eval::pawn - pawn[sq];
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        pieceSquare[nPieces + Rook][sq] = Eval::rook + rook[sq ^ 0x38];
-        pieceSquare[nPieces - Rook][sq] = -Eval::rook - rook[sq];
+        getPS( Rook, sq)  = Eval::rook + rook[sq ^ 0x38];
+        getPS(-Rook, sq) = -Eval::rook - rook[sq];
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        pieceSquare[nPieces + Bishop][sq] = Eval::bishop + bishop[sq ^ 0x38];
-        pieceSquare[nPieces - Bishop][sq] = -Eval::bishop - bishop[sq];
+        getPS( Bishop, sq) = Eval::bishop + bishop[sq ^ 0x38];
+        getPS(-Bishop, sq) = -Eval::bishop - bishop[sq];
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        pieceSquare[nPieces + Knight][sq] = Eval::knight + knight[sq ^ 0x38];
-        pieceSquare[nPieces - Knight][sq] = -Eval::knight - knight[sq];
+        getPS( Knight, sq) = Eval::knight + knight[sq ^ 0x38];
+        getPS(-Knight, sq) = -Eval::knight - knight[sq];
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        pieceSquare[nPieces + Queen][sq] = Eval::queen + queen[sq ^ 0x38];
-        pieceSquare[nPieces - Queen][sq] = -Eval::queen - queen[sq];
+        getPS( Queen, sq) = Eval::queen + queen[sq ^ 0x38];
+        getPS(-Queen, sq) = -Eval::queen - queen[sq];
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        pieceSquare[nPieces + King][sq] = king[sq ^ 0x38];
-        pieceSquare[nPieces - King][sq] = - king[sq];
+        getPS( King, sq) = king[sq ^ 0x38];
+        getPS(-King, sq) = - king[sq];
     }
 
+}
+
+void Eval::initZobrist() {
+	srand(1);
+	for (int p = -nPieces; p <= (signed int)nPieces; p++)
+		for (unsigned int i = 0; i < nSquares; ++i)
+			if (p) {
+				uint64_t r;
+				do {
+					r = (uint64_t) rand()
+					^ (uint64_t) rand() << 8
+					^ (uint64_t) rand() << 16
+					^ (uint64_t) rand() << 24
+					^ (uint64_t) rand() << 32
+					^ (uint64_t) rand() << 40
+					^ (uint64_t) rand() << 48
+					^ (uint64_t) rand() << 56;
+				} while (popcount(r) >= 29 && popcount(r) <= 36);
+				zobristPieceSquare[p+nPieces][i].key = r;
+			} else {
+				zobristPieceSquare[p+nPieces][i].key = 0;
+			}
 }
 
 RawScore Eval::pieces(const PieceList&, int ) const {
@@ -238,8 +262,8 @@ RawScore Eval::eval(const BoardBase& b) const {
 			value += getPS(C*Queen, queen);
 		}
 	}
-	if (value != b.pieceSquare) asm("int3");
+	if (value != b.keyScore.score) asm("int3");
 
 #endif
-	return b.pieceSquare;
+	return b.keyScore.score;
 }

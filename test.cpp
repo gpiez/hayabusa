@@ -192,7 +192,9 @@ void TestRootBoard::generateCaptures() {
 }
 
 void TestRootBoard::perft() {
-  	b->setup("4k2r/8/8/8/8/6nB/8/4K2R w Kk - 0 1");
+//	Zobrist::test();
+
+	b->setup("4k2r/8/8/8/8/6nB/8/4K2R w Kk - 0 1");
   	b->threads.first()->startJob(new RootPerftJob<White>(*b, 8));
  	QCOMPARE( c->getAnswer(), QString("9941334384"));
 
@@ -223,6 +225,7 @@ void TestRootBoard::perft() {
 	b->setup("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
 	b->threads.first()->startJob(new RootPerftJob<White>(*b, 7));
 	QCOMPARE( c->getAnswer(), QString("178633661"));
+
 }
 
 QTEST_MAIN(TestRootBoard);

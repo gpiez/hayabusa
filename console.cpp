@@ -36,7 +36,6 @@ Console::Console(QCoreApplication* parent):
 	BoardBase::initTables();
 	ColoredBoard<White>::initTables();
 	ColoredBoard<Black>::initTables();
-	Zobrist::initTables();
 	board = new RootBoard(this);
 	board->setup();
 	

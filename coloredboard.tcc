@@ -82,7 +82,7 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootB
 
 template<Colors C>
 Key ColoredBoard<C>::getZobrist() const {
-	return zobrist + cep.data8 + (C+1);
+	return keyScore.key + cep.data8 + (C+1);
 }
 
 //attacked by (opposite colored) piece.
@@ -155,7 +155,7 @@ template<Colors C>
 RawScore ColoredBoard<C>::estimatedEval(const Move m, const RootBoard& rb) const {
 	int8_t piece = pieces[m.from];
 //	next->copyBoardClrPiece<C>(this, piece, m.from, rb);
-	RawScore estimate = pieceSquare - rb.getPS(piece, m.from);
+	RawScore estimate = keyScore.score - rb.getPS(piece, m.from);
 //	next->cep.enPassant = 0;
 //	next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from].data4 & castlingMask[m.to].data4;
 

@@ -25,6 +25,7 @@
 
 #include "constants.h"
 #include "score.h"
+#include "ttentry.h"
 /*
  * A square attacked by a piece is higher evaluated if it inhibits moves from
  * enemy pieces to this square. For this to happen it must be either less
@@ -45,10 +46,21 @@ struct SquareEval {
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986 );
 
+union KeyScore {
+	struct {
+		union {
+			RawScore	score;
+			Key			pawnKey;
+		};
+		Key				key;
+	};
+	__v8hi vector;
+};
+
 class PieceList;
 class BoardBase;
 class Eval {
-	RawScore pieceSquare[nTotalPieces][nSquares];
+	KeyScore zobristPieceSquare[nTotalPieces][nSquares];
 	
 	static RawScore pawn, knight, bishop, rook, queen;
 	static RawScore bishopPair;
@@ -62,8 +74,10 @@ class Eval {
 	RawScore controls[nSquares];
 
 protected:
+
 	Eval();
 	void initPS();
+	void initZobrist();
 	
 	unsigned int attackHash( unsigned int  pos );
 	int squareControl();
@@ -76,7 +90,17 @@ public:
 	RawScore getPS(int8_t piece, uint8_t square) const {
 		ASSERT(square < nSquares);
 		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
-		return pieceSquare[piece+nPieces][square];
+		return zobristPieceSquare[piece+nPieces][square].score;
+	}
+	RawScore& getPS(int8_t piece, uint8_t square) {
+		ASSERT(square < nSquares);
+		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
+		return zobristPieceSquare[piece+nPieces][square].score;
+	}
+	__v8hi getKSVector(int8_t piece, uint8_t square) const {
+		ASSERT(square < nSquares);
+		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
+		return zobristPieceSquare[piece+nPieces][square].vector;
 	}
 };
 

@@ -87,7 +87,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 			return false;
 	}
 	const ColoredBoard<C> b(prev, m, *this);
-	ASSERT(b.pieceSquare == prev.estimatedEval(m, *this));
+	ASSERT(b.keyScore.score == prev.estimatedEval(m, *this));
 	
 	Key z = b.getZobrist();
 	QReadWriteLock* l;
