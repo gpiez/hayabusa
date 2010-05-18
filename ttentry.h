@@ -73,7 +73,7 @@ union TTEntry {
 	Bitfield<18, 1, unsigned int> loBound;
 	Bitfield<19, 1, unsigned int> hiBound;
 	Bitfield<20, 12, int> score;
-	Bitfield<32, 1, unsigned int> lock;
+	Bitfield<32, 1, unsigned int> visited;
 	Bitfield<33, 31, Key> upperKey;
 	enum { upperShift = 33 };
 	uint64_t data;
