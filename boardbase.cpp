@@ -228,7 +228,7 @@ void BoardBase::initTables()
 	}
 
 	for (uint8_t from = 0; from<nSquares; ++from) {
-		Move m = { from, from };
+		Move m = {{ from, from }};
 		for (unsigned int i=0; i<7; i++) {
 			moveFromTable[from].single[i] = m;
 		}
@@ -254,12 +254,12 @@ void BoardBase::initTables()
 	for (int r = 0; r < 8; ++r) {
 		for (int i = 0;  i < r; ++i)
 		{
-			Move m = { 0, (i+1)*dirOffsets[dir] };
+			Move m = {{ 0, (i+1)*dirOffsets[dir] }};
 			moveOffsetTable[r][dir].single[i] = m;
 		}
 		for (int i = r;  i < 7; ++i)
 		{
-			Move m = { 0, (r-i-1)*dirOffsets[dir] };
+			Move m = {{ 0, (r-i-1)*dirOffsets[dir] }};
 			moveOffsetTable[r][dir].single[i] = m;
 		}
 	}
