@@ -227,20 +227,12 @@ WorkThread* RootBoard::findFreeThread() {
 	return 0;
 }
 
-void updateAndReady(uint64_t& r, uint64_t v) {
+void update(uint64_t& r, uint64_t v) {
 	r += v;
 }
-void updateAndReady(Result<uint64_t>& r, uint64_t v) {
-	r.update(v);
-	r.setReady();
-}
-void updateAndReady(Result<uint64_t>& r, Result<uint64_t>& v) {
-	r.update(v);
-	r.setReady();
-}
 
-template<> void setNotReady<Result<uint64_t> >(Result<uint64_t>& r) {
-	r.setNotReady();
+void update(Result<uint64_t>& r, uint64_t v) {
+	r.update(v);
 }
 
 uint64_t RootBoard::getTime() const {
