@@ -201,7 +201,7 @@ Move* ColoredBoard<C>::generateCaptureMoves( Move* list) const {
 
 			to = pawn + C*dirOffsets[2];
 			if ( !pieces[to] & !isValid(pin))
-				*list++ = (Move) {pawn, to, 0, promoteQ};
+				*list++ = (Move) {{pawn, to, 0, promoteQ}};
 		}
 	}
 	/*
