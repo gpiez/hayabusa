@@ -45,27 +45,24 @@ Move RootBoard::rootSearch() {
 
 	for (depth=2; depth<maxDepth; depth++) {
 		QDateTime currentStart = QDateTime::currentDateTime();
-		Score<C> alpha(-infinity);
-		alpha.m = (Move) {0};
-		Score<(Colors)-C> beta(-infinity);	//both alpha and beta are lower limits, viewed from th color to move
-		beta.m = (Move) {0};
+		SharedScore<C> alpha(-infinity);
+		SharedScore<(Colors)-C> beta(-infinity);	//both alpha and beta are lower limits, viewed from th color to move
 //		SearchFlag f = null;
 		QTextStream xout(stderr);
-		Score<C> bestScore = alpha;
 		
 		for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
 			//xout << depth << ":" << currentMove->string();
-			if (search<(Colors)-C, trunk>(b, *currentMove, depth-1, beta, bestScore)) {
+			if (search<(Colors)-C, trunk>(b, *currentMove, depth-1, beta, alpha)) {
 				bestMove = *currentMove;
 				*currentMove = *firstMove;
 				*firstMove = bestMove;
 			}
 			QString newBestLine = tt->bestLine(*this);
-			emit console->iterationDone(depth, stats.node, newBestLine, bestScore.get());
+			emit console->iterationDone(depth, stats.node, newBestLine, alpha.v);
 			//if (QDateTime::currentDateTime() > hardBudget) break;
 		}
 		emit console->send(QString("depth %1 time %2 nodes %3 score %4 pv %5")
-		.arg(depth).arg(getTime()).arg(stats.node).arg(bestScore.get()).arg(tt->bestLine(*this)));
+		.arg(depth).arg(getTime()).arg(stats.node).arg(alpha.v).arg(tt->bestLine(*this)));
 		// assume geometrically increasing time per depth
 		//if (QDateTime::currentDateTime() > softBudget) break;
 	}
@@ -82,7 +79,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	stats.node++;
 	if (P == leaf) {
 		A current(alpha);
-		current.max(prev.estimatedEval(m, *this), (Move){0});
+		current.max(prev.estimatedEval(m, *this));
 		if (current >= beta) {
 			stats.leafcut++;
 			return false;
@@ -97,28 +94,26 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	if (P != leaf) te = tt->getSubTable(z, l);
 	TTEntry subentry;
 
-	Move ttMove = {0};
+	Move ttMove = {{0}};
 	unsigned int ttDepth = 0;
 	A current(alpha);	// current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
-	current.m = (Move) {0};
-	bool alreadyLocked;
-	if (P != leaf && tt->retrieveAndLock(te, z, subentry, l, alreadyLocked) ) {
+	bool alreadyVisited;
+	if (P != leaf && tt->retrieveAndMark(te, z, subentry, alreadyVisited) ) {
 		stats.tthit++;
 		ttDepth = subentry.depth;
 		if (subentry.depth >= depth) {
-			ASSERT( subentry.loBound || subentry.hiBound );
+
 			if (subentry.loBound) {
 				stats.ttalpha++;
-				current.max(subentry.score, (Move){0});
+				current.max(subentry.score);
 			}
 			if (subentry.hiBound) {
 				stats.ttbeta++;
 				beta.max(subentry.score, m);
 			}
 			if (current >= beta) {
-				beta.setReady();
-				if (!alreadyLocked)
-					tt->unlock(te);
+				if (!alreadyVisited)
+					tt->unmark(te);
 				return false;
 			}
 		}
@@ -130,7 +125,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	Move* end;
 	if (P == leaf) {
 		stats.eval++;
-		current.max(eval(b), (Move){0});
+		current.max(eval(b));
 		end = b.generateCaptureMoves(list);
 	} else
 		end = b.generateMoves(list);
@@ -153,7 +148,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	for (unsigned int d = ttDepth+1; d < depth; ++d) {
 		for (Move* i = list; i<end; ++i) {
 			search<(Colors)-C, tree, B, A>(b, *i, d-1, beta, current);
-			if ((uint32_t&)current.m == (uint32_t&)*i) {
+			if (current.m.data == i->data) {
 				*i = *list;
 				*list = current.m;
 			}
@@ -175,31 +170,30 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 			search<(Colors)-C, tree, B, A>(b, *i, depth-1, beta, current);
 		} else {
 			WorkThread* th;
-			if (0 && (th = findFreeThread())) {
-				setNotReady(current);
+			if (i > list && (th = findFreeThread())) {
 				th->startJob(new SearchJob<(Colors)-C, B, A>(*this, b, *i, depth-1, beta, current));
 			} else {
-				setNotReady(current);
 				search<(Colors)-C, P>(b, *i, depth-1, beta, current);
 			}
 		}
 	}
 
-	if (P != leaf && !alreadyLocked) {
+	current.join();
+	if (P != leaf) {
 		TTEntry stored;
 		stored.zero();
 		stored.depth |= depth;
 		stored.upperKey |= z >> stored.upperShift;
-		stored.score |= current.get();
+		stored.score |= current.v;
 		stored.loBound |= current > alpha;
 		stored.hiBound |= current < beta;
-		ASSERT( stored.loBound || stored.hiBound );
 		stored.from |= current.m.from;
 		stored.to |= current.m.to;
-		tt->storeAndRelease(te, stored, l);
+		if (!alreadyVisited)
+			tt->unmark(te);
+		tt->store(te, stored);
 	}
 	bool newBM = beta.max(current, m);
-	beta.setReady();
 	return newBM;
 }
 
@@ -215,7 +209,6 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
 
 	Result<uint64_t> n(0);
 	for (Move* i = list; i<end; ++i) {
-		n.setNotReady();
 		perft<(Colors)-C, trunk>(n, b, *i, depth-1);
 	}
 	return n;
@@ -235,7 +228,6 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
 		if (depth == 1) {
 			n.update(1);
 		} else {
-			n.setNotReady();
 			perft<(Colors)-C, trunk>(n, b, *i, depth-1);
 		}
 		xout << i->string() << " " << (uint64_t)n << endl;
@@ -244,17 +236,24 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
 	return sum;
 }
 
-void updateAndReady(Result<uint64_t>& r, Result<uint64_t>& v);
-void updateAndReady(Result<uint64_t>& r, uint64_t v);
-void updateAndReady(uint64_t& r, uint64_t v);
+void update(Result<uint64_t>& r, uint64_t v);
+void update(uint64_t& r, uint64_t v);
+void inline setReady(uint64_t r) {};
+void inline setNotReady(uint64_t r) {};
+void inline setReady(Result<uint64_t>& r) {
+	r.setReady();
+}
 
-template<typename ResultType> void setNotReady(ResultType&) {};
+void inline setNotReady(Result<uint64_t>& r) {
+	r.setNotReady();
+}
+
 
 template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth) {
 	if (P == trunk && depth <= splitDepth) {
 		uint64_t n=0;
 		perft<C, tree>(n, prev, m, depth);
-		updateAndReady(result, n);
+		update(result, n);
 		return;
 	}
 
@@ -266,13 +265,13 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 	PerftEntry subentry;
 
 	if (pt->retrieve(pe, z, subentry, l) && subentry.depth == depth) {
-		updateAndReady(result, subentry.value);
+		update(result, subentry.value);
 		return;
 	}
 	Move list[256];
 	Move* end = b.generateMoves(list);
 	if (depth == 1) {
-		updateAndReady(result, end-list);
+		update(result, end-list);
 		return;
 	}
 	
@@ -280,10 +279,8 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 	for (Move* i = list; i<end; ++i) {
 		WorkThread* th;
 		if (P == trunk && !!(th = findFreeThread())) {
-			setNotReady(n);
 			th->startJob(new (PerftJob<(Colors)-C, ResultType>)(*this, n, b, *i, depth-1));
 		} else {
-			setNotReady(n);
 			perft<(Colors)-C, P>(n, b, *i, depth-1);
 		}
 
@@ -294,8 +291,8 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 	stored.depth |= depth;
 	stored.upperKey |= z >> stored.upperShift;
 	stored.value = (uint64_t)n;
-	pt->store(pe, stored, l);
-	updateAndReady(result, n);
+	pt->store(pe, stored);
+	update(result, n);
 }
 
 #endif

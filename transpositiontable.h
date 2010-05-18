@@ -60,12 +60,12 @@ public:
 	}
 
 
-	bool retrieveAndLock(SubTable* subTable, Key k, Entry&, QReadWriteLock*, bool& alreadyLocked);
-	void storeAndRelease(SubTable* subTable, Entry entry, QReadWriteLock*);
+	bool retrieveAndMark(SubTable* subTable, Key k, Entry&, bool&);
+//	void storeAndUnmark(SubTable* subTable, const Entry& entry);
 	bool retrieve(SubTable* subTable, Key k, Entry& ret, QReadWriteLock* );
-	void store(SubTable* subTable, Entry entry, QReadWriteLock*);
-	void unlock(SubTable* subTable) {
-		subTable->entries[0].lock.reset();
+	void store(SubTable* subTable, Entry entry);
+	void unmark(SubTable* subTable) {
+		subTable->entries[0].visited.reset();
 	}
 	void freeMemory();
 	QString bestLine(const RootBoard& );
