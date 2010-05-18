@@ -35,7 +35,7 @@ Name=hayabusa
 Type=Native Application
 
 [Launch][Launch Configuration 1][Data]
-Arguments=
+Arguments=go
 Debugger Shell=
 Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a)
 Dependency Action=Build
@@ -50,7 +50,7 @@ Remote GDB Run Script=
 Remote GDB Shell Script=
 Separate Terminal For Application IO=true
 Try Setting Breakpoints On Loading Libraries=true
-Working Directory=file:///home/gpiez/src/hayabusa/Release
+Working Directory=file:///home/gpiez/src/hayabusa/Debug
 isExecutable=false
 
 [Launch][Launch Configuration 2]

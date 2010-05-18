@@ -37,7 +37,7 @@ WorkThread::~WorkThread()
 }
 
 void WorkThread::run() {
-	// TODO implement WorkThread::run
+	pstats = &stats;
 
 	while(keepRunning) {
 

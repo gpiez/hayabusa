@@ -164,10 +164,10 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 			// The leaf search always starts with the piece square value and
 			// will return a value worse
 //			if (current < b.estimatedEval(m, *this))
-				search<(Colors)-C, leaf, B, A>(b, *i, 0, beta, current);
+				search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
 			
 		} else if (P == tree || (P == trunk && depth <= splitDepth)) {
-			search<(Colors)-C, tree, B, A>(b, *i, depth-1, beta, current);
+			search<(Colors)-C, tree>(b, *i, depth-1, (typename B::Base&)beta, current);
 		} else {
 			WorkThread* th;
 			if (i > list && (th = findFreeThread())) {

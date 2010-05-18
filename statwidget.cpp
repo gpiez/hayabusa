@@ -25,7 +25,7 @@
 #include "transpositiontable.tcc"
 #include "console.h"
 
-Stats stats;
+__thread Stats stats;
 StatWidget::StatWidget(const RootBoard& rb):
 	rb(rb)
 {
@@ -59,15 +59,15 @@ void StatWidget::updateLine(unsigned int depth, uint64_t nodes, QString line, in
 		Ui_Statsui::depth->setText("Depth: " + QString::number(depth));
 	}
 }
-#define DISPLAYNUM(x) n##x->setText(QString::number(prev.last().x)); if (prev.size() > 1) v##x->setText(QString::number((prev.last().x - prev.first().x) / (prev.size()-1)));
 /* Store the last 10 stats for a sliding average */
 void StatWidget::update()
 {
 	static QList<Stats> prev;
-	prev.append(stats);
+	prev.append(rb.getStats());
 	if (prev.size() > 10)
 		prev.removeFirst();
 
+#define DISPLAYNUM(x) n##x->setText(QString::number(prev.last().x)); if (prev.size() > 1) v##x->setText(QString::number((prev.last().x - prev.first().x) / (prev.size()-1)));
 	
 	DISPLAYNUM(node)
 	DISPLAYNUM(eval)

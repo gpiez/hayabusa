@@ -43,6 +43,7 @@ template<Colors C> struct Score
 {
 	Move m;
 	RawScore v;	//Absolute score. Less is good for black, more is good for white.
+	typedef Score<C> Base;
 	
 	//Score() {};
 	explicit Score (int a) 							{ v = C*a; m.data = 0; };
@@ -112,6 +113,7 @@ template<Colors C> struct SharedScore: public Score<C>
 {
 	using Score<C>::v;
 	using Score<C>::m;
+	typedef Score<C> Base;
 	
 	volatile unsigned int notReady;
 	QMutex valueMutex;

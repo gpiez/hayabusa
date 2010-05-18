@@ -27,6 +27,7 @@
 
 class Job;
 class RootBoard;
+union Stats;
 
 class WorkThread: public QThread {
 	QWaitCondition startable, starting;
@@ -38,9 +39,10 @@ class WorkThread: public QThread {
 	BoardBase board;
 	Colors color;
 	Job* job;
-//	RootBoard* root;
 	
 public:
+	Stats* pstats;
+
 	WorkThread();
 	virtual ~WorkThread();
 

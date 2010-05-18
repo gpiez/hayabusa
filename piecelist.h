@@ -158,7 +158,7 @@ public:
 		mask |= _mm_slli_si128(mask, 8);
 		mask = _mm_sub_epi8((__m128i)(__v16qi){ 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 }, mask);
 		pos_v = _mm_shuffle_epi8(npos, mask);
-		--count[piece];
+		--count[piece];							// TODO this dec needs 10-20 clocks, why
 		index_v -= indexDiffs[piece];
 	}
 };

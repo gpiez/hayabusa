@@ -108,5 +108,6 @@ public:
 //	template<Colors C> void perft(Result<uint64_t>* result, const ColoredBoard<(Colors)-C>* prev, const Move m, const unsigned int depth);
 	void divide(unsigned int depth) const;
 	uint64_t getTime() const;
+	Stats getStats() const;
 };
 #endif

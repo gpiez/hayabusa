@@ -240,3 +240,12 @@ uint64_t RootBoard::getTime() const {
 	return temp.msecsTo(QTime::currentTime()) +
 	86400000*(startTime.daysTo(QDateTime::currentDateTime()));
 }
+
+Stats RootBoard::getStats() const {
+	Stats sum = {0};
+	foreach(WorkThread* th, threads) {
+		for (int i=0; i<sizeof(Stats)/sizeof(uint64_t); ++i)
+			sum.data[i] += th->pstats->data[i];
+	}
+	return sum;
+}
