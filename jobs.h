@@ -55,9 +55,12 @@ class SearchJob: public Job {
 	const A& alpha;
 	B& beta;
 public:
-	SearchJob(RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {};
+	SearchJob(RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {
+		beta.setNotReady();
+	};
 	void job() {
 		rb.search<C, trunk>(b, m, depth, alpha, beta);
+		beta.setReady();
 	}
 };
 
@@ -82,9 +85,12 @@ class PerftJob: public Job {
 	Move m;
 	unsigned int depth;
 public:
-	PerftJob(RootBoard& rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {};
+	PerftJob(RootBoard& rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {
+		setNotReady(n);
+	};
 	void job() {
 		rb.perft<C, trunk>(n, b, m, depth);
+		setReady(n);
 	}
 };
 
