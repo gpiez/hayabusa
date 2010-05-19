@@ -89,9 +89,8 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	ASSERT(b.keyScore.score == prev.estimatedEval(m, *this));
 	
 	Key z = b.getZobrist();
-	QReadWriteLock* l;
-	TranspositionTable<TTEntry, transpositionTableAssoc>::SubTable* te;
-	if (P != leaf) te = tt->getSubTable(z, l);
+	TranspositionTable<TTEntry, transpositionTableAssoc>::SubTable* st;
+	if (P != leaf) st = tt->getSubTable(z);
 	TTEntry subentry;
 
 	Move ttMove = {{0}};
@@ -99,9 +98,9 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	A current(alpha);	// current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
 	bool alreadyVisited;
 	if (P == tree || P == trunk) {
-		tt->retrieve(te, z, subentry, alreadyVisited);
+		tt->retrieve(st, z, subentry, alreadyVisited);
 		if ( P == trunk)
-			tt->mark(te);
+			tt->mark(st);
 		stats.tthit++;
 		ttDepth = subentry.depth;
 		if (subentry.depth >= depth) {
@@ -116,7 +115,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 			}
 			if (current >= beta) {
 				if (P == trunk && !alreadyVisited)
-					tt->unmark(te);
+					tt->unmark(st);
 				return false;
 			}
 		}
@@ -193,9 +192,9 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		stored.from |= current.m.from;
 		stored.to |= current.m.to;
 		if (P == trunk && !alreadyVisited)
-			tt->unmark(te);
+			tt->unmark(st);
 		if (!alreadyVisited && current.v)	// don't overwerite current variant
-			tt->store(te, stored);
+			tt->store(st, stored);
 	}
 	bool newBM = beta.max(current, m);
 	return newBM;

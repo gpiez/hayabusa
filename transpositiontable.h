@@ -58,6 +58,9 @@ public:
 		l = lock + ((k>>4) & (nTTLocks-1));
 		return &table[k & mask];
 	}
+	SubTable* getSubTable( Key k ) {
+		return &table[k & mask];
+	}
 
 	bool retrieve(SubTable* subTable, Key k, Entry& ret, QReadWriteLock* );
 	bool retrieve(SubTable* subTable, Key k, Entry& ret, bool&);
