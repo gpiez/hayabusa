@@ -242,9 +242,9 @@ uint64_t RootBoard::getTime() const {
 }
 
 Stats RootBoard::getStats() const {
-	Stats sum = {0};
+	Stats sum = {{0}};
 	foreach(WorkThread* th, threads) {
-		for (int i=0; i<sizeof(Stats)/sizeof(uint64_t); ++i)
+		for (unsigned int i=0; i<sizeof(Stats)/sizeof(uint64_t); ++i)
 			sum.data[i] += th->pstats->data[i];
 	}
 	return sum;

@@ -62,7 +62,7 @@ Move RootBoard::rootSearch() {
 			//if (QDateTime::currentDateTime() > hardBudget) break;
 		}
 		emit console->send(QString("depth %1 time %2 nodes %3 score %4 pv %5")
-		.arg(depth).arg(getTime()).arg(stats.node).arg(alpha.v).arg(tt->bestLine(*this)));
+		.arg(depth).arg(getTime()).arg(getStats().node).arg(alpha.v).arg(tt->bestLine(*this)));
 		// assume geometrically increasing time per depth
 		//if (QDateTime::currentDateTime() > softBudget) break;
 	}
@@ -98,7 +98,10 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	unsigned int ttDepth = 0;
 	A current(alpha);	// current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
 	bool alreadyVisited;
-	if (P != leaf && tt->retrieveAndMark(te, z, subentry, alreadyVisited) ) {
+	if (P == tree || P == trunk) {
+		tt->retrieve(te, z, subentry, alreadyVisited);
+		if ( P == trunk)
+			tt->mark(te);
 		stats.tthit++;
 		ttDepth = subentry.depth;
 		if (subentry.depth >= depth) {
@@ -112,7 +115,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 				beta.max(subentry.score, m);
 			}
 			if (current >= beta) {
-				if (!alreadyVisited)
+				if (P == trunk && !alreadyVisited)
 					tt->unmark(te);
 				return false;
 			}
@@ -179,7 +182,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	}
 
 	current.join();
-	if (P != leaf) {
+	if (P == tree || P == trunk) {
 		TTEntry stored;
 		stored.zero();
 		stored.depth |= depth;
@@ -189,9 +192,10 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		stored.hiBound |= current < beta;
 		stored.from |= current.m.from;
 		stored.to |= current.m.to;
-		if (!alreadyVisited)
+		if (P == trunk && !alreadyVisited)
 			tt->unmark(te);
-		tt->store(te, stored);
+		if (!alreadyVisited && current.v)	// don't overwerite current variant
+			tt->store(te, stored);
 	}
 	bool newBM = beta.max(current, m);
 	return newBM;
@@ -238,8 +242,8 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
 
 void update(Result<uint64_t>& r, uint64_t v);
 void update(uint64_t& r, uint64_t v);
-void inline setReady(uint64_t r) {};
-void inline setNotReady(uint64_t r) {};
+void inline setReady(uint64_t ) {};
+void inline setNotReady(uint64_t ) {};
 void inline setReady(Result<uint64_t>& r) {
 	r.setReady();
 }

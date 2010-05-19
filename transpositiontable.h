@@ -59,13 +59,14 @@ public:
 		return &table[k & mask];
 	}
 
-
-	bool retrieveAndMark(SubTable* subTable, Key k, Entry&, bool&);
-//	void storeAndUnmark(SubTable* subTable, const Entry& entry);
 	bool retrieve(SubTable* subTable, Key k, Entry& ret, QReadWriteLock* );
+	bool retrieve(SubTable* subTable, Key k, Entry& ret, bool&);
 	void store(SubTable* subTable, Entry entry);
 	void unmark(SubTable* subTable) {
 		subTable->entries[0].visited.reset();
+	}
+	void mark(SubTable* subTable) {
+		subTable->entries[0].visited |= true;
 	}
 	void freeMemory();
 	QString bestLine(const RootBoard& );

@@ -60,15 +60,14 @@ void TranspositionTable<Entry, assoc>::freeMemory() {
 	}
 }
 
-// This is only called from trunk
+// this is only called from tree
 template<typename Entry, unsigned int assoc>
-bool TranspositionTable<Entry, assoc>::retrieveAndMark(SubTable* subTable, Key k, Entry &ret, bool &visited ) {
+bool TranspositionTable<Entry, assoc>::retrieve(SubTable* subTable, Key k, Entry &ret, bool &visited) {
 	visited = subTable->entries[0].visited;
-	subTable->entries[0].visited |= true;
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
 	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
 		if (subTable->entries[i].upperKey == upperKey) {		//only lock if a possible match is found
-				//TODO rotate to first position
+			// found same entry again, move repetition
 			if (visited) {
 				ret.zero();
 				ret.loBound |= true;

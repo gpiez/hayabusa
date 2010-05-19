@@ -123,6 +123,6 @@ static const uint8_t checkKR = 0x40;//checkKR_;
 static const LAttack checkKB_ = { 0, 0, 0, 0, 1 };
 static const uint8_t checkKB = 0x80;//checkKB_;
 
-static const Attack attackMask_ = { attackMaskLong_, attackMaskShort_, attackMaskLong_, attackMaskShort_ };
+//static const Attack attackMask_ = { attackMaskLong_, attackMaskShort_, attackMaskLong_, attackMaskShort_ };
 static const uint32_t attackMask = 0x3f3f3f3f;
 #endif /* ATTACKS_H_ */
