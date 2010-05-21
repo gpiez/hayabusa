@@ -82,5 +82,6 @@ public:
 	void divide(unsigned int depth) const;
 	uint64_t getTime() const;
 	Stats getStats() const;
+	void ttClear();
 };
 #endif

@@ -210,3 +210,8 @@ Stats RootBoard::getStats() const {
 	}
 	return sum;
 }
+
+void RootBoard::ttClear()
+{
+	//TODO implement me
+}

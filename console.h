@@ -54,6 +54,9 @@ private:
 	QCoreApplication* app;
 	RootBoard* board;
 	QString answer;
+    bool debugMode;
+    QMap<QString, QString> option;
+	
 	
 public:
 	QTextStream cin;

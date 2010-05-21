@@ -117,31 +117,58 @@ void Console::divide(QStringList cmds) {
 void Console::uci(QStringList /*cmds*/) {
 }
 
-void Console::debug(QStringList /*cmds*/) {
+void Console::debug(QStringList cmds) {
+	if (cmds[1] == "on") 
+		debugMode = true;
+	else if (cmds[1]=="off") 
+		debugMode = false;
+	else
+		cout << "info string usage: debug on|off" << endl;
 }
 
+// engine is always ready as soon as the command dispatcher is working.
 void Console::isready(QStringList /*cmds*/) {
+	cout << "readyok" << endl << flush;
 }
 
-void Console::setoption(QStringList /*cmds*/) {
+void Console::setoption(QStringList cmds) {
+	int v=cmds.indexOf("value");
+	QStringList value, name;
+	if (v > 0) {
+		value = cmds.mid(v+1);
+		name = cmds.mid(2, v-2);
+	} else {
+		name = cmds.mid(2);
+	}
+	option[name.join(" ")] = value.join(" ");
 }
 
 void Console::reg(QStringList /*cmds*/) {
 }
 
 void Console::ucinewgame(QStringList /*cmds*/) {
+	WorkThread::stopAll();
+	board->ttClear();
 }
 
 void Console::position(QStringList cmds) {
+	WorkThread::stopAll();
+	int m=cmds.indexOf("moves");
 	if (cmds[1] == "startpos")
 		board->setup();
-	else {
-		cmds.removeFirst();
-		board->setup(cmds.join(" "));
+	else if (cmds[1] == "fen") {
+		QStringList fen = cmds.mid(2, m-2);
+		board->setup(fen.join(" "));
+	}
+	if (m>0) {
+		QStringList moves = cmds.mid(m+1);
+		foreach(QString move, cmds)
+			; //TODO
 	}
 }
 
 void Console::go(QStringList cmds) {
+	WorkThread::stopAll();
 	board->go(cmds);
 }
 
