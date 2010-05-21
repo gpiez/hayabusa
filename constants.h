@@ -68,12 +68,13 @@ enum SpecialMoves {
 
 enum Phase { root, trunk, tree, leaf };
 
+static const unsigned int maxQueuedJobs = 4;
 static const unsigned int nTTLocks = 1;
 static const unsigned int nMaxMoves = 256; // maximum possible moves in a position
 static const unsigned int nMaxGameLength = 5000; // maximum possible moves in a position
 static const int infinity = 10000;
 static const unsigned int maxDepth = 64;
-static const unsigned int splitDepth = 6;
+static const unsigned int splitDepth = 5;
 static const unsigned int transpositionTableAssoc = 2;
 static const unsigned int nPieces = 6;
 static const unsigned int nColors = 2;

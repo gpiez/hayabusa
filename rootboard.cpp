@@ -35,7 +35,6 @@ RootBoard::RootBoard(Console *c):
 	movesToDo(40),
 	console(c)
 {
-	initWorkThreads();
 	tt = new TranspositionTable<TTEntry, transpositionTableAssoc>;
 	#ifdef QT_GUI_LIB
 	statWidget = new StatWidget(*this);
@@ -43,32 +42,8 @@ RootBoard::RootBoard(Console *c):
 	#endif
 }
 
-void RootBoard::initWorkThreads() {
-	numThreads = sysconf(_SC_NPROCESSORS_ONLN);
-	if (numThreads == 0) numThreads = 1;
-	allocateWorkThreads(numThreads);
-}
-
-void RootBoard::allocateWorkThreads(unsigned int numThreads) {
-	unsigned int i=0;
-	foreach(WorkThread* th, threads) {
-		if (++i > numThreads) {
-			th->stop();
-			th->wait();
-			delete th;
-		}
-	}
-
-	while (++i <= numThreads) {
-		WorkThread* th = new WorkThread();
-		th->start();
-		threads.append(th);
-	}
-
-}
-
 void RootBoard::stop() {
-	foreach(WorkThread* th, threads) {
+	foreach(WorkThread* th, WorkThread::getThreads()) {
 		th->stop();
 	}
 }
@@ -202,29 +177,21 @@ void RootBoard::go(QStringList )
 		job = new RootSearchJob<White>(*this);
 	else
 		job = new RootSearchJob<Black>(*this);
-	threads.first()->startJob(job);
+	WorkThread::findFree()->startJob(job);
 }
 
 void RootBoard::perft(unsigned int depth) {
 	if (color == White)
-		threads.first()->startJob(new RootPerftJob<White>(*this, depth));
+		WorkThread::findFree()->startJob(new RootPerftJob<White>(*this, depth));
 	else
-		threads.first()->startJob(new RootPerftJob<Black>(*this, depth));
+		WorkThread::findFree()->startJob(new RootPerftJob<Black>(*this, depth));
 }
 
 void RootBoard::divide(unsigned int depth) {
 	if (color == White)
-		threads.first()->startJob(new RootDivideJob<White>(*this, depth));
+		WorkThread::findFree()->startJob(new RootDivideJob<White>(*this, depth));
 	else
-		threads.first()->startJob(new RootDivideJob<Black>(*this, depth));
-}
-
-WorkThread* RootBoard::findFreeThread() {
-//	QMutexLocker locker(&threadsLock);
-	foreach(WorkThread* th, threads) 
-		if (th->isFree())
-			return th;
-	return 0;
+		WorkThread::findFree()->startJob(new RootDivideJob<Black>(*this, depth));
 }
 
 void update(uint64_t& r, uint64_t v) {
@@ -243,7 +210,7 @@ uint64_t RootBoard::getTime() const {
 
 Stats RootBoard::getStats() const {
 	Stats sum = {{0}};
-	foreach(WorkThread* th, threads) {
+	foreach(WorkThread* th, WorkThread::getThreads()) {
 		for (unsigned int i=0; i<sizeof(Stats)/sizeof(uint64_t); ++i)
 			sum.data[i] += th->pstats->data[i];
 	}

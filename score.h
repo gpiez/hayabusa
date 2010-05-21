@@ -151,6 +151,8 @@ public:
 		m.data = 0;
 	}
 
+	void join();
+	
 	bool operator >= (RawScore a) {
 		if ( C==White )
 			return v>=a;
@@ -203,23 +205,17 @@ public:
 		return false;		
 	}
 
-	void join() {
-		QMutexLocker lock(&readyMutex);
-		while (notReady)
-			readyCond.wait(&readyMutex);
-	}
-	
 	void setReady() {
 		QMutexLocker lock(&readyMutex);
 		--notReady;
-		ASSERT(notReady <= 4);
+		ASSERT(notReady <= 44*maxQueuedJobs);
 		readyCond.wakeOne();
 	}
 
 	void setNotReady() {
 		QMutexLocker lock(&readyMutex);
 		++notReady;
-		ASSERT(notReady <= 4);
+		ASSERT(notReady <= 44*maxQueuedJobs);
 	}
 };
 

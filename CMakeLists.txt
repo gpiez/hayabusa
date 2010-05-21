@@ -14,10 +14,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 enable_language(ASM-FASM)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=core2 -fno-exceptions -Winline -Wuninitialized")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=core2 -fno-exceptions -Wuninitialized")
 
 # SSSE3 (Note the additional S) is mandatory because of the pshufb instruction.
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mssse3")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mssse3 $ENV{CXXFLAGS}")
 
 FIND_PACKAGE(Qt4 COMPONENTS QtCore REQUIRED)
 FIND_PACKAGE(PrecompiledHeaders)

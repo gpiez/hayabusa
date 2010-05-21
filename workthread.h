@@ -30,8 +30,9 @@ class RootBoard;
 union Stats;
 
 class WorkThread: public QThread {
-	QWaitCondition startable, starting;
-	QMutex* mutex;
+	QWaitCondition startable;
+	static QWaitCondition starting;
+	static QMutex mutex;
 	volatile bool doStop;
 	volatile bool keepRunning;
 	volatile bool isStopped;
@@ -39,20 +40,31 @@ class WorkThread: public QThread {
 	BoardBase board;
 	Colors color;
 	Job* job;
+	static QMultiMap<Key, Job*> jobs;
+	static QVector<WorkThread*> threads;
+	static unsigned int nThreads;
 	
 public:
 	Stats* pstats;
+	static unsigned int running;
 
 	WorkThread();
 	virtual ~WorkThread();
-
+	
 	void run();
 	void stop();
 	void end();
-	void startJob(Job* = NULL);
+	void startJob(Job*);
+	static void queueJob(Key, Job*);
 	void setJob(Job*);
 	void *operator new (size_t s);
 	bool isFree();
+	static bool canQueued();
+	static Job* getJob(Key);
+	static void idle(int);
+	static WorkThread* findFree();
+	static void init();
+	static const QVector<WorkThread*>& getThreads();
 };
 
 #endif /* WORKTHREAD_H_ */

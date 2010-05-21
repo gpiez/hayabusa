@@ -31,6 +31,7 @@
 #include "result.h"
 #include "workthread.h"
 #include "jobs.h"
+#include "score.tcc"
 
 template<Colors C>
 Move RootBoard::rootSearch() {
@@ -90,7 +91,6 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	
 	Key z = b.getZobrist();
 	TranspositionTable<TTEntry, transpositionTableAssoc>::SubTable* st;
-	if (P != leaf) st = tt->getSubTable(z);
 	TTEntry subentry;
 
 	Move ttMove = {{0}};
@@ -98,34 +98,37 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	A current(alpha);	// current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
 	bool alreadyVisited;
 	if (P == tree || P == trunk) {
-		tt->retrieve(st, z, subentry, alreadyVisited);
-		if ( P == trunk)
-			tt->mark(st);
-		stats.tthit++;
-		ttDepth = subentry.depth;
-		if (subentry.depth >= depth) {
+		st = tt->getSubTable(z);
+		if (tt->retrieve(st, z, subentry, alreadyVisited)) {
+			if ( P == trunk)
+				tt->mark(st);
+			stats.tthit++;
+			ttDepth = subentry.depth;
+			if (P == trunk && subentry.score == 0) ttDepth=0;
+			if (ttDepth >= depth) {
 
-			if (subentry.loBound) {
-				stats.ttalpha++;
-				current.max(subentry.score);
+				if (subentry.loBound) {
+					stats.ttalpha++;
+					current.max(subentry.score);
+				}
+				if (subentry.hiBound) {
+					stats.ttbeta++;
+					beta.max(subentry.score, m);
+				}
+				if (current >= beta) {
+					if (P == trunk && !alreadyVisited)
+						tt->unmark(st);
+					return false;
+				}
 			}
-			if (subentry.hiBound) {
-				stats.ttbeta++;
-				beta.max(subentry.score, m);
-			}
-			if (current >= beta) {
-				if (P == trunk && !alreadyVisited)
-					tt->unmark(st);
-				return false;
-			}
+			ttMove.from = subentry.from;
+			ttMove.to = subentry.to;
 		}
-		ttMove.from = subentry.from;
-		ttMove.to = subentry.to;
 	}
 
 	Move list[256];
 	Move* end;
-	if (P == leaf) {
+	if (P == leaf && (b.template attacks<(C-Black)/2>(b.pieceList[(White-C)/2].getKing()) & attackMask) == 0) {
 		stats.eval++;
 		current.max(eval(b));
 		end = b.generateCaptureMoves(list);
@@ -133,7 +136,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		end = b.generateMoves(list);
 
 	// move best move from tt / history to front
-	if ((uint32_t&)ttMove)
+	if (ttMove.data)
 		for (Move* i = list; i<end; ++i) 
 			if ((ttMove.from == i->from) & (ttMove.to == i->to)) {
 				ttMove = *i;
@@ -147,7 +150,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	for (unsigned int i = depth; i<10; i++)
 		indentation += "  ";*/
 //	xout << indentation << alpha.get() << "," << beta.get();
-	for (unsigned int d = ttDepth+1; d < depth; ++d) {
+	for (unsigned int d = ((ttDepth+2)&~1) + (depth&1); d < depth; d+=2) {
 		for (Move* i = list; i<end; ++i) {
 			search<(Colors)-C, tree, B, A>(b, *i, d-1, beta, current);
 			if (current.m.data == i->data) {
@@ -159,26 +162,28 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		}
 		current.v = alpha.v;
 	}
-	for (Move* i = list; i<end; ++i) {
-		if (current >= beta)
-			break;
+	for (Move* i = list; i<end && current < beta; ++i) {
+		// Stay in leaf search if it already is or change to it if the next depth would be 0
 		if (P == leaf || depth <= 1) {
-			// The leaf search always starts with the piece square value and
-			// will return a value worse
-//			if (current < b.estimatedEval(m, *this))
-				search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
-			
+			search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
+		// Stay in tree search or change from trunk to it if the next depth would
+		// be below the split depth
 		} else if (P == tree || (P == trunk && depth <= splitDepth)) {
 			search<(Colors)-C, tree>(b, *i, depth-1, (typename B::Base&)beta, current);
+		// Multi threaded search: After the first move try to find a free thread, otherwise do a normal
+		// search but stay in trunk. To avoid multithreading search at cut off nodes
+		// where it would be useless.
 		} else {
-			WorkThread* th;
-			if (i > list && (th = findFreeThread())) {
-				th->startJob(new SearchJob<(Colors)-C, B, A>(*this, b, *i, depth-1, beta, current));
+			if (i > list && WorkThread::canQueued()) {
+				WorkThread::queueJob(z, new SearchJob<(Colors)-C, B, A>(*this, b, *i, depth-1, beta, current));
 			} else {
 				search<(Colors)-C, P>(b, *i, depth-1, beta, current);
 			}
 		}
 	}
+
+	// if there are queued jobs started from _this_ node, do them first
+	if (P == trunk) while(Job* job = WorkThread::getJob(z)) job->job();
 
 	current.join();
 	if (P == tree || P == trunk) {
@@ -281,7 +286,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 	ResultType n(0);
 	for (Move* i = list; i<end; ++i) {
 		WorkThread* th;
-		if (P == trunk && !!(th = findFreeThread())) {
+		if (P == trunk && !!(th = WorkThread::findFree())) {
 			th->startJob(new (PerftJob<(Colors)-C, ResultType>)(*this, n, b, *i, depth-1));
 		} else {
 			perft<(Colors)-C, P>(n, b, *i, depth-1);

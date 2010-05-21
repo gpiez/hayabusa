@@ -17,6 +17,14 @@
 
 */
 #include "score.h"
+#include "workthread.h"
 
-using namespace template< Colors C >;
+template<Colors C>
+void SharedScore<C>::join() {
+	QMutexLocker lock(&readyMutex);
+	WorkThread::idle(1);
+	while (notReady)
+		readyCond.wait(&readyMutex);
+	WorkThread::idle(-1);
+}
 

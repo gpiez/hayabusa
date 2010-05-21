@@ -21,65 +21,93 @@
 #include "workthread.h"
 #include "jobs.h"
 
+QMultiMap<Key,Job*> WorkThread::jobs;
+QWaitCondition WorkThread::starting;
+QMutex WorkThread::mutex;
+unsigned int WorkThread::running = 0;
+unsigned int WorkThread::nThreads = 0;
+QVector<WorkThread*> WorkThread::threads;
+
 WorkThread::WorkThread():
-	doStop(true),
+	doStop(false),
 	keepRunning(true),
 	isStopped(true),
 	job(NULL)
 {
-	mutex = new QMutex;
 	board.init();
 }
 
 WorkThread::~WorkThread()
 {
-	delete mutex;
 }
 
 void WorkThread::run() {
 	pstats = &stats;
 
+	mutex.lock();
 	while(keepRunning) {
 
-		mutex->lock();
-		doStop = false;
 		isStopped = true;
 		startable.wakeAll();	//wake stop() function
-		while(isStopped)		//isStopped is resetted by startJob() and free()
-			starting.wait(mutex);//starting is signalled by StartJob()
-		mutex->unlock();
+		do {
+			if (!doStop && jobs.count()>0 && running<4) {
+				job = jobs.take(jobs.keys().first());
+			}
+			if (!job) starting.wait(&mutex);//starting is signalled by StartJob() or QJob()
+		} while(!job);
+		isStopped = false;
+		doStop = false;
+		running++;
+		mutex.unlock();
 //        qDebug() << "execute" << (const void*)job;
         job->job();             //returning the result must have happened here.
+		mutex.lock();
+		delete job;
+		job = NULL;
+		running--;
 	}
+	mutex.unlock();
 }
 
 void WorkThread::stop() {
-	mutex->lock();
+	QMutexLocker lock(&mutex);
 	while (!isStopped) {
 		doStop = true;
-		startable.wait(mutex);	//waits until the end of the run loop is reached.
+		startable.wait(&mutex);	//waits until the end of the run loop is reached.
 	}
-	mutex->unlock();
 }
 
 void WorkThread::startJob(Job *j) {
 	ASSERT(j);
+//	qDebug() << "startJob" << j;
+	QMutexLocker lock(&mutex);
 	delete job;
 	job = j;
-	mutex->lock();
-	isStopped = false;
-	starting.wakeOne();
-	mutex->unlock();
+	starting.wakeAll();
+}
+
+// Queue a job from a parent. This allows the parent later to start only its
+// own jobs.
+void WorkThread::queueJob(Key parent, Job *j) {
+	ASSERT(j);
+//	qDebug() << "queueJob" << j;
+	QMutexLocker lock(&mutex);
+	jobs.insertMulti(parent, j);
+	starting.wakeAll();
+}
+
+Job* WorkThread::getJob(Key parent) {
+	QMutexLocker lock(&mutex);
+	return jobs.take(parent);
 }
 
 void WorkThread::end() {
-	mutex->lock();
+	QMutexLocker lock(&mutex);
 	keepRunning = false;
 	doStop = true;
 	delete job;
 //	job = new VoidJob();
 	starting.wakeOne();
-	mutex->unlock();
 }
 
 void WorkThread::setJob(Job* j) {
@@ -94,10 +122,47 @@ void* WorkThread::operator new (size_t s) {
 	return p;
 }
 
-bool WorkThread::isFree() { // TODO merge into startJob
-	mutex->lock();
+bool WorkThread::isFree() {
 	bool ret = isStopped;
 	isStopped = false;		// return true only once
-	mutex->unlock();
 	return ret;
+}
+
+bool WorkThread::canQueued() {
+	QMutexLocker lock(&mutex);
+	return (unsigned)jobs.count() < nThreads-1;
+}
+
+void WorkThread::idle(int /*n*/) {
+//  TODO decreasing the number of running threads should only allow to start new
+//  jobs in child nodes, otherwise a unrelated node may be started and not
+//  finished, while join() continues, which increases the number of threads
+//  beyond the number of cores
+//	QMutexLocker lock(&mutex);
+//	running -= n;
+//	if (n<0) starting.wakeAll();
+//	ASSERT(running <= 8);
+}
+
+void WorkThread::init() {
+	nThreads = sysconf(_SC_NPROCESSORS_ONLN);
+	if (nThreads == 0) nThreads = 1;
+
+	for (unsigned int i=0; i<nThreads; ++i) {
+		WorkThread* th = new WorkThread();
+		th->start();
+		threads.append(th);
+	}
+}
+
+WorkThread* WorkThread::findFree() {
+	QMutexLocker lock(&mutex);
+	foreach(WorkThread* th, WorkThread::threads)
+		if (th->isFree())
+			return th;
+	return 0;
+}
+
+const QVector<WorkThread*>& WorkThread::getThreads() {
+	return threads;
 }

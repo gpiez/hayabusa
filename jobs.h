@@ -36,6 +36,7 @@
 struct Job {
 	virtual ~Job() {};			// the for calling destructor of QObject in signalJob
 	virtual void job() = 0;
+	virtual unsigned int getDepth() { return 0; };
 };
 
 // Base class for jobs which need to deliver signals, usually the root threads
@@ -55,12 +56,16 @@ class SearchJob: public Job {
 	const A& alpha;
 	B& beta;
 public:
-	SearchJob(RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {
+	SearchJob(RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta):
+		rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {
 		beta.setNotReady();
 	};
 	void job() {
 		rb.search<C, trunk>(b, m, depth, alpha, beta);
 		beta.setReady();
+	}
+	unsigned int getDepth() {
+		return depth;
 	}
 };
 

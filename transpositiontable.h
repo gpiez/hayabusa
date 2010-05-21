@@ -63,7 +63,7 @@ public:
 	}
 
 	bool retrieve(SubTable* subTable, Key k, Entry& ret, QReadWriteLock* );
-	bool retrieve(SubTable* subTable, Key k, Entry& ret, bool&);
+	bool retrieve(const SubTable* subTable, Key k, Entry& ret, bool&) const ;
 	void store(SubTable* subTable, Entry entry);
 	void unmark(SubTable* subTable) {
 		subTable->entries[0].visited.reset();

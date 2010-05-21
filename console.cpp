@@ -36,6 +36,7 @@ Console::Console(QCoreApplication* parent):
 	BoardBase::initTables();
 	ColoredBoard<White>::initTables();
 	ColoredBoard<Black>::initTables();
+	WorkThread::init();
 	board = new RootBoard(this);
 	board->setup();
 	

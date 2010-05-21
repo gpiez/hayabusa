@@ -24,6 +24,7 @@
 #include "rootboard.h"
 #include "transpositiontable.tcc"
 #include "console.h"
+#include "workthread.h"
 
 __thread Stats stats;
 StatWidget::StatWidget(const RootBoard& rb):
@@ -60,6 +61,16 @@ void StatWidget::updateLine(unsigned int depth, uint64_t nodes, QString line, in
 	}
 }
 /* Store the last 10 stats for a sliding average */
+template<typename T>
+QString number(T n) {
+	if (n==0) return "0";
+	int base = floor(log(n)/log(1000.0));
+	if (base>4) base=4;
+	if (base<-4) base=-4;
+	double base10 = pow(1000.0, base);
+	return QString(QString::number(n/base10, 'g', 3) % QString(" ") % "pnµm kMGT"[base+5]).trimmed();
+}
+
 void StatWidget::update()
 {
 	static QList<Stats> prev;
@@ -67,8 +78,9 @@ void StatWidget::update()
 	if (prev.size() > 10)
 		prev.removeFirst();
 
-#define DISPLAYNUM(x) n##x->setText(QString::number(prev.last().x)); if (prev.size() > 1) v##x->setText(QString::number((prev.last().x - prev.first().x) / (prev.size()-1)));
-	
+#define DISPLAYNUM(x) n##x->setText(number(prev.last().x)); if (prev.size() > 1) v##x->setText(number((prev.last().x - prev.first().x) / (prev.size()-1)));
+
+	ninternalNode->setText(number(WorkThread::running));
 	DISPLAYNUM(node)
 	DISPLAYNUM(eval)
 	DISPLAYNUM(tthit)

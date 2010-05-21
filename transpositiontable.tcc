@@ -62,7 +62,7 @@ void TranspositionTable<Entry, assoc>::freeMemory() {
 
 // this is only called from tree
 template<typename Entry, unsigned int assoc>
-bool TranspositionTable<Entry, assoc>::retrieve(SubTable* subTable, Key k, Entry &ret, bool &visited) {
+bool TranspositionTable<Entry, assoc>::retrieve(const SubTable* subTable, Key k, Entry &ret, bool &visited) const {
 	visited = subTable->entries[0].visited;
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
 	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
@@ -76,7 +76,6 @@ bool TranspositionTable<Entry, assoc>::retrieve(SubTable* subTable, Key k, Entry
 			} else {
 				ret = subTable->entries[i];
 			}
-
 			return true;
 		}
 	}
@@ -146,21 +145,21 @@ void TranspositionTable<Entry, assoc>::setSize(size_t s)
 	size = s;
 	
 	while (!table) {
-		nEntries = s/sizeof(Entry);
+		nEntries = size/sizeof(SubTable);
 #		ifdef HAVE_HUGE_PAGES
-			table = (Entry *) get_huge_pages(s, GHP_DEFAULT);
+			table = (SubTable *) get_huge_pages(s, GHP_DEFAULT);
 			usesHugePages = true;
 			if (table) break;
 			qWarning() << "Could not allocate" << size << "bytes in huge pages";
 #       endif
-		table = new SubTable[nEntries/assoc];
+		table = new SubTable[nEntries];
 		usesHugePages = false;
 		if (table) break;
 		qWarning() << "Could not allocate" << size << "bytes";
-		s >>= 1;
+		size >>= 1;
 	}
 	memset(table, 0, size);	// not strictly neccessary, but allocating pages
-	mask = nEntries/assoc-1;
+	mask = nEntries-1;
 }
 
 template<typename Entry, unsigned assoc>
