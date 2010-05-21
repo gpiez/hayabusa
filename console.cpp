@@ -115,6 +115,8 @@ void Console::divide(QStringList cmds) {
 }
 
 void Console::uci(QStringList /*cmds*/) {
+	send("id name hayabusa 0.1");
+	send("author Gunther Piez");
 }
 
 void Console::debug(QStringList cmds) {
@@ -123,7 +125,7 @@ void Console::debug(QStringList cmds) {
 	else if (cmds[1]=="off") 
 		debugMode = false;
 	else
-		cout << "info string usage: debug on|off" << endl;
+		send("info string usage: debug on|off");
 }
 
 // engine is always ready as soon as the command dispatcher is working.
@@ -210,4 +212,17 @@ void Console::privateSend(QString str)
 
 void Console::send(QString str) {
 	emit signalSend(str);
+}
+
+QHash<QString, QStringList> Console::parse(QStringList cmds, QStringList tokens) {
+	QMap<int, QString> tokenPositions;
+	foreach(QString token, tokens) 
+		tokenPositions[cmds.indexOf(token)] = token;
+
+	QHash<QString, QStringList> tokenValues;
+	for(int i=0; i<tokenPositions.keys().count(); ++i) {
+		tokenValues[tokenPositions.values().at(i)] =
+			cmds.mid(tokenPositions.keys().at(i)+1, tokenPositions.keys().at(i+1)-tokenPositions.keys().at(i)-1);
+	}
+	return tokenValues;
 }

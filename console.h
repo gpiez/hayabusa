@@ -56,7 +56,7 @@ private:
 	QString answer;
     bool debugMode;
     QMap<QString, QString> option;
-	
+	QHash<QString, QStringList> parse(QStringList, QStringList);
 	
 public:
 	QTextStream cin;
