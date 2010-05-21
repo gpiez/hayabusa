@@ -48,7 +48,7 @@ void WorkThread::run() {
 	while(keepRunning) {
 
 		isStopped = true;
-		startable.wakeAll();	//wake stop() function
+		stopped.wakeAll();	//wake stop() function
 		do {
 			if (!doStop && jobs.count()>0 && running<4) {
 				job = jobs.take(jobs.keys().first());
@@ -70,14 +70,23 @@ void WorkThread::run() {
 }
 
 void WorkThread::stop() {
-	QMutexLocker lock(&mutex);
+	QMutexLocker lock(&stoppedMutex);
 	while (!isStopped) {
 		doStop = true;
-		startable.wait(&mutex);	//waits until the end of the run loop is reached.
+		stopped.wait(&stoppedMutex);	//waits until the end of the run loop is reached.
 	}
 }
 
-void WorkThread::startJob(Job *j) {
+void WorkThread::stopAll() {
+	QMutexLocker lock(&mutex);
+	foreach(Job* j, jobs)
+		delete j;
+	jobs.clear();
+	foreach(WorkThread* th, threads)
+		th->stop();
+}
+
+void WorkThread::startJob(Job *j) { // todo only used at root now, insert findfree() here
 	ASSERT(j);
 //	qDebug() << "startJob" << j;
 	QMutexLocker lock(&mutex);
@@ -99,15 +108,6 @@ void WorkThread::queueJob(Key parent, Job *j) {
 Job* WorkThread::getJob(Key parent) {
 	QMutexLocker lock(&mutex);
 	return jobs.take(parent);
-}
-
-void WorkThread::end() {
-	QMutexLocker lock(&mutex);
-	keepRunning = false;
-	doStop = true;
-	delete job;
-//	job = new VoidJob();
-	starting.wakeOne();
 }
 
 void WorkThread::setJob(Job* j) {
@@ -136,8 +136,8 @@ bool WorkThread::canQueued() {
 void WorkThread::idle(int /*n*/) {
 //  TODO decreasing the number of running threads should only allow to start new
 //  jobs in child nodes, otherwise a unrelated node may be started and not
-//  finished, while join() continues, which increases the number of threads
-//  beyond the number of cores
+//  finished, while join() continues, which increases the number of running and
+//  executed threads beyond the number of cores
 //	QMutexLocker lock(&mutex);
 //	running -= n;
 //	if (n<0) starting.wakeAll();

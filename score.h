@@ -208,14 +208,14 @@ public:
 	void setReady() {
 		QMutexLocker lock(&readyMutex);
 		--notReady;
-		ASSERT(notReady <= 44*maxQueuedJobs);
+		ASSERT(notReady <= 6);
 		readyCond.wakeOne();
 	}
 
 	void setNotReady() {
 		QMutexLocker lock(&readyMutex);
 		++notReady;
-		ASSERT(notReady <= 44*maxQueuedJobs);
+		ASSERT(notReady <= 6);	//queued jobs + running
 	}
 };
 

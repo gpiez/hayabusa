@@ -56,7 +56,6 @@ class RootBoard: public Eval {
 	unsigned int iMove;				// current half move index
 	QDateTime startTime;
 
-	void stop();
 	template<Colors C> ColoredBoard<C>& currentBoard();
 	unsigned int getAndDecAvailableThreads();
 	

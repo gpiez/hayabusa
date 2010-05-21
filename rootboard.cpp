@@ -42,12 +42,6 @@ RootBoard::RootBoard(Console *c):
 	#endif
 }
 
-void RootBoard::stop() {
-	foreach(WorkThread* th, WorkThread::getThreads()) {
-		th->stop();
-	}
-}
-
 template<>
 const ColoredBoard<White>& RootBoard::currentBoard<White>() const {
 	return boards[iMove].wb;

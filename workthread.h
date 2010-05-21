@@ -30,7 +30,8 @@ class RootBoard;
 union Stats;
 
 class WorkThread: public QThread {
-	QWaitCondition startable;
+	QMutex stoppedMutex;
+	QWaitCondition stopped;
 	static QWaitCondition starting;
 	static QMutex mutex;
 	volatile bool doStop;
@@ -43,7 +44,9 @@ class WorkThread: public QThread {
 	static QMultiMap<Key, Job*> jobs;
 	static QVector<WorkThread*> threads;
 	static unsigned int nThreads;
-	
+
+	void stop();
+
 public:
 	Stats* pstats;
 	static unsigned int running;
@@ -52,8 +55,7 @@ public:
 	virtual ~WorkThread();
 	
 	void run();
-	void stop();
-	void end();
+	static void stopAll();
 	void startJob(Job*);
 	static void queueJob(Key, Job*);
 	void setJob(Job*);
