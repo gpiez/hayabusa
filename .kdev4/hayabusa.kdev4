@@ -60,7 +60,7 @@ Name=go
 Type=Native Application
 
 [Launch][Launch Configuration 2][Data]
-Arguments=position 8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -:go
+Arguments=position fen 8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - -:setoption name splitdepth value -1:go
 Debugger Shell=
 Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a)
 Dependency Action=Build

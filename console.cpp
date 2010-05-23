@@ -25,7 +25,7 @@
 #include "rootboard.h"
 #include "coloredboard.tcc"
 
-QMap<QString, void (Console::*)(QStringList)> dispatcher;
+unsigned int splitDepth = 5;
 
 Console::Console(QCoreApplication* parent):
 	QObject(parent),
@@ -134,15 +134,14 @@ void Console::isready(QStringList /*cmds*/) {
 }
 
 void Console::setoption(QStringList cmds) {
-	int v=cmds.indexOf("value");
-	QStringList value, name;
-	if (v > 0) {
-		value = cmds.mid(v+1);
-		name = cmds.mid(2, v-2);
-	} else {
-		name = cmds.mid(2);
+	const QHash<QString, QStringList> o = parse(cmds, QStringList() << "name" << "value");
+	QString name = o["name"].join(" ").toLower();
+	if (!name.isEmpty()) {
+		QString data = o["value"].join(" ").toLower();
+		if (name == "splitdepth") {
+			splitDepth = data.toInt();
+		}
 	}
-	option[name.join(" ")] = value.join(" ");
 }
 
 void Console::reg(QStringList /*cmds*/) {
@@ -171,6 +170,9 @@ void Console::position(QStringList cmds) {
 
 void Console::go(QStringList cmds) {
 	WorkThread::stopAll();
+	QHash<QString, QStringList> subCmds = parse(cmds, QStringList() << "searchmoves"
+	<< "ponder" << "wtime" << "btime" << "winc" << "binc" << "movestogo" << "depth"
+	<< "nodes" << "mate" << "movetime" << "infinite");
 	board->go(cmds);
 }
 
@@ -216,11 +218,13 @@ void Console::send(QString str) {
 
 QHash<QString, QStringList> Console::parse(QStringList cmds, QStringList tokens) {
 	QMap<int, QString> tokenPositions;
-	foreach(QString token, tokens) 
-		tokenPositions[cmds.indexOf(token)] = token;
-
+	foreach(QString token, tokens)
+		if (cmds.indexOf(token)>0)
+			tokenPositions[cmds.indexOf(token)] = token;
+	tokenPositions[9999] = "";
+	
 	QHash<QString, QStringList> tokenValues;
-	for(int i=0; i<tokenPositions.keys().count(); ++i) {
+	for(int i=0; i<tokenPositions.keys().count()-1; ++i) {
 		tokenValues[tokenPositions.values().at(i)] =
 			cmds.mid(tokenPositions.keys().at(i)+1, tokenPositions.keys().at(i+1)-tokenPositions.keys().at(i)-1);
 	}
