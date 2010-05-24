@@ -186,23 +186,29 @@ void Eval::initPS() {
 void Eval::initZobrist() {
 	srand(1);
 	for (int p = -nPieces; p <= (signed int)nPieces; p++)
-		for (unsigned int i = 0; i < nSquares; ++i)
-			if (p) {
-				uint64_t r;
-				do {
-					r = (uint64_t) rand()
-					^ (uint64_t) rand() << 8
-					^ (uint64_t) rand() << 16
-					^ (uint64_t) rand() << 24
-					^ (uint64_t) rand() << 32
-					^ (uint64_t) rand() << 40
-					^ (uint64_t) rand() << 48
-					^ (uint64_t) rand() << 56;
-				} while (popcount(r) >= 29 && popcount(r) <= 36);
+		for (unsigned int i = 0; i < nSquares; ++i) {
+			uint64_t r;
+			do {
+				r = (uint64_t) rand()
+				^ (uint64_t) rand() << 8
+				^ (uint64_t) rand() << 16
+				^ (uint64_t) rand() << 24
+				^ (uint64_t) rand() << 32
+				^ (uint64_t) rand() << 40
+				^ (uint64_t) rand() << 48
+				^ (uint64_t) rand() << 56;
+			} while (popcount(r) >= 29 && popcount(r) <= 36);
+			
+			if (p)
 				zobristPieceSquare[p+nPieces][i].key = r;
-			} else {
+			else
 				zobristPieceSquare[p+nPieces][i].key = 0;
-			}
+			
+			if (abs(p) == Pawn) 
+				zobristPieceSquare[p+nPieces][i].pawnKey = r & 0xffffffff;
+			else
+				zobristPieceSquare[p+nPieces][i].pawnKey = 0;
+		}
 }
 
 RawScore Eval::pieces(const PieceList&, int ) const {
