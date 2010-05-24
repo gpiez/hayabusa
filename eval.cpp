@@ -225,12 +225,47 @@ RawScore Eval::pieces(const PieceList&, int ) const {
     return value;
 }
 
-RawScore Eval::pawns(const BoardBase& ) const {
+RawScore Eval::pawns(const BoardBase& b) const {
 
     RawScore value = 0;
 
-//	uint64_t wp = b.pieceList[0].bitBoard<Pawn>();
-//	uint64_t bp = b.pieceList[1].bitBoard<Pawn>();
+	uint64_t wpawn = b.pieceList[0].bitBoard<Pawn>();
+	uint64_t bpawn = b.pieceList[1].bitBoard<Pawn>();
+
+	uint64_t wAbove = wpawn << 8 | wpawn << 16;
+	wAbove |= wAbove << 16 | wAbove << 32;
+	uint64_t wBelow = wpawn >> 8 | wpawn >> 16;
+	wBelow |= wBelow >> 16 | wBelow >> 32;
+
+	uint64_t bAbove = bpawn << 8 | bpawn << 16;
+	bAbove |= bAbove << 16 | bAbove << 32;
+	uint64_t bBelow = bpawn >> 8 | bpawn >> 16;
+	bBelow |= bBelow >> 16 | bBelow >> 32;
+
+	// squares above/below the most advanced pawns
+
+	uint64_t wAboveA = wAbove & ~(wBelow | wpawn);
+	uint64_t bBelowA = bBelow & ~(bAbove | bpawn);
+
+	// calculate squares which are or possibly are attacked by w and b pawns
+	// take only the most advanced attacker and the most backward defender into account
+
+	uint64_t wAttack = (wAbove >> 1 & ~0x8080808080808080LL) | (wAbove << 1 & ~0x101010101010101LL);
+	uint64_t bAttack = (bBelow >> 1 & ~0x8080808080808080LL) | (bBelow << 1 & ~0x101010101010101LL);
+	uint64_t wAttackA = (wAboveA >> 1 & ~0x8080808080808080LL) | (wAboveA << 1 & ~0x101010101010101LL);
+	uint64_t bAttackA = (bBelowA >> 1 & ~0x8080808080808080LL) | (bBelowA << 1 & ~0x101010101010101LL);
+	uint64_t wContested = wAttack & bAttackA;
+	uint64_t bContested = wAttackA & bAttack;
+
+	// backward pawns are pawns which are may be attacked, if the advance,
+	// but are not on a contested file (otherwise they would be defended)
+
+	wContested |= wContested << 8 | wContested >> 8;
+	wContested |= wContested << 24 | wContested >> 24;
+	bContested |= bContested << 8 | bContested >> 8;
+	bContested |= bContested << 24 | bContested >> 24;
+	uint64_t wBackward = wpawn & bAttack & ~wContested;
+	uint64_t bBackward = bpawn & wAttack & ~bContested;
 
     return value;
 }
