@@ -78,12 +78,12 @@ public:
 	template<int piece>
 	uint64_t getAll() const {
 		static_assert(piece >= Rook && piece <= King);
-		return *(uint64_t*)&pos[index[piece]] & posMask[count[piece]];
+		return *(uint64_t*)&pos[index[piece]];
 	}
 
 	uint64_t getAll(int piece) const {
 		ASSERT(piece >= Rook && piece <= King);
-		return *(uint64_t*)&pos[index[piece]] & posMask[count[piece]];
+		return *(uint64_t*)&pos[index[piece]];
 	}
 
 	uint8_t getKing() const {
