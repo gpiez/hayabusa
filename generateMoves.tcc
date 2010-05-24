@@ -111,7 +111,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 
 	if (a.s.N) {
 		nAttacks = a.s.N;
-		sources = pieceList[CI].getAll(Knight);
+		sources = pieceList[CI].getAll<Knight>();
 		unsigned int n = 0;
 		while (true) {
 			ASSERT(++n <= pieceList[CI][Knight]);
@@ -126,7 +126,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 
 	if (a.l.B) {
 		nAttacks = a.l.B;
-		sources = pieceList[CI].getAll(Bishop);
+		sources = pieceList[CI].getAll<Bishop>();
 		unsigned int n = 0;
 		while(true) {
 			ASSERT(++n <= pieceList[CI][Bishop]);
@@ -143,7 +143,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 
 	if (a.l.R) {
 		nAttacks = a.l.R;
-		sources = pieceList[CI].getAll(Rook);
+		sources = pieceList[CI].getAll<Rook>();
 		unsigned int n = 0;
 		while(true) {
 			ASSERT(++n <= pieceList[CI][Rook]);
@@ -160,7 +160,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
 
 	if (a.l.Q) {
 		nAttacks = a.l.Q;
-		sources = pieceList[CI].getAll(Queen);
+		sources = pieceList[CI].getAll<Queen>();
 		unsigned int n = 0;
 		while(true) {
 			ASSERT(++n <= pieceList[CI][Queen]);
