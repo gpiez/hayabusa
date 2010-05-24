@@ -54,7 +54,7 @@ union KeyScore {
 		};
 		Key				key;
 	};
-	__v8hi vector;
+	__v8hi vector ALIGN_XMM;
 };
 
 class PieceList;

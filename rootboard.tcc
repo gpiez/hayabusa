@@ -78,16 +78,20 @@ Move RootBoard::rootSearch() {
 template<Colors C, Phase P, typename A, typename B>
 bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
 	stats.node++;
-	if (P == leaf) {
+	KeyScore estimate ALIGN_XMM;
+	estimate.vector = prev.estimatedEval(m, *this);	//TODO in leaf phase use a estimate function which calculates only the score
+	if (P == leaf || P == vein) {									//TODO in the very fist leaf iteration, use tt?
 		A current(alpha);
-		current.max(prev.estimatedEval(m, *this));
+		current.max(estimate.score);
 		if (current >= beta) {
 			stats.leafcut++;
 			return false;
 		}
 	}
+	if (P != vein)										//TODO use the precalculated key in the board constructor
+		tt->prefetchSubTable(estimate.key + prev.cep.data8 + (C+1));
 	const ColoredBoard<C> b(prev, m, *this);
-	ASSERT(b.keyScore.score == prev.estimatedEval(m, *this));
+	ASSERT(b.keyScore.score == estimate.score);
 	
 	Key z = b.getZobrist();
 	TranspositionTable<TTEntry, transpositionTableAssoc>::SubTable* st;
@@ -97,7 +101,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	unsigned int ttDepth = 0;
 	A current(alpha);	// current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
 	bool alreadyVisited;
-	if (P == tree || P == trunk) {
+	if (P == tree || P == trunk || P == leaf) {
 		st = tt->getSubTable(z);
 		if (tt->retrieve(st, z, subentry, alreadyVisited)) {
 			if ( P == trunk)
@@ -128,7 +132,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 
 	Move list[256];
 	Move* end;
-	if (P == leaf && (b.template attacks<(C-Black)/2>(b.pieceList[(White-C)/2].getKing()) & attackMask) == 0) {
+	if ((P == leaf || P == vein) && (b.template attacks<(C-Black)/2>(b.pieceList[(White-C)/2].getKing()) & attackMask) == 0) {
 		stats.eval++;
 		current.max(eval(b));
 		end = b.generateCaptureMoves(list);
@@ -164,11 +168,13 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	}
 	for (Move* i = list; i<end && current < beta; ++i) {
 		// Stay in leaf search if it already is or change to it if the next depth would be 0
-		if (P == leaf || depth <= 1) {
+		if (P == leaf || P == vein)
+			search<(Colors)-C, vein>(b, *i, 0, (typename B::Base&)beta, current);
+		else if (depth <= 1) 
 			search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
 		// Stay in tree search or change from trunk to it if the next depth would
 		// be below the split depth
-		} else if (P == tree || (P == trunk && depth <= splitDepth)) {
+		else if (P == tree || (P == trunk && depth <= splitDepth)) {
 			search<(Colors)-C, tree>(b, *i, depth-1, (typename B::Base&)beta, current);
 		// Multi threaded search: After the first move try to find a free thread, otherwise do a normal
 		// search but stay in trunk. To avoid multithreading search at cut off nodes
@@ -186,7 +192,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	if (P == trunk) while(Job* job = WorkThread::getJob(z)) job->job();
 
 	current.join();
-	if (P == tree || P == trunk) {
+	if (P == tree || P == trunk || P == leaf) {
 		TTEntry stored;
 		stored.zero();
 		stored.depth |= depth;

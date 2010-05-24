@@ -54,7 +54,7 @@ public:
 	Move* generateCaptureMoves(Move* list) const;
 	Move* generateMoves(Move* list) const;
 	void doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootBoard&) const;
-	RawScore estimatedEval(const Move m, const RootBoard& rb) const;
+	__v8hi estimatedEval(const Move m, const RootBoard& rb) const;
 	Key getZobrist() const;
 	
 private:

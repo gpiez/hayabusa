@@ -66,7 +66,7 @@ enum SpecialMoves {
 	enableEP, EP
 };
 
-enum Phase { root, trunk, tree, leaf };
+enum Phase { root, trunk, tree, leaf, vein };
 
 extern unsigned int splitDepth;
 

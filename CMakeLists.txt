@@ -84,7 +84,7 @@ if(HUGE_PAGES)
 	TARGET_LINK_LIBRARIES(hayabusa hugetlbfs)
 	find_path(HUGETLBFS_LD_PATH ld.hugetlbfs PATH_SUFFIXES share/libhugetlbfs)
 	if(HUGE_BDT)
-	    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -B ${HUGETLBFS_LD_PATH} -Wl,--hugetlbfs-link=BDT")
+	    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -B ${HUGETLBFS_LD_PATH} -Wl,-hugetlbfs-align")
 	endif(HUGE_BDT)
 ENDIF(HUGE_PAGES)
 

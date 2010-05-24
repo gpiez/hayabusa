@@ -152,24 +152,19 @@ void ColoredBoard<C>::initTables() {
 }
 
 template<Colors C>
-RawScore ColoredBoard<C>::estimatedEval(const Move m, const RootBoard& rb) const {
+__v8hi ColoredBoard<C>::estimatedEval(const Move m, const RootBoard& rb) const {
 	int8_t piece = pieces[m.from];
-//	next->copyBoardClrPiece<C>(this, piece, m.from, rb);
-	RawScore estimate = keyScore.score - rb.getPS(piece, m.from);
-//	next->cep.enPassant = 0;
-//	next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from].data4 & castlingMask[m.to].data4;
-
-//	next->fiftyMoves = (m.capture!=0) | (piece==5) ? 0:fiftyMoves+1;
-//	ASSERT(C*m.capture < King);
+	__v8hi estimate;
+	estimate = keyScore.vector - rb.getKSVector(piece, m.from);
 
 	switch (m.special & 0xf) {
 	case 0:
 		break;
 	case shortCastling:
-		estimate +=  rb.getPS(C*Rook, pov^f1)-rb.getPS(C*Rook, pov^h1);
+		estimate +=  rb.getKSVector(C*Rook, pov^f1)-rb.getKSVector(C*Rook, pov^h1);
 		break;
 	case longCastling:
-		estimate +=  rb.getPS(C*Rook, pov^d1)-rb.getPS(C*Rook, pov^a1);
+		estimate +=  rb.getKSVector(C*Rook, pov^d1)-rb.getKSVector(C*Rook, pov^a1);
 		break;
 	case promoteQ:
 		piece = C*Queen;
@@ -184,13 +179,13 @@ RawScore ColoredBoard<C>::estimatedEval(const Move m, const RootBoard& rb) const
 		piece = C*Knight;
 		break;
 	case EP:
-		estimate -= rb.getPS(-C*Pawn, cep.enPassant);
+		estimate -= rb.getKSVector(-C*Pawn, cep.enPassant);
 		break;
 	}
 
 	if (m.capture)
-		estimate -= rb.getPS(m.capture, m.to);
-	estimate += rb.getPS(piece, m.to);
+		estimate -= rb.getKSVector(m.capture, m.to);
+	estimate += rb.getKSVector(piece, m.to);
 	return estimate;
 }
 #endif /* COLOREDBOARD_TCC_ */
