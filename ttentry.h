@@ -25,7 +25,10 @@
 
 #include <stdint.h>
 
+#include "constants.h"
+
 typedef uint64_t Key;
+typedef uint32_t PawnKey;
 
 template <unsigned int pos, unsigned int width, typename T>
 struct Bitfield {
@@ -79,6 +82,13 @@ union TTEntry {
 	uint64_t data;
 
 	void zero() { data = 0; };
+};
+
+union PawnEntry {
+	uint16_t upperKey;
+	enum { upperShift = 16 };
+	uint8_t passers[nColors];
+	uint8_t openFiles[nColors];
 };
 
 struct PerftEntry {
