@@ -109,8 +109,16 @@ uint64_t PieceList::indexDiffs[nPieces+1] = {
 	0x00010101010100	// k
 };
 
-const uint64_t PieceList::posMask[9] = { 0, 0xff, 0xffff, 0xffffff, 0xffffffff,
-	0xffffffffff, 0xffffffffffff, 0xffffffffffffff, 0xffffffffffffffff
+const uint64_t PieceList::posMask[9] = {
+	0xffffffffffffffff,
+	0x00ffffffffffffff,
+	0x0000ffffffffffff,
+	0x000000ffffffffff,
+	0x00000000ffffffff,
+	0x0000000000ffffff,
+	0x000000000000ffff,
+	0x00000000000000ff,
+	0x0000000000000000
 };
 
 Castling BoardBase::castlingMask[nSquares];
