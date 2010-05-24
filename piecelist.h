@@ -81,9 +81,10 @@ public:
 		return *(uint64_t*)&pos[index[piece]];
 	}
 
-	uint64_t getAll(int piece) const {
-		ASSERT(piece >= Rook && piece <= King);
-		return *(uint64_t*)&pos[index[piece]];
+	template<int piece>
+	uint64_t getAllMasked() const {
+		static_assert(piece >= Rook && piece <= King);
+		return *(uint64_t*)&pos[index[piece]] | posMask[count[piece]];
 	}
 
 	uint8_t getKing() const {
