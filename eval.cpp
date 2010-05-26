@@ -21,6 +21,9 @@
 
 #include "eval.h"
 #include "boardbase.h"
+#include "transpositiontable.tcc"
+
+static __thread PawnEntry pawnEntry;
 
 int squareControl[nSquares];
 //void sigmoid(Score* p, unsigned int n, double start, double end, double dcenter, double width) {
@@ -47,6 +50,7 @@ RawScore Eval::r_p[17];
 RawScore Eval::q_p[17];
 
 Eval::Eval() {
+	pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
     pawn = 100;
     knight = 325;			// + 16 Pawns * 3 = 342 == 3 7/16s
     bishop = 325;
@@ -227,6 +231,12 @@ RawScore Eval::pieces(const PieceList&, int ) const {
 
 RawScore Eval::pawns(const BoardBase& b) const {
 
+	PawnKey k=b.keyScore.pawnKey;
+	Sub<PawnEntry, 4>* st = pt->getSubTable(k);
+	if (pt->retrieve(st, k, pawnEntry)) {
+		return pawnEntry.score;
+	}
+
     RawScore value = 0;
 
 	uint64_t wpawn = b.pieceList[0].bitBoard<Pawn>();
@@ -267,6 +277,8 @@ RawScore Eval::pawns(const BoardBase& b) const {
 	uint64_t wBackward = wpawn & bAttack & ~wContested;
 	uint64_t bBackward = bpawn & wAttack & ~bContested;
 
+	pawnEntry.score = value;
+	pt->store(st, pawnEntry);
     return value;
 }
 
@@ -408,13 +420,13 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
 
 	uint64_t rook0 = (uint8_t)rooks;	// 0xff if no rook
 	uint64_t rook0bits = mobBits[0][b.attLen[0][rook0].uint8()] | mobBits[2][b.attLen[0][rook0|0x80].uint8()];
-	rook0bits = (rook0bits << (uint8_t)rook0) | (rook0bits >> 64-(uint8_t)rook0);
+	rook0bits = (rook0bits << (uint8_t)rook0) | (rook0bits >> (64-(uint8_t)rook0));
 	rookbits = _mm_insert_epi64(rookbits, rook0bits, 0);
 	occupied = bits[rook0];
 	
 	uint64_t rook1 = (uint8_t)(rooks >> 8);		// attLen[0][0xff] is always 0.0
 	uint64_t rook1bits = mobBits[0][b.attLen[0][rook1].uint8()] | mobBits[2][b.attLen[0][rook1|0x80].uint8()];
-	rook1bits = (rook1bits << (uint8_t)rook1) | (rook1bits >> 64-(uint8_t)rook1);
+	rook1bits = (rook1bits << (uint8_t)rook1) | (rook1bits >> (64-(uint8_t)rook1));
 	rookbits = _mm_insert_epi64(rookbits, rook1bits, 1);
 //	rookbits = (__v2di) { rook0bits, rook1bits };
 	occupied |= bits[rook1];
@@ -423,13 +435,13 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
 	
 	uint64_t bishop0 = (uint8_t)bishops;	// 0xff if no bishop
 	uint64_t bishop0bits = mobBits[1][b.attLen[0][bishop0|0x40].uint8()] | mobBits[3][b.attLen[0][bishop0|0xC0].uint8()];
-	bishop0bits = (bishop0bits << (uint8_t)bishop0) | (bishop0bits >> 64-(uint8_t)bishop0);
+	bishop0bits = (bishop0bits << (uint8_t)bishop0) | (bishop0bits >> (64-(uint8_t)bishop0));
 	bishopbits = _mm_insert_epi64(bishopbits, bishop0bits, 0);
 	occupied |= bits[bishop0];
 
 	uint64_t bishop1 = (uint8_t)(bishops >> 8);		// attLen[0][0xff] is always 0.0
 	uint64_t bishop1bits = mobBits[1][b.attLen[0][bishop1|0x40].uint8()] | mobBits[3][b.attLen[0][bishop1|0xC0].uint8()];
-	bishop1bits = (bishop1bits << (uint8_t)bishop1) | (bishop1bits >> 64-(uint8_t)bishop1);
+	bishop1bits = (bishop1bits << (uint8_t)bishop1) | (bishop1bits >> (64-(uint8_t)bishop1));
 	bishopbits =_mm_insert_epi64(bishopbits, bishop1bits, 1);
 	occupied |= bits[bishop1];
 
@@ -465,7 +477,7 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
 	uint8_t queen0 = b.pieceList[C==Black].getAllMasked<Queen>();
 	queen0bits = mobBits[0][b.attLen[0][queen0].uint8()] | mobBits[2][b.attLen[0][queen0|0x80].uint8()]
 		| mobBits[1][b.attLen[0][queen0|0x40].uint8()] | mobBits[3][b.attLen[0][queen0|0xC0].uint8()];
-	queen0bits = (queen0bits << queen0) | (queen0bits >> 64-queen0);
+	queen0bits = (queen0bits << queen0) | (queen0bits >> (64-queen0));
 	occupied |= bits[queen0];
 }
 

@@ -30,15 +30,18 @@
 template<Colors C> class ColoredBoard;
 class RootBoard;
 
+template<typename Entry, unsigned int assoc>
+struct Sub {
+		Entry entries[assoc];
+};
+
 /* Hashtable for storing diagrams which are visited twice and for move ordering
  * The assoc parameter gives the number of different keys stored at the same
  * adress
  */
-template<typename Entry, unsigned assoc>
-class TranspositionTable {
-	struct SubTable {
-		Entry entries[assoc];
-	};
+template<typename Entry, unsigned assoc, typename Key>
+class Table {
+	typedef Sub<Entry, assoc> SubTable;
 	SubTable* table;		// TODO remove indirection level
 	uint64_t mask;
 	QReadWriteLock lock[nTTLocks];
@@ -49,8 +52,8 @@ class TranspositionTable {
 
 public:
 
-	TranspositionTable();
-	~TranspositionTable();
+	Table(uint64_t size = 0x1000000);
+	~Table();
 
 	void setSize(size_t s);
 	Key nextKey(Key k, Move m);
@@ -65,8 +68,8 @@ public:
 		_mm_prefetch(&table[k & mask], _MM_HINT_T0);
 	}
 
-	bool retrieve(SubTable* subTable, Key k, Entry& ret, QReadWriteLock* );
 	bool retrieve(const SubTable* subTable, Key k, Entry& ret, bool&) const ;
+	bool retrieve(const SubTable* subTable, Key k, Entry& ret) const ;
 	void store(SubTable* subTable, Entry entry);
 	void unmark(SubTable* subTable) {
 		subTable->entries[0].visited.reset();
@@ -79,5 +82,13 @@ public:
 	template<Colors C> QString bestLineNext(const ColoredBoard<(Colors)-C>&, Move, const RootBoard&, QSet<Key>&);
 };
 
+template<typename Entry, unsigned assoc, typename Key>
+class TranspositionTable: public Table<Entry, assoc, Key> {};
+
+template<unsigned assoc, typename Key>
+class TranspositionTable<PawnEntry, assoc, Key>: public Table<PawnEntry, assoc, Key> {
+public:
+	void store(Sub<PawnEntry, assoc>* subTable, PawnEntry entry);
+};
 
 #endif /* TRANSPOSITIONTABLE_H_ */

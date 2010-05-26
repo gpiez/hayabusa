@@ -35,7 +35,7 @@ RootBoard::RootBoard(Console *c):
 	movesToDo(40),
 	console(c)
 {
-	tt = new TranspositionTable<TTEntry, transpositionTableAssoc>;
+	tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
 	#ifdef QT_GUI_LIB
 	statWidget = new StatWidget(*this);
 	statWidget->show();

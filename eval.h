@@ -26,6 +26,7 @@
 #include "constants.h"
 #include "score.h"
 #include "ttentry.h"
+#include "transpositiontable.h"
 /*
  * A square attacked by a piece is higher evaluated if it inhibits moves from
  * enemy pieces to this square. For this to happen it must be either less
@@ -90,6 +91,8 @@ class Eval {
 	static RawScore r_p[17];
 	static RawScore q_p[17];
 
+	TranspositionTable<PawnEntry, 4, PawnKey>* pt;
+	
 	RawScore controls[nSquares];
     RawScore inline mobilityValue(uint64_t arg1, uint64_t arg2, __v2di arg3, __v2di arg4, __v2di arg5, __v2di arg6, __v2di arg7, __v2di arg8, uint64_t arg9) const;
 	template<Colors C> void inline mobilityBits(const BoardBase &b, uint64_t &occupied,

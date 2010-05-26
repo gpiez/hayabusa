@@ -103,7 +103,7 @@ class RootPerftJob: public signalJob {
 public:
 	RootPerftJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
 	void job() {
-		rb.pt = new TranspositionTable<PerftEntry, 1>;
+		rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
 		connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
 		uint64_t n=rb.rootPerft<C>(depth);
 		emit(result(QString::number(n)));
@@ -119,7 +119,7 @@ class RootDivideJob: public signalJob {
 public:
 	RootDivideJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
 	void job() {
-		rb.pt = new TranspositionTable<PerftEntry, 1>;
+		rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
 		connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
 		uint64_t n=rb.rootDivide<C>(depth);
 		emit(result(QString("%1").arg(n)));

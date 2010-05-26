@@ -33,22 +33,22 @@ extern "C" {
 }
 #endif
 
-template<typename Entry, unsigned int assoc>
-TranspositionTable<Entry, assoc>::TranspositionTable() :
+template<typename Entry, unsigned int assoc, typename Key>
+Table<Entry, assoc, Key>::Table(uint64_t size) :
 	table(NULL),
 	size(0),
 	usesHugePages(false)
 {
-	setSize(0x10000000);
+	setSize(size);
 }
 
-template<typename Entry, unsigned int assoc>
-TranspositionTable<Entry, assoc>::~TranspositionTable() {
+template<typename Entry, unsigned int assoc, typename Key>
+Table<Entry, assoc, Key>::~Table() {
 	freeMemory();
 }
 
-template<typename Entry, unsigned int assoc>
-void TranspositionTable<Entry, assoc>::freeMemory() {
+template<typename Entry, unsigned int assoc, typename Key>
+void Table<Entry, assoc, Key>::freeMemory() {
 	if (table) {
 #ifdef HAVE_HUGE_PAGES
 		if (usesHugePages)
@@ -61,8 +61,8 @@ void TranspositionTable<Entry, assoc>::freeMemory() {
 }
 
 // this is only called from tree
-template<typename Entry, unsigned int assoc>
-bool TranspositionTable<Entry, assoc>::retrieve(const SubTable* subTable, Key k, Entry &ret, bool &visited) const {
+template<typename Entry, unsigned int assoc, typename Key>
+bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry &ret, bool &visited) const {
 	visited = subTable->entries[0].visited;
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
 	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
@@ -82,10 +82,9 @@ bool TranspositionTable<Entry, assoc>::retrieve(const SubTable* subTable, Key k,
 	return false;
 }
 
-template<typename Entry, unsigned int assoc>
-bool TranspositionTable<Entry, assoc>::retrieve(SubTable* subTable, Key k, Entry& ret, QReadWriteLock* ) {
+template<typename Entry, unsigned int assoc, typename Key>
+bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& ret ) const {
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
-//	QReadLocker locker(l);
 	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
 		if (subTable->entries[i].upperKey == upperKey) {		//only lock if a possible match is found
 				//TODO rotate to first position
@@ -97,9 +96,8 @@ bool TranspositionTable<Entry, assoc>::retrieve(SubTable* subTable, Key k, Entry
 }
 
 #pragma GCC diagnostic ignored "-Wtype-limits"
-template<typename Entry, unsigned int assoc>
-void TranspositionTable<Entry, assoc>::store(SubTable* subTable, Entry entry) {
-//	QWriteLocker locker(l);
+template<typename Entry, unsigned int assoc, typename Key>
+void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
 	stats.ttstore++;
 	// look if the position is already stored. if it is, but the new depth
 	// isn't sufficient, don't write anything.
@@ -127,8 +125,16 @@ void TranspositionTable<Entry, assoc>::store(SubTable* subTable, Entry entry) {
 	subTable->entries[i] = entry;
 }
 
-template<typename Entry, unsigned int assoc>
-void TranspositionTable<Entry, assoc>::setSize(size_t s)
+template<unsigned int assoc, typename Key>
+void TranspositionTable<PawnEntry, assoc, Key>::store(Sub<PawnEntry, assoc>* subTable, PawnEntry entry) {
+	stats.ttstore++;
+	if (subTable->entries[assoc-1].upperKey == 0)
+		stats.ttuse++;
+	subTable->entries[assoc-1] = entry;
+}
+
+template<typename Entry, unsigned int assoc, typename Key>
+void Table<Entry, assoc, Key>::setSize(size_t s)
 {
 	freeMemory();
 	
@@ -162,20 +168,19 @@ void TranspositionTable<Entry, assoc>::setSize(size_t s)
 	mask = nEntries-1;
 }
 
-template<typename Entry, unsigned assoc>
+template<typename Entry, unsigned assoc, typename Key>
 template<Colors C>
-QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard& rb, QSet<Key>& visited) {
+QString Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard& rb, QSet<Key>& visited) {
 	QString line = m.string();
 	const ColoredBoard<C> b(prev, m, rb);
 	Key key = b.getZobrist();
 	if (visited.contains(key)) return "";
 	visited << key;
-	QReadWriteLock* l;
-	SubTable* te = getSubTable(key, l);
+	SubTable* te = getSubTable(key);
 	TTEntry subentry;
 
 	Move ttMove = {{0}};
-	if (retrieve(te, key, subentry, l) ) {
+	if (retrieve(te, key, subentry) ) {
 		ttMove.from = subentry.from;
 		ttMove.to = subentry.to;
 	}
@@ -193,8 +198,8 @@ QString TranspositionTable<Entry, assoc>::bestLineNext(const ColoredBoard<(Color
 	return line;
 }
 
-template<typename Entry, unsigned assoc>
-QString TranspositionTable<Entry, assoc>::bestLine(const RootBoard& b) {
+template<typename Entry, unsigned assoc, typename Key>
+QString Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
 	if (!(uint32_t&)b.bestMove) return QString();
 	QSet<Key> visited;
 	if (b.color == White) {

@@ -85,10 +85,12 @@ union TTEntry {
 };
 
 union PawnEntry {
+	uint64_t w, b;
 	uint16_t upperKey;
 	enum { upperShift = 16 };
 	uint8_t passers[nColors];
 	uint8_t openFiles[nColors];
+	int16_t score;
 };
 
 struct PerftEntry {

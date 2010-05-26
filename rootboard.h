@@ -33,7 +33,7 @@
 
 class WorkThread;
 class Console;
-template<class T, unsigned int U> class TranspositionTable;
+template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
 
 /* Board representing a position with history, color to move, castling and en
@@ -61,8 +61,8 @@ class RootBoard: public Eval {
 	
 public:
 	unsigned int depth;
-	TranspositionTable<TTEntry, transpositionTableAssoc>* tt;
-	TranspositionTable<PerftEntry, 1>* pt;
+	TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt;
+	TranspositionTable<PerftEntry, 1, Key>* pt;
 	Console* console;
 	Colors color;
 	Move bestMove;

@@ -94,7 +94,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	ASSERT(b.keyScore.score == estimate.score);
 	
 	Key z = b.getZobrist();
-	TranspositionTable<TTEntry, transpositionTableAssoc>::SubTable* st;
+	TranspositionTable<TTEntry, transpositionTableAssoc, Key>::SubTable* st;
 	TTEntry subentry;
 
 	Move ttMove = {{0}};
@@ -262,7 +262,6 @@ void inline setNotReady(Result<uint64_t>& r) {
 	r.setNotReady();
 }
 
-
 template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth) {
 	if (P == trunk && depth <= splitDepth) {
 		uint64_t n=0;
@@ -274,11 +273,10 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 	const ColoredBoard<C> b(prev, m, *this);
 
 	Key z = b.getZobrist();
-	QReadWriteLock* l;
-	TranspositionTable<PerftEntry,1>::SubTable* pe = pt->getSubTable(z, l);
+	TranspositionTable<PerftEntry, 1, Key>::SubTable* pe = pt->getSubTable(z);
 	PerftEntry subentry;
 
-	if (pt->retrieve(pe, z, subentry, l) && subentry.depth == depth) {
+	if (pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
 		update(result, subentry.value);
 		return;
 	}
