@@ -327,19 +327,22 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		//if a promoting pawn is pinned it must not move - except if it is capturing in the opposite direction of the pin.
 		if (isPromoRank(from)) {
 			to = from + C * 9;
-			cap = pieces[to];
-			if ((C*cap < 0) & ((from&7) != 7*EI) && (!isValid(pin) | (pin == 1))) {
-				*list++ = (Move) {{from, to, cap, promoteN}};
-				*list++ = (Move) {{from, to, cap, promoteR}};
-				*list++ = (Move) {{from, to, cap, promoteB}};
+			if (((from&7) != 7*EI) & (!isValid(pin) | (pin == 1))) {
+				cap = pieces[to];
+				if (C*cap < 0) {
+					*list++ = (Move) {{from, to, cap, promoteN}};
+					*list++ = (Move) {{from, to, cap, promoteR}};
+					*list++ = (Move) {{from, to, cap, promoteB}};
+				}
 			}
-
 			to = from + C * 7;
-			cap = pieces[to];
-			if ((C*cap < 0) & ((from&7) != 7*CI) && (!isValid(pin) | (pin == 3))) {
-				*list++ = (Move) {{from, to, cap, promoteN}};
-				*list++ = (Move) {{from, to, cap, promoteR}};
-				*list++ = (Move) {{from, to, cap, promoteB}};
+			if (((from&7) != 7*CI) & (!isValid(pin) | (pin == 3))) {
+				cap = pieces[to];
+				if (C*cap < 0) {
+					*list++ = (Move) {{from, to, cap, promoteN}};
+					*list++ = (Move) {{from, to, cap, promoteR}};
+					*list++ = (Move) {{from, to, cap, promoteB}};
+				}
 			}
 
 			to = from + C * 8;
