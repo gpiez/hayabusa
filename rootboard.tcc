@@ -82,7 +82,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	estimate.vector = prev.estimatedEval(m, *this);	//TODO in leaf phase use a estimate function which calculates only the score
 	if (P == leaf || P == vein) {									//TODO in the very fist leaf iteration, use tt?
 		A current(alpha);
-		current.max(estimate.score);
+		current.max(estimate.score-Score<C>(125));
 		if (current >= beta) {
 			stats.leafcut++;
 			return false;

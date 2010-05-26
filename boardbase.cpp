@@ -111,13 +111,13 @@ uint64_t PieceList::indexDiffs[nPieces+1] = {
 
 const uint64_t PieceList::posMask[9] = {
 	0xffffffffffffffff,
-	0x00ffffffffffffff,
-	0x0000ffffffffffff,
-	0x000000ffffffffff,
-	0x00000000ffffffff,
-	0x0000000000ffffff,
-	0x000000000000ffff,
-	0x00000000000000ff,
+	0xffffffffffffff00,
+	0xffffffffffff0000,
+	0xffffffffff000000,
+	0xffffffff00000000,
+	0xffffff0000000000,
+	0xffff000000000000,
+	0xff00000000000000,
 	0x0000000000000000
 };
 

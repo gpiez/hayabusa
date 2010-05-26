@@ -48,13 +48,32 @@ void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 
 
 union KeyScore {
 	struct {
-		union {
-			RawScore	score;
-			Key			pawnKey;
-		};
-		Key				key;
+		RawScore	score;
+		RawScore	endgame;
+		PawnKey		pawnKey;
+		Key			key;
 	};
-	__v8hi vector ALIGN_XMM;
+	__v8hi vector;
+};
+
+union Parameters {
+	struct {
+		struct {
+			float center;
+			float slopex;
+			float curvx;
+			float slopey;
+			float curvy;
+			float mobility;
+			float mobilityCurv;
+		} pp[nPieces];
+		float rookOpen;
+		float rookBehindPasser;
+		float rookHalfOpen;
+		float rookAttackP;
+		float rookAttackK;
+	};
+	float data[];
 };
 
 class PieceList;
@@ -72,6 +91,10 @@ class Eval {
 	static RawScore q_p[17];
 
 	RawScore controls[nSquares];
+    RawScore inline mobilityValue(uint64_t arg1, uint64_t arg2, __v2di arg3, __v2di arg4, __v2di arg5, __v2di arg6, __v2di arg7, __v2di arg8, uint64_t arg9) const;
+	template<Colors C> void inline mobilityBits(const BoardBase &b, uint64_t &occupied,
+						__v2di &rookbits, __v2di &bishopbits, __v2di &knightbits,
+						uint64_t &queen0bits, uint64_t &pawnbits) const;
 
 protected:
 
@@ -82,6 +105,9 @@ protected:
 	unsigned int attackHash( unsigned int  pos );
 	int squareControl();
 
+	RawScore mobility(const BoardBase&) const;
+	RawScore defense(const BoardBase&) const;
+	RawScore attack(const BoardBase&) const;
 	RawScore pieces(const PieceList&, int) const;
 	RawScore pawns(const BoardBase&) const;
 	RawScore eval(const BoardBase&) const;	///TODO should be template<C>
