@@ -87,11 +87,34 @@ bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& 
 	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
 	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
 		if (subTable->entries[i].upperKey == upperKey) {		//only lock if a possible match is found
-				//TODO rotate to first position
 			ret = subTable->entries[i];
 			return true;
 		}
 	}
+	return false;
+}
+
+template<unsigned int assoc, typename Key>
+bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* subTable, Key k, PawnEntry& ret ) {
+	Key upperKey = k >> PawnEntry::upperShift; //((Entry*) &k)->upperKey;
+	unsigned int i=0;
+	PawnEntry first = subTable->entries[i];
+	PawnEntry second;
+	bool possibleUse = subTable->entries[assoc-1].upperKey == 0;
+	do {		//TODO compare all keys simultaniously suing sse
+		if (first.upperKey == upperKey) {
+			subTable->entries[0] = first;
+			ret = first;
+			return true;
+		}
+		++i;
+		if (i == assoc) break;
+		second = subTable->entries[i];
+		subTable->entries[i] = first;
+		first = second;
+	} while (true);
+
+	stats.ptuse += possibleUse;
 	return false;
 }
 
@@ -127,10 +150,7 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
 
 template<unsigned int assoc, typename Key>
 void TranspositionTable<PawnEntry, assoc, Key>::store(Sub<PawnEntry, assoc>* subTable, PawnEntry entry) {
-	stats.ttstore++;
-	if (subTable->entries[assoc-1].upperKey == 0)
-		stats.ttuse++;
-	subTable->entries[assoc-1] = entry;
+	subTable->entries[0] = entry;
 }
 
 template<typename Entry, unsigned int assoc, typename Key>
@@ -140,18 +160,19 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 	
 	s = qMin(s, (size_t) sysconf(_SC_PAGESIZE) * (size_t) sysconf(_SC_PHYS_PAGES));
 
-	s |= s >> 1;
-	s |= s >> 2;
-	s |= s >> 4;
-	s |= s >> 8;
-	s |= s >> 16;
-	s |= s >> 32;
-	s++;
-	s >>= 1;
-	size = s;
+	nEntries = s/sizeof(SubTable);
+
+	nEntries |= nEntries >> 1;
+	nEntries |= nEntries >> 2;
+	nEntries |= nEntries >> 4;
+	nEntries |= nEntries >> 8;
+	nEntries |= nEntries >> 16;
+	nEntries |= nEntries >> 32;
+	nEntries++;
+	nEntries >>= 1;
+	size = nEntries*sizeof(SubTable);
 	
 	while (!table) {
-		nEntries = size/sizeof(SubTable);
 #		ifdef HAVE_HUGE_PAGES
 			table = (SubTable *) get_huge_pages(s, GHP_DEFAULT);
 			usesHugePages = true;
@@ -163,6 +184,7 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 		if (table) break;
 		qWarning() << "Could not allocate" << size << "bytes";
 		size >>= 1;
+		nEntries >>= 1;
 	}
 	memset(table, 0, size);	// not strictly neccessary, but allocating pages
 	mask = nEntries-1;
