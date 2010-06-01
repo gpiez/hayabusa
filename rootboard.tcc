@@ -175,6 +175,12 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		// Stay in tree search or change from trunk to it if the next depth would
 		// be below the split depth
 		else if (P == tree || (P == trunk && depth <= splitDepth)) {
+/*			B null(current + Score<C>(1));
+			if (depth <= 4)
+			search<C, leaf>((const ColoredBoard<(Colors)-C>)b, *i, 0, current, null);
+			else
+			search<C, tree>((const ColoredBoard<(Colors)-C>)b, *i, depth-4, current, null);
+			if (null.v != current.v)*/
 			search<(Colors)-C, tree>(b, *i, depth-1, (typename B::Base&)beta, current);
 		// Multi threaded search: After the first move try to find a free thread, otherwise do a normal
 		// search but stay in trunk. To avoid multithreading search at cut off nodes

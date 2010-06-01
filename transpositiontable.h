@@ -89,6 +89,7 @@ template<unsigned assoc, typename Key>
 class TranspositionTable<PawnEntry, assoc, Key>: public Table<PawnEntry, assoc, Key> {
 public:
 	void store(Sub<PawnEntry, assoc>* subTable, PawnEntry entry);
+	bool retrieve(Sub<PawnEntry, assoc>* subTable, Key k, PawnEntry& entry);
 };
 
 #endif /* TRANSPOSITIONTABLE_H_ */

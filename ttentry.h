@@ -84,7 +84,7 @@ union TTEntry {
 	void zero() { data = 0; };
 };
 
-union PawnEntry {
+struct PawnEntry {
 	uint64_t w, b;
 	uint16_t upperKey;
 	enum { upperShift = 16 };

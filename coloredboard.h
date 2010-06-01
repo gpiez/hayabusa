@@ -50,6 +50,9 @@ class ColoredBoard: public BoardBase {
 public:
 	ColoredBoard() {};
 	ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard&);
+	operator const ColoredBoard<(Colors)-C>& () const {
+		return *(ColoredBoard<(Colors)-C>*)(void*)this;
+	}
 	static void initTables();
 	Move* generateCaptureMoves(Move* list) const;
 	Move* generateMoves(Move* list) const;

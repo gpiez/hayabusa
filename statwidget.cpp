@@ -92,5 +92,8 @@ void StatWidget::update()
 	DISPLAYNUM(ttinsufficient)
 	DISPLAYNUM(ttstore)
 	DISPLAYNUM(leafcut);
+	DISPLAYNUM(pthit);
+	DISPLAYNUM(ptmiss);
+	DISPLAYNUM(ptuse);
 }
 #endif // QT_GUI_LIB

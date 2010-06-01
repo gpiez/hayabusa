@@ -17,6 +17,15 @@
 
 */
 #include <pch.h>
+#ifndef __SSE4_1__
+#define __SSE4_1__
+#endif
+#ifndef __SSSE3__
+#define __SSSE3__
+#endif
+#ifndef __SSE3__
+#define __SSE3__
+#endif
 #include <smmintrin.h>
 
 #include "eval.h"
@@ -51,6 +60,7 @@ RawScore Eval::q_p[17];
 
 Eval::Eval() {
 	pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
+//	pt->setSize(0x100000000);
     pawn = 100;
     knight = 325;			// + 16 Pawns * 3 = 342 == 3 7/16s
     bishop = 325;
@@ -234,9 +244,11 @@ RawScore Eval::pawns(const BoardBase& b) const {
 	PawnKey k=b.keyScore.pawnKey;
 	Sub<PawnEntry, 4>* st = pt->getSubTable(k);
 	if (pt->retrieve(st, k, pawnEntry)) {
+		stats.pthit++;
 		return pawnEntry.score;
 	}
 
+	stats.ptmiss++;
     RawScore value = 0;
 
 	uint64_t wpawn = b.pieceList[0].bitBoard<Pawn>();
@@ -277,6 +289,9 @@ RawScore Eval::pawns(const BoardBase& b) const {
 	uint64_t wBackward = wpawn & bAttack & ~wContested;
 	uint64_t bBackward = bpawn & wAttack & ~bContested;
 
+	pawnEntry.upperKey = k >> PawnEntry::upperShift;
+	pawnEntry.w = wpawn;
+	pawnEntry.b = bpawn;
 	pawnEntry.score = value;
 	pt->store(st, pawnEntry);
     return value;
@@ -318,7 +333,7 @@ RawScore Eval::eval(const BoardBase& b) const {
 	if (value != b.keyScore.score) asm("int3");
 
 #endif
-	return b.keyScore.score + mobility(b);
+	return b.keyScore.score + mobility(b) + pawns(b);
 }
 
 static const uint64_t mobBits[nDirs/2][64] = {{
@@ -519,6 +534,50 @@ static const __v16qi kmobtab = { 0, 3, 7, 12, 17, 19, 20, 20, 20, 20, 20, 20, 20
 static const __v16qi rmobtab = { 0, 1, 2, 6, 10, 13, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15 };
 static const RawScore qmobtab[28] = { 0, 0, 1, 1, 2, 3, 5, 7, 8, 8, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
 
+void printBit(uint64_t bits) {
+	QTextStream cout(stdout);
+	for (int y=8; y; ) {
+		--y;
+		for (int x=0; x<8; ++x) {
+			if ((bits >> (x+y*8)) & 1)
+				cout << "X";
+			else
+				cout << ".";
+		}
+		cout << endl;
+	}
+	cout << endl;
+}
+
+template<unsigned int I>
+uint64_t extract(const __v2di &v) {
+	return _mm_extract_epi64(v, I);
+}
+
+void printBit(__v2di bits) {
+	QTextStream cout(stdout);
+	for (int y=8; y; ) {
+		--y;
+		for (int x=0; x<8; ++x) {
+			if ((extract<0>(bits) >> (x+y*8)) & 1)
+				cout << "X";
+			else
+				cout << ".";
+		}
+		cout << " ";
+		for (int x=0; x<8; ++x) {
+			if ((extract<1>(bits) >> (x+y*8)) & 1)
+				cout << "X";
+			else
+				cout << ".";
+		}
+		cout << endl;
+		
+	}
+	cout << endl;
+}
+
+
 RawScore Eval::mobilityValue( uint64_t occupied, uint64_t pawnbits, __v2di bishopbits, __v2di knightbits, __v2di rookbits,
 							  __v2di bishopbitsw, __v2di knightbitsw, __v2di rookbitsw, uint64_t queen0bitsw) const {
 
@@ -526,6 +585,12 @@ RawScore Eval::mobilityValue( uint64_t occupied, uint64_t pawnbits, __v2di bisho
 	__v2di mob = pop2count(bishopbitsw & restricted);
 	RawScore score = look2up(mob, bmobtab);
 
+	QTextStream cout(stdout);
+	cout << "restricted" << endl; printBit(restricted);
+	cout << "mobb" << endl; printBit(bishopbitsw & restricted);
+	cout << "mobbcount" << endl; printBit(mob);
+	cout << score << endl;
+	
 	mob = pop2count(knightbitsw & restricted);
 	score += look2up(mob, kmobtab);
 
