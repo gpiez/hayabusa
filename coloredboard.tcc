@@ -28,61 +28,60 @@
  */
 template<Colors C>
 ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard& rb) {
-	prev.doMove(this, m, rb);
+    prev.doMove(this, m, rb);
 }
 
 template<Colors C>
 void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootBoard& rb) const {
-	copyPieces(next);
-	uint8_t piece = C*pieces[m.from];
-	next->copyBoardClrPiece<C>(this, piece, m.from, rb);
-	next->cep.enPassant = 0;
-	next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from].data4 & castlingMask[m.to].data4;
-	
-	next->fiftyMoves = (m.capture!=0) | (piece==5) ? 0:fiftyMoves+1;
-	ASSERT(C*m.capture < King);
-	
-	switch (m.special & 0xf) {
-	case 0:
-		break;
-	case shortCastling:
-		next->clrPiece<C>(Rook, pov^h1, rb);
-		next->setPiece<C>(Rook, pov^f1, rb);
-		break;
-	case longCastling:
-		next->clrPiece<C>(Rook, pov^a1, rb);
-		next->setPiece<C>(Rook, pov^d1, rb);
-		break;
-	case promoteQ:
-		piece = Queen;
-		break;
-	case promoteR:
-		piece = Rook;
-		break;
-	case promoteB:
-		piece = Bishop;
-		break;
-	case promoteN:
-		piece = Knight;
-		break;
-	case enableEP:
-		next->cep.enPassant = m.to;
-		break;
-	case EP:
-		next->clrPiece<(Colors)-C>(Pawn, cep.enPassant, rb);
-		break;
-	}
+    uint8_t piece = C*pieces[m.from];
+    next->copyBoardClrPiece<C>(this, piece, m.from, rb);
+    next->cep.enPassant = 0;
+    next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from].data4 & castlingMask[m.to].data4;
+    
+    next->fiftyMoves = (m.capture!=0) | (piece==5) ? 0:fiftyMoves+1;
+    ASSERT(C*m.capture < King);
+    
+    switch (m.special & 0xf) {
+    case 0:
+        break;
+    case shortCastling:
+        next->clrPiece<C>(Rook, pov^h1, rb);
+        next->setPiece<C>(Rook, pov^f1, rb);
+        break;
+    case longCastling:
+        next->clrPiece<C>(Rook, pov^a1, rb);
+        next->setPiece<C>(Rook, pov^d1, rb);
+        break;
+    case promoteQ:
+        piece = Queen;
+        break;
+    case promoteR:
+        piece = Rook;
+        break;
+    case promoteB:
+        piece = Bishop;
+        break;
+    case promoteN:
+        piece = Knight;
+        break;
+    case enableEP:
+        next->cep.enPassant = m.to;
+        break;
+    case EP:
+        next->clrPiece<(Colors)-C>(Pawn, cep.enPassant, rb);
+        break;
+    }
 
-	if (m.capture)
-//		next->clrPiece<(Colors)-C>(-C*m.capture, m.to, rb);
-		next->chgPiece<C>(-C*m.capture, piece, m.to, rb);
-	else
-		next->setPiece<C>(piece, m.to, rb);
+    if (m.capture)
+//        next->clrPiece<(Colors)-C>(-C*m.capture, m.to, rb);
+        next->chgPiece<C>(-C*m.capture, piece, m.to, rb);
+    else
+        next->setPiece<C>(piece, m.to, rb);
 }
 
 template<Colors C>
 Key ColoredBoard<C>::getZobrist() const {
-	return keyScore.key + cep.data8 + (C+1);
+    return keyScore.key + cep.data8 + (C+1);
 }
 
 //attacked by (opposite colored) piece.
@@ -90,44 +89,44 @@ Key ColoredBoard<C>::getZobrist() const {
 template<Colors C>
 template<int P>
 bool ColoredBoard<C>::attackedBy(uint8_t pos) {
-	switch(C*P) {
-	case King: 	// if color == Black, attackedBy<-King> = w
-		return shortAttack[0][pos] & attackMaskK;
-		break;
-	case Pawn:
-		return shortAttack[0][pos] & attackMaskP;
-		break;
-	case Knight:
-		return shortAttack[0][pos] & attackMaskN;
-		break;
-	case -King: 	// if color == Black, attackedBy<-King> = w
-		return shortAttack[1][pos] & attackMaskK;
-		break;
-	case -Pawn:
-		return shortAttack[1][pos] & attackMaskP;
-		break;
-	case -Knight:
-		return shortAttack[1][pos] & attackMaskN;
-		break;
-	case Queen:
-		return longAttack[0][pos] & attackMaskQ;
-		break;
-	case Bishop:
-		return longAttack[0][pos] & attackMaskB;
-		break;
-	case Rook:
-		return longAttack[0][pos] & attackMaskR;
-		break;
-	case -Queen:
-		return longAttack[1][pos] & attackMaskQ;
-		break;
-	case -Bishop:
-		return longAttack[1][pos] & attackMaskB;
-		break;
-	case -Rook:
-		return longAttack[1][pos] & attackMaskR;
-		break;
-	}
+    switch(C*P) {
+    case King:     // if color == Black, attackedBy<-King> = w
+        return shortAttack[0][pos] & attackMaskK;
+        break;
+    case Pawn:
+        return shortAttack[0][pos] & attackMaskP;
+        break;
+    case Knight:
+        return shortAttack[0][pos] & attackMaskN;
+        break;
+    case -King:     // if color == Black, attackedBy<-King> = w
+        return shortAttack[1][pos] & attackMaskK;
+        break;
+    case -Pawn:
+        return shortAttack[1][pos] & attackMaskP;
+        break;
+    case -Knight:
+        return shortAttack[1][pos] & attackMaskN;
+        break;
+    case Queen:
+        return longAttack[0][pos] & attackMaskQ;
+        break;
+    case Bishop:
+        return longAttack[0][pos] & attackMaskB;
+        break;
+    case Rook:
+        return longAttack[0][pos] & attackMaskR;
+        break;
+    case -Queen:
+        return longAttack[1][pos] & attackMaskQ;
+        break;
+    case -Bishop:
+        return longAttack[1][pos] & attackMaskB;
+        break;
+    case -Rook:
+        return longAttack[1][pos] & attackMaskR;
+        break;
+    }
 }
 
 template<Colors C>
@@ -135,57 +134,57 @@ uint8_t ColoredBoard<C>::diaPinTable[nDirs][256];
 
 template<Colors C>
 void ColoredBoard<C>::initTables() {
-	for (unsigned int dir = 0; dir<nDirs; dir++)
-	for (int l = -King; l<=King; ++l)
-	for (int r = -King; r<=King; ++r) {
-		LongIndex i = { l, r };
-		diaPinTable[dir][(uint8_t&)i] = ~0;
-		if ( (dir&1) && l == C*King && (r == -C*Bishop || r == -C*Queen) )
-			diaPinTable[dir][(uint8_t&)i] = dir;
-		if ( (dir&1) && r == C*King && (l == -C*Bishop || l == -C*Queen) )
-			diaPinTable[dir][(uint8_t&)i] = dir;
-		if ( !(dir&1) && l == C*King && (r == -C*Rook || r == -C*Queen) )
-			diaPinTable[dir][(uint8_t&)i] = dir;
-		if ( !(dir&1) && r == C*King && (l == -C*Rook || l == -C*Queen) )
-			diaPinTable[dir][(uint8_t&)i] = dir;
-	}
+    for (unsigned int dir = 0; dir<nDirs; dir++)
+    for (int l = -King; l<=King; ++l)
+    for (int r = -King; r<=King; ++r) {
+        LongIndex i = { l, r };
+        diaPinTable[dir][(uint8_t&)i] = ~0;
+        if ( (dir&1) && l == C*King && (r == -C*Bishop || r == -C*Queen) )
+            diaPinTable[dir][(uint8_t&)i] = dir;
+        if ( (dir&1) && r == C*King && (l == -C*Bishop || l == -C*Queen) )
+            diaPinTable[dir][(uint8_t&)i] = dir;
+        if ( !(dir&1) && l == C*King && (r == -C*Rook || r == -C*Queen) )
+            diaPinTable[dir][(uint8_t&)i] = dir;
+        if ( !(dir&1) && r == C*King && (l == -C*Rook || l == -C*Queen) )
+            diaPinTable[dir][(uint8_t&)i] = dir;
+    }
 }
 
 template<Colors C>
 __v8hi ColoredBoard<C>::estimatedEval(const Move m, const RootBoard& rb) const {
-	int8_t piece = pieces[m.from];
-	__v8hi estimate;
-	estimate = keyScore.vector - rb.getKSVector(piece, m.from);
+    int8_t piece = pieces[m.from];
+    __v8hi estimate;
+    estimate = keyScore.vector - rb.getKSVector(piece, m.from);
 
-	switch (m.special & 0xf) {
-	case 0:
-		break;
-	case shortCastling:
-		estimate +=  rb.getKSVector(C*Rook, pov^f1)-rb.getKSVector(C*Rook, pov^h1);
-		break;
-	case longCastling:
-		estimate +=  rb.getKSVector(C*Rook, pov^d1)-rb.getKSVector(C*Rook, pov^a1);
-		break;
-	case promoteQ:
-		piece = C*Queen;
-		break;
-	case promoteR:
-		piece = C*Rook;
-		break;
-	case promoteB:
-		piece = C*Bishop;
-		break;
-	case promoteN:
-		piece = C*Knight;
-		break;
-	case EP:
-		estimate -= rb.getKSVector(-C*Pawn, cep.enPassant);
-		break;
-	}
+    switch (m.special & 0xf) {
+    case 0:
+        break;
+    case shortCastling:
+        estimate +=  rb.getKSVector(C*Rook, pov^f1)-rb.getKSVector(C*Rook, pov^h1);
+        break;
+    case longCastling:
+        estimate +=  rb.getKSVector(C*Rook, pov^d1)-rb.getKSVector(C*Rook, pov^a1);
+        break;
+    case promoteQ:
+        piece = C*Queen;
+        break;
+    case promoteR:
+        piece = C*Rook;
+        break;
+    case promoteB:
+        piece = C*Bishop;
+        break;
+    case promoteN:
+        piece = C*Knight;
+        break;
+    case EP:
+        estimate -= rb.getKSVector(-C*Pawn, cep.enPassant);
+        break;
+    }
 
-	if (m.capture)
-		estimate -= rb.getKSVector(m.capture, m.to);
-	estimate += rb.getKSVector(piece, m.to);
-	return estimate;
+    if (m.capture)
+        estimate -= rb.getKSVector(m.capture, m.to);
+    estimate += rb.getKSVector(piece, m.to);
+    return estimate;
 }
 #endif /* COLOREDBOARD_TCC_ */
