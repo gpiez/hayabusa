@@ -585,12 +585,12 @@ RawScore Eval::mobilityValue( uint64_t occupied, uint64_t pawnbits, __v2di bisho
 	__v2di mob = pop2count(bishopbitsw & restricted);
 	RawScore score = look2up(mob, bmobtab);
 
-	QTextStream cout(stdout);
+/*	QTextStream cout(stdout);
 	cout << "restricted" << endl; printBit(restricted);
 	cout << "mobb" << endl; printBit(bishopbitsw & restricted);
 	cout << "mobbcount" << endl; printBit(mob);
 	cout << score << endl;
-	
+	*/
 	mob = pop2count(knightbitsw & restricted);
 	score += look2up(mob, kmobtab);
 

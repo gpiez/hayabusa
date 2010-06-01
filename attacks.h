@@ -32,18 +32,18 @@
  * than the bitfield can hold.
  */
 struct LAttack {
-	uint8_t R:nRBits;
-	uint8_t B:nBBits;
-	uint8_t Q:nQBits;
-	uint8_t KR:nCheckKRBits;
-	uint8_t KB:nCheckKBBits;
+    uint8_t R:nRBits;
+    uint8_t B:nBBits;
+    uint8_t Q:nQBits;
+    uint8_t KR:nCheckKRBits;
+    uint8_t KB:nCheckKBBits;
 
-	operator uint8_t& () {
-		return *(uint8_t*)this;
-	}
-	operator uint8_t () const {
-		return *(uint8_t*)this;
-	}
+    operator uint8_t& () {
+        return *(uint8_t*)this;
+    }
+    operator uint8_t () const {
+        return *(uint8_t*)this;
+    }
 };
 
 /*
@@ -51,33 +51,33 @@ struct LAttack {
  * which do short range attacks on this square/piece.
  */
 struct SAttack {
-	uint8_t N:nNBits;
-	uint8_t PR:nPRBits;
-	uint8_t PL:nPLBits;
-	uint8_t K:nKBits;
-	uint8_t KN:nKNAttackBits;
-	uint8_t KP:nKPAttackBits;
+    uint8_t N:nNBits;
+    uint8_t PR:nPRBits;
+    uint8_t PL:nPLBits;
+    uint8_t K:nKBits;
+    uint8_t KN:nKNAttackBits;
+    uint8_t KP:nKPAttackBits;
 
-	operator uint8_t& () {
-		return *(uint8_t*)this;
-	}
-	operator uint8_t () const {
-		return *(uint8_t*)this;
-	}
+    operator uint8_t& () {
+        return *(uint8_t*)this;
+    }
+    operator uint8_t () const {
+        return *(uint8_t*)this;
+    }
 };
 
 struct Attack {
-	LAttack l;
-	SAttack s;
-	LAttack ll;
-	SAttack ss;
+    LAttack l;
+    SAttack s;
+    LAttack ll;
+    SAttack ss;
 
-	operator uint32_t () const {
-		return *(uint32_t*)this;
-	}
-	operator uint32_t& () {
-		return *(uint32_t*)this;
-	}
+    operator uint32_t () const {
+        return *(uint32_t*)this;
+    }
+    operator uint32_t& () {
+        return *(uint32_t*)this;
+    }
 };
 
 /* Attack constants should be defined as integral types rather than structs,
@@ -102,7 +102,7 @@ static const uint8_t attackMaskQ = 0x30;
 static const LAttack attackMaskLong_ = { (1<<nRBits)-1, (1<<nBBits)-1, (1<<nQBits)-1 };
 static const uint8_t attackMaskLong = 0x3f;
 
-static const SAttack attackMaskN_ ={ (1<<nNBits)-1, 0, 0 };
+static const SAttack attackMaskN_ = { (1<<nNBits)-1, 0, 0 };
 static const uint8_t attackMaskN = 7;
 static const SAttack attackMaskP_ = { 0, (1<<nPRBits)-1, (1<<nPLBits)-1, 0 };
 static const uint8_t attackMaskP = 0x18;
@@ -119,10 +119,10 @@ static const uint8_t attackB = 4;
 static const LAttack attackQ_ = { 0, 0, 1, 0, 0 };
 static const uint8_t attackQ = 0x10;
 static const LAttack checkKR_ = { 0, 0, 0, 1, 0 };
-static const uint8_t checkKR = 0x40;//checkKR_;
+static const uint8_t checkKR = 0x40;
 static const LAttack checkKB_ = { 0, 0, 0, 0, 1 };
-static const uint8_t checkKB = 0x80;//checkKB_;
+static const uint8_t checkKB = 0x80;
 
-//static const Attack attackMask_ = { attackMaskLong_, attackMaskShort_, attackMaskLong_, attackMaskShort_ };
+static const Attack attackMask_ = { attackMaskLong_, attackMaskShort_, attackMaskLong_, attackMaskShort_ };
 static const uint32_t attackMask = 0x3f3f3f3f;
 #endif /* ATTACKS_H_ */

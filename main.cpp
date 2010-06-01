@@ -20,10 +20,9 @@
 
 #include "console.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 #ifdef QT_GUI_LIB
-	Q_INIT_RESOURCE(hayabusa);
+    Q_INIT_RESOURCE(hayabusa);
     QApplication app(argc, argv);
 #else
     QCoreApplication app(argc, argv);
