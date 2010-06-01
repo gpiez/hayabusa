@@ -47,6 +47,7 @@ template<Colors C> struct Score
 	
 	//Score() {};
 	explicit Score (int a) 							{ v = C*a; m.data = 0; };
+    explicit Score (const Score& a)                 { v = a.v; m.data = 0; };
 	// Returns a relative score. More is better for the current side.
 	void join() const {};
 	operator RawScore() const				{ return v;	}
@@ -142,13 +143,11 @@ public:
 	// maximum is calculated for this score, and if it changes
 	// for its depending scores too.
 	explicit SharedScore(const SharedScore& a):
-		Score<C>(0),
+		Score<C>(a),
 		notReady(0),
 		valueMutex(QMutex::Recursive),
 		depending(0)
 	{
-		v = a.v;
-		m.data = 0;
 	}
 
 	void join();
