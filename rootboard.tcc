@@ -23,6 +23,7 @@
 #include <pch.h>
 #endif
 
+#include <unistd.h>
 #include "rootboard.h"
 #include "coloredboard.h"
 #include "generateMoves.tcc"
@@ -77,7 +78,13 @@ Move RootBoard::rootSearch() {
  */
 template<Colors C, Phase P, typename A, typename B>
 bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
-	stats.node++;
+    stats.node++;
+/*    QTextStream xout(stdout);
+    QString indentation;
+    for (unsigned int i = depth; i<5; i++)
+        indentation += "     ";
+    xout << indentation << m.string() << " " << stats.node;
+    usleep(100000);*/
 	KeyScore estimate ALIGN_XMM;
 	estimate.vector = prev.estimatedEval(m, *this);	//TODO in leaf phase use a estimate function which calculates only the score
 	if (P == leaf || P == vein) {									//TODO in the very fist leaf iteration, use tt?
@@ -85,6 +92,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 		current.max(estimate.score-Score<C>(125));
 		if (current >= beta) {
 			stats.leafcut++;
+//            xout << " cut " << current.v << endl;
 			return false;
 		}
 	}
@@ -108,7 +116,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 				tt->mark(st);
 			stats.tthit++;
 			ttDepth = subentry.depth;
-			if (P == trunk && subentry.score == 0) ttDepth=0;
+			if (P == trunk && subentry.score == 0) ttDepth=0; // TODO workaround, fix this
 			if (ttDepth >= depth) {
 
 				if (subentry.loBound) {
@@ -132,12 +140,16 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 
 	Move list[256];
 	Move* end;
-	if ((P == leaf || P == vein) && (b.template attacks<(C-Black)/2>(b.pieceList[(White-C)/2].getKing()) & attackMask) == 0) {
+	if ((P == leaf || P == vein) /*&& (b.template attacks<(C-Black)/2>(b.pieceList[(White-C)/2].getKing()) & attackMask) == 0*/) {
 		stats.eval++;
 		current.max(eval(b));
+//        if (P==leaf) xout << " leaf " << current.v << endl;
+//        else xout << " vein " << current.v << endl;
 		end = b.generateCaptureMoves(list);
-	} else
+	} else {
 		end = b.generateMoves(list);
+//        xout << endl;
+    }
 
 	// move best move from tt / history to front
 	if (ttMove.data)
@@ -149,11 +161,6 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 				break;
 			}
 
-/*	QTextStream xout(stderr);
-	QString indentation;
-	for (unsigned int i = depth; i<10; i++)
-		indentation += "  ";*/
-//	xout << indentation << alpha.get() << "," << beta.get();
 	for (unsigned int d = ((ttDepth+2)&~1) + (depth&1); d < depth; d+=2) {
 		for (Move* i = list; i<end; ++i) {
 			search<(Colors)-C, tree, B, A>(b, *i, d-1, beta, current);

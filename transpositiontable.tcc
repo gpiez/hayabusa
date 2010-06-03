@@ -196,7 +196,7 @@ QString Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& p
 	QString line = m.string();
 	const ColoredBoard<C> b(prev, m, rb);
 	Key key = b.getZobrist();
-	if (visited.contains(key)) return "";
+	if (visited.contains(key)) return line;
 	visited << key;
 	SubTable* te = getSubTable(key);
 	TTEntry subentry;
@@ -209,7 +209,7 @@ QString Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& p
 
 	Move list[256];
 	Move* const end = b.generateMoves(list);
-	if ((uint32_t&)ttMove)
+	if (ttMove.data)
 		for (Move *i=list; i<end; ++i) {
 			if (i->from == ttMove.from && i->to == ttMove.to) {
 				line += " " + bestLineNext<(Colors)-C>(b, *i, rb, visited);
@@ -222,7 +222,7 @@ QString Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& p
 
 template<typename Entry, unsigned assoc, typename Key>
 QString Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
-	if (!(uint32_t&)b.bestMove) return QString();
+	if (!b.bestMove.data) return QString();
 	QSet<Key> visited;
 	if (b.color == White) {
 		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, b, visited);
