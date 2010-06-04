@@ -57,6 +57,35 @@ RawScore Eval::n_p_ram[9], Eval::n_p[17];
 RawScore Eval::b_bad_own_p[9], Eval::b_p[17], Eval::b_p_ram[9], Eval::bpair_p[17];
 RawScore Eval::r_p[17];
 RawScore Eval::q_p[17];
+RawScore Eval::pawnBackward, Eval::pawnBackwardOpen;
+RawScore Eval::pawnPasser[8] = { 0, 50, 50, 60, 80, 110, 150, 0 };
+RawScore Eval::pawnHalfIsolated;
+RawScore Eval::pawnIsolated;
+
+#if !defined(__SSE_4_2__)
+// popcount, which counts at most 15 ones, for counting pawns
+static inline uint64_t popcount15( uint64_t x )
+{
+    x -=  x>>1 & 0x5555555555555555LL;
+    x  = ( x>>2 & 0x3333333333333333LL ) + ( x & 0x3333333333333333LL );
+    x *= 0x1111111111111111LL;
+    return  x>>60;
+}
+
+// special popcount, assuming each 2-bit block has max one bit set, for counting light/dark squares.
+static inline uint64_t popcount2( uint64_t x )
+{
+    x -=  x>>1 & 0x5555555555555555LL;
+    x  = (( x>>2 )+x) & 0x3333333333333333LL;
+    x  = (( x>>4 )+x) & 0x0f0f0f0f0f0f0f0fLL;
+    x *= 0x0101010101010101LL;
+    return  x>>56;
+}
+
+#else
+#define popcount(x) __builtin_popcountll(x)
+#define popcount2(x) __builtin_popcountll(x)
+#endif
 
 Eval::Eval() {
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
@@ -239,62 +268,150 @@ RawScore Eval::pieces(const PieceList&, int ) const {
     return value;
 }
 
-RawScore Eval::pawns(const BoardBase& b) const {
+template<Colors C, unsigned int xoffset>
+PawnEntry::Shield evalShield(const BoardBase &b) {
 
+    static const unsigned int CI = (White-C)/(White-Black);    // ColorIndex, 0 for White, 1 for Black
+    static const uint8_t pov = CI*56;    //for xoring square values to the other side
+
+    int lshield = 0;
+    int light = 0;
+    int dark = 0;
+
+    if (b.pieces[pov^(a2+xoffset)] == C*Pawn) {
+        light++;
+        lshield += 4;
+    } else if (b.pieces[pov^(a3+xoffset)] == C*Pawn) {
+        dark++;
+        lshield += 3;
+    } else if (b.pieces[pov^(a4+xoffset)] == C*Pawn) {
+        light++;
+        lshield += 2;
+    }
+
+    if (b.pieces[pov^(b2+xoffset)] == C*Pawn) {
+        dark++;
+        lshield += 4;
+    } else if (b.pieces[pov^(b3+xoffset)] == C*Pawn) {
+        light++;
+        lshield += 3;
+    } else if (b.pieces[pov^(b4+xoffset)] == C*Pawn) {
+        dark++;
+        lshield += 2;
+    }
+
+    if (b.pieces[pov^(c2+xoffset)] == C*Pawn) {
+        light++;
+        lshield += 4;
+    } else if (b.pieces[pov^(c3+xoffset)] == C*Pawn) {
+        dark++;
+        lshield += 3;
+    } else if (b.pieces[pov^(c4+xoffset)] == C*Pawn) {
+        light++;
+        lshield += 2;
+    }
+
+    PawnEntry::Shield ret;
+    ret.weakLight = ! (((C == White) ^ (xoffset == 0)) ? light : dark);
+    ret.weakDark = ! (((C == White) ^ (xoffset == 0)) ? dark : light);
+    ret.value = lshield;
+    return ret;
+}
+
+RawScore Eval::pawns(const BoardBase& b) const {
     PawnKey k=b.keyScore.pawnKey;
     Sub<PawnEntry, 4>* st = pt->getSubTable(k);
     if (pt->retrieve(st, k, pawnEntry)) {
         stats.pthit++;
-        return pawnEntry.score;
+    } else {
+        stats.ptmiss++;
+        pawnEntry.score = 0;
+
+        uint64_t wpawn = b.pieceList[0].bitBoard<Pawn>();
+        uint64_t bpawn = b.pieceList[1].bitBoard<Pawn>();
+
+        uint64_t wAbove = wpawn << 8 | wpawn << 16;
+        wAbove |= wAbove << 16 | wAbove << 32;
+        uint64_t wBelow = wpawn >> 8 | wpawn >> 16;
+        wBelow |= wBelow >> 16 | wBelow >> 32;
+
+        uint64_t bAbove = bpawn << 8 | bpawn << 16;
+        bAbove |= bAbove << 16 | bAbove << 32;
+        uint64_t bBelow = bpawn >> 8 | bpawn >> 16;
+        bBelow |= bBelow >> 16 | bBelow >> 32;
+
+        // squares above/below the most advanced pawns
+
+        uint64_t wAboveA = wAbove & ~(wBelow | wpawn);
+        uint64_t bBelowA = bBelow & ~(bAbove | bpawn);
+
+        // calculate squares which are or possibly are attacked by w and b pawns
+        // take only the most advanced attacker and the most backward defender into account
+
+        uint64_t wAttack = (wAbove >> 1 & ~0x8080808080808080LL) | (wAbove << 1 & ~0x101010101010101LL);
+        uint64_t bAttack = (bBelow >> 1 & ~0x8080808080808080LL) | (bBelow << 1 & ~0x101010101010101LL);
+        uint64_t wAttackA = (wAboveA >> 1 & ~0x8080808080808080LL) | (wAboveA << 1 & ~0x101010101010101LL);
+        uint64_t bAttackA = (bBelowA >> 1 & ~0x8080808080808080LL) | (bBelowA << 1 & ~0x101010101010101LL);
+        uint64_t wContested = wAttack & bAttackA;
+        uint64_t bContested = wAttackA & bAttack;
+
+        // backward pawns are pawns which are may be attacked, if the advance,
+        // but are not on a contested file (otherwise they would be defended)
+
+        wContested |= wContested << 8 | wContested >> 8;
+        wContested |= wContested << 24 | wContested >> 24;
+        bContested |= bContested << 8 | bContested >> 8;
+        bContested |= bContested << 24 | bContested >> 24;
+        uint64_t wBackward = wpawn & bAttack & ~wContested;
+        uint64_t bBackward = bpawn & wAttack & ~bContested;
+
+        pawnEntry.score += pawnBackward * (popcount15(wBackward) - popcount15(bBackward));
+        pawnEntry.score += pawnBackwardOpen * (popcount15(wBackward & ~bBelow) - popcount15(bBackward & ~wAbove));
+
+        // a white pawn is not passed, if he is below a opponent pawn or its attack squares
+        // store positions of passers for later use in other eval functions
+
+        uint64_t wNotPassedMask = bBelow | bAttack;
+        uint64_t bNotPassedMask = wAbove | wAttack;
+        uint64_t wPassed = wpawn & ~wNotPassedMask;
+        uint64_t bPassed = bpawn & ~bNotPassedMask;
+        unsigned i;
+        for (i = 0; wPassed && i < nHashPassers; wPassed &= wPassed - 1, i++) {
+            int pos = __builtin_ctzll(wPassed);
+            int y = pos >> 3;
+            pawnEntry.score += pawnPasser[y];
+            pawnEntry.passers[0][i] = pos + (y << 3);
+        }
+        for ( i=0; bPassed && i<nHashPassers; bPassed &= bPassed-1, i++ ) {
+            int pos = __builtin_ctzll(bPassed);
+            int y = pos>>3;
+            pawnEntry.score -= pawnPasser[7-y];
+            pawnEntry.passers[1][i] = pos + ( y<<3 );
+        }
+
+        // possible weak pawns are adjacent to open files or below pawns an a adjacent file on both sides
+        // rook pawns are always adjacent to a "open" file
+        uint64_t wOpenFiles = ~(wAbove | wpawn | wBelow);
+        uint64_t bOpenFiles = ~(bAbove | bpawn | bBelow);
+        pawnEntry.openFiles[0] = ~wOpenFiles;
+        pawnEntry.openFiles[1] = ~bOpenFiles;
+        uint64_t wRightIsolani = wpawn & (wOpenFiles<<1 | 0x101010101010101LL);
+        uint64_t bRightIsolani = bpawn & (bOpenFiles<<1 | 0x101010101010101LL);
+        uint64_t wLeftIsolani = wpawn & (wOpenFiles>>1 | 0x8080808080808080LL);
+        uint64_t bLeftIsolani = bpawn & (bOpenFiles>>1 | 0x8080808080808080LL);
+        pawnEntry.score += pawnHalfIsolated * (popcount15(wRightIsolani|wLeftIsolani) - popcount15(bRightIsolani|bLeftIsolani));
+        pawnEntry.score += pawnIsolated * (popcount15(wRightIsolani&wLeftIsolani) - popcount15(bRightIsolani&bLeftIsolani));
+
+        pawnEntry.lShield[0] = evalShield<White, 0>(b);
+        pawnEntry.rShield[0] = evalShield<White, 5>(b);
+        pawnEntry.lShield[1] = evalShield<Black, 0>(b);
+        pawnEntry.rShield[1] = evalShield<Black, 5>(b);
+        pawnEntry.upperKey = k >> PawnEntry::upperShift;
+        pawnEntry.w = wpawn;
+        pawnEntry.b = bpawn;
+        pt->store(st, pawnEntry);
     }
-
-    stats.ptmiss++;
-    RawScore value = 0;
-
-    uint64_t wpawn = b.pieceList[0].bitBoard<Pawn>();
-    uint64_t bpawn = b.pieceList[1].bitBoard<Pawn>();
-
-    uint64_t wAbove = wpawn << 8 | wpawn << 16;
-    wAbove |= wAbove << 16 | wAbove << 32;
-    uint64_t wBelow = wpawn >> 8 | wpawn >> 16;
-    wBelow |= wBelow >> 16 | wBelow >> 32;
-
-    uint64_t bAbove = bpawn << 8 | bpawn << 16;
-    bAbove |= bAbove << 16 | bAbove << 32;
-    uint64_t bBelow = bpawn >> 8 | bpawn >> 16;
-    bBelow |= bBelow >> 16 | bBelow >> 32;
-
-    // squares above/below the most advanced pawns
-
-    uint64_t wAboveA = wAbove & ~(wBelow | wpawn);
-    uint64_t bBelowA = bBelow & ~(bAbove | bpawn);
-
-    // calculate squares which are or possibly are attacked by w and b pawns
-    // take only the most advanced attacker and the most backward defender into account
-
-    uint64_t wAttack = (wAbove >> 1 & ~0x8080808080808080LL) | (wAbove << 1 & ~0x101010101010101LL);
-    uint64_t bAttack = (bBelow >> 1 & ~0x8080808080808080LL) | (bBelow << 1 & ~0x101010101010101LL);
-    uint64_t wAttackA = (wAboveA >> 1 & ~0x8080808080808080LL) | (wAboveA << 1 & ~0x101010101010101LL);
-    uint64_t bAttackA = (bBelowA >> 1 & ~0x8080808080808080LL) | (bBelowA << 1 & ~0x101010101010101LL);
-    uint64_t wContested = wAttack & bAttackA;
-    uint64_t bContested = wAttackA & bAttack;
-
-    // backward pawns are pawns which are may be attacked, if the advance,
-    // but are not on a contested file (otherwise they would be defended)
-
-    wContested |= wContested << 8 | wContested >> 8;
-    wContested |= wContested << 24 | wContested >> 24;
-    bContested |= bContested << 8 | bContested >> 8;
-    bContested |= bContested << 24 | bContested >> 24;
-    uint64_t wBackward = wpawn & bAttack & ~wContested;
-    uint64_t bBackward = bpawn & wAttack & ~bContested;
-
-    pawnEntry.upperKey = k >> PawnEntry::upperShift;
-    pawnEntry.w = wpawn;
-    pawnEntry.b = bpawn;
-    pawnEntry.score = value;
-    pt->store(st, pawnEntry);
-    return value;
+    return pawnEntry.score;
 }
 
 RawScore Eval::eval(const BoardBase& b) const {
