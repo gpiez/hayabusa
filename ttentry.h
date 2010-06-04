@@ -32,37 +32,37 @@ typedef uint32_t PawnKey;
 
 template <unsigned int pos, unsigned int width, typename T>
 struct Bitfield {
-	static const unsigned int tBits = CHAR_BIT * sizeof(T);
-	static const unsigned int start = pos / tBits;
-	static const unsigned int startpos = pos % tBits;
-	static const unsigned int end = (pos+width-1)/ tBits;
+    static const unsigned int tBits = CHAR_BIT * sizeof(T);
+    static const unsigned int start = pos / tBits;
+    static const unsigned int startpos = pos % tBits;
+    static const unsigned int end = (pos+width-1)/ tBits;
 
-	T data[end+1];
-	operator T () const {
-		static_assert(end == start);
-/*		if (width == 1)		// T is a bool type
-			return data[start] & (T)1 << startpos;
-		else*/ {
-			T unmasked = data[start] >> startpos;
-			if (width + startpos != tBits)
-				unmasked &= ((T)1 << width) - 1;
-			return unmasked;
-		}
-	}
+    T data[end+1];
+    operator T () const {
+        static_assert(end == start);
+/*        if (width == 1)        // T is a bool type
+            return data[start] & (T)1 << startpos;
+        else*/ {
+            T unmasked = data[start] >> startpos;
+            if (width + startpos != tBits)
+                unmasked &= ((T)1 << width) - 1;
+            return unmasked;
+        }
+    }
 
-//	void operator = (T value) {
-//		data &= (1ULL<<width)-1 << pos;
-//		data |= value << pos;
-//	}
+//    void operator = (T value) {
+//        data &= (1ULL<<width)-1 << pos;
+//        data |= value << pos;
+//    }
 
-	void operator |= (T value) {
-		static_assert(end == start);
-		data[start] |= value << startpos;
-	}
-	void reset() {
-		static_assert(end == start);
-		data[start] &= ~ (((1<<width)-1) << startpos);
-	}
+    void operator |= (T value) {
+        static_assert(end == start);
+        data[start] |= value << startpos;
+    }
+    void reset() {
+        static_assert(end == start);
+        data[start] &= ~ (((1<<width)-1) << startpos);
+    }
 };
 
 /*
@@ -70,39 +70,44 @@ struct Bitfield {
  * The static consts are the shift values for components.
  */
 union TTEntry {
-	Bitfield<0, 6, unsigned int> from;
-	Bitfield<6, 6, unsigned int> to;
-	Bitfield<12, 6, unsigned int> depth;
-	Bitfield<18, 1, unsigned int> loBound;
-	Bitfield<19, 1, unsigned int> hiBound;
-	Bitfield<20, 12, int> score;
-	Bitfield<32, 1, unsigned int> visited;
-	Bitfield<33, 31, Key> upperKey;
-	enum { upperShift = 33 };
-	uint64_t data;
+    Bitfield<0, 6, unsigned int> from;
+    Bitfield<6, 6, unsigned int> to;
+    Bitfield<12, 6, unsigned int> depth;
+    Bitfield<18, 1, unsigned int> loBound;
+    Bitfield<19, 1, unsigned int> hiBound;
+    Bitfield<20, 12, int> score;
+    Bitfield<32, 1, unsigned int> visited;
+    Bitfield<33, 31, Key> upperKey;
+    enum { upperShift = 33 };
+    uint64_t data;
 
-	void zero() { data = 0; };
+    void zero() { data = 0; };
 };
 
 struct PawnEntry {
-	uint64_t w, b;
-	uint16_t upperKey;
-	enum { upperShift = 16 };
-	uint8_t passers[nColors];
-	uint8_t openFiles[nColors];
-	int16_t score;
+    uint64_t w, b;
+    uint16_t upperKey;
+    int16_t score;
+    struct Shield {
+        uint8_t value;
+        uint8_t weakLight;
+        uint8_t weakDark;
+    } lShield[nColors], rShield[nColors];
+    enum { upperShift = 16 };
+    uint8_t passers[nColors][nHashPassers];
+    uint8_t openFiles[nColors];
 };
 
 struct PerftEntry {
-	union {
-	Bitfield<0, 6, uint8_t> depth;
-	Bitfield<6, 58, Key> upperKey;
-	uint64_t data;
-	};
-	enum { upperShift = 6 };
-	uint64_t value;
-	
-	void zero() { data = 0; };
+    union {
+    Bitfield<0, 6, uint8_t> depth;
+    Bitfield<6, 58, Key> upperKey;
+    uint64_t data;
+    };
+    enum { upperShift = 6 };
+    uint64_t value;
+    
+    void zero() { data = 0; };
 };
 
 #endif /* TTENTRY_H_ */
