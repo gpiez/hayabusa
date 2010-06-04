@@ -70,12 +70,14 @@ enum Phase { root, trunk, tree, leaf, vein };
 
 extern unsigned int splitDepth;
 
+static const unsigned int nHashPassers = 2;
 static const unsigned int nTTLocks = 1;
 static const unsigned int nMaxMoves = 256; // maximum possible moves in a position
 static const unsigned int nMaxGameLength = 5000; // maximum possible moves in a position
 static const int infinity = 10000;
 static const unsigned int maxDepth = 64;
 static const unsigned int transpositionTableAssoc = 2;
+static const unsigned int pawnTableAssoc = 4;
 static const unsigned int nPieces = 6;
 static const unsigned int nColors = 2;
 static const unsigned int nTotalPieces = nPieces*nColors + 1;	// -King,... -Pawn, 0, Pawn,... King

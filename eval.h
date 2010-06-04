@@ -90,7 +90,12 @@ class Eval {
 	static RawScore b_bad_own_p[9], b_p[17], b_p_ram[9], bpair_p[17];
 	static RawScore r_p[17];
 	static RawScore q_p[17];
-
+    static RawScore pawnBackward;
+    static RawScore pawnBackwardOpen;
+    static RawScore pawnIsolated;    
+    static RawScore pawnHalfIsolated;
+    static RawScore pawnPasser[8];
+    
 	TranspositionTable<PawnEntry, 4, PawnKey>* pt;
 	
 	RawScore controls[nSquares];
