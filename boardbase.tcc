@@ -47,7 +47,7 @@ void BoardBase::setPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
     else
         as::setPieceB(this, C*piece, pos);
     for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > ((uint8_t*)attLen)[i]);
+        ASSERT(64 > attLen[0][i]);
     }
     pieces[pos] = C*piece;
 }
@@ -65,7 +65,7 @@ void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t 
     else
         as::clrPieceAndCopyB(prev, this, C*piece, pos);
     for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > ((uint8_t*)attLen)[i]);
+        ASSERT(64 > attLen[0][i]);
     }
     pieces[pos] = 0;
 }
@@ -82,7 +82,7 @@ void BoardBase::clrPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
     else
         as::clrPieceB(this, this, C*piece, pos);
     for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > ((uint8_t*)attLen)[i]);
+        ASSERT(64 > attLen[0][i]);
     }
     pieces[pos] = 0;
 }
@@ -102,7 +102,7 @@ void BoardBase::chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const Roo
         as::chgPieceB(this, -C*oldpiece, C*piece, pos);
     }
     for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > ((uint8_t*)attLen)[i]);
+        ASSERT(64 > attLen[0][i]);
     }
     pieces[pos] = C*piece;
 }

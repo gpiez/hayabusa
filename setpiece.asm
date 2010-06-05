@@ -295,7 +295,6 @@ macro		chgpiecedir dir {
 
 setPieceW:	mov		r10, rbp
 			mov		ebp, shortAttack
-;			xor 	ebp, ebp							;offset for shortAttack
 			mov		eax, esi							;piece
 			shl		eax, shortPiece						;offset for abs(piece)
 			jmp		setPieceCommon

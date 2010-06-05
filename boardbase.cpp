@@ -246,13 +246,13 @@ void BoardBase::initTables()
             len.left = 1;
         if (l.lIndex)
             len.right = 1;
-        borderTable[(uint8_t&)l] = len;
+        borderTable[l] = len;
     }
 
     for (int left = 0; left < 8; left++)
     for (int right = 0; right < 8; right++) {
         Length len = {{ right, left }};
-        totalLen[(uint8_t&)len] = left + right;
+        totalLen[len] = left + right;
     }
     for (int dir=0; dir<4; ++dir)
     for (int r = 0; r < 8; ++r) {
@@ -273,7 +273,7 @@ void BoardBase::initTables()
 // The default constructor should not be initialized, because the contents
 // of the constructed object are generated anyway.
 void BoardBase::init() {
-    *this = (BoardBase){{{{}}}};
+    *this = (BoardBase){{{{{0}}}}};
 
     for (unsigned int dir = 0; dir < nDirs; ++dir) {
         for (unsigned int y = 0; y < nRows; ++y) {
