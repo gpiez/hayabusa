@@ -241,7 +241,7 @@ void BoardBase::initTables()
     LongIndex l;
     for (l.lIndex = -King; l.lIndex <= King; l.lIndex++)
     for (l.rIndex = -King; l.rIndex <= King; l.rIndex++) {
-        Length len = { 0, 0};
+        Length len = {{ 0, 0 }};
         if (l.rIndex)
             len.left = 1;
         if (l.lIndex)
@@ -251,7 +251,7 @@ void BoardBase::initTables()
 
     for (int left = 0; left < 8; left++)
     for (int right = 0; right < 8; right++) {
-        Length len = { right, left };
+        Length len = {{ right, left }};
         totalLen[(uint8_t&)len] = left + right;
     }
     for (int dir=0; dir<4; ++dir)

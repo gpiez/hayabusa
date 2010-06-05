@@ -31,12 +31,15 @@
  * if the structure is interpreted a a byte, five bits for left to make sure
  * the upper bits are always set to zero.
  */
-struct Length {
-	uint8_t	right:3;
-	uint8_t	left:5;
-	uint8_t uint8() const {
-		return *(uint8_t*)this;
-	}
+union Length {
+    struct {
+    uint8_t    right:3;
+    uint8_t    left:5;
+    };
+    uint8_t data;
+    operator const uint8_t& () const {
+        return data;
+    }
 };
 static const unsigned int nLengths = 64;
 
@@ -47,9 +50,15 @@ static const unsigned int nLengths = 64;
  * in vecLookup[] to get the LongAttack associated with
  * the piece.
  */
-struct LongIndex {
-	int8_t rIndex:4;
-	int8_t lIndex:4;
+union LongIndex {
+    struct {
+    int8_t rIndex:4;
+    int8_t lIndex:4;
+    };
+    uint8_t data;
+    operator const uint8_t& () const {
+        return data;
+    }
 };
 
 /*
@@ -58,8 +67,8 @@ struct LongIndex {
  *  accessed at once, they need to be cache line aligned.
  */
 struct LenMask64 {
-	Length	len[nSquares];
-	LongIndex mask[nSquares];
+    Length    len[nSquares];
+    LongIndex mask[nSquares];
 } ALIGN_CACHE;
 
 /*
