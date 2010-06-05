@@ -133,10 +133,10 @@ struct BoardBase {
     }
     template<unsigned int ColorIndex>
     Attack attacks( unsigned int pos) const {
-        return (Attack) {
+        return (Attack) {{
             longAttack[ColorIndex][pos],
             shortAttack[ColorIndex][pos]
-        };
+        }};
     }
 } ALIGN_CACHE;                                    //sum:        3C0
 

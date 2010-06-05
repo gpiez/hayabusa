@@ -233,9 +233,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		 * first check for a attack from a sliding piece. in this case all moves with destination
 		 * to a square between the king and the attacking piece or destination attacking piece are
 		 * allowed.
-		 */
-		LAttack doubleAttack = { 2, 2, 2 };
-		
+		 */		
 		ASSERT(__builtin_popcount(kingAttacks) <= 2);
 		if (__builtin_parity(kingAttacks) && !(kingAttacks.l & doubleAttack) ) {
 
