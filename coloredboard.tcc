@@ -138,15 +138,15 @@ void ColoredBoard<C>::initTables() {
     for (int l = -King; l<=King; ++l)
     for (int r = -King; r<=King; ++r) {
         LongIndex i = {{ l, r }};
-        diaPinTable[dir][(uint8_t&)i] = ~0;
+        diaPinTable[dir][i] = ~0;
         if ( (dir&1) && l == C*King && (r == -C*Bishop || r == -C*Queen) )
-            diaPinTable[dir][(uint8_t&)i] = dir;
+            diaPinTable[dir][i] = dir;
         if ( (dir&1) && r == C*King && (l == -C*Bishop || l == -C*Queen) )
-            diaPinTable[dir][(uint8_t&)i] = dir;
+            diaPinTable[dir][i] = dir;
         if ( !(dir&1) && l == C*King && (r == -C*Rook || r == -C*Queen) )
-            diaPinTable[dir][(uint8_t&)i] = dir;
+            diaPinTable[dir][i] = dir;
         if ( !(dir&1) && r == C*King && (l == -C*Rook || l == -C*Queen) )
-            diaPinTable[dir][(uint8_t&)i] = dir;
+            diaPinTable[dir][i] = dir;
     }
 }
 

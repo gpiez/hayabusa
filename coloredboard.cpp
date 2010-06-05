@@ -31,15 +31,15 @@ void ColoredBoard<C>::initTables() {
     for (int l = -King; l<=King; ++l)
     for (int r = -King; r<=King; ++r) {
         LongIndex i = { l, r };
-        diaPinTable[dir][(uint8_t&)i] = ~0;
+        diaPinTable[dir][i] = ~0;
         if ( (dir&1) && l == King && (r == Bishop || r == Queen) )
-            diaPinTable[dir][(uint8_t&)i] = dir;
+            diaPinTable[dir][i] = dir;
         if ( (dir&1) && r == King && (l == Bishop || l == Queen) )
-            diaPinTable[dir][(uint8_t&)i] = dir;
+            diaPinTable[dir][i] = dir;
         if ( !(dir&1) && l == King && (r == Rook || r == Queen) )
-            diaPinTable[dir][(uint8_t&)i] = dir;
+            diaPinTable[dir][i] = dir;
         if ( !(dir&1) && r == King && (l == Rook || l == Queen) )
-            diaPinTable[dir][(uint8_t&)i] = dir;
+            diaPinTable[dir][i] = dir;
     }
 }
 

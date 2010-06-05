@@ -40,7 +40,7 @@ uint8_t ColoredBoard<C>::detectPin( unsigned int pos ) const {
     if ( !!(longAttack[CI][pos] & (checkKB|checkKR)) & !!(longAttack[EI][pos]&attackMaskLong) ) {
         uint8_t king = pieceList[CI].getKing();
         uint8_t dir2 = vec2pin[pos][king];
-        return diaPinTable[dir2][(uint8_t&)attVec[dir2][pos]];
+        return diaPinTable[dir2][attVec[dir2][pos]];
     }
     return ~0;
 
