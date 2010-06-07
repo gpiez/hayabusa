@@ -86,7 +86,6 @@ const BoardBase& RootBoard::setup(QString fen) {
 
 	board.init();
 	board.fiftyMoves = fiftyTemp;
-	board.keyScore.vector = (__v8hi) {0};
 	
 	unsigned int p,x,y;
 	for ( p=0, x=0, y=7; p<(unsigned int)piecePlacement.length(); p++, x++ ) {

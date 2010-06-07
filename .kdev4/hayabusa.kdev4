@@ -11,7 +11,7 @@ CurrentInstallDir=file:///usr/local
 ProjectRootRelative=./
 
 [Launch]
-Launch Configurations=Launch Configuration 0,Launch Configuration 1,Launch Configuration 2,Launch Configuration 3
+Launch Configurations=Launch Configuration 0,Launch Configuration 1,Launch Configuration 2,Launch Configuration 3,Launch Configuration 4
 
 [Launch][Launch Configuration 0]
 Configured Launch Modes=execute
@@ -90,6 +90,21 @@ EnvironmentGroup=default
 Executable=file:///home/gpiez/src/hayabusa/Release/hayabusa
 Working Directory=file:///home/gpiez/src/hayabusa/Release
 isExecutable=true
+
+[Launch][Launch Configuration 4]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=Kosteniuk
+Type=Native Application
+
+[Launch][Launch Configuration 4][Data]
+Arguments=setoption name splitdepth value -1:position fen /bP2k/4P/4K1p/6B/3p/2P/ w - - : go\n
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a)
+Dependency Action=Build
+EnvironmentGroup=default
+Project Target=hayabusa,hayabusa
+Working Directory=file:///home/gpiez/src/hayabusa/Debug
+isExecutable=false
 
 [MakeBuilder]
 Number Of Jobs=4

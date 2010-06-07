@@ -136,6 +136,11 @@ public:
 		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
 		return zobristPieceSquare[piece+nPieces][square].vector;
 	}
+    PawnKey getPawnKey(int8_t piece, uint8_t square) const {
+        ASSERT(square < nSquares);
+        ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
+        return zobristPieceSquare[piece+nPieces][square].pawnKey;
+    }
 };
 
 template<typename T>

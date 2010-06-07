@@ -43,6 +43,7 @@ extern __thread union Stats {
 	uint64_t	pthit;
 	uint64_t	ptmiss;
 	uint64_t	ptuse;
+    uint64_t    ptcollision;
 	};
 	uint64_t data[];
 } stats;

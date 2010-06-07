@@ -274,7 +274,7 @@ void BoardBase::initTables()
 // of the constructed object are generated anyway.
 void BoardBase::init() {
     *this = (BoardBase){{{{{0}}}}};
-
+    keyScore.pawnKey = 0x12345678;
     for (unsigned int dir = 0; dir < nDirs; ++dir) {
         for (unsigned int y = 0; y < nRows; ++y) {
             for (unsigned int x = 0; x < nFiles; ++x) {

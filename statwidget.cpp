@@ -95,5 +95,6 @@ void StatWidget::update()
 	DISPLAYNUM(pthit);
 	DISPLAYNUM(ptmiss);
 	DISPLAYNUM(ptuse);
+    DISPLAYNUM(ptcollision);
 }
 #endif // QT_GUI_LIB

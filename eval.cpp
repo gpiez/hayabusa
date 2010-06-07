@@ -31,6 +31,7 @@
 #include "eval.h"
 #include "boardbase.h"
 #include "transpositiontable.tcc"
+//#include <cstdio>
 
 static __thread PawnEntry pawnEntry;
 
@@ -226,6 +227,8 @@ void Eval::initPS() {
 
 }
 
+//static uint64_t bits2[0x10000];
+
 void Eval::initZobrist() {
     srand(1);
     for (int p = -nPieces; p <= (signed int)nPieces; p++)
@@ -247,11 +250,24 @@ void Eval::initZobrist() {
             else
                 zobristPieceSquare[p+nPieces][i].key = 0;
     
-            if (abs(p) == Pawn)
-                zobristPieceSquare[p+nPieces][i].pawnKey = r & 0xffffffff;
-            else
+            if (abs(p) == Pawn) {
+                zobristPieceSquare[p+nPieces][i].pawnKey = r ^ r >> 32;
+/*                printf("%9x", zobristPieceSquare[p+nPieces][i].pawnKey);
+                if ((i & 7) == 7) printf("\n");*/
+            } else
                 zobristPieceSquare[p+nPieces][i].pawnKey = 0;
         }
+/*    for (unsigned int a = 0; a<0x100; ++a)
+    for (unsigned int b = 0; b<0x100; ++b) {
+        if (a==nSquares) a = 0xff;
+        if (b==nSquares) b = 0xff;
+        uint64_t v = 0;
+        if (a < nSquares)
+            v |= 1ULL << a;
+        if (b < nSquares)
+            v |= 1ULL << b;
+        bits2[(a << 8) + b] = v;
+    }*/
 }
 
 RawScore Eval::pieces(const PieceList&, int ) const {
@@ -321,7 +337,7 @@ PawnEntry::Shield evalShield(const BoardBase &b) {
 RawScore Eval::pawns(const BoardBase& b) const {
     PawnKey k=b.keyScore.pawnKey;
     Sub<PawnEntry, 4>* st = pt->getSubTable(k);
-    if (pt->retrieve(st, k, pawnEntry)) {
+    if (k >> PawnEntry::upperShift && pt->retrieve(st, k, pawnEntry)) {
         stats.pthit++;
     } else {
         stats.ptmiss++;
@@ -409,7 +425,8 @@ RawScore Eval::pawns(const BoardBase& b) const {
         pawnEntry.upperKey = k >> PawnEntry::upperShift;
         pawnEntry.w = wpawn;
         pawnEntry.b = bpawn;
-        pt->store(st, pawnEntry);
+        if (k >> PawnEntry::upperShift)
+            pt->store(st, pawnEntry);
     }
     return pawnEntry.score;
 }
@@ -450,9 +467,7 @@ RawScore Eval::eval(const BoardBase& b) const {
     if (value != b.keyScore.score) asm("int3");
 
 #endif
-//    QTextStream cout(stdout);
-//    cout << b.keyScore.score << " " << mobility(b) << " "<< pawns(b) << endl;
-    return b.keyScore.score + mobility(b) + pawns(b);
+    return b.keyScore.score + pawns(b) + mobility(b);
 }
 
 static const uint64_t mobBits[nDirs/2][64] = {{
@@ -564,6 +579,7 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
     rookbits = _mm_insert_epi64(rookbits, rook1bits, 1);
 //    rookbits = (__v2di) { rook0bits, rook1bits };
     occupied |= bits[rook1];
+//    occupied |= bits2[rooks & 0xffff];
 
     uint64_t bishops = b.pieceList[C==Black].getAllMasked<Bishop>();
     
@@ -578,6 +594,7 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
     bishop1bits = (bishop1bits << (uint8_t)bishop1) | (bishop1bits >> (64-(uint8_t)bishop1));
     bishopbits =_mm_insert_epi64(bishopbits, bishop1bits, 1);
     occupied |= bits[bishop1];
+//    occupied |= bits2[bishops & 0xffff];
 
     uint64_t knights = b.pieceList[C==Black].getAllMasked<Knight>();
     uint64_t knight0bits = knightBits[(uint8_t)knights];
@@ -586,7 +603,19 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
     knightbits =_mm_insert_epi64(knightbits, knight1bits, 1);
     occupied |= bits[(uint8_t)knights];
     occupied |= bits[(uint8_t)(knights >> 8)];
+//    ASSERT((bits[(uint8_t)knights] | bits[(uint8_t)(knights >> 8)]) == bits2[knights & 0xffff]);
+//    occupied |= bits2[knights & 0xffff];
 
+#define REUSE_PAWN_HASH 1
+#if REUSE_PAWN_HASH    
+    if (C == White) {
+        occupied |= pawnEntry.w;
+        pawnbits = ((pawnEntry.w << 9) & ~0x0101010101010101) | ((pawnEntry.w << 7) & ~0x8080808080808080);
+    } else {
+        occupied |= pawnEntry.b;
+        pawnbits = ((pawnEntry.b >> 7) & ~0x0101010101010101) | ((pawnEntry.b >> 9) & ~0x8080808080808080);
+    }
+#else    
     uint64_t pawns = b.pieceList[C==Black].getAllMasked<Pawn>();
     uint32_t pawnsHi = pawns >> 32;
     uint32_t pawnsLo = pawns;
@@ -606,7 +635,8 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
     occupied |= bits[pawnsLo>>24];
     pawn1bits |= pawnBits[C==Black][pawnsHi>>24];
     occupied |= bits[pawnsHi>>24];
-    pawnbits = pawn0bits | pawn1bits;
+    pawnbits = (pawn0bits | pawn1bits);
+#endif
 
     uint8_t queen0 = b.pieceList[C==Black].getAllMasked<Queen>();
     queen0bits = mobBits[0][b.attLen[0][queen0]] | mobBits[2][b.attLen[0][queen0|0x80]]

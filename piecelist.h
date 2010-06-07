@@ -109,7 +109,7 @@ public:
 		uint64_t bb = 0;
 		uint64_t piecePos = getAll<piece>();
 		for (unsigned int i = count[piece]; i>0; --i, piecePos >>= 8)
-			bb |= 1ULL << (uint8_t)piecePos;	//TODO check if (uint8_t) can be omitted
+			bb |= 1ULL << piecePos;
 		return bb;
 	}
 	/*
