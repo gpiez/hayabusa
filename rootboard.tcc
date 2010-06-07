@@ -142,7 +142,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	Move* end;
 	if ((P == leaf || P == vein) /*&& (b.template attacks<(C-Black)/2>(b.pieceList[(White-C)/2].getKing()) & attackMask) == 0*/) {
 		stats.eval++;
-		current.max(eval(b));
+		current.max(eval.eval(b));
 //        if (P==leaf) xout << " leaf " << current.v << endl;
 //        else xout << " vein " << current.v << endl;
 		end = b.generateCaptureMoves(list);

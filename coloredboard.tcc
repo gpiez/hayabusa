@@ -154,16 +154,16 @@ template<Colors C>
 __v8hi ColoredBoard<C>::estimatedEval(const Move m, const RootBoard& rb) const {
     int8_t piece = pieces[m.from];
     __v8hi estimate;
-    estimate = keyScore.vector - rb.getKSVector(piece, m.from);
+    estimate = keyScore.vector - rb.eval.getKSVector(piece, m.from);
 
     switch (m.special & 0xf) {
     case 0:
         break;
     case shortCastling:
-        estimate +=  rb.getKSVector(C*Rook, pov^f1)-rb.getKSVector(C*Rook, pov^h1);
+        estimate +=  rb.eval.getKSVector(C*Rook, pov^f1)-rb.eval.getKSVector(C*Rook, pov^h1);
         break;
     case longCastling:
-        estimate +=  rb.getKSVector(C*Rook, pov^d1)-rb.getKSVector(C*Rook, pov^a1);
+        estimate +=  rb.eval.getKSVector(C*Rook, pov^d1)-rb.eval.getKSVector(C*Rook, pov^a1);
         break;
     case promoteQ:
         piece = C*Queen;
@@ -178,13 +178,13 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const RootBoard& rb) const {
         piece = C*Knight;
         break;
     case EP:
-        estimate -= rb.getKSVector(-C*Pawn, cep.enPassant);
+        estimate -= rb.eval.getKSVector(-C*Pawn, cep.enPassant);
         break;
     }
 
     if (m.capture)
-        estimate -= rb.getKSVector(m.capture, m.to);
-    estimate += rb.getKSVector(piece, m.to);
+        estimate -= rb.eval.getKSVector(m.capture, m.to);
+    estimate += rb.eval.getKSVector(piece, m.to);
     return estimate;
 }
 #endif /* COLOREDBOARD_TCC_ */

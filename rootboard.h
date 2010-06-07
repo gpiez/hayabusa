@@ -40,13 +40,14 @@ template<class T> class Result;
  * passant status. Has an associated Eval object and holds multiple worker
  * threads. Contains information about the time budget.
  */
-class RootBoard: public Eval {
+class RootBoard {
 	friend class TestRootBoard;
 	
 	struct {
 		ColoredBoard<White> wb;
 		ColoredBoard<Black> bb;
 	} boards[nMaxGameLength];
+
 	#ifdef QT_GUI_LIB
     StatWidget* statWidget;
 	#endif
@@ -60,6 +61,7 @@ class RootBoard: public Eval {
 	unsigned int getAndDecAvailableThreads();
 	
 public:
+    Eval eval;
 	unsigned int depth;
 	TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt;
 	TranspositionTable<PerftEntry, 1, Key>* pt;

@@ -105,8 +105,6 @@ class Eval {
 						uint64_t &queen0bits, uint64_t &pawnbits) const;
 
 protected:
-
-	Eval();
 	void initPS();
 	void initZobrist();
 	
@@ -118,9 +116,10 @@ protected:
 	RawScore attack(const BoardBase&) const;
 	RawScore pieces(const PieceList&, int) const;
 	RawScore pawns(const BoardBase&) const;
-	RawScore eval(const BoardBase&) const;	///TODO should be template<C>
 
 public:
+    Eval();
+    RawScore eval(const BoardBase&) const;  ///TODO should be template<C>
 	RawScore getPS(int8_t piece, uint8_t square) const {
 		ASSERT(square < nSquares);
 		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
