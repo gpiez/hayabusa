@@ -192,9 +192,9 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 
 template<typename Entry, unsigned assoc, typename Key>
 template<Colors C>
-QString Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard& rb, QSet<Key>& visited) {
+QString Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval& e, QSet<Key>& visited) {
 	QString line = m.string();
-	const ColoredBoard<C> b(prev, m, rb);
+	const ColoredBoard<C> b(prev, m, e);
 	Key key = b.getZobrist();
 	if (visited.contains(key)) return line;
 	visited << key;
@@ -212,7 +212,7 @@ QString Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& p
 	if (ttMove.data)
 		for (Move *i=list; i<end; ++i) {
 			if (i->from == ttMove.from && i->to == ttMove.to) {
-				line += " " + bestLineNext<(Colors)-C>(b, *i, rb, visited);
+				line += " " + bestLineNext<(Colors)-C>(b, *i, e, visited);
 				break;
 			}
 		}
@@ -225,9 +225,9 @@ QString Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
 	if (!b.bestMove.data) return QString();
 	QSet<Key> visited;
 	if (b.color == White) {
-		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, b, visited);
+		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, b.eval, visited);
 	} else {
-		return bestLineNext<White>(b.currentBoard<Black>(), b.bestMove, b, visited);
+		return bestLineNext<White>(b.currentBoard<Black>(), b.bestMove, b.eval, visited);
 	}
 
 }

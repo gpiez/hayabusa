@@ -168,7 +168,7 @@ void TestRootBoard::generateCaptures() {
 			for (Move* k=list; k<end; ++k) {
 				asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 				tsc = (a + (d << 32));
-				ColoredBoard<Black> bb(b->boards[0].wb, *k, *b);
+				ColoredBoard<Black> bb(b->boards[0].wb, *k, b->eval);
 				blah += bb.getZobrist();
 				asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 				movetimes[i][j] += (a + (d << 32)) - tsc - overhead;

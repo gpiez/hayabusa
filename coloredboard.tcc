@@ -27,14 +27,14 @@
  * to construct a board with C to move
  */
 template<Colors C>
-ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard& rb) {
-    prev.doMove(this, m, rb);
+ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval& e) {
+    prev.doMove(this, m, e);
 }
 
 template<Colors C>
-void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootBoard& rb) const {
+void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const Eval& e) const {
     uint8_t piece = C*pieces[m.from];
-    next->copyBoardClrPiece<C>(this, piece, m.from, rb);
+    next->copyBoardClrPiece<C>(this, piece, m.from, e);
     next->cep.enPassant = 0;
     next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from].data4 & castlingMask[m.to].data4;
     
@@ -45,12 +45,12 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootB
     case 0:
         break;
     case shortCastling:
-        next->clrPiece<C>(Rook, pov^h1, rb);
-        next->setPiece<C>(Rook, pov^f1, rb);
+        next->clrPiece<C>(Rook, pov^h1, e);
+        next->setPiece<C>(Rook, pov^f1, e);
         break;
     case longCastling:
-        next->clrPiece<C>(Rook, pov^a1, rb);
-        next->setPiece<C>(Rook, pov^d1, rb);
+        next->clrPiece<C>(Rook, pov^a1, e);
+        next->setPiece<C>(Rook, pov^d1, e);
         break;
     case promoteQ:
         piece = Queen;
@@ -68,15 +68,15 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootB
         next->cep.enPassant = m.to;
         break;
     case EP:
-        next->clrPiece<(Colors)-C>(Pawn, cep.enPassant, rb);
+        next->clrPiece<(Colors)-C>(Pawn, cep.enPassant, e);
         break;
     }
 
     if (m.capture)
 //        next->clrPiece<(Colors)-C>(-C*m.capture, m.to, rb);
-        next->chgPiece<C>(-C*m.capture, piece, m.to, rb);
+        next->chgPiece<C>(-C*m.capture, piece, m.to, e);
     else
-        next->setPiece<C>(piece, m.to, rb);
+        next->setPiece<C>(piece, m.to, e);
 }
 
 template<Colors C>
@@ -151,19 +151,19 @@ void ColoredBoard<C>::initTables() {
 }
 
 template<Colors C>
-__v8hi ColoredBoard<C>::estimatedEval(const Move m, const RootBoard& rb) const {
+__v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
     int8_t piece = pieces[m.from];
     __v8hi estimate;
-    estimate = keyScore.vector - rb.eval.getKSVector(piece, m.from);
+    estimate = keyScore.vector - eval.getKSVector(piece, m.from);
 
     switch (m.special & 0xf) {
     case 0:
         break;
     case shortCastling:
-        estimate +=  rb.eval.getKSVector(C*Rook, pov^f1)-rb.eval.getKSVector(C*Rook, pov^h1);
+        estimate +=  eval.getKSVector(C*Rook, pov^f1)-eval.getKSVector(C*Rook, pov^h1);
         break;
     case longCastling:
-        estimate +=  rb.eval.getKSVector(C*Rook, pov^d1)-rb.eval.getKSVector(C*Rook, pov^a1);
+        estimate +=  eval.getKSVector(C*Rook, pov^d1)-eval.getKSVector(C*Rook, pov^a1);
         break;
     case promoteQ:
         piece = C*Queen;
@@ -178,13 +178,13 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const RootBoard& rb) const {
         piece = C*Knight;
         break;
     case EP:
-        estimate -= rb.eval.getKSVector(-C*Pawn, cep.enPassant);
+        estimate -= eval.getKSVector(-C*Pawn, cep.enPassant);
         break;
     }
 
     if (m.capture)
-        estimate -= rb.eval.getKSVector(m.capture, m.to);
-    estimate += rb.eval.getKSVector(piece, m.to);
+        estimate -= eval.getKSVector(m.capture, m.to);
+    estimate += eval.getKSVector(piece, m.to);
     return estimate;
 }
 #endif /* COLOREDBOARD_TCC_ */

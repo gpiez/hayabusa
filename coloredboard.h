@@ -42,15 +42,15 @@ class ColoredBoard: public BoardBase {
     
 public:
     ColoredBoard() {};
-    ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const RootBoard&);
+    ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval&);
     operator const ColoredBoard<(Colors)-C>& () const {
         return *(ColoredBoard<(Colors)-C>*)(void*)this;
     }
     static void initTables();
     Move* generateCaptureMoves(Move* list) const;
     Move* generateMoves(Move* list) const;
-    void doMove(ColoredBoard<(Colors)-C>* next, Move m, const RootBoard&) const;
-    __v8hi estimatedEval(const Move m, const RootBoard& rb) const;
+    void doMove(ColoredBoard<(Colors)-C>* next, Move m, const Eval&) const;
+    __v8hi estimatedEval(const Move m, const Eval& rb) const;
     Key getZobrist() const;
     
 private:

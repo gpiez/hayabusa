@@ -107,10 +107,10 @@ struct BoardBase {
     void init();
     void print();
 
-    template<Colors C> void setPiece(uint8_t piece, uint8_t pos, const RootBoard&);
-    template<Colors C> void clrPiece(uint8_t piece, uint8_t pos, const RootBoard&);
-    template<Colors C> void chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const RootBoard&);
-    template<Colors C> void copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const RootBoard&);
+    template<Colors C> void setPiece(uint8_t piece, uint8_t pos, const Eval&);
+    template<Colors C> void clrPiece(uint8_t piece, uint8_t pos, const Eval&);
+    template<Colors C> void chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const Eval&);
+    template<Colors C> void copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const Eval&);
 
     // copy pieces and pieceList
     void copyPieces(BoardBase* next) const {

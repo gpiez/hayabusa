@@ -33,6 +33,7 @@
 #include "workthread.h"
 #include "jobs.h"
 #include "score.tcc"
+#include "search.tcc"
 
 template<Colors C>
 Move RootBoard::rootSearch() {
@@ -54,6 +55,7 @@ Move RootBoard::rootSearch() {
 		
 		for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
 			//xout << depth << ":" << currentMove->string();
+//            Search<2,2,1,2,8,2,2,1,2,8>::search<(Colors)-C, trunk>(tt, eval, b, *currentMove, depth-1, beta, alpha);
 			if (search<(Colors)-C, trunk>(b, *currentMove, depth-1, beta, alpha)) {
 				bestMove = *currentMove;
 				*currentMove = *firstMove;
@@ -86,7 +88,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
     xout << indentation << m.string() << " " << stats.node;
     usleep(100000);*/
 	KeyScore estimate ALIGN_XMM;
-	estimate.vector = prev.estimatedEval(m, *this);	//TODO in leaf phase use a estimate function which calculates only the score
+	estimate.vector = prev.estimatedEval(m, eval);	//TODO in leaf phase use a estimate function which calculates only the score
 	if (P == leaf || P == vein) {									//TODO in the very fist leaf iteration, use tt?
 		A current(alpha);
 		current.max(estimate.score-Score<C>(125));
@@ -98,7 +100,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
 	}
 	if (P != vein)										//TODO use the precalculated key in the board constructor
 		tt->prefetchSubTable(estimate.key + prev.cep.data8 + (C+1));
-	const ColoredBoard<C> b(prev, m, *this);
+	const ColoredBoard<C> b(prev, m, eval);
 	ASSERT(b.keyScore.score == estimate.score);
 	
 	Key z = b.getZobrist();
@@ -283,7 +285,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 		return;
 	}
 
-	const ColoredBoard<C> b(prev, m, *this);
+	const ColoredBoard<C> b(prev, m, eval);
 
 	Key z = b.getZobrist();
 	TranspositionTable<PerftEntry, 1, Key>::SubTable* pe = pt->getSubTable(z);

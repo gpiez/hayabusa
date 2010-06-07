@@ -29,6 +29,7 @@
 
 template<Colors C> class ColoredBoard;
 class RootBoard;
+class Eval;
 
 template<typename Entry, unsigned int assoc>
 struct Sub {
@@ -79,7 +80,7 @@ public:
     }
     void freeMemory();
     QString bestLine(const RootBoard& );
-    template<Colors C> QString bestLineNext(const ColoredBoard<(Colors)-C>&, Move, const RootBoard&, QSet<Key>&);
+    template<Colors C> QString bestLineNext(const ColoredBoard<(Colors)-C>&, Move, const Eval&, QSet<Key>&);
 };
 
 template<typename Entry, unsigned assoc, typename Key>

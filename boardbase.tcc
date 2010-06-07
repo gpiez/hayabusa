@@ -36,13 +36,13 @@ extern "C" {
 }
 
 template<Colors C>
-void BoardBase::setPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
+void BoardBase::setPiece(uint8_t piece, uint8_t pos, const Eval& e) {
     ASSERT(piece <= King && piece > 0);
     ASSERT(pos < 64);
     ASSERT(pieces[pos] == 0);
     pieceList[C<0].add(piece, pos);
 //    PawnKey temp = keyScore.pawnKey;
-    keyScore.vector += rb.eval.getKSVector(C*piece, pos);
+    keyScore.vector += e.getKSVector(C*piece, pos);
 //    keyScore.pawnKey = temp ^ rb.getPawnKey(C*piece, pos);
     if (C==White)
         as::setPieceW(this, C*piece, pos);
@@ -55,13 +55,13 @@ void BoardBase::setPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
 }
 
 template<Colors C>
-void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const RootBoard& rb) {
+void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const Eval& e) {
     ASSERT(piece <= King && piece > 0);
     ASSERT(pos < 64);
     prev->copyPieces(this);
     ASSERT(pieces[pos] == C*piece);
     pieceList[C<0].sub(piece, pos);
-    keyScore.vector = prev->keyScore.vector - rb.eval.getKSVector(C*piece, pos);
+    keyScore.vector = prev->keyScore.vector - e.getKSVector(C*piece, pos);
 //    keyScore.pawnKey = prev->keyScore.pawnKey ^ rb.getPawnKey(C*piece, pos);
     if (C==White)
         as::clrPieceAndCopyW(prev, this, C*piece, pos);
@@ -74,13 +74,13 @@ void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t 
 }
 
 template<Colors C>
-void BoardBase::clrPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
+void BoardBase::clrPiece(uint8_t piece, uint8_t pos, const Eval& e) {
     ASSERT(piece <= King && piece > 0);
     ASSERT(pos < 64);
     ASSERT(pieces[pos] == C*piece);
     pieceList[C<0].sub(piece, pos);
 //    PawnKey temp = keyScore.pawnKey;
-    keyScore.vector -= rb.eval.getKSVector(C*piece, pos);
+    keyScore.vector -= e.getKSVector(C*piece, pos);
 //    keyScore.pawnKey = temp ^ rb.getPawnKey(C*piece, pos);
     if (C==White)
         as::clrPieceW(this, this, C*piece, pos);
@@ -93,7 +93,7 @@ void BoardBase::clrPiece(uint8_t piece, uint8_t pos, const RootBoard& rb) {
 }
 
 template<Colors C>
-void BoardBase::chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const RootBoard& rb) {
+void BoardBase::chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const Eval& e) {
     ASSERT(piece <= King && piece > 0);
     ASSERT(oldpiece < King && oldpiece > 0);
     ASSERT(pos < 64);
@@ -101,7 +101,7 @@ void BoardBase::chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const Roo
     pieceList[C>0].sub(oldpiece, pos);
     pieceList[C<0].add(piece, pos);
 //    PawnKey temp = keyScore.pawnKey;
-    keyScore.vector += rb.eval.getKSVector(C*piece, pos) - rb.eval.getKSVector(-C*oldpiece, pos);
+    keyScore.vector += e.getKSVector(C*piece, pos) - e.getKSVector(-C*oldpiece, pos);
 //    keyScore.pawnKey = temp ^ rb.getPawnKey(C*piece, pos) ^ rb.getPawnKey(-C*oldpiece, pos);
     if (C==White) {
         as::chgPieceW(this, -C*oldpiece, C*piece, pos);

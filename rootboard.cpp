@@ -95,40 +95,40 @@ const BoardBase& RootBoard::setup(QString fen) {
 			x += piecePlacement[p].toLatin1() - '1';
 			break;
 		case 'k':
-			board.setPiece<Black>( King, square, *this);
+			board.setPiece<Black>( King, square, eval);
 			break;
 		case 'p':
-			board.setPiece<Black>( Pawn, square, *this);
+			board.setPiece<Black>( Pawn, square, eval);
 			break;
 		case 'b':
-			board.setPiece<Black>( Bishop, square, *this);
+			board.setPiece<Black>( Bishop, square, eval);
 			break;
 		case 'n':
-			board.setPiece<Black>( Knight, square, *this);
+			board.setPiece<Black>( Knight, square, eval);
 			break;
 		case 'r':
-			board.setPiece<Black>( Rook, square, *this);
+			board.setPiece<Black>( Rook, square, eval);
 			break;
 		case 'q':
-			board.setPiece<Black>( Queen, square, *this);
+			board.setPiece<Black>( Queen, square, eval);
 			break;
 		case 'K':
-			board.setPiece<White>( King, square, *this);
+			board.setPiece<White>( King, square, eval);
 			break;
 		case 'P':
-			board.setPiece<White>( Pawn, square, *this);
+			board.setPiece<White>( Pawn, square, eval);
 			break;
 		case 'B':
-			board.setPiece<White>( Bishop, square, *this);
+			board.setPiece<White>( Bishop, square, eval);
 			break;
 		case 'N':
-			board.setPiece<White>( Knight, square, *this);
+			board.setPiece<White>( Knight, square, eval);
 			break;
 		case 'R':
-			board.setPiece<White>( Rook, square, *this);
+			board.setPiece<White>( Rook, square, eval);
 			break;
 		case 'Q':
-			board.setPiece<White>( Queen, square, *this);
+			board.setPiece<White>( Queen, square, eval);
 			break;
 		case '/':
 			x = -1;
