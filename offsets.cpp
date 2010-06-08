@@ -25,11 +25,37 @@ int ld(unsigned int x) {
 	return lrint(log(x)/log(2.0));
 }
 
+void printTemplate(int WR, int WB, int WQ, int WN, int WP,
+                   int BR, int BB, int BQ, int BN, int BP) {
+    QTextStream out(stdout);
+    if (abs(WR*5+WB*3+WQ*9+WN*3+WP - BR*5-BB*3-BQ*9-BN*3-BP) > 14) {
+        out << "template<int WP, int BP> struct Search<" <<
+        WR << "," << WB << "," << WQ << "," << WN << "," << "WP" << "," <<
+        BR << "," << BB << "," << BQ << "," << BN << "," << "BP" <<
+        ">: SearchBase {" << endl;
+        out << "template<Colors C, Phase P, typename A, typename B>" << endl;
+        out << "static bool search(TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt, const Eval& e, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int d, const A& a, B& beta) {" << endl;
+        out << "    return defaultSearch<C,P>(tt, e, b, m, d, a, beta); }};" << endl;
+    }
+}
+
 int main(int, char** argv) {
 	QTextStream out(stdout);
 	//out << "pieceList = " << ld(sizeof(shortAttacks[0])) << '\n';
 
-	if (argv[1] && QString("knightbits") == argv[1]) {
+    if (argv[1] && QString("templates") == argv[1]) {
+        for (int WR = 0; WR <= 2; ++WR)
+        for (int WB = 0; WB <= 2; ++WB)
+        for (int WQ = 0; WQ <= 1; ++WQ)
+        for (int WN = 0; WN <= 2; ++WN)
+        for (int WP = 8; WP <= 8; ++WP)
+        for (int BR = 0; BR <= 2; ++BR)
+        for (int BB = 0; BB <= 2; ++BB)
+        for (int BQ = 0; BQ <= 1; ++BQ)
+        for (int BN = 0; BN <= 2; ++BN)
+        for (int BP = 8; BP <= 8; ++BP)
+        printTemplate(WR,WB,WQ,WN,WP,BR,BB,BQ,BN,BP);
+    } else if (argv[1] && QString("knightbits") == argv[1]) {
 		for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
 			 {
 				uint64_t bits=0;
