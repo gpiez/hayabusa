@@ -570,14 +570,12 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
     uint64_t rook0 = (uint8_t)rooks;    // 0xff if no rook
     uint64_t rook0bits = mobBits[0][b.attLen[0][rook0]] | mobBits[2][b.attLen[0][rook0|0x80]];
     rook0bits = (rook0bits << (uint8_t)rook0) | (rook0bits >> (64-(uint8_t)rook0));
-    rookbits = _mm_insert_epi64(rookbits, rook0bits, 0);
     occupied = bits[rook0];
     
     uint64_t rook1 = (uint8_t)(rooks >> 8);        // attLen[0][0xff] is always 0.0
     uint64_t rook1bits = mobBits[0][b.attLen[0][rook1]] | mobBits[2][b.attLen[0][rook1|0x80]];
     rook1bits = (rook1bits << (uint8_t)rook1) | (rook1bits >> (64-(uint8_t)rook1));
-    rookbits = _mm_insert_epi64(rookbits, rook1bits, 1);
-//    rookbits = (__v2di) { rook0bits, rook1bits };
+    rookbits = _mm_set_epi64x(rook0bits, rook1bits);
     occupied |= bits[rook1];
 //    occupied |= bits2[rooks & 0xffff];
 
@@ -586,21 +584,19 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
     uint64_t bishop0 = (uint8_t)bishops;    // 0xff if no bishop
     uint64_t bishop0bits = mobBits[1][b.attLen[0][bishop0|0x40]] | mobBits[3][b.attLen[0][bishop0|0xC0]];
     bishop0bits = (bishop0bits << (uint8_t)bishop0) | (bishop0bits >> (64-(uint8_t)bishop0));
-    bishopbits = _mm_insert_epi64(bishopbits, bishop0bits, 0);
     occupied |= bits[bishop0];
 
     uint64_t bishop1 = (uint8_t)(bishops >> 8);        // attLen[0][0xff] is always 0.0
     uint64_t bishop1bits = mobBits[1][b.attLen[0][bishop1|0x40]] | mobBits[3][b.attLen[0][bishop1|0xC0]];
     bishop1bits = (bishop1bits << (uint8_t)bishop1) | (bishop1bits >> (64-(uint8_t)bishop1));
-    bishopbits =_mm_insert_epi64(bishopbits, bishop1bits, 1);
+    bishopbits =_mm_set_epi64x(bishop0bits, bishop1bits);
     occupied |= bits[bishop1];
 //    occupied |= bits2[bishops & 0xffff];
 
     uint64_t knights = b.pieceList[C==Black].getAllMasked<Knight>();
     uint64_t knight0bits = knightBits[(uint8_t)knights];
     uint64_t knight1bits = knightBits[(uint8_t)(knights >> 8)];
-    knightbits = _mm_insert_epi64(knightbits, knight0bits, 0);
-    knightbits =_mm_insert_epi64(knightbits, knight1bits, 1);
+    knightbits =_mm_set_epi64x(knight0bits, knight1bits);
     occupied |= bits[(uint8_t)knights];
     occupied |= bits[(uint8_t)(knights >> 8)];
 //    ASSERT((bits[(uint8_t)knights] | bits[(uint8_t)(knights >> 8)]) == bits2[knights & 0xffff]);
@@ -730,18 +726,19 @@ void printBit(__v2di bits) {
 RawScore Eval::mobilityValue( uint64_t occupied, uint64_t pawnbits, __v2di bishopbits, __v2di knightbits, __v2di rookbits,
                               __v2di bishopbitsw, __v2di knightbitsw, __v2di rookbitsw, uint64_t queen0bitsw) const {
 
-    __v2di restricted = { ~(occupied | pawnbits), ~(occupied | pawnbits) };
+    __v2di restricted = _mm_set_epi64x( ~(occupied | pawnbits), ~(occupied | pawnbits) );
     __v2di mob = pop2count(bishopbitsw & restricted);
     RawScore score = look2up(mob, bmobtab);
 
     mob = pop2count(knightbitsw & restricted);
     score += look2up(mob, kmobtab);
-    
-    restricted &=~ (bishopbits | knightbits);
+
+    __v2di minorbits = bishopbits | knightbits;
+    restricted &=~ (_mm_shuffle_epi32(minorbits, 0x4e) | minorbits);
     mob = pop2count(rookbitsw & restricted);
     score += look2up(mob, rmobtab);
     
-    restricted &=~ rookbits;
+    restricted &=~ (_mm_shuffle_epi32(rookbits, 0x4e) | rookbits);
     uint64_t mob2 = popcount(queen0bitsw & _mm_extract_epi64(restricted, 0));
     score += qmobtab[mob2];
 
