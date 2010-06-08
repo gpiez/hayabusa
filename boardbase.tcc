@@ -114,4 +114,72 @@ void BoardBase::chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const Eva
     pieces[pos] = C*piece;
 }
 
+template<Colors C>
+void BoardBase::setPieceEst(uint8_t piece, uint8_t pos) {
+    ASSERT(piece <= King && piece > 0);
+    ASSERT(pos < 64);
+    ASSERT(pieces[pos] == 0);
+    pieceList[C<0].add(piece, pos);
+    if (C==White)
+        as::setPieceW(this, C*piece, pos);
+    else
+        as::setPieceB(this, C*piece, pos);
+    for (unsigned int i = 0; i < 256; ++i) {
+        ASSERT(64 > attLen[0][i]);
+    }
+    pieces[pos] = C*piece;
+}
+
+template<Colors C>
+void BoardBase::copyBoardClrPieceEst(const BoardBase* prev, uint8_t piece, uint8_t pos) {
+    ASSERT(piece <= King && piece > 0);
+    ASSERT(pos < 64);
+    prev->copyPieces(this);
+    ASSERT(pieces[pos] == C*piece);
+    pieceList[C<0].sub(piece, pos);
+    if (C==White)
+        as::clrPieceAndCopyW(prev, this, C*piece, pos);
+    else
+        as::clrPieceAndCopyB(prev, this, C*piece, pos);
+    for (unsigned int i = 0; i < 256; ++i) {
+        ASSERT(64 > attLen[0][i]);
+    }
+    pieces[pos] = 0;
+}
+
+template<Colors C>
+void BoardBase::clrPieceEst(uint8_t piece, uint8_t pos) {
+    ASSERT(piece <= King && piece > 0);
+    ASSERT(pos < 64);
+    ASSERT(pieces[pos] == C*piece);
+    pieceList[C<0].sub(piece, pos);
+    if (C==White)
+        as::clrPieceW(this, this, C*piece, pos);
+    else
+        as::clrPieceB(this, this, C*piece, pos);
+    for (unsigned int i = 0; i < 256; ++i) {
+        ASSERT(64 > attLen[0][i]);
+    }
+    pieces[pos] = 0;
+}
+
+template<Colors C>
+void BoardBase::chgPieceEst(uint8_t oldpiece, uint8_t piece, uint8_t pos) {
+    ASSERT(piece <= King && piece > 0);
+    ASSERT(oldpiece < King && oldpiece > 0);
+    ASSERT(pos < 64);
+    ASSERT(pieces[pos] == -C*oldpiece);
+    pieceList[C>0].sub(oldpiece, pos);
+    pieceList[C<0].add(piece, pos);
+    if (C==White) {
+        as::chgPieceW(this, -C*oldpiece, C*piece, pos);
+    } else {
+        as::chgPieceB(this, -C*oldpiece, C*piece, pos);
+    }
+    for (unsigned int i = 0; i < 256; ++i) {
+        ASSERT(64 > attLen[0][i]);
+    }
+    pieces[pos] = C*piece;
+}
+
 #endif

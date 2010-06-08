@@ -88,22 +88,24 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
     xout << indentation << m.string() << " " << stats.node;
     usleep(100000);*/
     KeyScore estimate ALIGN_XMM;
-    estimate.vector = prev.estimatedEval(m, eval);    //TODO in leaf phase use a estimate function which calculates only the score
+    uint64_t nextcep;
+    estimate.vector = prev.estimatedEval(m, eval, nextcep);    //TODO in leaf phase use a estimate function which calculates only the score
     if (P == leaf || P == vein) {                                    //TODO in the very fist leaf iteration, use tt?
         A current(alpha);
-        current.max(estimate.score-Score<C>(125));
+        current.max(estimate.score-Score<C>(100));
         if (current >= beta) {
             stats.leafcut++;
 //            xout << " cut " << current.v << endl;
             return false;
         }
     }
+    Key z = estimate.key + nextcep + (C+1);
     if (P != vein)                                        //TODO use the precalculated key in the board constructor
-        tt->prefetchSubTable(estimate.key + prev.cep.data8 + (C+1));
-    const ColoredBoard<C> b(prev, m, eval);
+        tt->prefetchSubTable(z);
+    const ColoredBoard<C> b(prev, m, estimate.vector, nextcep);
     ASSERT(b.keyScore.score == estimate.score);
-    
-    Key z = b.getZobrist();
+    ASSERT(z == b.getZobrist());
+
     TranspositionTable<TTEntry, transpositionTableAssoc, Key>::SubTable* st;
     TTEntry subentry;
 

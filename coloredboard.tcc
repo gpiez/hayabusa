@@ -32,6 +32,12 @@ ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, cons
 }
 
 template<Colors C>
+ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, __v8hi est, uint64_t cep) {
+    prev.doMoveEst(this, m, cep);
+    keyScore.vector = est;
+}
+
+template<Colors C>
 void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const Eval& e) const {
     uint8_t piece = C*pieces[m.from];
     next->copyBoardClrPiece<C>(this, piece, m.from, e);
@@ -77,6 +83,60 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const Eval&
         next->chgPiece<C>(-C*m.capture, piece, m.to, e);
     else
         next->setPiece<C>(piece, m.to, e);
+}
+
+template<Colors C>
+void ColoredBoard<C>::doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t cepdata) const {
+    uint8_t piece = C*pieces[m.from];
+    next->copyBoardClrPieceEst<C>(this, piece, m.from);
+#ifdef MYDEBUG    
+    next->cep.enPassant = 0;
+    next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from].data4 & castlingMask[m.to].data4;
+#endif
+    next->fiftyMoves = (m.capture!=0) | (piece==5) ? 0:fiftyMoves+1;
+    ASSERT(C*m.capture < King);
+
+    switch (m.special & 0xf) {
+    case 0:
+        break;
+    case shortCastling:
+        next->clrPieceEst<C>(Rook, pov^h1);
+        next->setPieceEst<C>(Rook, pov^f1);
+        break;
+    case longCastling:
+        next->clrPieceEst<C>(Rook, pov^a1);
+        next->setPieceEst<C>(Rook, pov^d1);
+        break;
+    case promoteQ:
+        piece = Queen;
+        break;
+    case promoteR:
+        piece = Rook;
+        break;
+    case promoteB:
+        piece = Bishop;
+        break;
+    case promoteN:
+        piece = Knight;
+        break;
+#ifdef MYDEBUG        
+    case enableEP:
+        next->cep.enPassant = m.to;
+        break;
+#endif        
+    case EP:
+        next->clrPieceEst<(Colors)-C>(Pawn, cep.enPassant);
+        break;
+    }
+
+    ASSERT(next->cep.data8 == cepdata);
+    next->cep.data8 = cepdata;
+    
+    if (m.capture)
+//        next->clrPiece<(Colors)-C>(-C*m.capture, m.to, rb);
+        next->chgPieceEst<C>(-C*m.capture, piece, m.to);
+    else
+        next->setPieceEst<C>(piece, m.to);
 }
 
 template<Colors C>
@@ -151,10 +211,13 @@ void ColoredBoard<C>::initTables() {
 }
 
 template<Colors C>
-__v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
+__v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval, uint64_t& cepdata) const {
     int8_t piece = pieces[m.from];
     __v8hi estimate;
     estimate = keyScore.vector - eval.getKSVector(piece, m.from);
+    CastlingAndEP nextcep;
+    nextcep.enPassant = 0;
+    nextcep.castling.data4 = cep.castling.data4 & castlingMask[m.from].data4 & castlingMask[m.to].data4;
 
     switch (m.special & 0xf) {
     case 0:
@@ -177,6 +240,9 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
     case promoteN:
         piece = C*Knight;
         break;
+    case enableEP:
+        nextcep.enPassant = m.to;
+        break;
     case EP:
         estimate -= eval.getKSVector(-C*Pawn, cep.enPassant);
         break;
@@ -185,6 +251,7 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
     if (m.capture)
         estimate -= eval.getKSVector(m.capture, m.to);
     estimate += eval.getKSVector(piece, m.to);
+    cepdata = nextcep.data8;
     return estimate;
 }
 #endif /* COLOREDBOARD_TCC_ */
