@@ -28,194 +28,138 @@
 
 typedef int16_t RawScore;
 
-// struct MoveRawScore {
-// 	Move m;
-// 	RawScore r;
-// 	operator RawScore () const {
-// 		return r;
-// 	}
-// 	void operator = (RawScore a) {
-// 		r = a;
-// 	}
-// };
-
-template<Colors C> struct Score
+template<Colors C> struct ScoreBase
 {
-	Move m;
-	RawScore v;	//Absolute score. Less is good for black, more is good for white.
-	typedef Score<C> Base;
-	
-	//Score() {};
-	explicit Score (int a) 							{ v = C*a; m.data = 0; };
-    explicit Score (const Score& a)                 { v = a.v; m.data = 0; };
-	// Returns a relative score. More is better for the current side.
-	void join() const {};
-	operator RawScore() const				{ return v;	}
-//	void operator = (const Score<C>& a)  			{ v = a.v; };
-//	void operator = (RawScore a)  					{ v = a; };
-//	Score operator + (const Score<C>& a) const 		{ return v + a.v; };
-//	Score operator - (const Score<C>& a) const 		{ return v - a.v; };
-//	Score operator * (int a) const 					{ return v * a; };
-	void setReady()									{};
-	void setNotReady()								{};
-//	unsigned int shares()							{ return 0; };
+    RawScore v; //Absolute score. Less is good for black, more is good for white.
 
-	bool operator >= (RawScore a) const {
-		if ( C==White )
-			return v>=a;
-		else
-			return v<=a;
-	}
-	bool operator > (RawScore a) const {
-		if ( C==White )
-			return v>a;
-		else
-			return v<a;
-	}
-	bool operator < (RawScore a) const {
-		if ( C==White )
-			return v<a;
-		else
-			return v>a;
-	}
-	bool max(const RawScore b) 		{
-		if ( C==White ) {
-			if (b > v) {
-				v = b;
-				return true;
-			}
-		} else {
-			if (b < v) {
-				v = b;
-				return true;
-			}
-		}
-		return false;
-	}
-	bool max(const RawScore b, const Move n) 		{
-		if ( C==White ) {
-			if (b > v) {
-				v = b;
-				m = n;
-				return true;
-			}
-		} else {
-			if (b < v) {
-				v = b;
-				m = n;
-				return true;
-			}
-		}
-		return false;
-	}
+    explicit ScoreBase (int a)              { v = C*a; };
+    
+    explicit ScoreBase (const ScoreBase& a) { v = a.v; };
+    
+    operator RawScore() const               { return v; }
+
+    bool operator >= (RawScore a) const {
+        if ( C==White ) return v>=a;
+        else            return v<=a;
+    }
+    bool operator > (RawScore a) const {
+        if ( C==White ) return v>a;
+        else            return v<a;
+    }
+    bool operator < (RawScore a) const {
+        if ( C==White ) return v<a;
+        else            return v>a;
+    }
+    void max(const RawScore b) {
+        if (*this < b) 
+            v = b;
+    }
+};
+
+template<Colors C> struct Score: ScoreBase<C>
+{
+    using ScoreBase<C>::v;
+    using ScoreBase<C>::max;
+
+    Move m;
+    typedef Score<C> Base;
+    
+    explicit Score (int a):
+        ScoreBase<C>(a) {
+        m.data = 0;
+    };
+    explicit Score (const Score& a):
+        ScoreBase<C>(a) {
+        m.data = 0;
+    };
+    
+    void join() const {};
+    operator RawScore() const { return v; }
+    void setReady() {};
+    void setNotReady() {};
+
+    bool max(const RawScore b, const Move n)         {
+        if (*this < b) {
+            v = b;
+            m = n;
+            return true;
+        }
+        return false;
+    }
 };
 
 template<Colors C> struct SharedScore: public Score<C>
 {
-	using Score<C>::v;
-	using Score<C>::m;
-	typedef Score<C> Base;
-	
-	volatile unsigned int notReady;
-	QMutex valueMutex;
-	QWaitCondition readyCond;
-	QMutex readyMutex;
-	SharedScore<C>* depending;
+    using Score<C>::v;
+    using Score<C>::m;
+    typedef Score<C> Base;
+    
+    volatile unsigned int notReady;
+    QMutex valueMutex;
+    QWaitCondition readyCond;
+    QMutex readyMutex;
+//    SharedScore<C>* depending;
 
 private:
-	SharedScore();
-	SharedScore(SharedScore&);
+    SharedScore();
+    SharedScore(SharedScore&);
 
 public:
-	~SharedScore() {
-		ASSERT(!notReady);
-	}
+    ~SharedScore() {
+        ASSERT(!notReady);
+    }
 
-	explicit SharedScore (int a):
-		Score<C>(a),
-		notReady(0),
-		valueMutex(QMutex::Recursive),
-		depending(0)
-	{
-	};
-	// construct a shared score depending on the parameter
-	// if the parameter score gets a better value, a new
-	// maximum is calculated for this score, and if it changes
-	// for its depending scores too.
-	explicit SharedScore(const SharedScore& a):
-		Score<C>(a),
-		notReady(0),
-		valueMutex(QMutex::Recursive),
-		depending(0)
-	{
-	}
+    explicit SharedScore (int a):
+        Score<C>(a),
+        notReady(0),
+        valueMutex(QMutex::Recursive)
+//        depending(0)
+    {
+    };
+    // construct a shared score depending on the parameter
+    // if the parameter score gets a better value, a new
+    // maximum is calculated for this score, and if it changes
+    // for its depending scores too.
+    explicit SharedScore(const SharedScore& a):
+        Score<C>(a),
+        notReady(0),
+        valueMutex(QMutex::Recursive)
+//        depending(0)
+    {
+    }
 
-	void join();
-	
-	bool operator >= (RawScore a) {
-		if ( C==White )
-			return v>=a;
-		else
-			return v<=a;
-	}
-	bool operator > (RawScore a) {
-		if ( C==White )
-			return v>a;
-		else
-			return v<a;
-	}
-	bool operator < (RawScore a) {
-		if ( C==White )
-			return v<a;
-		else
-			return v>a;
-	}
+    void join();
+    
+    bool max(const RawScore b)         {
+        QMutexLocker lock(&valueMutex);
+        if (*this < b) {
+            v = b;
+            return true;
+        }
+        return false;
+    }
+    bool max(const RawScore b, const Move n)         {
+        QMutexLocker lock(&valueMutex);
+        if (*this < b) {
+            v = b;
+            m = n;
+            return true;
+        }
+        return false;
+    }
 
-	bool max(const RawScore b) 		{
-		QMutexLocker lock(&valueMutex);
-		if ( C==White ) {
-			if (b > v) {
-				v = b;
-				return true;
-			}
-		} else {
-			if (b < v) {
-				v = b;
-				return true;
-			}
-		}
-		return false;
-	}
-	bool max(const RawScore b, const Move n) 		{
-		QMutexLocker lock(&valueMutex);
-		if ( C==White ) {
-			if (b > v) {
-				v = b;
-				m = n;
-				return true;
-			}
-		} else {
-			if (b < v) {
-				v = b;
-				m = n;
-				return true;
-			}
-		}
-		return false;		
-	}
+    void setReady() {
+        QMutexLocker lock(&readyMutex);
+        --notReady;
+        ASSERT(notReady <= 6);
+        readyCond.wakeOne();
+    }
 
-	void setReady() {
-		QMutexLocker lock(&readyMutex);
-		--notReady;
-		ASSERT(notReady <= 6);
-		readyCond.wakeOne();
-	}
-
-	void setNotReady() {
-		QMutexLocker lock(&readyMutex);
-		++notReady;
-		ASSERT(notReady <= 6);	//queued jobs + running
-	}
+    void setNotReady() {
+        QMutexLocker lock(&readyMutex);
+        ++notReady;
+        ASSERT(notReady <= 6);    //queued jobs + running
+    }
 };
 
 
