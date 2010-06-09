@@ -36,6 +36,10 @@ RootBoard::RootBoard(Console *c):
 	console(c)
 {
 	tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
+    for (int p=-nPieces; p<=(int)nPieces; ++p)
+        for (unsigned int sq=0; sq<nSquares; ++sq)
+            estimatedError[p+nPieces][sq] = initialError;
+
 	#ifdef QT_GUI_LIB
 	statWidget = new StatWidget(*this);
 	statWidget->show();

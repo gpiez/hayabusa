@@ -59,7 +59,8 @@ class RootBoard {
 
 	template<Colors C> ColoredBoard<C>& currentBoard();
 	unsigned int getAndDecAvailableThreads();
-	
+    RawScore estimatedError[nPieces*2+1][nSquares];
+
 public:
     Eval eval;
 	unsigned int depth;

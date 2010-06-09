@@ -78,6 +78,7 @@ Move RootBoard::rootSearch() {
  * beta is the return value, it is updated at the end
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
+
 template<Colors C, Phase P, typename A, typename B>
 bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
     stats.node++;
@@ -89,22 +90,24 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
     usleep(100000);*/
     KeyScore estimate ALIGN_XMM;
     uint64_t nextcep;
-    estimate.vector = prev.estimatedEval(m, eval, nextcep);    //TODO in leaf phase use a estimate function which calculates only the score
-    if (P == leaf || P == vein) {                                    //TODO in the very fist leaf iteration, use tt?
-        A current(alpha);
-        current.max(estimate.score-Score<C>(100));
-        if (current >= beta) {
-            stats.leafcut++;
-//            xout << " cut " << current.v << endl;
+    estimate.vector = prev.estimatedEval(m, eval, nextcep);
+    RawScore& eE = estimatedError[nPieces + prev.pieces[m.from]][m.to];
+    if (P == leaf || P == vein) {                          
+        ScoreBase<C> current(alpha);
+        current.max(estimate.score-C*eE);
+        if (current >= beta) {  // from the view of beta, current is a bad move,
+            stats.leafcut++;    // so neither update beta nor return true
             return false;
         }
     }
-    Key z = estimate.key + nextcep + (C+1);
-    if (P != vein)                                        //TODO use the precalculated key in the board constructor
+    Key z;
+    if (P != vein) {
+        z = estimate.key + nextcep + (C+1);
         tt->prefetchSubTable(z);
+    }
     const ColoredBoard<C> b(prev, m, estimate.vector, nextcep);
     ASSERT(b.keyScore.score == estimate.score);
-    ASSERT(z == b.getZobrist());
+    ASSERT(P == vein || z == b.getZobrist());
 
     TranspositionTable<TTEntry, transpositionTableAssoc, Key>::SubTable* st;
     TTEntry subentry;
@@ -113,7 +116,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
     unsigned int ttDepth = 0;
     A current(alpha);    // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     bool alreadyVisited;
-    if (P == tree || P == trunk || P == leaf) {
+    if (P != vein) {
         st = tt->getSubTable(z);
         if (tt->retrieve(st, z, subentry, alreadyVisited)) {
             if ( P == trunk)
@@ -146,7 +149,11 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
     Move* end;
     if ((P == leaf || P == vein) /*&& (b.template attacks<(C-Black)/2>(b.pieceList[(White-C)/2].getKing()) & attackMask) == 0*/) {
         stats.eval++;
-        current.max(eval.eval(b));
+        RawScore realScore = eval.eval(b);
+        current.max(realScore);
+        RawScore error = C*(estimate.score - realScore);
+        if (eE < error) eE = error;
+        else eE--;
 //        if (P==leaf) xout << " leaf " << current.v << endl;
 //        else xout << " vein " << current.v << endl;
         end = b.generateCaptureMoves(list);
@@ -209,7 +216,7 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
     if (P == trunk) while(Job* job = WorkThread::getJob(z)) job->job();
 
     current.join();
-    if (P == tree || P == trunk || P == leaf) {
+    if (P != vein) {
         TTEntry stored;
         stored.zero();
         stored.depth |= depth;

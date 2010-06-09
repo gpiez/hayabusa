@@ -32,6 +32,8 @@ template<Colors C> struct ScoreBase
 {
     RawScore v; //Absolute score. Less is good for black, more is good for white.
 
+    ScoreBase() {};
+
     explicit ScoreBase (int a)              { v = C*a; };
     
     explicit ScoreBase (const ScoreBase& a) { v = a.v; };
@@ -63,7 +65,7 @@ template<Colors C> struct Score: ScoreBase<C>
 
     Move m;
     typedef Score<C> Base;
-    
+
     explicit Score (int a):
         ScoreBase<C>(a) {
         m.data = 0;

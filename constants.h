@@ -70,6 +70,7 @@ enum Phase { root, trunk, tree, leaf, vein };
 
 extern unsigned int splitDepth;
 
+static const int initialError = 100;
 static const unsigned int nHashPassers = 2;
 static const unsigned int nTTLocks = 1;
 static const unsigned int nMaxMoves = 256; // maximum possible moves in a position
