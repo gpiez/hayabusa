@@ -47,8 +47,8 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const Eval&
     next->fiftyMoves = (m.capture!=0) | (piece==5) ? 0:fiftyMoves+1;
     ASSERT(C*m.capture < King);
     
-    switch (m.special & 0xf) {
-    case 0:
+    switch (m.special) {
+    case nothingSpecial:
         break;
     case shortCastling:
         next->clrPiece<C>(Rook, pov^h1, e);
@@ -76,10 +76,11 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const Eval&
     case EP:
         next->clrPiece<(Colors)-C>(Pawn, cep.enPassant, e);
         break;
+    default:
+        __builtin_unreachable();
     }
 
     if (m.capture)
-//        next->clrPiece<(Colors)-C>(-C*m.capture, m.to, rb);
         next->chgPiece<C>(-C*m.capture, piece, m.to, e);
     else
         next->setPiece<C>(piece, m.to, e);
@@ -96,8 +97,8 @@ void ColoredBoard<C>::doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t
     next->fiftyMoves = (m.capture!=0) | (piece==5) ? 0:fiftyMoves+1;
     ASSERT(C*m.capture < King);
 
-    switch (m.special & 0xf) {
-    case 0:
+    switch (m.special) {
+    case nothingSpecial:
         break;
     case shortCastling:
         next->clrPieceEst<C>(Rook, pov^h1);
@@ -127,6 +128,8 @@ void ColoredBoard<C>::doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t
     case EP:
         next->clrPieceEst<(Colors)-C>(Pawn, cep.enPassant);
         break;
+    default:
+        __builtin_unreachable();
     }
 
     ASSERT(next->cep.data8 == cepdata);
@@ -219,8 +222,8 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval, uint64_t& 
     nextcep.enPassant = 0;
     nextcep.castling.data4 = cep.castling.data4 & castlingMask[m.from].data4 & castlingMask[m.to].data4;
 
-    switch (m.special & 0xf) {
-    case 0:
+    switch (m.special) {
+    case nothingSpecial:
         break;
     case shortCastling:
         estimate +=  eval.getKSVector(C*Rook, pov^f1)-eval.getKSVector(C*Rook, pov^h1);
@@ -246,6 +249,8 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval, uint64_t& 
     case EP:
         estimate -= eval.getKSVector(-C*Pawn, cep.enPassant);
         break;
+    default:
+        __builtin_unreachable();
     }
 
     if (m.capture)
