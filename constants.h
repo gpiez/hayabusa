@@ -68,8 +68,6 @@ enum SpecialMoves {
 
 enum Phase { root, trunk, tree, leaf, vein };
 
-extern unsigned int splitDepth;
-
 static const int initialError = 100;
 static const unsigned int nHashPassers = 2;
 static const unsigned int nTTLocks = 1;
@@ -152,6 +150,8 @@ static inline uint64_t popcount(uint64_t x) {
     x *= 0x0101010101010101;
     return  x>>56;
 }
+
+static const __v16qi zeroToFifteen = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
 
 extern "C" __m128i broadcastTab[256] ALIGN_XMM;
 #endif /* CONSTANTS_H_ */
