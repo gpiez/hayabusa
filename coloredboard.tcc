@@ -32,8 +32,19 @@ ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, cons
 }
 
 template<Colors C>
+ColoredBoard<C>::ColoredBoard(const ColoredBoard<C>& prev, Move m, const Eval& e) {
+    prev.doMove((ColoredBoard<(Colors)-C>*)this, m, e);
+}
+
+template<Colors C>
 ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, __v8hi est, uint64_t cep) {
     prev.doMoveEst(this, m, cep);
+    keyScore.vector = est;
+}
+
+template<Colors C>
+ColoredBoard<C>::ColoredBoard(const ColoredBoard<C>& prev, Move m, __v8hi est, uint64_t cep) {
+    prev.doMoveEst((ColoredBoard<(Colors)-C>*)this, m, cep);
     keyScore.vector = est;
 }
 
@@ -120,11 +131,11 @@ void ColoredBoard<C>::doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t
     case promoteN:
         piece = Knight;
         break;
-#ifdef MYDEBUG        
     case enableEP:
+#ifdef MYDEBUG        
         next->cep.enPassant = m.to;
+#endif
         break;
-#endif        
     case EP:
         next->clrPieceEst<(Colors)-C>(Pawn, cep.enPassant);
         break;
