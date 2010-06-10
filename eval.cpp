@@ -17,16 +17,12 @@
 
 */
 #include <pch.h>
-#ifndef __SSE4_1__
-#define __SSE4_1__
-#endif
 #ifndef __SSSE3__
 #define __SSSE3__
 #endif
 #ifndef __SSE3__
 #define __SSE3__
 #endif
-#include <smmintrin.h>
 
 #include "eval.h"
 #include "boardbase.h"
@@ -695,8 +691,9 @@ void printBit(uint64_t bits) {
 }
 
 template<unsigned int I>
-uint64_t extract(const __v2di &v) {
-    return _mm_extract_epi64(v, I);
+uint64_t extract(const __v2di &) {
+    return 0;
+    //return _mm_extract_epi64(v, I);
 }
 
 void printBit(__v2di bits) {
@@ -739,7 +736,7 @@ RawScore Eval::mobilityValue( uint64_t occupied, uint64_t pawnbits, __v2di bisho
     score += look2up(mob, rmobtab);
     
     restricted &=~ (_mm_shuffle_epi32(rookbits, 0x4e) | rookbits);
-    uint64_t mob2 = popcount(queen0bitsw & _mm_extract_epi64(restricted, 0));
+    uint64_t mob2 = popcount(queen0bitsw & _mm_cvtsi128_si64x(restricted));
     score += qmobtab[mob2];
 
     return score;
