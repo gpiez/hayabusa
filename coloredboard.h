@@ -44,9 +44,11 @@ public:
     ColoredBoard() {};
     ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval&);
     ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, __v8hi est, uint64_t cep);
-    operator const ColoredBoard<(Colors)-C>& () const {
+    ColoredBoard(const ColoredBoard<C>& prev, Move m, const Eval&);
+    ColoredBoard(const ColoredBoard<C>& prev, Move m, __v8hi est, uint64_t cep);
+/*    operator const ColoredBoard<(Colors)-C>& () const {
         return *(ColoredBoard<(Colors)-C>*)(void*)this;
-    }
+    }*/
     static void initTables();
     Move* generateCaptureMoves(Move* list) const;
     Move* generateMoves(Move* list) const;
