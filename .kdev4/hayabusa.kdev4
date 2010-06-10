@@ -35,7 +35,7 @@ Name=hayabusa
 Type=Native Application
 
 [Launch][Launch Configuration 1][Data]
-Arguments=setoption name splitdepth value -1:go\n
+Arguments=setoption name humanreadable value 1:setoption name splitdepth value -1:position fen r2qrb1k/1p1b2p1/p2ppn1p/8/3NP3/1BN5/PPP3QP/1K3RR1 w - -:go\n
 Debugger Shell=
 Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a)
 Dependency Action=Build

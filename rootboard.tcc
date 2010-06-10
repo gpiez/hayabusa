@@ -24,6 +24,8 @@
 #endif
 
 #include <unistd.h>
+#include <sstream>
+#include <locale>
 #include "rootboard.h"
 #include "coloredboard.h"
 #include "generateMoves.tcc"
@@ -34,6 +36,7 @@
 #include "jobs.h"
 #include "score.tcc"
 #include "search.tcc"
+#include "options.h"
 
 template<Colors C>
 Move RootBoard::rootSearch() {
@@ -65,12 +68,13 @@ Move RootBoard::rootSearch() {
             emit console->iterationDone(depth, stats.node, newBestLine, alpha.v);
             //if (QDateTime::currentDateTime() > hardBudget) break;
         }
-        emit console->send(QString("depth %1 time %2 nodes %3 score %4 pv %5")
-        .arg(depth).arg(getTime()).arg(getStats().node).arg(alpha.v).arg(tt->bestLine(*this)));
-        // assume geometrically increasing time per depth
-        //if (QDateTime::currentDateTime() > softBudget) break;
+        std::stringstream g;
+        if (Options::humanreadable) g.imbue(std::locale("de_DE"));
+        else                        g.imbue(std::locale("C"));
+        g << "depth " << depth << " time " << std::showpoint << getTime() << " nodes "
+          << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this).toStdString();
+        emit console->send(QString::fromStdString(g.str()));
     }
-
     return bestMove;
 }
 /*
@@ -79,8 +83,8 @@ Move RootBoard::rootSearch() {
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
 
-template<Colors C, Phase P, typename A, typename B>
-bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
+template<Colors C, Phase P, typename A, typename B, typename T>
+bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
     stats.node++;
 /*    QTextStream xout(stdout);
     QString indentation;
@@ -192,13 +196,15 @@ bool RootBoard::search(const ColoredBoard<(Colors)-C>& prev, Move m, unsigned in
             search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
         // Stay in tree search or change from trunk to it if the next depth would
         // be below the split depth
-        else if (P == tree || (P == trunk && depth <= splitDepth)) {
-/*            B null(current + Score<C>(1));
-            if (depth <= 4)
-            search<C, leaf>((const ColoredBoard<(Colors)-C>)b, *i, 0, current, null);
-            else
-            search<C, tree>((const ColoredBoard<(Colors)-C>)b, *i, depth-4, current, null);
-            if (null.v != current.v)*/
+        else if (P == tree || (P == trunk && depth <= Options::splitDepth)) {
+            typename B::Base null(current + Score<C>(1));
+            if (depth > 1) {
+                if (depth > 4)
+                    search<C, tree>(b, *i, depth-4, current, null);
+                else
+                    search<C, leaf>(b, *i, 0, current, null);
+            }
+            if (null.v != current.v)
             search<(Colors)-C, tree>(b, *i, depth-1, (typename B::Base&)beta, current);
         // Multi threaded search: After the first move try to find a free thread, otherwise do a normal
         // search but stay in trunk. To avoid multithreading search at cut off nodes
@@ -287,7 +293,7 @@ void inline setNotReady(Result<uint64_t>& r) {
 }
 
 template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth) {
-    if (P == trunk && depth <= splitDepth) {
+    if (P == trunk && depth <= Options::splitDepth) {
         uint64_t n=0;
         perft<C, tree>(n, prev, m, depth);
         update(result, n);
