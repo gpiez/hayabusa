@@ -24,8 +24,12 @@
 #include "workthread.h"
 #include "rootboard.h"
 #include "coloredboard.tcc"
+#include "options.h"
 
+namespace Options {
 unsigned int splitDepth = 5;
+int humanreadable = 0;
+}
 
 Console::Console(QCoreApplication* parent):
     QObject(parent),
@@ -139,7 +143,9 @@ void Console::setoption(QStringList cmds) {
     if (!name.isEmpty()) {
         QString data = o["value"].join(" ").toLower();
         if (name == "splitdepth") {
-            splitDepth = data.toInt();
+            Options::splitDepth = data.toInt();
+        } else if (name == "humanreadable") {
+            Options::humanreadable = data.toInt();
         }
     }
 }
