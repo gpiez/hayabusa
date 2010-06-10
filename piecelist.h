@@ -134,7 +134,7 @@ public:
 	void add(int piece, unsigned int pos) {
 		ASSERT(piece >= Rook && piece <= King);
 		ASSERT(pos < nSquares);
-		pos_v = _mm_shuffle_epi8(pos_v, (__m128i)addShifts[index[piece]]);
+		pos_v = _mm_shuffle_epi8(pos_v, addShifts[index[piece]]);
 		this->pos[index[piece]] = pos;
 		++count[piece];
 		index_v += indexDiffs[piece];
@@ -157,7 +157,7 @@ public:
 		mask |= _mm_slli_si128(mask, 2);
 		mask |= _mm_slli_si128(mask, 4);
 		mask |= _mm_slli_si128(mask, 8);
-		mask = _mm_sub_epi8((__m128i)(__v16qi){ 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 }, mask);
+		mask = _mm_sub_epi8(zeroToFifteen, mask);
 		pos_v = _mm_shuffle_epi8(npos, mask);
 		--count[piece];							// TODO this dec needs 10-20 clocks, why
 		index_v -= indexDiffs[piece];
