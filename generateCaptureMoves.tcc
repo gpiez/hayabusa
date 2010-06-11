@@ -181,7 +181,7 @@ Move* ColoredBoard<C>::generateCaptureMoves( Move* list) const {
      * generateTargetCaptures().
      */
     for (unsigned int i = 0; i < pieceList[CI][Pawn]; ++i) {
-        unsigned int pawn = pieceList[CI].getPawn(i);            //TODO load all 8 pieces at once and shift instead?
+        uint8_t pawn = pieceList[CI].getPawn(i);            //TODO load all 8 pieces at once and shift instead?
         if (isPromoRank(pawn)) {
             uint8_t pin=detectPin(pawn);
 

@@ -28,7 +28,7 @@ template<Colors C>
 void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
     ASSERT(to < nSquares);
     Attack a = attacks<CI>( to );
-    int cap = pieces[to];
+    uint8_t cap = pieces[to];
     uint8_t dir;
     uint8_t from;
     uint8_t pin;
@@ -51,7 +51,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint8_t to ) const {
                      * a different vector than the pin in every possible case. Avoiding a check
                      * by moving a pawn in between with an e. p. capture is impossible
                      * leave capture field empty, otherwise we would capture twice */
-                    if (!isValid(detectPin(from))) *list++ = (Move) {{ from, to+C*8, 0, EP }};
+                    if (!isValid(detectPin(from))) *list++ = (Move) {{ from, (uint8_t)(to+C*8), 0, EP }};
             }
 
         if ( a.s.PR ) {
@@ -217,7 +217,7 @@ void ColoredBoard<C>::ray_vectorized(Move* &list, uint8_t from, uint8_t dir) con
 template<Colors C>
 Move* ColoredBoard<C>::generateMoves(Move* list) const {
 
-    unsigned int king = pieceList[CI].getKing();
+    uint8_t king = pieceList[CI].getKing();
     Attack kingAttacks;
     kingAttacks.data = attacks<EI>(king) & attackMask;
 
@@ -302,9 +302,9 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
         }
 
         for (unsigned int i = 0; i < 8; ++i) {
-            unsigned int to = king + dirOffsets[i];
+            uint8_t to = king + dirOffsets[i];
             if (!isKingDistance(king, to)) continue;
-            int cap = pieces[to];
+            int8_t cap = pieces[to];
             if (i != attDir && i != attDir2 && C * cap <= 0 && !((longAttack[EI][to] & attackMaskLong) | (shortAttack[EI][to] & attackMaskShort)))
                 *list++ = (Move) {{king, to, cap, nothingSpecial}};
         }
