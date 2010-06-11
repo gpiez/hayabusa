@@ -19,6 +19,10 @@
 #ifndef PCH_H_
 #define PCH_H_
 
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+
 #include <QtCore>
 
 #ifdef QT_GUI_LIB
