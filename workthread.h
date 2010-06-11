@@ -46,8 +46,9 @@ class WorkThread: public QThread {
 	static unsigned int nThreads;
 
 	void stop();
-
+    
 public:
+    static __thread bool isMain;
 	Stats* pstats;
 	static unsigned int running;
 

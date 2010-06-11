@@ -27,6 +27,7 @@ QMutex WorkThread::mutex;
 unsigned int WorkThread::running = 0;
 unsigned int WorkThread::nThreads = 0;
 QVector<WorkThread*> WorkThread::threads;
+__thread bool WorkThread::isMain;
 
 WorkThread::WorkThread():
 	doStop(false),
@@ -35,6 +36,7 @@ WorkThread::WorkThread():
 	job(NULL)
 {
 	board.init();
+    isMain = false;
 }
 
 WorkThread::~WorkThread()
@@ -153,6 +155,7 @@ void WorkThread::init() {
 		th->start();
 		threads.append(th);
 	}
+	threads.first()->isMain = true;
 }
 
 WorkThread* WorkThread::findFree() {
