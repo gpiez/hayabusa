@@ -17,12 +17,6 @@
 
 */
 #include <pch.h>
-#ifndef __SSSE3__
-#define __SSSE3__
-#endif
-#ifndef __SSE3__
-#define __SSE3__
-#endif
 
 #include "eval.h"
 #include "boardbase.h"
