@@ -44,7 +44,7 @@
 
 enum SearchFlag { null = 1 };
 
-enum Pieces { Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6 };
+enum Pieces: int8_t { Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6 };
 
 enum Colors { Black = -1, White = 1 };
 
@@ -59,7 +59,7 @@ enum Square {
 	a8, b8, c8, d8, e8, f8, g8, h8
 };
 
-enum SpecialMoves {
+enum SpecialMoves: uint8_t {
 	nothingSpecial=0,
 	shortCastling, longCastling,
 	promoteQ, promoteR, promoteB, promoteN,
@@ -143,6 +143,8 @@ static const int yShortOffsets[nColors][nPieces+1][nDirs] = {{
 	{ 0, 1, 1, 1, 0, -1, -1, -1 }	//king
 }};
 
+static const __v16qi zeroToFifteen = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
+
 static inline uint64_t popcount(uint64_t x) {
     x -=  x>>1 & 0x5555555555555555;
     x  = ( x>>2 & 0x3333333333333333 ) + ( x & 0x3333333333333333 );
@@ -150,8 +152,6 @@ static inline uint64_t popcount(uint64_t x) {
     x *= 0x0101010101010101;
     return  x>>56;
 }
-
-static const __v16qi zeroToFifteen = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
 
 extern "C" __m128i broadcastTab[256] ALIGN_XMM;
 #endif /* CONSTANTS_H_ */

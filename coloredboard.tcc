@@ -209,8 +209,8 @@ uint8_t ColoredBoard<C>::diaPinTable[nDirs][256];
 template<Colors C>
 void ColoredBoard<C>::initTables() {
     for (unsigned int dir = 0; dir<nDirs; dir++)
-    for (int l = -King; l<=King; ++l)
-    for (int r = -King; r<=King; ++r) {
+    for (int8_t l = -King; l<=King; ++l)
+    for (int8_t r = -King; r<=King; ++r) {
         LongIndex i = {{ l, r }};
         diaPinTable[dir][i] = ~0;
         if ( (dir&1) && l == C*King && (r == -C*Bishop || r == -C*Queen) )
