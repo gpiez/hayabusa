@@ -34,13 +34,15 @@ template<Colors C>
 class ColoredBoard: public BoardBase {
 
     friend class TestRootBoard;
-
+public:    
     static const unsigned int CI = (White-C)/(White-Black);    // ColorIndex, 0 for White, 1 for Black
+private:    
     static const unsigned int EI = (C-Black)/(White-Black);    // EnemyIndex, 1 for White, 0 for Black
     static const uint8_t pov = CI*56;    //for xoring square values to the other side
     static uint8_t diaPinTable[nDirs][256];
     
 public:
+
     ColoredBoard() {};
     ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval&);
     ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, __v8hi est, uint64_t cep);
