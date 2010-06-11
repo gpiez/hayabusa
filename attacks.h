@@ -122,6 +122,6 @@ static const Attack attackMask_ = {{ attackMaskLong_, attackMaskShort_ }};
 static const uint16_t attackMask = attackMask_;
 
 static const LAttack doubleAttack_ = {{ 2, 2, 2 }};
-static const uint16_t doubleAttack = doubleAttack;
+static const uint16_t doubleAttack = doubleAttack_;
 
 #endif /* ATTACKS_H_ */
