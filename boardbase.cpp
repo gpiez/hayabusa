@@ -249,8 +249,8 @@ void BoardBase::initTables()
         borderTable[l] = len;
     }
 
-    for (int left = 0; left < 8; left++)
-    for (int right = 0; right < 8; right++) {
+    for (uint8_t left = 0; left < 8; left++)
+    for (uint8_t right = 0; right < 8; right++) {
         Length len = {{ right, left }};
         totalLen[len] = left + right;
     }
@@ -258,12 +258,12 @@ void BoardBase::initTables()
     for (int r = 0; r < 8; ++r) {
         for (int i = 0;  i < r; ++i)
         {
-            Move m = {{ 0, (i+1)*dirOffsets[dir] }};
+            Move m = {{ 0, (uint8_t)((i+1)*dirOffsets[dir]) }};
             moveOffsetTable[r][dir].single[i] = m;
         }
         for (int i = r;  i < 7; ++i)
         {
-            Move m = {{ 0, (r-i-1)*dirOffsets[dir] }};
+            Move m = {{ 0, (uint8_t)((r-i-1)*dirOffsets[dir]) }};
             moveOffsetTable[r][dir].single[i] = m;
         }
     }
