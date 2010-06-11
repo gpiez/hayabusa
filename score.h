@@ -32,6 +32,8 @@ template<Colors C> struct ScoreBase
 {
     RawScore v; //Absolute score. Less is good for black, more is good for white.
 
+    enum { isNotShared = true };
+    
     ScoreBase() {};
 
     explicit ScoreBase (int a)              { v = C*a; };
@@ -61,9 +63,10 @@ template<Colors C> struct ScoreBase
 template<Colors C> struct Score: ScoreBase<C>
 {
     using ScoreBase<C>::v;
-    using ScoreBase<C>::max;
-
     Move m;
+
+    enum { isNotShared = true };
+
     typedef Score<C> Base;
 
     explicit Score (int a):
@@ -80,6 +83,8 @@ template<Colors C> struct Score: ScoreBase<C>
     void setReady() {};
     void setNotReady() {};
 
+    using ScoreBase<C>::max;
+    
     bool max(const RawScore b, const Move n)         {
         if (*this < b) {
             v = b;
@@ -96,10 +101,12 @@ template<Colors C> struct SharedScore: public Score<C>
     using Score<C>::m;
     typedef Score<C> Base;
     
+    enum { isNotShared = false };
+    
     volatile unsigned int notReady;
-    QMutex valueMutex;
-    QWaitCondition readyCond;
-    QMutex readyMutex;
+    std::recursive_mutex valueMutex;
+    std::condition_variable readyCond;
+    std::mutex readyMutex;
 //    SharedScore<C>* depending;
 
 private:
@@ -113,8 +120,7 @@ public:
 
     explicit SharedScore (int a):
         Score<C>(a),
-        notReady(0),
-        valueMutex(QMutex::Recursive)
+        notReady(0)
 //        depending(0)
     {
     };
@@ -124,8 +130,7 @@ public:
     // for its depending scores too.
     explicit SharedScore(const SharedScore& a):
         Score<C>(a),
-        notReady(0),
-        valueMutex(QMutex::Recursive)
+        notReady(0)
 //        depending(0)
     {
     }
@@ -133,7 +138,7 @@ public:
     void join();
     
     bool max(const RawScore b)         {
-        QMutexLocker lock(&valueMutex);
+        std::lock_guard<std::recursive_mutex> lock(valueMutex);
         if (*this < b) {
             v = b;
             return true;
@@ -141,7 +146,7 @@ public:
         return false;
     }
     bool max(const RawScore b, const Move n)         {
-        QMutexLocker lock(&valueMutex);
+        std::lock_guard<std::recursive_mutex> lock(valueMutex);
         if (*this < b) {
             v = b;
             m = n;
@@ -151,14 +156,14 @@ public:
     }
 
     void setReady() {
-        QMutexLocker lock(&readyMutex);
+        std::lock_guard<std::mutex> lock(readyMutex);
         --notReady;
         ASSERT(notReady <= 6);
-        readyCond.wakeOne();
+        readyCond.notify_one();
     }
 
     void setNotReady() {
-        QMutexLocker lock(&readyMutex);
+        std::lock_guard<std::mutex> lock(readyMutex);
         ++notReady;
         ASSERT(notReady <= 6);    //queued jobs + running
     }

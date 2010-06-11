@@ -21,10 +21,10 @@
 
 template<Colors C>
 void SharedScore<C>::join() {
-	QMutexLocker lock(&readyMutex);
+	std::unique_lock<std::mutex> lock(readyMutex);
 	WorkThread::idle(1);
 	while (notReady)
-		readyCond.wait(&readyMutex);
+		readyCond.wait(lock);
 	WorkThread::idle(-1);
 }
 
