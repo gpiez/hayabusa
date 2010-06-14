@@ -192,8 +192,8 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 
 template<typename Entry, unsigned assoc, typename Key>
 template<Colors C>
-QString Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval& e, QSet<Key>& visited) {
-	QString line = m.string();
+std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval& e, QSet<Key>& visited) {
+	std::string line = m.string();
 	const ColoredBoard<C> b(prev, m, e);
 	Key key = b.getZobrist();
 	if (visited.contains(key)) return line;
@@ -221,8 +221,8 @@ QString Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& p
 }
 
 template<typename Entry, unsigned assoc, typename Key>
-QString Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
-	if (!b.bestMove.data) return QString();
+std::string Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
+	if (!b.bestMove.data) return "";
 	QSet<Key> visited;
 	if (b.color == White) {
 		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, b.eval, visited);

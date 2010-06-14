@@ -354,14 +354,13 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
         }
         //normal pawn moves.
         //if the pawn is pinned, it is allowed to move if the pin is from direction 2 or 6 (vertically)
-        //if there is an uncovered check, it can only be from an direction other than 2 or 6
         to = from + C * 8;
         if ((!pieces[to]) & (!isValid(pin) | (pin == 2))) {
             *list++ = (Move) {{ from, to }};
             to = from + C * 16;
             if (isRank<2> (from) && !pieces[to]) {
-                bool pawnadj = ((to & 7) != 7 && pieces[to+1] == -C*Pawn)
-                             || ((to & 7) != 0 && pieces[to-1] == -C*Pawn);
+                bool pawnadj = (to != (h4^pov) && pieces[to+1] == -C*Pawn)
+                             || (to != (a4^pov) && pieces[to-1] == -C*Pawn);
                 *list++ = (Move) {{from, to, 0, pawnadj ? enableEP:nothingSpecial}};
                 continue; // if a pawn has made a double step, skip the en passant check
             }
@@ -373,7 +372,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
  * Additionally check if we have reached the 5th rank, else we might capture our own pawn,
  * if we made two moves in a row and the last move was a double step of our own pawn
  */
-        if ( cep.enPassant && isRank<5>(from))
+        if ( cep.enPassant && isRank<5>(from) && isRank<5>(cep.enPassant))  // last check is for null search, otherwise after h2-h4 a white pawn a5 may capture at h4 if a black pawn is present at g4. Happened.
         if (((( from+C == cep.enPassant ) && ( !isValid(pin) | (pin == 1)))
         || (( from-C == cep.enPassant ) && ( !isValid(pin) | (pin == 3))))) {
             /*

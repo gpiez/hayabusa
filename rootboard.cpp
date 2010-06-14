@@ -33,6 +33,7 @@ RootBoard::RootBoard(Console *c):
 	
 	timeBudget(300000),
 	movesToDo(40),
+	currentLine(line),
 	console(c)
 {
 	tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
@@ -217,4 +218,12 @@ Stats RootBoard::getStats() const {
 void RootBoard::ttClear()
 {
 	//TODO implement me
+}
+
+std::string RootBoard::getLine() const {
+    std::string temp;
+    for (const Move* i=line; i<currentLine; ++i) {
+        temp += i->string() + " ";
+    }
+    return temp;
 }

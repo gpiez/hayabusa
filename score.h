@@ -35,13 +35,8 @@ template<Colors C> struct ScoreBase
     enum { isNotShared = true };
     
     ScoreBase() {};
-
-    explicit ScoreBase (int a)              { v = C*a; };
-    
     explicit ScoreBase (const ScoreBase& a) { v = a.v; };
     
-    operator RawScore() const               { return v; }
-
     bool operator >= (RawScore a) const {
         if ( C==White ) return v>=a;
         else            return v<=a;
@@ -69,17 +64,13 @@ template<Colors C> struct Score: ScoreBase<C>
 
     typedef Score<C> Base;
 
-    explicit Score (int a):
-        ScoreBase<C>(a) {
-        m.data = 0;
-    };
+    Score() {};
     explicit Score (const Score& a):
         ScoreBase<C>(a) {
         m.data = 0;
     };
     
     void join() const {};
-    operator RawScore() const { return v; }
     void setReady() {};
     void setNotReady() {};
 
@@ -109,21 +100,13 @@ template<Colors C> struct SharedScore: public Score<C>
     std::mutex readyMutex;
 //    SharedScore<C>* depending;
 
-private:
-    SharedScore();
-    SharedScore(SharedScore&);
-
 public:
+    SharedScore():
+    	notReady(0) {}
     ~SharedScore() {
         ASSERT(!notReady);
     }
 
-    explicit SharedScore (int a):
-        Score<C>(a),
-        notReady(0)
-//        depending(0)
-    {
-    };
     // construct a shared score depending on the parameter
     // if the parameter score gets a better value, a new
     // maximum is calculated for this score, and if it changes

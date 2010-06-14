@@ -19,9 +19,9 @@
 #include "move.h"
 #include "constants.h"
 
-QString Move::string() const
+std::string Move::string() const
 {
-	QString temp;
+	std::string temp;
 	temp += (from & 7) + 'a';
 	temp += (from >> 3) + '1';
 //	temp += capture ? 'x' : '-';

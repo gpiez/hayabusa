@@ -60,7 +60,7 @@ Console::Console(QCoreApplication* parent):
     
     notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
     connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
-    connect(this, SIGNAL(signalSend(QString)), this, SLOT(privateSend(QString)));
+    connect(this, SIGNAL(signalSend(std::string)), this, SLOT(privateSend(std::string)));
     
     QStringList args = QCoreApplication::arguments();
     args.removeFirst();
@@ -82,9 +82,9 @@ Console::~Console()
 {
 }
 
-void Console::getResult(QString result) {
+void Console::getResult(std::string result) {
     answer = result;
-    cout << result << endl;
+    std::cout << result << std::endl;
 }
 
 void Console::dataArrived() {
@@ -192,8 +192,8 @@ void Console::quit(QStringList /*cmds*/) {
     app->quit();
 }
 
-QString Console::getAnswer() {
-    answer = QString("");
+std::string Console::getAnswer() {
+    answer = "";
     while(answer == "") {
         app->processEvents();
         sleep(1);
@@ -209,16 +209,16 @@ void Console::info(int depth, int seldepth, uint64_t time, uint64_t nodes,
                    hashfull, nps, tbhits, cpuload, currline);
 }
 
-void Console::iterationDone(unsigned int depth, uint64_t nodes, QString line, int bestScore) {
+void Console::iterationDone(unsigned int depth, uint64_t nodes, std::string line, int bestScore) {
     emit signalIterationDone(depth, nodes, line, bestScore);
 }
 
-void Console::privateSend(QString str)
+void Console::privateSend(std::string str)
 {
-    cout << str << endl;
+    std::cout << str << std::endl;
 }
 
-void Console::send(QString str) {
+void Console::send(std::string str) {
     emit signalSend(str);
 }
 

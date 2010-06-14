@@ -38,7 +38,7 @@ class StatWidget: public QWidget, private Ui::Statsui
 	
 private slots:
 	void update();
-	void updateLine(unsigned int depth, uint64_t nodes, QString line, int bestScore);
+	void updateLine(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
 	
 public:
 	StatWidget(const RootBoard&);

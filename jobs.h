@@ -26,6 +26,7 @@
 #include "rootboard.h"
 #include "console.h"
 #include "boardbase.h"
+#include "workthread.h"
 
 // Abstract base class for functions called to be executed by a different thread
 // To execute a function in a different thread, create a ***Job object with the
@@ -43,7 +44,7 @@ struct Job {
 struct signalJob: public QObject, public Job {
     Q_OBJECT
 signals:
-    void result(QString arg1);
+    void result(std::string arg1);
 };
 
 template<Colors C, typename A, typename B>
@@ -76,7 +77,7 @@ class RootSearchJob: public signalJob {
 public:
     RootSearchJob(RootBoard& rb): rb(rb) {};
     void job() {
-        connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
+        connect(this, SIGNAL(result(std::string)), rb.console, SLOT(getResult(std::string)));
         Move m = rb.rootSearch<C>();
         emit(result(m.string()));
     }
@@ -110,7 +111,9 @@ public:
         rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
         connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
         uint64_t n=rb.rootPerft<C>(depth);
-        emit(result(QString::number(n)));
+        std::ostringstream temp;
+        temp << n;
+        emit(result(temp.str()));
         delete rb.pt;
     }
 };
@@ -126,7 +129,9 @@ public:
         rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
         connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
         uint64_t n=rb.rootDivide<C>(depth);
-        emit(result(QString("%1").arg(n)));
+        std::ostringstream temp;
+        temp << n;
+        emit(result(temp.str()));
         delete rb.pt;
     }
 };

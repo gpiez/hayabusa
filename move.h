@@ -23,8 +23,6 @@
 #include <pch.h>
 #endif
 
-#include <stdint.h>
-
 union Move {
 	struct {
 	uint8_t from;
@@ -33,7 +31,7 @@ union Move {
 	uint8_t special;
 	};
 	uint32_t data;
-	QString string() const;
+	std::string string() const;
 };
 
 #endif /* MOVE_H_ */

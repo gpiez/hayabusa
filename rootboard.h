@@ -60,6 +60,8 @@ class RootBoard {
 	template<Colors C> ColoredBoard<C>& currentBoard();
 	unsigned int getAndDecAvailableThreads();
     RawScore estimatedError[nPieces*2+1][nSquares];
+    Move line[nMaxGameLength];
+    Move* currentLine;
 
 public:
     Eval eval;
@@ -85,6 +87,7 @@ public:
 	void divide(unsigned int depth) const;
 	uint64_t getTime() const;
 	Stats getStats() const;
+    std::string getLine() const;
 	void ttClear();
 };
 #endif

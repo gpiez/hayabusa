@@ -48,12 +48,12 @@ class Console: public QObject {
     void uci(QStringList);
     void debug(QStringList);
 private slots:
-    void privateSend(QString);
+    void privateSend(std::string);
     
 private:
     QCoreApplication* app;
     RootBoard* board;
-    QString answer;
+    std::string answer;
     bool debugMode;
     QMap<QString, QString> option;
     QHash<QString, QStringList> parse(QStringList, QStringList);
@@ -66,24 +66,24 @@ public:
 
     Console(QCoreApplication* parent);
     virtual ~Console();
-    void iterationDone(unsigned int depth, uint64_t nodes, QString line, int bestScore);
+    void iterationDone(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
     void info(int depth, int seldepth, uint64_t time, uint64_t nodes,
                          QString pv, RawScore score, Move currMove, int currMoveNumber,
                          int hashfull, int nps, int tbhits, int cpuload, QString currline);
-    void send(QString);
+    void send(std::string);
 
 public slots:
     void dataArrived();
     void delayedEnable();
-    void getResult(QString);
-    QString getAnswer();
+    void getResult(std::string);
+    std::string getAnswer();
     
 signals:
-    void signalSend(QString);
+    void signalSend(std::string);
     void signalInfo(int depth, int seldepth, uint64_t time, uint64_t nodes,
                          QString pv, RawScore score, Move currMove, int currMoveNumber,
                          int hashfull, int nps, int tbhits, int cpuload, QString currline);
-    void signalIterationDone(unsigned int depth, uint64_t nodes, QString line, int bestScore);
+    void signalIterationDone(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
 };
 
 #endif /* CONSOLE_H_ */

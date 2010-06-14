@@ -22,6 +22,11 @@
 #include <mutex>
 #include <condition_variable>
 #include <thread>
+#include <iostream>
+#include <sstream>
+#include <locale>
+#include <iomanip>
+#include <cstdint>
 
 #include <QtCore>
 

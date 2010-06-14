@@ -24,9 +24,7 @@
 #endif
 
 #include <unistd.h>
-#include <sstream>
-#include <locale>
-#include <iomanip>
+
 #include "rootboard.h"
 #include "coloredboard.h"
 #include "generateMoves.tcc"
@@ -41,6 +39,7 @@
 
 template<Colors C>
 Move RootBoard::rootSearch() {
+    WorkThread::isMain = true;
     const ColoredBoard<C>& b = currentBoard<C>();//color == White ? &boards[iMove].wb : &boards[iMove].bb;
     stats.node++;
     Move firstMove[nMaxMoves];
@@ -52,8 +51,8 @@ Move RootBoard::rootSearch() {
 
     for (depth=2; depth<maxDepth; depth++) {
         QDateTime currentStart = QDateTime::currentDateTime();
-        SharedScore<C> alpha(-infinity);
-        SharedScore<(Colors)-C> beta(-infinity);    //both alpha and beta are lower limits, viewed from th color to move
+        SharedScore<C> alpha; alpha.v = -infinity*C;
+        SharedScore<(Colors)-C> beta; beta.v = infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
 //        SearchFlag f = null;
         QTextStream xout(stderr);
     
@@ -65,7 +64,7 @@ Move RootBoard::rootSearch() {
                 *currentMove = *firstMove;
                 *firstMove = bestMove;
             }
-            QString newBestLine = tt->bestLine(*this);
+            std::string newBestLine = tt->bestLine(*this);
             emit console->iterationDone(depth, stats.node, newBestLine, alpha.v);
             //if (QDateTime::currentDateTime() > hardBudget) break;
         }
@@ -73,8 +72,8 @@ Move RootBoard::rootSearch() {
         if (Options::humanreadable) g.imbue(std::locale("de_DE"));
         else                        g.imbue(std::locale("C"));
         g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
-          << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this).toStdString();
-        emit console->send(QString::fromStdString(g.str()));
+          << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
+        emit console->send(g.str());
     }
     return bestMove;
 }
@@ -87,12 +86,6 @@ Move RootBoard::rootSearch() {
 template<Colors C, Phase P, typename A, typename B, typename T>
 bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
     stats.node++;
-/*    QTextStream xout(stdout);
-    QString indentation;
-    for (unsigned int i = depth; i<5; i++)
-        indentation += "     ";
-    xout << indentation << m.string() << " " << stats.node;
-    usleep(100000);*/
     KeyScore estimate ALIGN_XMM;
     uint64_t nextcep;
     estimate.vector = prev.estimatedEval(m, eval, nextcep);
@@ -100,7 +93,7 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
     if (P == leaf || P == vein) {                          
         ScoreBase<C> current(alpha);
         current.max(estimate.score-C*eE);
-        if (current >= beta) {  // from the view of beta, current is a bad move,
+        if (current >= beta.v) {  // from the view of beta, current is a bad move,
             stats.leafcut++;    // so neither update beta nor return true
             return false;
         }
@@ -111,10 +104,22 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
         tt->prefetchSubTable(z);
     }
     const ColoredBoard<C> b(prev, m, estimate.vector, nextcep);
+	if (WorkThread::isMain) *currentLine++ = m;
+
+//    std::string moves;
+//    for (Move* i = line; i<currentLine; i++)
+//    	moves += i->string() + " ";
+//    std::cout << std::setw(7) << alpha.v << std::setw(7) << beta.v << " " << moves << " ### " << stats.node;
+//    usleep(100000);
+
     ASSERT(b.keyScore.score == estimate.score);
     ASSERT(P == vein || z == b.getZobrist());
     if (prev.CI == b.CI) {
-        if (b.template attacks<(1-C)/2>(b.pieceList[(1+C)/2].getKing()) & attackMask) return false;
+        if (b.template attacks<(1-C)/2>(b.pieceList[(1+C)/2].getKing()) & attackMask) {
+        	if (WorkThread::isMain) --currentLine;
+//        	std::cout << " illegal" << std::endl;
+        	return false;
+        }
     } else {
         ASSERT((b.template attacks<(1-C)/2>(b.pieceList[(1+C)/2].getKing()) & attackMask) == 0);
     }
@@ -144,9 +149,11 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
                     stats.ttbeta++;
                     beta.max(subentry.score, m);
                 }
-                if (current >= beta) {
+                if (current >= beta.v) {
                     if (P == trunk && !alreadyVisited)
                         tt->unmark(st);
+                	if (WorkThread::isMain) --currentLine;
+                	//std::cout << " beta" << std::endl;
                     return false;
                 }
             } else {
@@ -169,10 +176,15 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
             if (eE < error) eE = error;
             else eE--;
         }
-//        if (P==leaf) xout << " leaf " << current.v << endl;
-//        else xout << " vein " << current.v << endl;
+        // if (P==leaf) std::cout << " leaf " << current.v << std::endl;
+        // else std::cout << " vein " << current.v << std::endl;
         if (b.template attacks<(1+C)/2>(b.pieceList[(1-C)/2].getKing()) & attackMask) {
             end = b.generateMoves(list);
+			if (end == list) {
+				if (WorkThread::isMain) --currentLine;
+	        	// std::cout << " mate" << std::endl;
+				return beta.max(-infinity*C, m);
+			}
             Move* j;
             for (Move* i = j = list; i<end; ++i)
                 if (b.pieces[i->to])
@@ -182,10 +194,16 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
             end = b.generateCaptureMoves(list);
     } else {
         end = b.generateMoves(list);
-//        xout << endl;
+        if (end == list) {
+        	if (WorkThread::isMain) --currentLine;
+        	return beta.max(
+        	b.template attacks<(1+C)/2>(b.pieceList[(1-C)/2].getKing()) & attackMask ?
+        		-infinity*C : 0, m);
+        	// std::cout << " stale/mate" << std::endl;
+        }
     }
 
-    // move best move from tt / history to front
+//    // move best move from tt / history to front
     if (ttMove.data)
         for (Move* i = list; i<end; ++i)
             if ((ttMove.from == i->from) & (ttMove.to == i->to)) {
@@ -204,7 +222,7 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
                 *i = *list;
                 *list = current.m;
             }
-            if (current >= beta) {
+            if (current >= beta.v) {
                 if (d+2 >= depth)
                     betaNode = true;
                 break;
@@ -213,22 +231,24 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
         current.v = alpha.v;
     }
 
-    for (Move* i = list; i<end && current < beta; ++i) {
+//  if (depth)  std::cout << " search " << depth << std::endl;
+    for (Move* i = list; i<end && current < beta.v; ++i) {
         // Stay in leaf search if it already is or change to it if the next depth would be 0
         if (P == leaf || P == vein)
             search<(Colors)-C, vein>(b, *i, 0, (typename B::Base&)beta, current);
         else if (depth <= 1)
             search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
         else { // possible null search in tree or trunk
-            typename B::Base null(current + Score<C>(1));
-    /*            if (depth > 1 && current.v != Score<C>(-infinity).v && (i != list || !betaNode)) {
-                    if (depth > 4)
-                        search<C, tree>(b, *i, depth-4, current, null);
-                    else
-                        search<C, leaf>(b, *i, 0, current, null);
-                }*/
-            if (current < null) {
-                if (P == tree || A::isNotShared) {
+            typename B::Base null;
+            null.v = current.v + C;
+            if (depth > 1 && current.v != -infinity*C && (i != list || !betaNode)) {
+                if (depth > 4)
+                    search<C, tree>(b, *i, depth-4, current, null);
+                else
+                    search<C, leaf>(b, *i, 0, current, null);
+            }
+            if (current < null.v) {
+                if (P == tree || A::isNotShared || depth < Options::splitDepth) {
         /*                if (i != list)
                             search<(Colors)-C, tree>(b, *i, depth-1, null, current);
                         if (null.v != current.v)*/
@@ -236,7 +256,7 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
                 // Multi threaded search: After the first move try to find a free thread, otherwise do a normal
                 // search but stay in trunk. To avoid multithreading search at cut off nodes
                 // where it would be useless.
-                } else if (depth <= Options::splitDepth){
+                } else if (depth == Options::splitDepth){
                     if (i > list && WorkThread::canQueued()) {
                         WorkThread::queueJob(z, new SearchJob<(Colors)-C, typename B::Base, A>(*this, b, *i, depth-1, (typename B::Base&)beta, current));
                     } else {
@@ -263,8 +283,8 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
         stored.depth |= depth;
         stored.upperKey |= z >> stored.upperShift;
         stored.score |= current.v;
-        stored.loBound |= current > alpha;
-        stored.hiBound |= current < beta;
+        stored.loBound |= current > alpha.v;
+        stored.hiBound |= current < beta.v;
         stored.from |= current.m.from;
         stored.to |= current.m.to;
         if (P == trunk && !alreadyVisited)
@@ -272,7 +292,10 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
         if (!alreadyVisited && current.v)    // don't overwerite current variant
             tt->store(st, stored);
     }
-    bool newBM = beta.max(current, m);
+//    std::cout << std::setw(7) << alpha.v << std::setw(7) << beta.v << " " << moves;
+    bool newBM = beta.max(current.v, m);
+//    std::cout << " return " << current.v << std::endl;
+	if (WorkThread::isMain) --currentLine;
     return newBM;
 }
 
@@ -300,7 +323,6 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
     const ColoredBoard<C>& b = currentBoard<C>();
     Move* end = b.generateMoves(list);
 
-    QTextStream xout(stderr);
     uint64_t sum=0;
     for (Move* i = list; i<end; ++i) {
         Result<uint64_t> n(0);
@@ -309,7 +331,7 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
         } else {
             perft<(Colors)-C, trunk>(n, b, *i, depth-1);
         }
-        xout << i->string() << " " << (uint64_t)n << endl;
+        std::cout << i->string() << " " << (uint64_t)n << std::endl;
         sum += n;
     }
     return sum;

@@ -31,11 +31,11 @@ isExecutable=false
 [Launch][Launch Configuration 1]
 Configured Launch Modes=execute
 Configured Launchers=nativeAppLauncher
-Name=hayabusa
+Name=Spassky - Petrosjan
 Type=Native Application
 
 [Launch][Launch Configuration 1][Data]
-Arguments=setoption name humanreadable value 1:setoption name splitdepth value -1:position fen r2qrb1k/1p1b2p1/p2ppn1p/8/3NP3/1BN5/PPP3QP/1K3RR1 w - -:go\n
+Arguments=setoption name humanreadable value 1:setoption name splitdepth value 5:position fen r2qrb1k/1p1b2p1/p2ppn1p/8/3NP3/1BN5/PPP3QP/1K3RR1 w - -:go\n
 Debugger Shell=
 Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a)
 Dependency Action=Build
@@ -50,13 +50,13 @@ Remote GDB Run Script=
 Remote GDB Shell Script=
 Separate Terminal For Application IO=true
 Try Setting Breakpoints On Loading Libraries=true
-Working Directory=file:///home/gpiez/src/hayabusa/Debug
+Working Directory=file:///home/gpiez/src/hayabusa/Release
 isExecutable=false
 
 [Launch][Launch Configuration 2]
 Configured Launch Modes=execute
 Configured Launchers=nativeAppLauncher
-Name=go
+Name=Lasker Study
 Type=Native Application
 
 [Launch][Launch Configuration 2][Data]
@@ -79,17 +79,17 @@ isExecutable=false
 [Launch][Launch Configuration 3]
 Configured Launch Modes=execute
 Configured Launchers=nativeAppLauncher
-Name=Release
+Name=CMB.01
 Type=Native Application
 
 [Launch][Launch Configuration 3][Data]
-Arguments=setoption name splitdepth value -1:position fen r2qrb1k/1p1b2p1/p2ppn1p/8/3NP3/1BN5/PPP3QP/1K3RR1 w - -:go
-Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
-Dependency Action=Nothing
+Arguments=setoption name humanreadable value 1:setoption name splitdepth value -5:position fen 1r4k1/1q2bp2/3p2p1/2pP4/p1N4R/2P2QP1/1P3PK1/8 w - -:go
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a)
+Dependency Action=Build
 EnvironmentGroup=default
-Executable=file:///home/gpiez/src/hayabusa/Release/hayabusa
-Working Directory=file:///home/gpiez/src/hayabusa/Release
-isExecutable=true
+Project Target=hayabusa,hayabusa
+Working Directory=file:///home/gpiez/src/hayabusa/Debug
+isExecutable=false
 
 [Launch][Launch Configuration 4]
 Configured Launch Modes=execute

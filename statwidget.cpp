@@ -37,7 +37,7 @@ StatWidget::StatWidget(const RootBoard& rb):
 	QTimer* t = new QTimer(this);
 	connect(t, SIGNAL(timeout()), this, SLOT(update()));
 	qRegisterMetaType<uint64_t>("uint64_t");
-	connect(rb.console, SIGNAL(signalIterationDone(unsigned int, uint64_t, QString, int)), this, SLOT(updateLine(unsigned int, uint64_t, QString, int)));
+	connect(rb.console, SIGNAL(signalIterationDone(unsigned int, uint64_t, std::string, int)), this, SLOT(updateLine(unsigned int, uint64_t, std::string, int)));
 	t->setInterval(1000);
 	update();
 	t->start();
@@ -47,16 +47,16 @@ StatWidget::~StatWidget()
 {
 }
 
-void StatWidget::updateLine(unsigned int depth, uint64_t nodes, QString line, int bestScore)
+void StatWidget::updateLine(unsigned int depth, uint64_t nodes, std::string line, int bestScore)
 {
-	static QString oldBestLine;
+	static std::string oldBestLine;
 	static unsigned int oldDepth;
 	
-	if (line != oldBestLine || depth != oldDepth) {
+	if (line.substr(0, 5) != oldBestLine.substr(0, 5) || depth != oldDepth || bestScore != bestScore) {
 		oldBestLine = line;
 		oldDepth = depth;
 		//bestLine->moveCursor(QTextCursor::Start);
-		bestLine->appendPlainText(QString("%1 %2 %3 %4 %5").arg(depth, 2).arg(nodes, 15).arg(rb.getTime(), 15).arg(bestScore/100.0, 6, 'f', 2).arg(line));
+		bestLine->appendPlainText(QString("%1 %2 %3 %4 ").arg(depth, 2).arg(nodes, 15).arg(rb.getTime(), 15).arg(bestScore/100.0, 6, 'f', 2) + QString::fromStdString(line) );
 		Ui_Statsui::depth->setText("Depth: " + QString::number(depth));
 	}
 }
@@ -73,6 +73,7 @@ QString number(T n) {
 
 void StatWidget::update()
 {
+    currentLine->setText(QString::fromStdString(rb.getLine()));
 	static QList<Stats> prev;
 	prev.append(rb.getStats());
 	if (prev.size() > 10)

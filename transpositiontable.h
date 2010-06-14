@@ -79,8 +79,8 @@ public:
         subTable->entries[0].visited |= true;
     }
     void freeMemory();
-    QString bestLine(const RootBoard& );
-    template<Colors C> QString bestLineNext(const ColoredBoard<(Colors)-C>&, Move, const Eval&, QSet<Key>&);
+    std::string bestLine(const RootBoard& );
+    template<Colors C> std::string bestLineNext(const ColoredBoard<(Colors)-C>&, Move, const Eval&, QSet<Key>&);
 };
 
 template<typename Entry, unsigned assoc, typename Key>
