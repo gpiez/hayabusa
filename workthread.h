@@ -32,8 +32,9 @@ union Stats;
 class WorkThread: public QThread {
 	QMutex stoppedMutex;
 	QWaitCondition stopped;
-	static QWaitCondition starting;
-	static QMutex mutex;
+	static std::condition_variable starting;
+    static std::mutex runningMutex;
+    static volatile unsigned int sleeping;
 	volatile bool doStop;
 	volatile bool keepRunning;
 	volatile bool isStopped;
@@ -41,13 +42,14 @@ class WorkThread: public QThread {
 	BoardBase board;
 	Colors color;
 	Job* job;
+    Key key;
 	static QMultiMap<Key, Job*> jobs;
 	static QVector<WorkThread*> threads;
-	static unsigned int nThreads;
 
 	void stop();
     
 public:
+    static unsigned int nThreads;
     static __thread bool isMain;
 	Stats* pstats;
 	static unsigned int running;
@@ -62,12 +64,14 @@ public:
 	void setJob(Job*);
 	void *operator new (size_t s);
 	bool isFree();
-	static bool canQueued();
+	static bool canQueued(Key);
 	static Job* getJob(Key);
+    static Job* getAnyJob();
 	static void idle(int);
 	static WorkThread* findFree();
 	static void init();
 	static const QVector<WorkThread*>& getThreads();
+    static void printJobs();
 };
 
 #endif /* WORKTHREAD_H_ */
