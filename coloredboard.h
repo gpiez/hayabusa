@@ -58,7 +58,18 @@ public:
     void doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t cep) const;
     inline __v8hi estimatedEval(const Move m, const Eval& rb, uint64_t&) const;
     Key getZobrist() const;
-    
+    uint8_t getKing() const {
+        return pieceList[CI].getKing();
+    }
+    uint8_t getOKing() const {
+        return pieceList[EI].getKing();
+    }
+    Attack getAttacks(uint8_t pos) const {
+        return attacks<CI>(pos);     
+    }
+    Attack getOAttacks(uint8_t pos) const {
+        return attacks<EI>(pos);
+    }
 private:
     
     uint8_t detectPin( unsigned int pos) const;
@@ -96,7 +107,7 @@ private:
 
 public:
 
-    template<int piece>    bool attackedBy(uint8_t pos);
+    template<int piece> bool attackedBy(uint8_t pos);
 };
 
 #endif /* COLOREDBOARD_H_ */
