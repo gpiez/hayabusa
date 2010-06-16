@@ -27,20 +27,45 @@
 #include "workthread.h"
 
 __thread Stats stats;
-StatWidget::StatWidget(const RootBoard& rb):
-	rb(rb)
+
+static void splitImage( QImage* piecesSet, QImage piecesImage )
 {
-	setupUi(this);
-	QFont fixed;
-	fixed.setFamily("Consolas");
-	bestLine->setFont(fixed);
-	QTimer* t = new QTimer(this);
-	connect(t, SIGNAL(timeout()), this, SLOT(update()));
-	qRegisterMetaType<uint64_t>("uint64_t");
-	connect(rb.console, SIGNAL(signalIterationDone(unsigned int, uint64_t, std::string, int)), this, SLOT(updateLine(unsigned int, uint64_t, std::string, int)));
-	t->setInterval(1000);
-	update();
-	t->start();
+    int x = piecesImage.width()/6;
+    int y = piecesImage.height();
+
+    int size=2;
+    while ( size < x || size < y )
+        size <<= 1;
+
+    for ( int i=0; i<6; i++ ) {
+        QImage onePiece( size, size, QImage::Format_ARGB32 );
+        onePiece.fill( 0x00000000 );
+        QPainter p( &onePiece );
+        p.drawImage( ( size-x )/2, ( size-y )/2, piecesImage, i*x,0, x, y );
+        piecesSet[i] = onePiece;
+
+    }
+}
+
+
+StatWidget::StatWidget(const RootBoard& rb):
+    rb(rb)
+{
+    setupUi(this);
+    QImage wset( ":/setwhite.png" );
+    splitImage( wPieces, wset );
+    QImage bset( ":/setblack.png" );
+    splitImage( bPieces, bset );
+    QFont fixed;
+    fixed.setFamily("Consolas");
+    bestLine->setFont(fixed);
+    QTimer* t = new QTimer(this);
+    connect(t, SIGNAL(timeout()), this, SLOT(update()));
+    qRegisterMetaType<uint64_t>("uint64_t");
+    connect(rb.console, SIGNAL(signalIterationDone(unsigned int, uint64_t, std::string, int)), this, SLOT(updateLine(unsigned int, uint64_t, std::string, int)));
+    t->setInterval(1000);
+    update();
+    t->start();
 }
 
 StatWidget::~StatWidget()
@@ -49,53 +74,89 @@ StatWidget::~StatWidget()
 
 void StatWidget::updateLine(unsigned int depth, uint64_t nodes, std::string line, int bestScore)
 {
-	static std::string oldBestLine;
-	static unsigned int oldDepth;
-	
-	if (line.substr(0, 5) != oldBestLine.substr(0, 5) || depth != oldDepth || bestScore != bestScore) {
-		oldBestLine = line;
-		oldDepth = depth;
-		//bestLine->moveCursor(QTextCursor::Start);
-		bestLine->appendPlainText(QString("%1 %2 %3 %4 ").arg(depth, 2).arg(nodes, 15).arg(rb.getTime(), 15).arg(bestScore/100.0, 6, 'f', 2) + QString::fromStdString(line) );
-		Ui_Statsui::depth->setText("Depth: " + QString::number(depth));
-	}
+    static std::string oldBestLine;
+    static unsigned int oldDepth;
+    
+    if (line.substr(0, 5) != oldBestLine.substr(0, 5) || depth != oldDepth || bestScore != bestScore) {
+        oldBestLine = line;
+        oldDepth = depth;
+        //bestLine->moveCursor(QTextCursor::Start);
+        bestLine->appendPlainText(QString("%1 %2 %3 %4 ").arg(depth, 2).arg(nodes, 15).arg(rb.getTime(), 15).arg(bestScore/100.0, 6, 'f', 2) + QString::fromStdString(line) );
+        Ui_Statsui::depth->setText("Depth: " + QString::number(depth));
+    }
 }
 /* Store the last 10 stats for a sliding average */
 template<typename T>
 QString number(T n) {
-	if (n==0) return "0";
-	int base = floor(log(n)/log(1000.0));
-	if (base>4) base=4;
-	if (base<-4) base=-4;
-	double base10 = pow(1000.0, base);
-	return QString(QString::number(n/base10, 'g', 3) % QString(" ") % "pnµm kMGT"[base+5]).trimmed();
+    if (n==0) return "0";
+    int base = floor(log(n)/log(1000.0));
+    if (base>4) base=4;
+    if (base<-4) base=-4;
+    double base10 = pow(1000.0, base);
+    return QString(QString::number(n/base10, 'g', 3) % QString(" ") % "pnµm kMGT"[base+5]).trimmed();
 }
 
 void StatWidget::update()
 {
+    updateBoard();
     currentLine->setText(QString::fromStdString(rb.getLine()));
-	static QList<Stats> prev;
-	prev.append(rb.getStats());
-	if (prev.size() > 10)
-		prev.removeFirst();
+    static QList<Stats> prev;
+    prev.append(rb.getStats());
+    if (prev.size() > 10)
+        prev.removeFirst();
 
 #define DISPLAYNUM(x) n##x->setText(number(prev.last().x)); if (prev.size() > 1) v##x->setText(number((prev.last().x - prev.first().x) / (prev.size()-1)));
 
-	ninternalNode->setText(number(WorkThread::running));
-	DISPLAYNUM(node)
-	DISPLAYNUM(eval)
-	DISPLAYNUM(tthit)
-	DISPLAYNUM(ttuse)
-	DISPLAYNUM(ttfree)
-	DISPLAYNUM(ttalpha)
-	DISPLAYNUM(ttbeta)
-	DISPLAYNUM(ttoverwrite)
-	DISPLAYNUM(ttinsufficient)
-	DISPLAYNUM(ttstore)
-	DISPLAYNUM(leafcut);
-	DISPLAYNUM(pthit);
-	DISPLAYNUM(ptmiss);
-	DISPLAYNUM(ptuse);
+    ninternalNode->setText(number(WorkThread::running));
+    DISPLAYNUM(node)
+    DISPLAYNUM(eval)
+    DISPLAYNUM(tthit)
+    DISPLAYNUM(ttuse)
+    DISPLAYNUM(ttfree)
+    DISPLAYNUM(ttalpha)
+    DISPLAYNUM(ttbeta)
+    DISPLAYNUM(ttoverwrite)
+    DISPLAYNUM(ttinsufficient)
+    DISPLAYNUM(ttstore)
+    DISPLAYNUM(leafcut);
+    DISPLAYNUM(pthit);
+    DISPLAYNUM(ptmiss);
+    DISPLAYNUM(ptuse);
     DISPLAYNUM(ptcollision);
+}
+
+void StatWidget::updateBoard()
+{
+    int size=qMin( widgetBoard->width(), widgetBoard->height() )/8;
+
+    QImage wScaled[6], bScaled[6];
+    for ( int i=0; i<6; i++ ) {
+        wScaled[i] = wPieces[i].scaled( QSize( size*11/8, size*11/8 ), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ).copy(size*3/16, size*3/16, size, size);
+
+    }
+    for ( int i=0; i<6; i++ ) {
+        bScaled[i] = bPieces[i].scaled( QSize( size*11/8, size*11/8 ), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ).copy(size*3/16, size*3/16, size, size);
+    }
+
+    QPixmap boardPixmap(widgetBoard->size());
+    boardPixmap.fill(QColor(0, 0, 0, 0));
+    QPainter p( &boardPixmap );
+
+    for ( int x=0; x<8; x++ )
+        for ( int y=0; y<8; y++ ) {
+            int type = rb.currentBoard<White>().pieces[(7-y)*8 + x];
+            p.setPen(Qt::NoPen);
+            p.setBrush(QBrush((x^y)&1 ? QColor(128,128,128):QColor(192,192,192) ));
+            p.drawRect(x*size, y*size, size, size);
+            if ( type > 0 )
+                p.drawImage( x*size, y*size, wScaled[type-1] );
+            else if ( type < 0 )
+                p.drawImage( x*size, y*size, bScaled[-type-1] );
+        }
+
+    QPalette palette;
+    widgetBoard->setAutoFillBackground(true);
+    palette.setBrush(widgetBoard->backgroundRole(), QBrush(boardPixmap));
+    widgetBoard->setPalette(palette);
 }
 #endif // QT_GUI_LIB
