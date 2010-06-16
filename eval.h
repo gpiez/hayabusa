@@ -40,101 +40,102 @@
  * squareValue = attack_king(dist_king) + attack_piece(dist_piece) + attack_pawn(dist_pawn) + const
  */
 struct SquareEval {
-	RawScore	controls[nPieces*2 + 1];	//piece may move there unharmed.
-	RawScore	attacks[nPieces*2 + 1];		//piece attacks/defends square.
+    RawScore    controls[nPieces*2 + 1];    //piece may move there unharmed.
+    RawScore    attacks[nPieces*2 + 1];        //piece attacks/defends square.
 };
 
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986 );
 
 union KeyScore {
-	struct {
-		RawScore	score;
-		RawScore	endgame;
-		PawnKey		pawnKey;
-		Key			key;
-	};
-	__v8hi vector;
+    struct {
+        RawScore    score;
+        RawScore    endgame;
+        PawnKey        pawnKey;
+        Key            key;
+    };
+    __v8hi vector;
 };
 
 union Parameters {
-	struct {
-		struct {
-			float center;
-			float slopex;
-			float curvx;
-			float slopey;
-			float curvy;
-			float mobility;
-			float mobilityCurv;
-		} pp[nPieces];
-		float rookOpen;
-		float rookBehindPasser;
-		float rookHalfOpen;
-		float rookAttackP;
-		float rookAttackK;
-	};
-	float data[];
+    struct {
+        struct {
+            float center;
+            float slopex;
+            float curvx;
+            float slopey;
+            float curvy;
+            float mobility;
+            float mobilityCurv;
+        } pp[nPieces];
+        float rookOpen;
+        float rookBehindPasser;
+        float rookHalfOpen;
+        float rookAttackP;
+        float rookAttackK;
+    };
+    float data[];
 };
 
 class PieceList;
 class BoardBase;
 class Eval {
-	KeyScore zobristPieceSquare[nTotalPieces][nSquares];
-	
-	static RawScore pawn, knight, bishop, rook, queen;
-	static RawScore bishopPair;
-	static RawScore knightAlone;
-	static RawScore bishopAlone;
-	static RawScore n_p_ram[9], n_p[17];
-	static RawScore b_bad_own_p[9], b_p[17], b_p_ram[9], bpair_p[17];
-	static RawScore r_p[17];
-	static RawScore q_p[17];
+    KeyScore zobristPieceSquare[nTotalPieces][nSquares];
+    
+    static RawScore pawn, knight, bishop, rook, queen;
+    static RawScore bishopPair;
+    static RawScore knightAlone;
+    static RawScore bishopAlone;
+    static RawScore n_p_ram[9], n_p[17];
+    static RawScore b_bad_own_p[9], b_p[17], b_p_ram[9], bpair_p[17];
+    static RawScore r_p[17];
+    static RawScore q_p[17];
     static RawScore pawnBackward;
     static RawScore pawnBackwardOpen;
     static RawScore pawnIsolated;    
     static RawScore pawnHalfIsolated;
     static RawScore pawnPasser[8];
     
-	TranspositionTable<PawnEntry, 4, PawnKey>* pt;
-	
-	RawScore controls[nSquares];
-    RawScore inline mobilityValue(uint64_t arg1, uint64_t arg2, __v2di arg3, __v2di arg4, __v2di arg5, __v2di arg6, __v2di arg7, __v2di arg8, uint64_t arg9) const;
-	template<Colors C> void inline mobilityBits(const BoardBase &b, uint64_t &occupied,
-						__v2di &rookbits, __v2di &bishopbits, __v2di &knightbits,
-						uint64_t &queen0bits, uint64_t &pawnbits) const;
+    TranspositionTable<PawnEntry, 4, PawnKey>* pt;
+    
+    RawScore controls[nSquares];
+    static uint32_t borderTab4_0[nSquares];
+    static uint32_t borderTab321[nSquares];
+    static uint32_t borderTab567[nSquares];
+    static __thread PawnEntry pawnEntry;
+    RawScore inline mobilityValue(uint64_t, uint64_t, __v2di, __v2di, __v2di, __v2di, __v2di, __v2di, uint64_t) const;
+    template<Colors C> void inline mobilityBits(const BoardBase &, uint64_t &, __v2di &, __v2di &, __v2di &, uint64_t &, uint64_t &) const;
+    void initPS();
+    void initZobrist();
+    static void initTables();
+    unsigned int attackHash( unsigned int  pos );
+    int squareControl();
 
-protected:
-	void initPS();
-	void initZobrist();
-	
-	unsigned int attackHash( unsigned int  pos );
-	int squareControl();
-
-	RawScore mobility(const BoardBase&) const;
-	RawScore defense(const BoardBase&) const;
-	RawScore attack(const BoardBase&) const;
-	RawScore pieces(const PieceList&, int) const;
-	RawScore pawns(const BoardBase&) const;
+    RawScore mobility(const BoardBase&) const;
+    RawScore defense(const BoardBase&) const;
+    RawScore attack(const BoardBase&) const;
+    RawScore pieces(const PieceList&, int) const;
+    RawScore pawns(const BoardBase&) const;
+    template<Colors C> void EvalMate(const ColoredBoard<C>&) const;
 
 public:
     Eval();
     RawScore eval(const BoardBase&) const;  ///TODO should be template<C>
-	RawScore getPS(int8_t piece, uint8_t square) const {
-		ASSERT(square < nSquares);
-		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
-		return zobristPieceSquare[piece+nPieces][square].score;
-	}
-	RawScore& getPS(int8_t piece, uint8_t square) {
-		ASSERT(square < nSquares);
-		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
-		return zobristPieceSquare[piece+nPieces][square].score;
-	}
-	__v8hi getKSVector(int8_t piece, uint8_t square) const {
-		ASSERT(square < nSquares);
-		ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
-		return zobristPieceSquare[piece+nPieces][square].vector;
-	}
+    RawScore getPS(int8_t piece, uint8_t square) const {
+        ASSERT(square < nSquares);
+        ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
+        return zobristPieceSquare[piece+nPieces][square].score;
+    }
+    RawScore& getPS(int8_t piece, uint8_t square) {
+        ASSERT(square < nSquares);
+        ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
+        return zobristPieceSquare[piece+nPieces][square].score;
+    }
+    __v8hi getKSVector(int8_t piece, uint8_t square) const {
+        ASSERT(square < nSquares);
+        ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
+        return zobristPieceSquare[piece+nPieces][square].vector;
+    }
     PawnKey getPawnKey(int8_t piece, uint8_t square) const {
         ASSERT(square < nSquares);
         ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
@@ -144,29 +145,29 @@ public:
 
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter, double width) {
-	static const size_t n = sizeof(T)/sizeof(p[0])-1;
-	double t0 = -dcenter;
-	double t1 = n-dcenter;
-	double l0 = 1/(1+exp(-t0/width));
-	double l1 = 1/(1+exp(-t1/width));
+    static const size_t n = sizeof(T)/sizeof(p[0])-1;
+    double t0 = -dcenter;
+    double t1 = n-dcenter;
+    double l0 = 1/(1+exp(-t0/width));
+    double l1 = 1/(1+exp(-t1/width));
 
-	double r = (end - start)/(l1-l0);
-	double a = start - l0*r;
-	for (unsigned int i = 0; i <= n; ++i) {
-		double t = i - dcenter;
-		p[i] = lrint(a + r/(1.0 + exp(-t/width)));
-	}
+    double r = (end - start)/(l1-l0);
+    double a = start - l0*r;
+    for (unsigned int i = 0; i <= n; ++i) {
+        double t = i - dcenter;
+        p[i] = lrint(a + r/(1.0 + exp(-t/width)));
+    }
 }
 
 template<typename T>
 void printSigmoid(T& p, QString str) {
-	size_t n = sizeof(T)/sizeof(p[0])-1;
-	QTextStream xout(stderr);
-	xout << qSetFieldWidth(16) << str;
-	for (unsigned int i = 0; i <= n; ++i) {
-		xout << qSetFieldWidth(4) << p[i];
-	}
-	xout << endl;
+    size_t n = sizeof(T)/sizeof(p[0])-1;
+    QTextStream xout(stderr);
+    xout << qSetFieldWidth(16) << str;
+    for (unsigned int i = 0; i <= n; ++i) {
+        xout << qSetFieldWidth(4) << p[i];
+    }
+    xout << endl;
 }
 
 
