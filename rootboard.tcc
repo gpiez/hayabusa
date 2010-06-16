@@ -84,7 +84,7 @@ Move RootBoard::rootSearch() {
  */
 
 template<Colors C, Phase P, typename A, typename B, typename T>
-bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha, B& beta) {
+bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, const A& alpha, B& beta) {
     stats.node++;
     KeyScore estimate ALIGN_XMM;
     uint64_t nextcep;
@@ -116,12 +116,14 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
     ASSERT(P == vein || z == b.getZobrist());
     if (prev.CI == b.CI) {
         if (b.template attacks<(1-C)/2>(b.pieceList[(1+C)/2].getKing()) & attackMask) {
+            ASSERT(b.getAttacks(b.getOKing()) & attackMask);
         	if (WorkThread::isMain) --currentLine;
 //        	std::cout << " illegal" << std::endl;
         	return false;
         }
     } else {
         ASSERT((b.template attacks<(1-C)/2>(b.pieceList[(1+C)/2].getKing()) & attackMask) == 0);
+        ASSERT((b.getAttacks(b.getOKing()) & attackMask) == 0);
     }
     TranspositionTable<TTEntry, transpositionTableAssoc, Key>::SubTable* st;
     TTEntry subentry;
@@ -179,6 +181,7 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
         // if (P==leaf) std::cout << " leaf " << current.v << std::endl;
         // else std::cout << " vein " << current.v << std::endl;
         if (b.template attacks<(1+C)/2>(b.pieceList[(1-C)/2].getKing()) & attackMask) {
+            ASSERT(b.getOAttacks(b.getKing()) & attackMask);
             end = b.generateMoves(list);
 			if (end == list) {
 				if (WorkThread::isMain) --currentLine;
@@ -232,6 +235,10 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
     }
 
 //  if (depth)  std::cout << " search " << depth << std::endl;
+    Key zd;
+    if (P == trunk)
+        zd = (z &0xffffffffffff) + ((uint64_t)depth << 56);
+    
     for (Move* i = list; i<end && current < beta.v; ++i) {
         // Stay in leaf search if it already is or change to it if the next depth would be 0
         if (P == leaf || P == vein)
@@ -257,14 +264,24 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
                 // search but stay in trunk. To avoid multithreading search at cut off nodes
                 // where it would be useless.
                 } else if (depth == Options::splitDepth){
-                    if (i > list && WorkThread::canQueued()) {
-                        WorkThread::queueJob(z, new SearchJob<(Colors)-C, typename B::Base, A>(*this, b, *i, depth-1, (typename B::Base&)beta, current));
+                    if (i > list && WorkThread::canQueued(zd) && current.isNotReady() < 2*WorkThread::nThreads-1) {
+                        if (current.isNotReady() >= 2*WorkThread::nThreads) {
+                            std::cout << zd << std::endl;
+                            WorkThread::printJobs();
+                            ASSERT(0);
+                        }
+                        WorkThread::queueJob(zd, new SearchJob<(Colors)-C, typename B::Base, A>(*this, b, *i, depth-1, (typename B::Base&)beta, current));
                     } else {
                         search<(Colors)-C, P>(b, *i, depth-1, (typename B::Base&)beta, current);
                     }
                 } else {
-                    if (i > list && WorkThread::canQueued()) {
-                        WorkThread::queueJob(z, new SearchJob<(Colors)-C, B, A>(*this, b, *i, depth-1, beta, current));
+                    if (i > list && WorkThread::canQueued(zd) && current.isNotReady() < 2*WorkThread::nThreads-1) {
+                        if (current.isNotReady() >= 2*WorkThread::nThreads) {
+                            std::cout << zd << std::endl;
+                            WorkThread::printJobs();
+                            ASSERT(0);
+                        }
+                        WorkThread::queueJob(zd, new SearchJob<(Colors)-C, B, A>(*this, b, *i, depth-1, beta, current));
                     } else {
                         search<(Colors)-C, P>(b, *i, depth-1, beta, current);
                     }
@@ -274,7 +291,12 @@ bool RootBoard::search(const T& prev, Move m, unsigned int depth, const A& alpha
     }
 
     // if there are queued jobs started from _this_ node, do them first
-    if (P == trunk) while(Job* job = WorkThread::getJob(z)) job->job();
+    if (P == trunk) {
+        while(Job* job = WorkThread::getJob(zd)) job->job();
+/*        while(current.isNotReady()) {
+            if(Job* job = WorkThread::getAnyJob()) job->job();
+        }*/
+    }
 
     current.join();
     if (P != vein) {
