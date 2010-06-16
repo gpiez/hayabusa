@@ -25,6 +25,7 @@
 #include "rootboard.h"
 #include "coloredboard.tcc"
 #include "options.h"
+#include "testpositions.h"
 
 namespace Options {
 unsigned int splitDepth = 5;
@@ -166,6 +167,16 @@ void Console::position(QStringList cmds) {
     else if (cmds[1] == "fen") {
         QStringList fen = cmds.mid(2, m-2);
         board->setup(fen.join(" "));
+    } else if (cmds[1] == "test") {
+        QString search = cmds[2];
+        for (unsigned int i = 0; i < sizeof(testPositions)/sizeof(char*); ++i) {
+            QString pos(testPositions[i]);
+            if (pos.contains(search)) {
+                QString fen = pos.left(pos.indexOf(';'));
+                board->setup(fen);
+                break;
+            }
+        }
     }
     if (m>0) {
         QStringList moves = cmds.mid(m+1);
