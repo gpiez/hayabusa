@@ -25,7 +25,6 @@
 
 #ifdef QT_GUI_LIB
 
-#include <stdint.h>
 #include "ui_stats.h"
 
 class RootBoard;
@@ -35,9 +34,11 @@ class StatWidget: public QWidget, private Ui::Statsui
 	Q_OBJECT
 	
 	const RootBoard& rb;
+    QImage wPieces[6], bPieces[6];
 	
 private slots:
 	void update();
+    void updateBoard();
 	void updateLine(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
 	
 public:
