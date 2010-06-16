@@ -24,7 +24,6 @@
 #endif
 
 #include <emmintrin.h>	//SSE2 for m128i
-#include <stdint.h>
 
 #define static_assert(x) char __y[(x) ? 1 : -1 ] __attribute__((unused));
 #ifndef NDEBUG
