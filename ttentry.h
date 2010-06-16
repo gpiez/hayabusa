@@ -23,8 +23,6 @@
 #include <pch.h>
 #endif
 
-#include <stdint.h>
-
 #include "constants.h"
 
 typedef uint64_t Key;

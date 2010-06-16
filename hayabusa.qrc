@@ -1,4 +1,4 @@
-<RCC>
+<!DOCTYPE RCC><RCC version="1.0">
     <qresource>
         <file>setblack.png</file>
         <file>setwhite.png</file>

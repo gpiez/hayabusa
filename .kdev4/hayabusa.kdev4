@@ -79,11 +79,11 @@ isExecutable=false
 [Launch][Launch Configuration 3]
 Configured Launch Modes=execute
 Configured Launchers=nativeAppLauncher
-Name=CMB.01
+Name=CMB.11
 Type=Native Application
 
 [Launch][Launch Configuration 3][Data]
-Arguments=setoption name humanreadable value 1:setoption name splitdepth value -5:position fen 1r4k1/1q2bp2/3p2p1/2pP4/p1N4R/2P2QP1/1P3PK1/8 w - -:go
+Arguments=setoption name humanreadable value 1:setoption name splitdepth value 5:position test CMB.11:go
 Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a\x00\x00\x00\x10\x00h\x00a\x00y\x00a\x00b\x00u\x00s\x00a)
 Dependency Action=Build
 EnvironmentGroup=default
