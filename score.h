@@ -71,6 +71,7 @@ template<Colors C> struct Score: ScoreBase<C>
     };
     
     void join() const {};
+    unsigned int isNotReady() const { return 0; }
     void setReady() {};
     void setNotReady() {};
 
@@ -119,7 +120,11 @@ public:
     }
 
     void join();
-    
+
+    unsigned int isNotReady() const {
+        return notReady;
+    }
+
     bool max(const RawScore b)         {
         std::lock_guard<std::recursive_mutex> lock(valueMutex);
         if (*this < b) {
@@ -141,14 +146,14 @@ public:
     void setReady() {
         std::lock_guard<std::mutex> lock(readyMutex);
         --notReady;
-        ASSERT(notReady <= 6);
+//        ASSERT(notReady <= 6);
         readyCond.notify_one();
     }
 
     void setNotReady() {
         std::lock_guard<std::mutex> lock(readyMutex);
         ++notReady;
-        ASSERT(notReady <= 6);    //queued jobs + running
+//        ASSERT(notReady <= 6);    //queued jobs + running
     }
 };
 
