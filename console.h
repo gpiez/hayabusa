@@ -23,7 +23,6 @@
 #include <pch.h>
 #endif
 
-#include <stdint.h>
 #include "move.h"
 #include "score.h"
 
