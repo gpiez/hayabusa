@@ -22,7 +22,7 @@
 #include "jobs.h"
 
 QMultiMap<Key,Job*> WorkThread::jobs;
-std::condition_variable WorkThread::starting;
+//std::condition_variable WorkThread::starting;
 std::mutex WorkThread::runningMutex;
 unsigned int WorkThread::running = 0;
 volatile unsigned int WorkThread::sleeping = 0;
@@ -31,9 +31,9 @@ QVector<WorkThread*> WorkThread::threads;
 __thread bool WorkThread::isMain = false;
 
 WorkThread::WorkThread():
+    isStopped(true),
     doStop(false),
     keepRunning(true),
-    isStopped(true),
     job(NULL)
 {
     board.init();
@@ -45,12 +45,12 @@ WorkThread::~WorkThread()
 
 void WorkThread::run() {
     pstats = &stats;
-
     std::unique_lock<std::mutex> lock(runningMutex);
+//    int i = threads.indexOf(this);
     while(keepRunning) {
 
         isStopped = true;
-        stopped.wakeAll();    //wake stop() function
+        if (doStop) stopped.notify_one();    //wake stop() function
         do {
             if (!doStop && jobs.count()>0 && running<4) {
 /*                if (sleeping) {
@@ -63,28 +63,56 @@ void WorkThread::run() {
                 } else {*/
                     key = jobs.keys().first();
                     job = jobs.take(key);
-//                }
+//                    std::cerr << "deque " << i << " " <<(void*)job << " count " << jobs.count() << std::endl;
+//                 }
             }
             if (!job) starting.wait(lock);//starting is signalled by StartJob() or QJob()
+            stats.jobs++;
         } while(!job);
         isStopped = false;
         doStop = false;
         running++;
+//        std::cerr << "start " << i << " " << (void*)job << " count " << jobs.count() << std::endl;
         runningMutex.unlock();
-//        qDebug() << "execute" << (const void*)job;
         job->job();             //returning the result must have happened here.
         runningMutex.lock();
+//        std::cerr << "end   " << i << " " << (void*)job << " count " << jobs.count() << std::endl;
         delete job;
         job = NULL;
         running--;
     }
 }
 
+// Queue a job from a parent. This allows the parent later to start only its
+// own jobs.
+void WorkThread::queueJob(Key parent, Job *j) {
+    ASSERT(j);
+    runningMutex.lock();
+/*    for (int i = 0; i<threads.count(); ++i) {
+        WorkThread* th = threads[i];*/
+    foreach (WorkThread* th, threads) {
+        if (th->isStopped) {
+            ASSERT(th->job == NULL);
+            th->isStopped = false;
+            th->job = j;
+//            std::cerr << "notfy " << i << " " << (void*)j << " count " << jobs.count() << std::endl;
+            runningMutex.unlock();
+            th->starting.notify_one();
+            return;
+        }
+    }
+
+//    std::cerr << "queue " << (void*)j << " count " << jobs.count() << std::endl;
+    jobs.insertMulti(parent, j);
+    runningMutex.unlock();
+//    starting.notify_all();
+}
+
 void WorkThread::stop() {
-    QMutexLocker lock(&stoppedMutex);
+    std::unique_lock<std::mutex> lock(stoppedMutex);
     while (!isStopped) {
         doStop = true;
-        stopped.wait(&stoppedMutex);    //waits until the end of the run loop is reached.
+        stopped.wait(lock);    //waits until the end of the run loop is reached.
     }
 }
 
@@ -106,16 +134,6 @@ void WorkThread::startJob(Job *j) { // todo only used at root now, insert findfr
     starting.notify_all();
 }
 
-// Queue a job from a parent. This allows the parent later to start only its
-// own jobs.
-void WorkThread::queueJob(Key parent, Job *j) {
-    ASSERT(j);
-//    qDebug() << "queueJob" << j;
-    std::unique_lock<std::mutex> lock(runningMutex);
-    jobs.insertMulti(parent, j);
-    starting.notify_all();
-}
-
 Job* WorkThread::getJob(Key parent) {
     std::unique_lock<std::mutex> lock(runningMutex);
     return jobs.take(parent);
@@ -128,6 +146,15 @@ Job* WorkThread::getAnyJob() {
         return NULL;
     else
         return jobs.take(keys.first());
+}
+
+Job* WorkThread::getChildJob(Key z) {
+    std::unique_lock<std::mutex> lock(runningMutex);
+    QMultiMap<Key, Job*>::iterator i = jobs.upperBound(z);
+    if (i != jobs.begin()) {
+        return jobs.take((--i).key());
+    } else
+        return 0;
 }
 
 void WorkThread::setJob(Job* j) {
@@ -151,6 +178,7 @@ bool WorkThread::isFree() {
 bool WorkThread::canQueued(Key k) {
     std::unique_lock<std::mutex> lock(runningMutex);
     return (unsigned)jobs.count(k) < nThreads;
+//    return (unsigned)jobs.size() < nThreads;
 }
 
 void WorkThread::printJobs() {
@@ -159,23 +187,23 @@ void WorkThread::printJobs() {
     }
 }
 
-void WorkThread::idle(int n) {
+void WorkThread::idle(int ) {
 //  TODO decreasing the number of running threads should only allow to start new
 //  jobs in child nodes, otherwise a unrelated node may be started and not
 //  finished, while join() continues, which increases the number of running and
 //  executed threads beyond the number of cores
-    std::unique_lock<std::mutex> lock(runningMutex);
+/*    std::unique_lock<std::mutex> lock(runningMutex);
     running -= n;
     sleeping += n;
     if (n<0) starting.notify_all();
-    ASSERT(running <= 8);
+    ASSERT(running <= 8);*/
 }
 
 void WorkThread::init() {
     nThreads = sysconf(_SC_NPROCESSORS_ONLN);
     if (nThreads == 0) nThreads = 1;
 
-    for (unsigned int i=0; i<nThreads+1; ++i) {
+    for (unsigned int i=0; i<nThreads; ++i) {
         WorkThread* th = new WorkThread();
         th->start();
         threads.append(th);
