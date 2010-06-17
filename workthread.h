@@ -30,14 +30,15 @@ class RootBoard;
 union Stats;
 
 class WorkThread: public QThread {
-	QMutex stoppedMutex;
-	QWaitCondition stopped;
-	static std::condition_variable starting;
+	std::mutex stoppedMutex;
+	std::condition_variable stopped;
+    volatile bool isStopped;
+    
+	std::condition_variable starting;
     static std::mutex runningMutex;
     static volatile unsigned int sleeping;
 	volatile bool doStop;
 	volatile bool keepRunning;
-	volatile bool isStopped;
 	volatile int result;
 	BoardBase board;
 	Colors color;
@@ -67,7 +68,8 @@ public:
 	static bool canQueued(Key);
 	static Job* getJob(Key);
     static Job* getAnyJob();
-	static void idle(int);
+    static Job* getChildJob(Key z);
+    static void idle(int);
 	static WorkThread* findFree();
 	static void init();
 	static const QVector<WorkThread*>& getThreads();
