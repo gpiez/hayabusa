@@ -29,50 +29,50 @@ class Job;
 class RootBoard;
 union Stats;
 
-class WorkThread: public QThread {
-	std::mutex stoppedMutex;
-	std::condition_variable stopped;
+class WorkThread/*: public QThread*/ {
+    std::mutex stoppedMutex;
+    std::condition_variable stopped;
     volatile bool isStopped;
     
-	std::condition_variable starting;
+    std::condition_variable starting;
     static std::mutex runningMutex;
     static volatile unsigned int sleeping;
-	volatile bool doStop;
-	volatile bool keepRunning;
-	volatile int result;
-	BoardBase board;
-	Colors color;
-	Job* job;
+    volatile bool doStop;
+    volatile bool keepRunning;
+    volatile int result;
+    BoardBase board;
+    Colors color;
+    Job* job;
     Key key;
-	static QMultiMap<Key, Job*> jobs;
-	static QVector<WorkThread*> threads;
+    static QMultiMap<Key, Job*> jobs;
+    static QVector<WorkThread*> threads;
 
-	void stop();
+    void stop();
     
 public:
     static unsigned int nThreads;
     static __thread bool isMain;
-	Stats* pstats;
-	static unsigned int running;
+    Stats* pstats;
+    static unsigned int running;
 
-	WorkThread();
-	virtual ~WorkThread();
-	
-	void run();
-	static void stopAll();
-	void startJob(Job*);
-	static void queueJob(Key, Job*);
-	void setJob(Job*);
-	void *operator new (size_t s);
-	bool isFree();
-	static bool canQueued(Key);
-	static Job* getJob(Key);
+    WorkThread();
+    virtual ~WorkThread();
+    
+    void run();
+    static void stopAll();
+    void startJob(Job*);
+    static void queueJob(Key, Job*);
+    void setJob(Job*);
+    void *operator new (size_t s);
+    bool isFree();
+    static bool canQueued(Key);
+    static Job* getJob(Key);
     static Job* getAnyJob();
     static Job* getChildJob(Key z);
     static void idle(int);
-	static WorkThread* findFree();
-	static void init();
-	static const QVector<WorkThread*>& getThreads();
+    static WorkThread* findFree();
+    static void init();
+    static const QVector<WorkThread*>& getThreads();
     static void printJobs();
 };
 
