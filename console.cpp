@@ -30,6 +30,7 @@
 namespace Options {
 unsigned int splitDepth = 5;
 int humanreadable = 0;
+int hash = 0x1000000;
 }
 
 Console::Console(QCoreApplication* parent):
@@ -147,6 +148,9 @@ void Console::setoption(QStringList cmds) {
             Options::splitDepth = data.toInt();
         } else if (name == "humanreadable") {
             Options::humanreadable = data.toInt();
+        } else if (name == "hash") {
+            Options::hash = data.toInt();
+            if (Options::hash) board->tt->setSize(Options::hash*0x100000ULL);
         }
     }
 }

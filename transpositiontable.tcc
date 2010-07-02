@@ -36,7 +36,6 @@ extern "C" {
 template<typename Entry, unsigned int assoc, typename Key>
 Table<Entry, assoc, Key>::Table(uint64_t size) :
 	table(NULL),
-	size(0),
 	usesHugePages(false)
 {
 	setSize(size);
@@ -64,7 +63,7 @@ void Table<Entry, assoc, Key>::freeMemory() {
 template<typename Entry, unsigned int assoc, typename Key>
 bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry &ret, bool &visited) const {
 	visited = subTable->entries[0].visited;
-	Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
+	Key upperKey = k >> Entry::upperShift;
 	for (unsigned int i = 0; i < assoc; ++i) {		//TODO compare all keys simultaniously suing sse
 		if (subTable->entries[i].upperKey == upperKey) {		//only lock if a possible match is found
 			// found same entry again, move repetition
@@ -192,27 +191,30 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 
 template<typename Entry, unsigned assoc, typename Key>
 template<Colors C>
-std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval& e, QSet<Key>& visited) {
+std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, QSet<Key>& visited) {
 	std::string line = m.string();
-	const ColoredBoard<C> b(prev, m, e);
+	const ColoredBoard<C> b(prev, m);
 	Key key = b.getZobrist();
 	if (visited.contains(key)) return line;
 	visited << key;
 	SubTable* te = getSubTable(key);
 	TTEntry subentry;
 
-	Move ttMove = {{0}};
+	Move ttMove(0,0,0);
 	if (retrieve(te, key, subentry) ) {
-		ttMove.from = subentry.from;
-		ttMove.to = subentry.to;
+		ttMove = Move(subentry.from, subentry.to, 0);
 	}
 
 	Move list[256];
 	Move* const end = b.generateMoves(list);
 	if (ttMove.data)
 		for (Move *i=list; i<end; ++i) {
-			if (i->from == ttMove.from && i->to == ttMove.to) {
-				line += " " + bestLineNext<(Colors)-C>(b, *i, e, visited);
+#ifdef BITBOARD            
+			if (i->from() == ttMove.from() && i->to() == ttMove.to()) {
+#else                
+            if (i->from == ttMove.from && i->to == ttMove.to) {
+#endif                
+				line += " " + bestLineNext<(Colors)-C>(b, *i, visited);
 				break;
 			}
 		}
@@ -225,9 +227,9 @@ std::string Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
 	if (!b.bestMove.data) return "";
 	QSet<Key> visited;
 	if (b.color == White) {
-		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, b.eval, visited);
+		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, visited);
 	} else {
-		return bestLineNext<White>(b.currentBoard<Black>(), b.bestMove, b.eval, visited);
+		return bestLineNext<White>(b.currentBoard<Black>(), b.bestMove, visited);
 	}
 
 }

@@ -57,7 +57,7 @@ class RootBoard {
 	unsigned int iMove;				// current half move index
 	QDateTime startTime;
 
-	template<Colors C> ColoredBoard<C>& currentBoard();
+//	template<Colors C> ColoredBoard<C>& currentBoard();
 	unsigned int getAndDecAvailableThreads();
     RawScore estimatedError[nPieces*2+1][nSquares];
     Move line[nMaxGameLength];
@@ -74,6 +74,7 @@ public:
 	
 	RootBoard(Console*);
 	template<Colors C> const ColoredBoard<C>& currentBoard() const;
+    const BoardBase& currentBoard() const;
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<Colors C> Move rootSearch();

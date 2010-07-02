@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-ini
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=core2 -fno-exceptions -Wuninitialized")
 
 # SSSE3 (Note the additional S) is mandatory because of the pshufb instruction.
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -mssse3 -flax-vector-conversions $ENV{CXXFLAGS}")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -msse4.1 -flax-vector-conversions $ENV{CXXFLAGS}")
 
 FIND_PACKAGE(Qt4 COMPONENTS QtCore REQUIRED)
 FIND_PACKAGE(PrecompiledHeaders)
@@ -37,7 +37,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
 SET(hayabusa_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
-                   move.cpp setpiece.asm statwidget.cpp)
+                   move.cpp statwidget.cpp testgame.cpp)
 SET(hayabusa_MOC_H jobs.h console.h statwidget.h)
 SET(hayabusa_RCCS hayabusa.qrc)
 

@@ -22,24 +22,15 @@
 std::string Move::string() const
 {
 	std::string temp;
-	temp += (from & 7) + 'a';
-	temp += (from >> 3) + '1';
-//	temp += capture ? 'x' : '-';
-	temp += (to & 7) + 'a';
-	temp += (to >> 3) + '1';
-	switch (special & 0xf) {
-	case promoteQ:
-		temp += 'Q';
-		break;
-	case promoteN:
-		temp += 'N';
-		break;
-	case promoteB:
-		temp += 'B';
-		break;
-	case promoteR:
-		temp += 'R';
-		break;
-	}
+//    temp += " RBQN K"[piece() & 7];
+	temp += (from() & 7) + 'a';
+	temp += (from() >> 3) + '1';
+	temp += capture() ? 'x' : '-';
+	temp += (to() & 7) + 'a';
+	temp += (to() >> 3) + '1';
+    if (isSpecial()) 
+        if ((piece() & 7) != King)
+            temp += " RBQN"[piece() & 7];
+    
 	return temp;
 }

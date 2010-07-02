@@ -113,6 +113,7 @@ int main(int, char** argv) {
 			out << "}," << endl;
 		}
 	} else {
+#ifndef BITBOARD        
 		use(longAttack);
 		use(shortAttack);
 		use(attVec);
@@ -131,7 +132,8 @@ int main(int, char** argv) {
 
 		out << "shortColor = " << sizeof(shortAttacks[0][0][0]) << '\n';
 		out << "shortPiece = " << ld(sizeof(shortAttacks[0])) << '\n';
-		out << "shortPos = " << ld(sizeof(shortAttacks[0][0])) << '\n';		
+		out << "shortPos = " << ld(sizeof(shortAttacks[0][0])) << '\n';
+#endif        
 	}
 
 	return 0;

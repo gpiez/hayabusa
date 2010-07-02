@@ -18,7 +18,7 @@
 */
 #ifndef PIECELIST_H_
 #define PIECELIST_H_
-
+#ifndef BITBOARD
 #include <stdint.h>
 #include <tmmintrin.h>
 
@@ -163,5 +163,5 @@ public:
 		index_v -= indexDiffs[piece];
 	}
 };
-
+#endif
 #endif /* PIECELIST_H_ */

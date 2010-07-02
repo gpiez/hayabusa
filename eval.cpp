@@ -29,6 +29,9 @@ uint32_t Eval::borderTab4_0[nSquares];
 uint32_t Eval::borderTab321[nSquares];
 uint32_t Eval::borderTab567[nSquares];
 
+__v16qi Eval::kMask0[nSquares];
+__v16qi Eval::kMask1[nSquares];
+
 int squareControl[nSquares];
 //void sigmoid(Score* p, unsigned int n, double start, double end, double dcenter, double width) {
 //    double t0 = -0.5*n-dcenter;
@@ -332,9 +335,18 @@ void Eval::initZobrist() {
 void Eval::initTables() {
     for (unsigned int x = 0; x<nFiles; ++x)
     for (unsigned int y = 0; y<nRows; ++y) {
-        borderTab4_0[x+y*nFiles] = (x==0) | (x==7) << 16;
-        borderTab321[x+y*nFiles] = (x==0) | (x==7) << 16 | 0x10101*(y==7);
-        borderTab567[x+y*nFiles] = (x==0) | (x==7) << 16 | 0x10101*(y==0);
+        uint64_t oking = x+y*nFiles;
+        uint64_t offset = (oking + 010) & 020;    // 070-077 -> 080, 060-067 -> 060
+        borderTab4_0[oking] = (x==0) | (x==7) << 16;
+        borderTab321[oking] = (x==0) | (x==7) << 16 | 0x10101*(y==7);
+        borderTab567[oking] = (x==0) | (x==7) << 16 | 0x10101*(y==0);
+
+        BoardBase b = {{{0}}};
+        for (unsigned int dir = 0; dir<nDirs; ++dir) {
+            b.pieces[oking+dirOffsets[dir]] = 0xff;
+        }
+        kMask0[oking] = (__v16qi&)b.pieces[offset];
+        kMask1[oking] = (__v16qi&)b.pieces[offset-0x10];
     }
 }
 
@@ -410,7 +422,8 @@ RawScore Eval::pawns(const BoardBase& b) const {
     } else {
         stats.ptmiss++;
         pawnEntry.score = 0;
-
+#ifdef BITBOARD
+#else
         uint64_t wpawn = b.pieceList[0].bitBoard<Pawn>();
         uint64_t bpawn = b.pieceList[1].bitBoard<Pawn>();
 
@@ -495,6 +508,7 @@ RawScore Eval::pawns(const BoardBase& b) const {
         pawnEntry.b = bpawn;
         if (k >> PawnEntry::upperShift)
             pt->store(st, pawnEntry);
+#endif        
     }
     return pawnEntry.score;
 }
@@ -502,8 +516,10 @@ RawScore Eval::pawns(const BoardBase& b) const {
 RawScore Eval::eval(const BoardBase& b) const {
 #if defined(MYDEBUG)
     RawScore value = 0;
+#ifdef BITBOARD
+#else
     for (int pi = 0; pi <= 1; ++pi) {
-        int C = 1-pi*2;
+        int C = 1-pi*2;        
         uint8_t king = b.pieceList[pi].getKing();
         value += getPS(C*King, king);
         for (uint8_t i = b.pieceList[pi][Pawn]; i > 0;) {
@@ -533,6 +549,7 @@ RawScore Eval::eval(const BoardBase& b) const {
         }
     }
     if (value != b.keyScore.score) asm("int3");
+#endif    
 
 #endif
     return b.keyScore.score + pawns(b) + mobility(b);
@@ -553,6 +570,8 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
     // 6.0 6.1
     // 7.0
     // memory effectively used is 12 cachlines = 768 byte, total 35 blocks a 768 = 26.25 kByte
+#ifdef BITBOARD
+#else   
     uint64_t rooks = b.pieceList[C==Black].getAllMasked<Rook>();
 
     uint64_t rook0 = (uint8_t)rooks;    // 0xff if no rook
@@ -627,6 +646,8 @@ void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
         | mobBits[1][b.attLen[0][queen0|0x40]] | mobBits[3][b.attLen[0][queen0|0xC0]];
     queen0bits = (queen0bits << queen0) | (queen0bits >> (64-queen0));
     occupied |= bits[queen0];
+
+#endif
 }
 
 // double popcount of two quadwords
@@ -749,13 +770,46 @@ RawScore Eval::mobility(const BoardBase& b) const {
     mobilityValue( occupiedb, pawnbitsw, bishopbitsw, knightbitsw, rookbitsw, bishopbitsb, knightbitsb, rookbitsb, queen0bitsb);
 }
 
+// bit 0 = blocked for enemy king
+// bit 1 = defended by B and other
+// bit 2 = attacked by R and other
+// bit 3 = attacked by Q and other
+// 
 template<Colors C>
 void Eval::EvalMate(const ColoredBoard<C>& b) const {
+#ifdef BITBOARD
+#else    
     uint8_t oking = b.getOKing();
-    uint32_t p4_0 = reinterpret_cast<uint32_t&>(b.pieces[oking-1]);
-    p4_0 |= (reinterpret_cast<uint32_t&>(b.longAttack[(1-C)/2][oking-1]) & (attackMaskLong | attackMaskLong << 8 | attackMaskLong << 16));
+    uint64_t offset = (oking + 010) & 020;    // 070-077 -> 080, 060-067 -> 060
+    const __v16qi zero = _mm_set1_epi8(0);
+    const __v16qi low4bits = _mm_set1_epi8(0xf);
+    const __v16qi mateBits = _mm_set_epi8(0,0,0,2,0,4,6,6,0,8,10,10,12,12,14,14);
+    __v16qi m0 = kMask0[oking];
+    __v16qi m1 = kMask1[oking];
+    __v16qi p0 = (_mm_load_si128(&b.pieces[offset]) & m0) < zero;
+    __v16qi p1 = (_mm_load_si128(&b.pieces[offset-0x10]) & m1) < zero;
+    __v16qi sa0 = _mm_load_si128(&b.shortAttack[b.CI][offset]) & m0;
+    __v16qi sa1 = _mm_load_si128(&b.shortAttack[b.CI][offset-0x10]) & m1;
+    sa0 |= _mm_srli_epi16(sa0, nNBits);
+    sa1 |= _mm_srli_epi16(sa1, nNBits);
+    __v16qi la0 = _mm_load_si128(&b.longAttack[b.CI][offset]) & m0;
+    __v16qi la1 = _mm_load_si128(&b.longAttack[b.CI][offset-0x10]) & m1;
+//B bit 2->2, R bit 0->1, Q bit 4->3
+    la0 |= (la0 + la0) | (__v16qi)_mm_srli_epi16(la0, nRBits + nBBits - 3) | sa0;
+    la1 |= (la1 + la1) | (__v16qi)_mm_srli_epi16(la1, nRBits + nBBits - 3) | sa1;
+    la0 &= low4bits;
+    la1 &= low4bits;
+    la0 = _mm_shuffle_epi8(mateBits, la0);
+    la1 = _mm_shuffle_epi8(mateBits, la1);
+    la0 = _mm_slli_epi16(la0, 4);
+    la1 = _mm_slli_epi16(la1, 4);
+    __v16qi ed0 = zero == ((_mm_load_si128(&b.shortAttack[b.EI][offset]) | _mm_load_si128(&b.longAttack[b.EI][offset])) & m0);
+    __v16qi ed1 = zero == ((_mm_load_si128(&b.shortAttack[b.EI][offset-0x10]) | _mm_load_si128(&b.longAttack[b.EI][offset-0x10])) & m1);
+#endif
+    
+/*    p4_0 |= (reinterpret_cast<uint32_t&>(b.longAttack[(1-C)/2][oking-1]) & (attackMaskLong | attackMaskLong << 8 | attackMaskLong << 16));
     p4_0 |= borderTab4_0[oking];
     uint32_t p321 = reinterpret_cast<uint32_t&>(b.pieces[oking+7]) | borderTab321[oking];
     uint32_t p567 = reinterpret_cast<uint32_t&>(b.pieces[oking-9]) | borderTab567[oking];
-    uint64_t king8 = (p321 & 0xffffff) + ((p4_0 & 0xffL) << 24) + ((p4_0 & 0xff0000L) << 32) + ((p567 & 0xffffffL) << 40);
+    uint64_t king8 = (p321 & 0xffffff) + ((p4_0 & 0xffL) << 24) + ((p4_0 & 0xff0000L) << 32) + ((p567 & 0xffffffL) << 40);*/
 }

@@ -57,14 +57,11 @@ const ColoredBoard<Black>& RootBoard::currentBoard<Black>() const {
 	return boards[iMove].bb;
 }
 
-template<>
-ColoredBoard<White>& RootBoard::currentBoard<White>() {
-	return boards[iMove].wb;
-}
-
-template<>
-ColoredBoard<Black>& RootBoard::currentBoard<Black>() {
-	return boards[iMove].bb;
+const BoardBase& RootBoard::currentBoard() const {
+    if (color == White)
+        return currentBoard<White>();
+    else
+        return currentBoard<Black>();
 }
 
 const BoardBase& RootBoard::setup(QString fen) {
@@ -100,40 +97,40 @@ const BoardBase& RootBoard::setup(QString fen) {
 			x += piecePlacement[p].toLatin1() - '1';
 			break;
 		case 'k':
-			board.setPiece<Black>( King, square, eval);
+			board.setPiece<Black>( King, square);
 			break;
 		case 'p':
-			board.setPiece<Black>( Pawn, square, eval);
+			board.setPiece<Black>( Pawn, square);
 			break;
 		case 'b':
-			board.setPiece<Black>( Bishop, square, eval);
+			board.setPiece<Black>( Bishop, square);
 			break;
 		case 'n':
-			board.setPiece<Black>( Knight, square, eval);
+			board.setPiece<Black>( Knight, square);
 			break;
 		case 'r':
-			board.setPiece<Black>( Rook, square, eval);
+			board.setPiece<Black>( Rook, square);
 			break;
 		case 'q':
-			board.setPiece<Black>( Queen, square, eval);
+			board.setPiece<Black>( Queen, square);
 			break;
 		case 'K':
-			board.setPiece<White>( King, square, eval);
+			board.setPiece<White>( King, square);
 			break;
 		case 'P':
-			board.setPiece<White>( Pawn, square, eval);
+			board.setPiece<White>( Pawn, square);
 			break;
 		case 'B':
-			board.setPiece<White>( Bishop, square, eval);
+			board.setPiece<White>( Bishop, square);
 			break;
 		case 'N':
-			board.setPiece<White>( Knight, square, eval);
+			board.setPiece<White>( Knight, square);
 			break;
 		case 'R':
-			board.setPiece<White>( Rook, square, eval);
+			board.setPiece<White>( Rook, square);
 			break;
 		case 'Q':
-			board.setPiece<White>( Queen, square, eval);
+			board.setPiece<White>( Queen, square);
 			break;
 		case '/':
 			x = -1;
@@ -161,10 +158,11 @@ const BoardBase& RootBoard::setup(QString fen) {
 		}
 
 	if ( enPassant.length() == 2 && enPassant[0] >= 'a' && enPassant[0] <= 'h' && ( enPassant[1] == '3' || enPassant[1] == '6' ) )
-		board.cep.enPassant = 8 * ((enPassant[1].toLatin1() - '3' )/3 + 3) + enPassant[0].toLatin1() - 'a';
+		board.cep.enPassant = 1ULL << (8 * ((enPassant[1].toLatin1() - '3' )/3 + 3) + enPassant[0].toLatin1() - 'a');
 	else if ( enPassant != "-" )
 		qWarning() << "error importing e. p. move " << enPassant;
 
+	board.buildAttacks();
 	return board;
 }
 

@@ -102,6 +102,8 @@ class Eval {
     static uint32_t borderTab4_0[nSquares];
     static uint32_t borderTab321[nSquares];
     static uint32_t borderTab567[nSquares];
+    static __v16qi kMask0[nSquares];
+    static __v16qi kMask1[nSquares];
     static __thread PawnEntry pawnEntry;
     RawScore inline mobilityValue(uint64_t, uint64_t, __v2di, __v2di, __v2di, __v2di, __v2di, __v2di, uint64_t) const;
     template<Colors C> void inline mobilityBits(const BoardBase &, uint64_t &, __v2di &, __v2di &, __v2di &, uint64_t &, uint64_t &) const;

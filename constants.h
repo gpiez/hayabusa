@@ -25,7 +25,8 @@
 
 #include <emmintrin.h>	//SSE2 for m128i
 
-#define static_assert(x) char __y[(x) ? 1 : -1 ] __attribute__((unused));
+//#define static_assert(x) char __y[(x) ? 1 : -1 ] __attribute__((unused));
+
 #ifndef NDEBUG
 #define ASSERT(x) do { if (!(x)) { \
 				qDebug() << endl << "Assertion " << #x << " failed." << endl\
@@ -43,7 +44,7 @@
 
 enum SearchFlag { null = 1 };
 
-enum Pieces: int8_t { Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6 };
+enum Pieces: unsigned int { Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6, All = 7 };
 
 enum Colors { Black = -1, White = 1 };
 
@@ -58,12 +59,14 @@ enum Square {
 	a8, b8, c8, d8, e8, f8, g8, h8
 };
 
+#ifndef BITBOARD
 enum SpecialMoves: uint8_t {
 	nothingSpecial=0,
 	shortCastling, longCastling,
 	promoteQ, promoteR, promoteB, promoteN,
 	enableEP, EP
 };
+#endif
 
 enum Phase { root, trunk, tree, leaf, vein };
 
@@ -86,6 +89,7 @@ static const unsigned int nFiles = 8;
 static const unsigned int nRows = 8;
 static const unsigned int nSquares = nFiles*nRows;
 
+#ifndef BITBOARD
 /*
  * Number of bits reserved for the attackedBy counters.
  * The standard structure can handle:
@@ -105,6 +109,7 @@ static const unsigned int nKBits = 1;
 static const unsigned int nNBits = 3;
 static const unsigned int nKNAttackBits = 1;	// king attacks from enemy knight
 static const unsigned int nKPAttackBits = 1;	// king attacks from enemy pawn
+#endif
 
 /*
  * The eight possible directions of movement for a
@@ -114,6 +119,7 @@ static const int dirOffsets[8] = { 1, 9, 8, 7, -1, -9, -8, -7 };
 static const int xOffsets[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 static const int yOffsets[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
 
+#ifndef BITBOARD
 static const int xShortOffsets[nPieces+1][nDirs] = {
 	{},
 	{},	//rook
@@ -143,6 +149,7 @@ static const int yShortOffsets[nColors][nPieces+1][nDirs] = {{
 }};
 
 static const __v16qi zeroToFifteen = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
+#endif
 
 static inline uint64_t popcount(uint64_t x) {
     x -=  x>>1 & 0x5555555555555555;
@@ -150,6 +157,27 @@ static inline uint64_t popcount(uint64_t x) {
     x  = (( x>>4 )+x) & 0x0f0f0f0f0f0f0f0f;
     x *= 0x0101010101010101;
     return  x>>56;
+}
+
+static inline unsigned int bit(uint64_t x) {
+    return __builtin_ctzll(x);
+}
+
+static inline unsigned int bit(unsigned int x) {
+    return __builtin_ctz(x);
+}
+
+static inline uint64_t fold(__v2di hilo) {
+    return _mm_cvtsi128_si64(_mm_unpackhi_epi64(hilo, hilo))
+        | _mm_cvtsi128_si64(hilo);
+}
+
+template<int N>
+uint64_t shift(uint64_t b) {
+    if (N > 0)
+        return b << N;
+    else
+        return b >> -N;
 }
 
 extern "C" __m128i broadcastTab[256] ALIGN_XMM;

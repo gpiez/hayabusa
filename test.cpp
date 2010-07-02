@@ -26,6 +26,7 @@
 #include <sched.h>
 
 void TestRootBoard::initTestCase() {
+    qRegisterMetaType<std::string>("std::string");
 	BoardBase::initTables();
 	c = new Console(QCoreApplication::instance());
 	b = c->board;
@@ -96,6 +97,7 @@ void TestRootBoard::setPiece() {
 }
 
 void TestRootBoard::pieceList() {
+#ifndef BITBOARD    
 	PieceList p;
 	p.init();
 	p.add(Queen, d1);
@@ -125,7 +127,7 @@ void TestRootBoard::pieceList() {
 	QCOMPARE((unsigned int )p.getKing(), (unsigned int )e1);
 	QCOMPARE((unsigned int )p.getPawn(0), (unsigned int )b2);
 	QCOMPARE((unsigned int )p.get(Rook,0), (unsigned int )a1);
-
+#endif
 }
 
 void TestRootBoard::generateCaptures() {
@@ -146,7 +148,6 @@ void TestRootBoard::generateCaptures() {
 	uint64_t a, d, tsc;
 	Key blah;
 	Move* end;
-	sleep(2);
 	for (int j = 0; j < iter; ++j) {
 		nmoves = 0;
 		for (unsigned int i = 0; i < testCases; ++i) {
@@ -159,6 +160,7 @@ void TestRootBoard::generateCaptures() {
 			 overhead = (a + (d << 32)) - tsc;
 			 */
 			overhead = 272;
+			b->boards[0].wb.buildAttacks();
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			tsc = (a + (d << 32));
 			end = b->boards[0].wb.generateMoves(list);
@@ -166,13 +168,16 @@ void TestRootBoard::generateCaptures() {
 			nmoves += end - list;
 			times[i][j] = (a + (d << 32)) - tsc - overhead;
 			for (Move* k=list; k<end; ++k) {
+//				std::cout << k->string() << std::endl;
 				asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 				tsc = (a + (d << 32));
-				ColoredBoard<Black> bb(b->boards[0].wb, *k, b->eval);
+				ColoredBoard<Black> bb(b->boards[0].wb, *k);
 				blah += bb.getZobrist();
 				asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 				movetimes[i][j] += (a + (d << 32)) - tsc - overhead;
 			}
+//			std::string empty;
+//			std::cin >> empty;
 		}
 	}
 	for (QVector<Sample>::Iterator i = times.begin(); i != times.end(); ++i) {

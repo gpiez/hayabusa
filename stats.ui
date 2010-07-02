@@ -184,7 +184,7 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="1">
+           <item row="6" column="1">
             <spacer name="verticalSpacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -196,6 +196,33 @@
               </size>
              </property>
             </spacer>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="label_11">
+             <property name="text">
+              <string>Jobs</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLabel" name="vjobs">
+             <property name="text">
+              <string>0</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="2">
+            <widget class="QLabel" name="njobs">
+             <property name="text">
+              <string>0</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>

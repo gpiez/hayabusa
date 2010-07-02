@@ -26,6 +26,15 @@
 /* Execute move m from position prev, both of the previous (opposite) color
  * to construct a board with C to move
  */
+#ifdef BITBOARD
+template<Colors C>
+template<typename T>
+ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
+    prev.doMove(this, m);
+    keyScore.vector = est;
+    buildAttacks();
+}
+#else
 template<Colors C>
 ColoredBoard<C>::ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval& e) {
     prev.doMove(this, m, e);
@@ -47,9 +56,72 @@ ColoredBoard<C>::ColoredBoard(const ColoredBoard<C>& prev, Move m, __v8hi est, u
     prev.doMoveEst((ColoredBoard<(Colors)-C>*)this, m, cep);
     keyScore.vector = est;
 }
+#endif
 
 template<Colors C>
-void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const Eval& e) const {
+template<typename T>
+void ColoredBoard<C>::doMove(T* next, Move m) const {
+#ifdef BITBOARD
+    uint64_t from = 1ULL << m.from();
+    uint64_t to = 1ULL << m.to();
+
+    __m128i xmm0 = _mm_load_si128((__m128i*)pieces);
+    __m128i xmm1 = _mm_load_si128((__m128i*)pieces+1);
+    __m128i xmm2 = _mm_load_si128((__m128i*)pieces+2);
+    __m128i xmm3 = _mm_load_si128((__m128i*)pieces+3);
+    _mm_store_si128((__m128i*)next->pieces  , xmm0);
+    _mm_store_si128((__m128i*)next->pieces+1, xmm1);
+    _mm_store_si128((__m128i*)next->pieces+2, xmm2);
+    _mm_store_si128((__m128i*)next->pieces+3, xmm3);
+    xmm0 = _mm_load_si128((__m128i*)pieces+4);
+    xmm1 = _mm_load_si128((__m128i*)pieces+5);
+    xmm2 = _mm_load_si128((__m128i*)pieces+6);
+    xmm3 = _mm_load_si128((__m128i*)pieces+7);
+    _mm_store_si128((__m128i*)next->pieces+4 , xmm0);
+    _mm_store_si128((__m128i*)next->pieces+5, xmm1);
+    _mm_store_si128((__m128i*)next->pieces+6, xmm2);
+    _mm_store_si128((__m128i*)next->pieces+7, xmm3);
+
+    next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
+    
+    if (m.isSpecial()) {
+        next->fiftyMoves = 0;
+        next->cep.enPassant = 0;
+        unsigned int piece = m.piece() & 7;
+        if (piece == King) {
+            ASSERT(m.capture() == 0);
+            next->getPieces<C,King>() ^= from + to;
+            if (m.to() == (pov^g1)) {
+                // short castling
+                next->occupied2 = _mm_set1_epi64x(occupied1 ^ (0b1111ULL << m.from()));
+                next->getPieces<C,Rook>() ^= (from + to) << 1;
+            } else {
+                // long castling
+                next->occupied2 = _mm_set1_epi64x(occupied1 ^ (0b11101ULL << (m.to() & 070)));
+                next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4);
+            }
+            ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>()));
+        } else {
+            // promotion
+            ASSERT(m.captureOffset() == 0);
+            next->occupied2 = _mm_set1_epi64x(occupied1 ^ (from + (m.capture() ? 0:to)));
+            next->getPieces<C,Pawn>() ^= from;
+            next->getPieces<C>(piece) ^= to;
+            next->getPieces<-C>(m.capture()) ^= to;
+        }
+    } else {
+        // standard move, e. p. is handled by captureOffset
+        next->fiftyMoves = (m.capture() & 7) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
+        next->cep.enPassant = m.piece()==Pawn ? to & shift<C*16>(from) & rank<4>() & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1) : 0;
+        next->occupied2 = _mm_set1_epi64x(occupied1 ^ (from + (m.capture() & 7 ? 0:to)));
+        next->getPieces<C>(m.piece()) ^= from + to;
+        if (C == White)
+            next->getPieces<-C>(m.capture() & 7) ^= to >> m.captureOffset();
+        else
+            next->getPieces<-C>(m.capture() & 7) ^= to << m.captureOffset();
+        
+    }
+#else
     uint8_t piece = C*pieces[m.from];
     next->copyBoardClrPiece<C>(this, piece, m.from, e);
     next->cep.enPassant = 0;
@@ -95,8 +167,39 @@ void ColoredBoard<C>::doMove(ColoredBoard<(Colors)-C>* next, Move m, const Eval&
         next->chgPiece<C>(-C*m.capture, piece, m.to, e);
     else
         next->setPiece<C>(piece, m.to, e);
+#endif    
 }
 
+template<Colors C>
+__v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
+    if (m.isSpecial()) {
+    	unsigned piece = m.piece() & 7;
+    	if (piece == King) {
+            ASSERT(m.capture() == 0);
+    		__v8hi estKing = keyScore.vector
+				- eval.getKSVector(piece, m.from())
+				+ eval.getKSVector(piece, m.to());
+            if (m.to() == (pov^g1)) {
+            	return estKing - eval.getKSVector(C*Rook, pov^h1)
+            				   + eval.getKSVector(C*Rook, pov^f1);
+            } else {
+            	return estKing - eval.getKSVector(C*Rook, pov^a1)
+            				   + eval.getKSVector(C*Rook, pov^d1);
+            }
+    	} else {
+    		return keyScore.vector - eval.getKSVector(C*Pawn, m.from())
+    						       + eval.getKSVector(C*piece, m.to())
+    						       - eval.getKSVector(-C*m.capture(), m.to());
+    	}
+    } else {
+        return keyScore.vector
+            - eval.getKSVector(C*m.piece(), m.from())
+            + eval.getKSVector(C*m.piece(), m.to())
+            - eval.getKSVector(-C*(m.capture() & 7), m.to() - C*m.captureOffset());
+    }
+}
+
+#ifndef BITBOARD
 template<Colors C>
 void ColoredBoard<C>::doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t cepdata) const {
     uint8_t piece = C*pieces[m.from];
@@ -152,10 +255,10 @@ void ColoredBoard<C>::doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t
     else
         next->setPieceEst<C>(piece, m.to);
 }
-
+#endif
 template<Colors C>
 Key ColoredBoard<C>::getZobrist() const {
-    return keyScore.key + cep.data8 + (C+1);
+    return keyScore.key + cep.castling.data4 + cep.enPassant + (C+1);
 }
 
 //attacked by (opposite colored) piece.
@@ -163,6 +266,9 @@ Key ColoredBoard<C>::getZobrist() const {
 template<Colors C>
 template<int P>
 bool ColoredBoard<C>::attackedBy(uint8_t pos) {
+#ifdef BITBOARD
+    return false;
+#else
     switch(C*P) {
     case King:     // if color == Black, attackedBy<-King> = w
         return shortAttack[0][pos] & attackMaskK;
@@ -201,6 +307,7 @@ bool ColoredBoard<C>::attackedBy(uint8_t pos) {
         return longAttack[1][pos] & attackMaskR;
         break;
     }
+#endif    
 }
 
 template<Colors C>
@@ -224,6 +331,8 @@ void ColoredBoard<C>::initTables() {
     }
 }
 
+#ifdef BITBOARD
+#else
 template<Colors C>
 __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval, uint64_t& cepdata) const {
     int8_t piece = pieces[m.from];
@@ -270,4 +379,5 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval, uint64_t& 
     cepdata = nextcep.data8;
     return estimate;
 }
+#endif
 #endif /* COLOREDBOARD_TCC_ */

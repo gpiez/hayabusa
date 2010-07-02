@@ -80,7 +80,7 @@ public:
     }
     void freeMemory();
     std::string bestLine(const RootBoard& );
-    template<Colors C> std::string bestLineNext(const ColoredBoard<(Colors)-C>&, Move, const Eval&, QSet<Key>&);
+    template<Colors C> std::string bestLineNext(const ColoredBoard<(Colors)-C>&, Move, QSet<Key>&);
 };
 
 template<typename Entry, unsigned assoc, typename Key>

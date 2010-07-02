@@ -123,40 +123,56 @@ void StatWidget::update()
     DISPLAYNUM(ptmiss);
     DISPLAYNUM(ptuse);
     DISPLAYNUM(ptcollision);
+    DISPLAYNUM(jobs);
 }
 
 void StatWidget::updateBoard()
 {
+    static int oldsize = 0;
     int size=qMin( widgetBoard->width(), widgetBoard->height() )/8;
+    if (size != oldsize) {
+        oldsize = size;
+        QImage wScaled[6], bScaled[6];
+        for ( int i=0; i<6; i++ ) {
+            wScaled[i] = wPieces[i].scaled( QSize( size*11/8, size*11/8 ), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ).copy(size*3/16, size*3/16, size, size);
 
-    QImage wScaled[6], bScaled[6];
-    for ( int i=0; i<6; i++ ) {
-        wScaled[i] = wPieces[i].scaled( QSize( size*11/8, size*11/8 ), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ).copy(size*3/16, size*3/16, size, size);
-
-    }
-    for ( int i=0; i<6; i++ ) {
-        bScaled[i] = bPieces[i].scaled( QSize( size*11/8, size*11/8 ), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ).copy(size*3/16, size*3/16, size, size);
-    }
-
-    QPixmap boardPixmap(widgetBoard->size());
-    boardPixmap.fill(QColor(0, 0, 0, 0));
-    QPainter p( &boardPixmap );
-
-    for ( int x=0; x<8; x++ )
-        for ( int y=0; y<8; y++ ) {
-            int type = rb.currentBoard<White>().pieces[(7-y)*8 + x];
-            p.setPen(Qt::NoPen);
-            p.setBrush(QBrush((x^y)&1 ? QColor(128,128,128):QColor(192,192,192) ));
-            p.drawRect(x*size, y*size, size, size);
-            if ( type > 0 )
-                p.drawImage( x*size, y*size, wScaled[type-1] );
-            else if ( type < 0 )
-                p.drawImage( x*size, y*size, bScaled[-type-1] );
+        }
+        for ( int i=0; i<6; i++ ) {
+            bScaled[i] = bPieces[i].scaled( QSize( size*11/8, size*11/8 ), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ).copy(size*3/16, size*3/16, size, size);
         }
 
-    QPalette palette;
-    widgetBoard->setAutoFillBackground(true);
-    palette.setBrush(widgetBoard->backgroundRole(), QBrush(boardPixmap));
-    widgetBoard->setPalette(palette);
+        QPixmap boardPixmap(widgetBoard->size());
+        boardPixmap.fill(QColor(0, 0, 0, 0));
+        QPainter pa( &boardPixmap );
+
+        for ( int x=0; x<8; x++ )
+            for ( int y=0; y<8; y++ ) {
+            	uint64_t p = 1ULL << (x+(7-y)*8);
+                int type = rb.currentBoard().getPieces<White,King>() & p ? King:
+                rb.currentBoard().getPieces<White,Pawn>() & p ? Pawn:
+                rb.currentBoard().getPieces<White,Knight>() & p ? Knight:
+                rb.currentBoard().getPieces<White,Queen>() & p ? Queen:
+                rb.currentBoard().getPieces<White,Bishop>() & p ? Bishop:
+                rb.currentBoard().getPieces<White,Rook>() & p ? Rook:
+                rb.currentBoard().getPieces<Black,King>() & p ? -King:
+				rb.currentBoard().getPieces<Black,Pawn>() & p ? -Pawn:
+				rb.currentBoard().getPieces<Black,Knight>() & p ? -Knight:
+				rb.currentBoard().getPieces<Black,Queen>() & p ? -Queen:
+				rb.currentBoard().getPieces<Black,Bishop>() & p ? -Bishop:
+				rb.currentBoard().getPieces<Black,Rook>() & p ? -Rook:0;
+                pa.setPen(Qt::NoPen);
+                pa.setBrush(QBrush((x^y)&1 ? QColor(128,128,128):QColor(192,192,192) ));
+                pa.drawRect(x*size, y*size, size, size);
+                if ( type > 0 )
+                    pa.drawImage( x*size, y*size, wScaled[type-1] );
+                else if ( type < 0 )
+                    pa.drawImage( x*size, y*size, bScaled[-type-1] );
+            }
+
+        QPalette palette;
+        widgetBoard->setAutoFillBackground(true);
+        palette.setBrush(widgetBoard->backgroundRole(), QBrush(boardPixmap));
+        widgetBoard->setPalette(palette);
+    }
 }
 #endif // QT_GUI_LIB

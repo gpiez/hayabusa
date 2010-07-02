@@ -37,7 +37,7 @@ struct Bitfield {
 
     T data[end+1];
     operator T () const {
-        static_assert(end == start);
+        static_assert(end == start, "Bitfield mismatch");
 /*        if (width == 1)        // T is a bool type
             return data[start] & (T)1 << startpos;
         else*/ {
@@ -54,11 +54,11 @@ struct Bitfield {
 //    }
 
     void operator |= (T value) {
-        static_assert(end == start);
+        static_assert(end == start, "Bitfield mismatch");
         data[start] |= value << startpos;
     }
     void reset() {
-        static_assert(end == start);
+        static_assert(end == start, "Bitfield mismatch");
         data[start] &= ~ (((1<<width)-1) << startpos);
     }
 };

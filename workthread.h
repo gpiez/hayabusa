@@ -37,7 +37,6 @@ class WorkThread/*: public QThread*/ {
     std::condition_variable starting;
     static std::mutex runningMutex;
     static volatile unsigned int sleeping;
-    volatile bool doStop;
     volatile bool keepRunning;
     volatile int result;
     BoardBase board;
@@ -50,6 +49,7 @@ class WorkThread/*: public QThread*/ {
     void stop();
     
 public:
+    static volatile bool doStop;
     static unsigned int nThreads;
     static __thread bool isMain;
     Stats* pstats;

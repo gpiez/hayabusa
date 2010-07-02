@@ -109,7 +109,7 @@ public:
     RootPerftJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
     void job() {
         rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
-        connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
+        connect(this, SIGNAL(result(std::string)), rb.console, SLOT(getResult(std::string)));
         uint64_t n=rb.rootPerft<C>(depth);
         std::ostringstream temp;
         temp << n;
@@ -127,7 +127,7 @@ public:
     RootDivideJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
     void job() {
         rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
-        connect(this, SIGNAL(result(QString)), rb.console, SLOT(getResult(QString)));
+        connect(this, SIGNAL(result(std::string)), rb.console, SLOT(getResult(std::string)));
         uint64_t n=rb.rootDivide<C>(depth);
         std::ostringstream temp;
         temp << n;

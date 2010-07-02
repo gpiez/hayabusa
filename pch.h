@@ -19,6 +19,8 @@
 #ifndef PCH_H_
 #define PCH_H_
 
+#define BITBOARD
+
 #include <mutex>
 #include <condition_variable>
 #include <thread>

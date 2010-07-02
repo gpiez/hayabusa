@@ -24,7 +24,7 @@
 					<folderInfo id="0.153824048." name="/" resourcePath="">
 						<toolChain id="org.eclipse.cdt.build.core.prefbase.toolchain.1979996415" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="org.eclipse.cdt.build.core.prefbase.toolchain.1979996415.171803079" name=""/>
-							<builder buildPath="${workspace_loc:/hayabusa/Debug}" id="org.eclipse.cdt.build.core.settings.default.builder.1567273717" incrementalBuildTarget="hayabusa" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="4" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder buildPath="${workspace_loc:/hayabusa/Debug}" id="org.eclipse.cdt.build.core.settings.default.builder.1567273717" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="4" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.libs.620596018" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.719600125" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.240336676" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
@@ -469,6 +469,14 @@
 						<buildCommand>make</buildCommand>
 						<buildArguments>-j4</buildArguments>
 						<buildTarget>hayabusa</buildTarget>
+						<stopOnError>true</stopOnError>
+						<useDefaultCommand>true</useDefaultCommand>
+						<runAllBuilders>true</runAllBuilders>
+					</target>
+					<target name="test" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+						<buildCommand>make</buildCommand>
+						<buildArguments>-j4</buildArguments>
+						<buildTarget>test</buildTarget>
 						<stopOnError>true</stopOnError>
 						<useDefaultCommand>true</useDefaultCommand>
 						<runAllBuilders>true</runAllBuilders>
@@ -942,6 +950,14 @@
 						<buildCommand>make</buildCommand>
 						<buildArguments>-j4</buildArguments>
 						<buildTarget>hayabusa</buildTarget>
+						<stopOnError>true</stopOnError>
+						<useDefaultCommand>true</useDefaultCommand>
+						<runAllBuilders>true</runAllBuilders>
+					</target>
+					<target name="test" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+						<buildCommand>make</buildCommand>
+						<buildArguments>-j4</buildArguments>
+						<buildTarget>test</buildTarget>
 						<stopOnError>true</stopOnError>
 						<useDefaultCommand>true</useDefaultCommand>
 						<runAllBuilders>true</runAllBuilders>

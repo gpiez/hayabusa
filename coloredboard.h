@@ -43,21 +43,36 @@ private:
     
 public:
 
-    ColoredBoard() {};
+    ColoredBoard() = default;
+#ifdef BITBOARD
+    template<typename T> ColoredBoard(const T& prev, Move m, __v8hi est);
+    inline __v8hi estimatedEval(const Move m, const Eval& rb) const;
+    template<bool> void generateTargetCapture(Move* &list, uint64_t to, unsigned int cap) const;
+#else
     ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval&);
     ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, __v8hi est, uint64_t cep);
     ColoredBoard(const ColoredBoard<C>& prev, Move m, const Eval&);
     ColoredBoard(const ColoredBoard<C>& prev, Move m, __v8hi est, uint64_t cep);
+    inline __v8hi estimatedEval(const Move m, const Eval& rb, uint64_t&) const;
+    void generateTargetCapture(Move* &list, unsigned int to, unsigned int cap) const;
+#endif    
+    ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m) {
+        prev.doMove(this, m);
+        buildAttacks();
+    }
+
 /*    operator const ColoredBoard<(Colors)-C>& () const {
         return *(ColoredBoard<(Colors)-C>*)(void*)this;
     }*/
     static void initTables();
-    Move* generateCaptureMoves(Move* list) const;
+    template<bool> Move* generateCaptureMoves(Move* list) const;
     Move* generateMoves(Move* list) const;
-    void doMove(ColoredBoard<(Colors)-C>* next, Move m, const Eval&) const;
+    template<typename T>
+    void doMove(T* next, Move m) const;
     void doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t cep) const;
-    inline __v8hi estimatedEval(const Move m, const Eval& rb, uint64_t&) const;
     Key getZobrist() const;
+#ifdef BITBOARD
+#else    
     uint8_t getKing() const {
         return pieceList[CI].getKing();
     }
@@ -70,25 +85,40 @@ public:
     Attack getOAttacks(uint8_t pos) const {
         return attacks<EI>(pos);
     }
-private:
-    
-    uint8_t detectPin( unsigned int pos) const;
-    void ray(Move* &list, uint8_t from, uint8_t dir) const;
-    void ray_vectorized(Move* &list, uint8_t from, uint8_t dir) const;
-    void generateTargetMove(Move* &list, uint8_t to) const;
-    void generateTargetCapture(Move* &list, uint8_t to, int8_t cap, Attack a) const;
+#endif
+private:    
+    void generateTargetMove(Move* &list, uint64_t tobit) const;
     uint64_t perft(unsigned int depth) const;
     void divide(unsigned int depth) const;
 
+#ifndef BITBOARD    
     bool isPromoRank(uint8_t pos) const {
         return (C==White) ? (pos >= a7) : (pos <= h2);
     }
 
     template<uint8_t R>
     bool isRank(uint8_t pos) const {
-        static_assert( R>=1 && R<=8 );
+        static_assert( R>=1 && R<=8, "Wrong Rank" );
         return (pos >= 28-C*36+C*R*8) & (pos < 36-C*36+C*R*8);
     }
+#endif
+    
+    template<int R>
+    uint64_t rank() const {
+        static_assert( R>=1 && R<=8, "Wrong Rank" );
+        return 0xffULL << (C == White ? R*8-8:64-8*R);
+    }
+    template<char F>
+    uint64_t file() const {
+        static_assert( F>='a' && F<='h', "Wrong File" );
+        return 0x0101010101010101ULL << (F-'a');
+    }
+#ifdef BITBOARD
+#else    
+    uint8_t detectPin( unsigned int pos) const;
+    bool detectPin( unsigned int pos, unsigned int dir) const;
+    void ray(Move* &list, uint8_t from, uint8_t dir) const;
+    void ray_vectorized(Move* &list, uint8_t from, uint8_t dir) const;
     int8_t index( unsigned int dir, unsigned int pos) const {
         return dir<4 ? attVec[dir&3][pos].rIndex : attVec[dir&3][pos].lIndex;
     }
@@ -96,15 +126,14 @@ private:
     uint8_t length( uint8_t dir, uint8_t pos) const {
         return dir<4 ? attLen[dir&3][pos].right : attLen[dir&3][pos].left;
     }
+    bool isLongAttack( unsigned int dir, unsigned int pos) const {
+        return (index(dir, pos) == -C*3) | (index(dir, pos) == -C*(int)((dir&1)+1));
+    }
+#endif
 
     bool isValid(uint8_t dir) const {
         return dir < 0x80;
     }
-
-    bool isLongAttack( unsigned int dir, unsigned int pos) const {
-        return (index(dir, pos) == -C*3) | (index(dir, pos) == -C*(int)((dir&1)+1));
-    }
-
 public:
 
     template<int piece> bool attackedBy(uint8_t pos);

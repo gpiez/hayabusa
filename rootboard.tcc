@@ -34,8 +34,8 @@
 #include "workthread.h"
 #include "jobs.h"
 #include "score.tcc"
-#include "search.tcc"
 #include "options.h"
+#include "testgame.h"
 
 template<Colors C>
 Move RootBoard::rootSearch() {
@@ -86,11 +86,16 @@ Move RootBoard::rootSearch() {
 template<Colors C, Phase P, typename A, typename B, typename T>
 bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, const A& alpha, B& beta) {
     stats.node++;
-    KeyScore estimate ALIGN_XMM;
+    KeyScore estimate;
+#ifdef BITBOARD
+    estimate.vector = prev.estimatedEval(m, eval);
+    RawScore& eE = estimatedError[nPieces + C*m.piece()][m.to()];
+#else    
     uint64_t nextcep;
     estimate.vector = prev.estimatedEval(m, eval, nextcep);
     RawScore& eE = estimatedError[nPieces + prev.pieces[m.from]][m.to];
-    if (P == leaf || P == vein) {                          
+#endif    
+    if (P == leaf || P == vein) {
         ScoreBase<C> current(alpha);
         current.max(estimate.score-C*eE);
         if (current >= beta.v) {  // from the view of beta, current is a bad move,
@@ -98,12 +103,20 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
             return false;
         }
     }
+#ifdef BITBOARD
+    Key z;
+    const ColoredBoard<C> b(prev, m, estimate.vector);
+    if (P != vein) {
+        z = b.getZobrist();
+    }
+#else
     Key z;
     if (P != vein) {
         z = estimate.key + nextcep + (C+1);
         tt->prefetchSubTable(z);
     }
     const ColoredBoard<C> b(prev, m, estimate.vector, nextcep);
+#endif    
 	if (WorkThread::isMain) *currentLine++ = m;
 
 //    std::string moves;
@@ -115,32 +128,30 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
     ASSERT(b.keyScore.score == estimate.score);
     ASSERT(P == vein || z == b.getZobrist());
     if (prev.CI == b.CI) {
-        if (b.template attacks<(1-C)/2>(b.pieceList[(1+C)/2].getKing()) & attackMask) {
-            ASSERT(b.getAttacks(b.getOKing()) & attackMask);
+        if (b.template inCheck<(Colors)-C>()) {
         	if (WorkThread::isMain) --currentLine;
 //        	std::cout << " illegal" << std::endl;
         	return false;
         }
     } else {
-        ASSERT((b.template attacks<(1-C)/2>(b.pieceList[(1+C)/2].getKing()) & attackMask) == 0);
-        ASSERT((b.getAttacks(b.getOKing()) & attackMask) == 0);
+        ASSERT(!b.template inCheck<(Colors)-C>());
     }
     TranspositionTable<TTEntry, transpositionTableAssoc, Key>::SubTable* st;
     TTEntry subentry;
 
-    Move ttMove = {{0}};
+    Move ttMove(0,0,0);
     unsigned int ttDepth = 0;
     A current(alpha);    // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     bool alreadyVisited;
     bool betaNode = false;
+    bool alphaNode = false;
     if (P != vein) {
         st = tt->getSubTable(z);
         if (tt->retrieve(st, z, subentry, alreadyVisited)) {
-            if ( P == trunk)
-                tt->mark(st);
+            if (WorkThread::isMain && !alreadyVisited) tt->mark(st);
             stats.tthit++;
             ttDepth = subentry.depth;
-            if (P == trunk && subentry.score == 0) ttDepth=0; // TODO workaround, fix this
+//            if (P == trunk && subentry.score == 0) ttDepth=0; // TODO workaround, fix this
             if (ttDepth >= depth) {
 
                 if (subentry.loBound) {
@@ -152,18 +163,21 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
                     beta.max(subentry.score, m);
                 }
                 if (current >= beta.v) {
-                    if (P == trunk && !alreadyVisited)
-                        tt->unmark(st);
+                    if (WorkThread::isMain && !alreadyVisited) tt->unmark(st);
                 	if (WorkThread::isMain) --currentLine;
                 	//std::cout << " beta" << std::endl;
                     return false;
                 }
             } else {
-                if (subentry.loBound && current < (RawScore)subentry.score)
+                ScoreBase<C> ttScore;
+                ttScore.v = subentry.score;
+                if (subentry.loBound && ttScore >= beta.v)
                     betaNode = true;
+                if (subentry.hiBound && ttScore < alpha.v)
+                    alphaNode = true;
             }
-            ttMove.from = subentry.from;
-            ttMove.to = subentry.to;
+            
+            ttMove = Move(subentry.from, subentry.to, 0);
         }
     }
 
@@ -180,8 +194,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
         }
         // if (P==leaf) std::cout << " leaf " << current.v << std::endl;
         // else std::cout << " vein " << current.v << std::endl;
-        if (b.template attacks<(1+C)/2>(b.pieceList[(1-C)/2].getKing()) & attackMask) {
-            ASSERT(b.getOAttacks(b.getKing()) & attackMask);
+        if (b.template inCheck<C>()) {
             end = b.generateMoves(list);
 			if (end == list) {
 				if (WorkThread::isMain) --currentLine;
@@ -190,26 +203,30 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
 			}
             Move* j;
             for (Move* i = j = list; i<end; ++i)
-                if (b.pieces[i->to])
+                if (i->capture())
                     *j++ = *i;
             end = j;
         } else
-            end = b.generateCaptureMoves(list);
+            end = b.template generateCaptureMoves<false>(list);
     } else {
         end = b.generateMoves(list);
         if (end == list) {
         	if (WorkThread::isMain) --currentLine;
-        	return beta.max(
-        	b.template attacks<(1+C)/2>(b.pieceList[(1-C)/2].getKing()) & attackMask ?
-        		-infinity*C : 0, m);
+        	return beta.max(b.template inCheck<C>() ? -infinity*C:0, m);
         	// std::cout << " stale/mate" << std::endl;
         }
     }
 
+//    TestGame::recordBoard(C, b);
+
 //    // move best move from tt / history to front
     if (ttMove.data)
         for (Move* i = list; i<end; ++i)
+#ifdef BITBOARD            
+            if ((ttMove.from() == i->from()) & (ttMove.to() == i->to())) {
+#else
             if ((ttMove.from == i->from) & (ttMove.to == i->to)) {
+#endif                
                 ttMove = *i;
                 *i = *list;
                 *list = ttMove;
@@ -243,47 +260,50 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
         // Stay in leaf search if it already is or change to it if the next depth would be 0
         if (P == leaf || P == vein)
             search<(Colors)-C, vein>(b, *i, 0, (typename B::Base&)beta, current);
-        else if (depth <= 1)
-            search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
-        else { // possible null search in tree or trunk
-            typename B::Base null;
-            null.v = current.v + C;
-            if (depth > 1 && current.v != -infinity*C && (i != list || !betaNode)) {
-                if (depth > 4)
-                    search<C, tree>(b, *i, depth-4, current, null);
-                else
-                    search<C, leaf>(b, *i, 0, current, null);
-            }
-            if (current < null.v) {
-                if (P == tree || A::isNotShared || depth < Options::splitDepth) {
-        /*                if (i != list)
-                            search<(Colors)-C, tree>(b, *i, depth-1, null, current);
-                        if (null.v != current.v)*/
-                            search<(Colors)-C, tree>(b, *i, depth-1, (typename B::Base&)beta, current);
-                // Multi threaded search: After the first move try to find a free thread, otherwise do a normal
-                // search but stay in trunk. To avoid multithreading search at cut off nodes
-                // where it would be useless.
-                } else if (depth == Options::splitDepth){
-                    if (i > list && WorkThread::canQueued(zd) && current.isNotReady() < 2*WorkThread::nThreads-1) {
-                        if (current.isNotReady() >= 2*WorkThread::nThreads) {
-                            std::cout << zd << std::endl;
-                            WorkThread::printJobs();
-                            ASSERT(0);
+        else {
+//            if (WorkThread::doStop) return false;
+            if (depth <= 1 /*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
+                search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
+            else { // possible null search in tree or trunk
+                typename B::Base null;
+                null.v = current.v + C;
+                if (depth > 1 && current.v != -infinity*C && (i != list || !betaNode)) {
+                    if (depth > 4)
+                        search<C, tree>(b, *i, depth-4, current, null);
+                    else
+                        search<C, leaf>(b, *i, 0, current, null);
+                }
+                if (current < null.v) {
+                    if (P == tree || A::isNotShared || depth < Options::splitDepth) {
+            /*                if (i != list)
+                                search<(Colors)-C, tree>(b, *i, depth-1, null, current);
+                            if (null.v != current.v)*/
+                                search<(Colors)-C, tree>(b, *i, depth-1, (typename B::Base&)beta, current);
+                    // Multi threaded search: After the first move try to find a free thread, otherwise do a normal
+                    // search but stay in trunk. To avoid multithreading search at cut off nodes
+                    // where it would be useless.
+                    } else if (depth == Options::splitDepth){
+                        if (i > list && current.isNotReady() < 2*WorkThread::nThreads-1 && WorkThread::canQueued(zd)) {
+                            if (current.isNotReady() >= 2*WorkThread::nThreads) {
+                                std::cout << zd << std::endl;
+                                WorkThread::printJobs();
+                                ASSERT(0);
+                            }
+                            WorkThread::queueJob(zd, new SearchJob<(Colors)-C, typename B::Base, A>(*this, b, *i, depth-1, (typename B::Base&)beta, current));
+                        } else {
+                            search<(Colors)-C, P>(b, *i, depth-1, (typename B::Base&)beta, current);
                         }
-                        WorkThread::queueJob(zd, new SearchJob<(Colors)-C, typename B::Base, A>(*this, b, *i, depth-1, (typename B::Base&)beta, current));
                     } else {
-                        search<(Colors)-C, P>(b, *i, depth-1, (typename B::Base&)beta, current);
-                    }
-                } else {
-                    if (i > list && WorkThread::canQueued(zd) && current.isNotReady() < 2*WorkThread::nThreads-1) {
-                        if (current.isNotReady() >= 2*WorkThread::nThreads) {
-                            std::cout << zd << std::endl;
-                            WorkThread::printJobs();
-                            ASSERT(0);
+                        if (i > list && current.isNotReady() < 2*WorkThread::nThreads-1 && WorkThread::canQueued(zd)) {
+                            if (current.isNotReady() >= 2*WorkThread::nThreads) {
+                                std::cout << zd << std::endl;
+                                WorkThread::printJobs();
+                                ASSERT(0);
+                            }
+                            WorkThread::queueJob(zd, new SearchJob<(Colors)-C, B, A>(*this, b, *i, depth-1, beta, current));
+                        } else {
+                            search<(Colors)-C, P>(b, *i, depth-1, beta, current);
                         }
-                        WorkThread::queueJob(zd, new SearchJob<(Colors)-C, B, A>(*this, b, *i, depth-1, beta, current));
-                    } else {
-                        search<(Colors)-C, P>(b, *i, depth-1, beta, current);
                     }
                 }
             }
@@ -292,10 +312,9 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
 
     // if there are queued jobs started from _this_ node, do them first
     if (P == trunk) {
-        while(Job* job = WorkThread::getJob(zd)) job->job();
-/*        while(current.isNotReady()) {
-            if(Job* job = WorkThread::getAnyJob()) job->job();
-        }*/
+        Job* job;
+        while((job = WorkThread::getJob(zd))) job->job();
+//        while(current.isNotReady() && (job = WorkThread::getChildJob(zd))) job->job();
     }
 
     current.join();
@@ -307,10 +326,9 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
         stored.score |= current.v;
         stored.loBound |= current > alpha.v;
         stored.hiBound |= current < beta.v;
-        stored.from |= current.m.from;
-        stored.to |= current.m.to;
-        if (P == trunk && !alreadyVisited)
-            tt->unmark(st);
+        stored.from |= current.m.from();
+        stored.to |= current.m.to();
+        if (!alreadyVisited && WorkThread::isMain) tt->unmark(st);
         if (!alreadyVisited && current.v)    // don't overwerite current variant
             tt->store(st, stored);
     }
@@ -379,16 +397,17 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
         return;
     }
 
-    const ColoredBoard<C> b(prev, m, eval);
+    __v8hi est = prev.estimatedEval(m, eval);
+    const ColoredBoard<C> b(prev, m, est);
 
     Key z = b.getZobrist();
     TranspositionTable<PerftEntry, 1, Key>::SubTable* pe = pt->getSubTable(z);
     PerftEntry subentry;
 
     if (pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
-        update(result, subentry.value);
-        return;
-    }
+		update(result, subentry.value);
+		return;
+	}
     Move list[256];
     Move* end = b.generateMoves(list);
     if (depth == 1) {

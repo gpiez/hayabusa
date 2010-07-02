@@ -23,6 +23,7 @@
 #include <pch.h>
 #endif
 
+#ifndef BITBOARD
 #include "constants.h"
 /*
  * Structure which contains the number of rooks, bishops, queens
@@ -125,3 +126,4 @@ static const LAttack doubleAttack_ = {{ 2, 2, 2 }};
 static const uint16_t doubleAttack = doubleAttack_;
 
 #endif /* ATTACKS_H_ */
+#endif

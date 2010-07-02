@@ -32,10 +32,10 @@ volatile unsigned int WorkThread::sleeping = 0;
 unsigned int WorkThread::nThreads = 0;
 QVector<WorkThread*> WorkThread::threads;
 __thread bool WorkThread::isMain = false;
+volatile bool WorkThread::doStop = false;
 
 WorkThread::WorkThread():
     isStopped(true),
-    doStop(false),
     keepRunning(true),
     job(NULL)
 {

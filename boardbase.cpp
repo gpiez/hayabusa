@@ -19,6 +19,116 @@
 #include <pch.h>
 
 #include "boardbase.h"
+#include "boardbase.tcc"
+
+Castling BoardBase::castlingMask[nSquares];
+#ifdef BITBOARD
+__v2di BoardBase::mask02x[nSquares]; // 1 KByte  file : row, excluding square
+__v2di BoardBase::dir02mask[nSquares]; // 1 KByte  file : row, including square
+__v2di BoardBase::dir13mask[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
+__v2di BoardBase::doublebits[nSquares]; // 1 KByte    1<<sq  : 1<<sq
+__v2di BoardBase::doublereverse[nSquares]; // 1 KByte    1<<sq  : 1<<sq
+const __v16qi BoardBase::swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
+uint64_t BoardBase::knightAttacks[nSquares];
+uint64_t BoardBase::kingAttacks[16][nSquares];
+
+void BoardBase::buildAttacks() {
+    buildAttacks<White>();
+    buildAttacks<Black>();
+    buildPins<White>();
+    buildPins<Black>();
+}
+void BoardBase::initTables() {
+    // if a piece is moved from or to a position in this table, the castling status
+    // is disabled if the appropriate rook or king squares match.
+    for (unsigned int sq=0; sq<nSquares; ++sq) {
+        castlingMask[sq].data4 = ~0;
+        if (sq == a1 || sq == e1)
+            castlingMask[sq].color[0].q = 0;
+        if (sq == h1 || sq == e1)
+            castlingMask[sq].color[0].k = 0;
+        if (sq == a8 || sq == e8)
+            castlingMask[sq].color[1].q = 0;
+        if (sq == h8 || sq == e8)
+            castlingMask[sq].color[1].k = 0;
+    }
+
+    for (int y = 0; y < (signed)nRows; ++y)
+    for (int x = 0; x < (signed)nFiles; ++x) {
+        uint64_t p=0;
+        int dx=1, dy=0;
+        for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+            p |= 1ULL << (x0+y0*nRows);
+        dx=-1;
+        for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+            p |= 1ULL << (x0+y0*nRows);
+        uint64_t dir0x = p;
+        if (x==0)
+            p |= 1ULL << (x+y*nRows);
+        uint64_t dir0 = p;
+
+        p=0; dx=0; dy=1;
+        for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+            p |= 1ULL << (x0+y0*nRows);
+        dy=-1;
+        for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+            p |= 1ULL << (x0+y0*nRows);
+        uint64_t dir2x = p;
+        if (y==0)
+            p |= 1ULL << (x+y*nRows);
+        uint64_t dir2 = p;
+
+        p=0; dx=1; dy=1;
+        for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+            p |= 1ULL << (x0+y0*nRows);
+        dx=-1; dy=-1;
+        for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+            p |= 1ULL << (x0+y0*nRows);
+        uint64_t dir1 = p;
+
+        p=0; dx=1; dy=-1;
+        for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+            p |= 1ULL << (x0+y0*nRows);
+        dx=-1; dy=1;
+        for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+            p |= 1ULL << (x0+y0*nRows);
+        uint64_t dir3 = p;
+
+        mask02x[x+y*nRows] = _mm_set_epi64x(dir2x, dir0x);
+        dir02mask[x+y*nRows] = _mm_set_epi64x(dir2, dir0);
+        dir13mask[x+y*nRows] = _mm_set_epi64x(dir3, dir1);
+        doublebits[x+y*nRows] = _mm_set1_epi64x(1ULL << (x+y*nRows));
+        doublereverse[x+y*nRows] = _mm_set1_epi64x(1ULL << (x+(7-y)*nRows));
+
+        p=0;
+        for (dx=-2; dx<=2; dx++)
+        for (dy=-2; dy<=2; dy++)
+        if (abs(dx*dy) == 2) {
+            int x0 = x+dx; int y0=y+dy;
+            if ( x0>=0 && x0<=7 && y0>=0 && y0<=7 )
+                p |= 1ULL << (x0+y0*nRows);
+        }
+        knightAttacks[x+y*nRows] = p;
+
+        for (unsigned mask=0; mask<16; ++mask) {
+            p=0;
+            for (unsigned int dir=0; dir<8; ++dir)
+            if (~mask & (1ULL<<(int[]){0,2,1,3}[(dir&3)])) {
+                int x0 = x+xOffsets[dir]; int y0=y+yOffsets[dir];
+                if ( x0>=0 && x0<=7 && y0>=0 && y0<=7 )
+                    p |= 1ULL << (x0+y0*nRows);
+            }
+            kingAttacks[mask][x+y*nRows] = p;
+        }
+
+    }
+}
+
+void BoardBase::init() {
+    *this = (BoardBase){{{0}}};
+    keyScore.pawnKey = 0x12345678;
+}
+#else
 /*
  * Short attack table for each piece, positioned at a square, attacking a white/black board.
  */
@@ -121,7 +231,6 @@ const uint64_t PieceList::posMask[9] = {
     0x0000000000000000
 };
 
-Castling BoardBase::castlingMask[nSquares];
 uint64_t BoardBase::knightDistanceTable[nSquares] = {0};
 uint64_t BoardBase::kingDistanceTable[nSquares] = {0};
 BoardBase::FourMoves BoardBase::moveFromTable[nSquares];
@@ -269,9 +378,6 @@ void BoardBase::initTables()
     }
 }
 
-// Empty board and initialize length tables, instead of a constructor
-// The default constructor should not be initialized, because the contents
-// of the constructed object are generated anyway.
 void BoardBase::init() {
     *this = (BoardBase){{{{{0}}}}};
     keyScore.pawnKey = 0x12345678;
@@ -294,7 +400,10 @@ void BoardBase::init() {
         }
     }
 }
-
+#endif
+// Empty board and initialize length tables, instead of a constructor
+// The default constructor should not be initialized, because the contents
+// of the constructed object are generated anyway.
 void BoardBase::print() {
     static const QChar chessPieces[nTotalPieces] =
         { L'♚', L'♟', L'♞', L'♛', L'♝', L'♜', ' ', L'♖', L'♗', L'♕', L'♘', L'♙', L'♔' };

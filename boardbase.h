@@ -34,11 +34,13 @@
 /*
  * Global variables imported by setpiece.asm
  */
+#ifndef BITBOARD
 extern "C" {
     extern SAttack shortAttacks[nPieces+1][nSquares][nColors][nSquares] ALIGN_PAGE;
     extern const __v16qi vecLookup[4] ALIGN_CACHE;
     extern int squareControl[nSquares] ALIGN_PAGE;
 }
+#endif
 
 union Castling {
     struct {
@@ -53,14 +55,99 @@ union Castling {
 union CastlingAndEP {
     struct {
         Castling castling;
+#ifdef BITBOARD
+        uint64_t enPassant;
+#else        
         int enPassant;
+#endif        
     };
+#ifndef BITBOARD    
     uint64_t data8;
+#endif    
 };
 
 class RootBoard;
 
 struct BoardBase {
+#ifdef BITBOARD
+    union {
+        __v2di occupied2;
+        uint64_t occupied1;
+    };
+    union {
+        struct {
+        __v2di dir02;   // 0, if piece at this position is pinned in dir 0/2
+        __v2di dir13;   // 0, if piece at this position is pinned in dir 1/3
+        uint64_t pins;
+        };
+        uint64_t dir[4];
+    } pins[nColors];
+    union {
+    	struct {
+        __v2di d02;
+        __v2di d13;
+    	};
+    	uint64_t d[4];
+    } datt[nColors],			// sum of all directed attacks, for each of the 4 main directions
+      kingIncoming[nColors];
+    uint64_t pieces[16];
+    uint64_t attacks[16];
+    __v2di single[nColors][32];
+    Move moves[nColors][16];
+    static __v2di mask02x[nSquares]; // 1 KByte  file : row, excluding square
+    static __v2di dir02mask[nSquares]; // 1 KByte  file : row, excluding square
+    static __v2di dir13mask[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
+    static __v2di doublebits[nSquares]; // 1 KByte    1<<sq  : 1<<sq
+    static __v2di doublereverse[nSquares]; // 1 KByte    1<<sq  : 1<<sq
+    static const __v16qi swap16; // needs to be initialized to swap the bytes in both quad-words
+    static uint64_t knightAttacks[nSquares];
+    static uint64_t kingAttacks[16][nSquares];
+    static uint64_t epTab[nPieces+1][nSquares];
+    template<int C, Pieces P>
+    uint64_t getPieces() const {
+        static_assert(P>0 && P<=All, "Wrong Piece");
+        return pieces[nPieces+1 + C*P];
+    }
+    template<int C, Pieces P>
+    uint64_t& getPieces() {
+        static_assert(P>0 && P<=All, "Wrong Piece");
+        return pieces[nPieces+1 + C*P];
+    }
+    template<int C>
+    uint64_t& getPieces(unsigned int p) {
+        ASSERT(p <= King && p>=0);
+        return pieces[nPieces+1 + C*p];
+    }
+    template<int C, Pieces P>
+    uint64_t getAttacks() const {
+        static_assert(P>0 && P<=All, "Wrong Piece");
+        return attacks[nPieces+1 + C*P];
+    }
+    template<int C, Pieces P>
+    uint64_t& getAttacks() {
+        static_assert(P>0 && P<=All, "Wrong Piece");
+        return attacks[nPieces+1 + C*P];
+    }
+    template<Colors C, unsigned int dir>
+    uint64_t getPins() const {
+        enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+        return pins[CI].dir[((dir & 1) << 1) + ((dir & 2) >> 1)];
+    }
+    template<Colors C>
+    bool inCheck() const {
+        return getPieces<C,King>() & getAttacks<-C,All>();
+    }
+    template<Colors C> void setPiece(unsigned int piece, unsigned int pos) {
+        getPieces<C>(piece) |= 1ULL << pos;
+        occupied2 |= _mm_set1_epi64x(1ULL << pos);
+    }
+
+    __v2di build02Attack(const __v2di o, const unsigned sq) const;
+    __v2di build13Attack(const __v2di o, const unsigned sq) const;
+    template<Colors C> void buildAttacks();
+    template<Colors C> void buildPins();
+    void buildAttacks();
+#else
     LongIndex    attVec[nDirs/2][nSquares];        //0x100
     Length        attLen[nDirs/2][nSquares];        //0x100
     LAttack        longAttack[nColors][nSquares];    //0x080
@@ -80,17 +167,16 @@ struct BoardBase {
     } moveFromTable[nSquares];
     static uint8_t totalLen[64];
     static Length borderTable[0x100];
-    KeyScore keyScore;
-    unsigned int fiftyMoves;
-    CastlingAndEP cep;
-    static Castling castlingMask[nSquares];
     static uint64_t knightDistanceTable[nSquares];
     static uint64_t kingDistanceTable[nSquares];
     static uint8_t vec2pin[nSquares][nSquares];
     static bool attPinTable[256][256];
-    
-    static void initTables();
 
+    template<Colors C>
+    bool inCheck() {
+        enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+        return b.template attacks<EI>(b.pieceList[CI].getKing()) & attackMask;
+    }
     static bool isKnightDistance(int from, int to) {
         return knightDistanceTable[from] >> to & 1;
     }
@@ -104,17 +190,6 @@ struct BoardBase {
             return attLen[dir-4][pos].left;
     }
 
-    void init();
-    void print();
-
-    template<Colors C> void setPiece(uint8_t piece, uint8_t pos, const Eval&);
-    template<Colors C> void clrPiece(uint8_t piece, uint8_t pos, const Eval&);
-    template<Colors C> void chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const Eval&);
-    template<Colors C> void copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const Eval&);
-    template<Colors C> void setPieceEst(uint8_t piece, uint8_t pos);
-    template<Colors C> void clrPieceEst(uint8_t piece, uint8_t pos);
-    template<Colors C> void chgPieceEst(uint8_t oldpiece, uint8_t piece, uint8_t pos);
-    template<Colors C> void copyBoardClrPieceEst(const BoardBase* prev, uint8_t piece, uint8_t pos);
 
     // copy pieces and pieceList
     void copyPieces(BoardBase* next) const {
@@ -142,6 +217,25 @@ struct BoardBase {
             shortAttack[ColorIndex][pos]
         }};
     }
+    template<Colors C> void setPiece(uint8_t piece, uint8_t pos, const Eval&);
+    template<Colors C> void clrPiece(uint8_t piece, uint8_t pos, const Eval&);
+    template<Colors C> void chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const Eval&);
+    template<Colors C> void copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const Eval&);
+    template<Colors C> void setPieceEst(uint8_t piece, uint8_t pos);
+    template<Colors C> void clrPieceEst(uint8_t piece, uint8_t pos);
+    template<Colors C> void chgPieceEst(uint8_t oldpiece, uint8_t piece, uint8_t pos);
+    template<Colors C> void copyBoardClrPieceEst(const BoardBase* prev, uint8_t piece, uint8_t pos);
+#endif
+    KeyScore keyScore;
+    unsigned int fiftyMoves;
+    CastlingAndEP cep;
+    static Castling castlingMask[nSquares];
+    void init();
+    void print();
+
+
+    static void initTables();
+
 } ALIGN_CACHE;                                    //sum:        3C0
 
 #endif /* BOARDBASE_H_ */

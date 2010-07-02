@@ -23,6 +23,41 @@
 #include <pch.h>
 #endif
 
+#include "constants.h"
+
+#ifdef BITBOARD
+struct Move {
+    int32_t data;
+
+    Move() = default;
+    Move(unsigned int from, unsigned int to, unsigned int piece, unsigned int capture=0, bool special=false, unsigned captureoffset=0) {
+    	ASSERT(from < 64);
+    	ASSERT(to < 64);
+    	ASSERT(capture < King);
+    	ASSERT(piece <= King);
+        data = from + (to << 8) + ((capture+captureoffset) << 16) + (piece << 24) + (special << 31);
+    }
+    unsigned int from() const {
+        return (uint8_t)data;
+    }
+    unsigned int to() const {
+        return (uint8_t)(data >> 8);
+    }
+    unsigned int capture() const {
+        return (uint8_t)(data >> 16);
+    }
+    unsigned int piece() const {
+        return (uint32_t)data >> 24;
+    }
+    unsigned int captureOffset() const {
+        return (data >> 16) & 8;
+    }
+    bool isSpecial() const {
+        return data<0;
+    }
+    std::string string() const;
+};
+#else
 union Move {
 	struct {
 	uint8_t from;
@@ -33,5 +68,5 @@ union Move {
 	uint32_t data;
 	std::string string() const;
 };
-
+#endif
 #endif /* MOVE_H_ */
