@@ -89,7 +89,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
     KeyScore estimate;
 #ifdef BITBOARD
     estimate.vector = prev.estimatedEval(m, eval);
-    RawScore& eE = estimatedError[nPieces + C*m.piece()][m.to()];
+    RawScore& eE = estimatedError[nPieces + C*(m.piece()&7)][m.to()];
 #else    
     uint64_t nextcep;
     estimate.vector = prev.estimatedEval(m, eval, nextcep);

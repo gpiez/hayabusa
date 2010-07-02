@@ -20,7 +20,9 @@
 #define GENERATECAPTUREMOVES_TCC_
 
 #include "coloredboard.h"
+#ifdef __SSE4_1__
 #include <smmintrin.h>
+#endif
 
 #ifndef BITBOARD
 
@@ -70,14 +72,11 @@ uint8_t ColoredBoard<C>::detectPin( unsigned int pos ) const {
 template<Colors C>
 template<bool UPromo>
 void ColoredBoard<C>::generateTargetCapture(Move* &list, uint64_t d, const unsigned int cap) const {
-
-    unsigned int from;
-
 	// pawn capture to the absolute right, dir = 1 for white and 3 for black
-	for(uint64_t p = shift<C*8+1>(getPieces<C,Pawn>()) & ~file<'a'>() & d & getPins<C,2-C>();p ;p &= p-1) {
-		unsigned to = bit(p);
-		from = to -C*8 -1;
-		if (rank<8>() & (p&-p)) {
+	for(uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & shift<-C*8-1>(d) & getPins<C,2-C>();p ;p &= p-1) {
+		unsigned from = bit(p);
+		unsigned to = from + C*8+1;
+		if (rank<7>() & (p&-p)) {
 			*list++ = Move(from, to, Queen, cap, true);
 			if (UPromo) {
 				*list++ = Move(from, to, Knight, cap, true);
@@ -88,10 +87,10 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, uint64_t d, const unsig
 			*list++ = Move(from, to, Pawn, cap);
 	}
 	// left
-	for (uint64_t p = shift<C*8-1>(getPieces<C,Pawn>()) & ~file<'h'>() & d & getPins<C,2+C>();p ;p &= p-1) {
-		unsigned to = bit(p);
-		from = to -C*8 +1;
-		if (rank<8>() & (p&-p)) {
+	for (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & shift<-C*8+1>(d) & getPins<C,2+C>();p ;p &= p-1) {
+		unsigned from = bit(p);
+		unsigned to = from + C*8-1;
+		if (rank<7>() & (p&-p)) {
 			*list++ = Move(from, to, Queen, cap, true);
 			if (UPromo) {
 				*list++ = Move(from, to, Knight, cap, true);
@@ -121,12 +120,25 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, uint64_t d, const unsig
         __v2di a02 = *psingle++;
         __v2di a13 = *psingle++;
         if (!m.data) break;
+#ifdef __SSE4_1__
         if (!_mm_testz_si128(d2, (a02|a13))) {
+#else
+        if (fold(d2 & (a02|a13))) {
+#endif
             __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
             __v2di pin02 = from2 & pins[CI].dir02;
             __v2di pin13 = from2 & pins[CI].dir13;
+#ifdef __SSE4_1__            
             pin02 = _mm_cmpeq_epi64(pin02, zero);
             pin13 = _mm_cmpeq_epi64(pin13, zero);
+#else            
+            pin02 = _mm_cmpeq_epi32(pin02, zero);
+            pin13 = _mm_cmpeq_epi32(pin13, zero);
+            __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
+            __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
+            pin02 = pin02 & pin02s;
+            pin13 = pin13 & pin13s;
+#endif            
             pin02 = ~pin02 & d2 & a02;
             pin13 = ~pin13 & d2 & a13;
             for (uint64_t a=fold(pin02|pin13); a; a&=a-1) {
@@ -140,7 +152,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, uint64_t d, const unsig
      * King captures something.
      */
     for ( uint64_t p = getAttacks<C,King>() & d & ~getAttacks<-C,All>(); p; p &= p-1 ) {
-        from = bit(getPieces<C,King>());
+        unsigned from = bit(getPieces<C,King>());
         *list++ = Move(from, bit(p), King, cap);
     }
 }

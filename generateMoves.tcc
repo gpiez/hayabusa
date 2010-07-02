@@ -40,7 +40,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint64_t tobit ) const {
         *list++ = Move(bit(p), bit(p) + C*8, Pawn);
 
     for (uint64_t p = getPieces<C,Pawn>() & shift<-C*16>(tobit) & pins[CI].pins & rank<2>() & ~shift<-C*8>(occupied1); p; p &= p-1)
-        *list++=  Move(bit(p), bit(p) + C*8, Pawn);
+        *list++=  Move(bit(p), bit(p) + C*16, Pawn);
     
     for ( uint64_t p = getAttacks<C,Knight>() & tobit; p; p &= p-1 ) {
         unsigned to = bit(p);
@@ -60,12 +60,25 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint64_t tobit ) const {
 		if (!m.data) break;
         __v2di a02 = *psingle++;
 		__v2di a13 = *psingle++;
+#ifdef __SSE4_1__        
 		if (!_mm_testz_si128(d2, (a02|a13))) {
+#else
+        if (fold(d2 & (a02|a13))) {
+#endif            
 			__v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
 			__v2di pin02 = from2 & pins[CI].dir02;
 			__v2di pin13 = from2 & pins[CI].dir13;
+#ifdef __SSE4_1__            
 			pin02 = _mm_cmpeq_epi64(pin02, zero);
 			pin13 = _mm_cmpeq_epi64(pin13, zero);
+#else
+            pin02 = _mm_cmpeq_epi32(pin02, zero);
+            pin13 = _mm_cmpeq_epi32(pin13, zero);
+            __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
+            __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
+            pin02 = pin02 & pin02s;
+            pin13 = pin13 & pin13s;
+#endif
 			pin02 = ~pin02 & d2 & a02;
 			pin13 = ~pin13 & d2 & a13;
 			for (uint64_t a=fold(pin02|pin13); a; a&=a-1) {
@@ -282,8 +295,15 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
     	__v2di zero = _mm_set1_epi64x(0);
 		__v2di check02 = datt[EI].d02 & king2;
 		__v2di check13 = datt[EI].d13 & king2;
+#ifdef __SSE4_1__       
 		check02 = _mm_cmpeq_epi64(check02, zero);
 		check13 = _mm_cmpeq_epi64(check13, zero);
+#else
+        check02 = _mm_cmpeq_epi32(check02, zero);
+        check13 = _mm_cmpeq_epi32(check13, zero);
+        check02 = check02 & _mm_shuffle_epi32(check02, 0b10110001);
+        check13 = check13 & _mm_shuffle_epi32(check13, 0b10110001);
+#endif        
 		check02 = ~check02 & _mm_set_epi64x(2,1);
 		check13 = ~check13 & _mm_set_epi64x(8,4);
 
@@ -292,6 +312,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
         		       + (king & getAttacks<-C, Pawn>() ? 32:0);
         ASSERT(check);
         unsigned int kingSq = bit(king);
+        uint64_t pawn = 0;
         if (__builtin_parity(check)) {
             if (check == 16) {
             	// attack by knight, try to capture it.
@@ -314,13 +335,21 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
             } else {
                 // No other pieces left, we are attacked by one pawn.
             	ASSERT(check == 32);
-                uint64_t pawn;
                 if (C == White)
                     pawn = (king << 7 & 0x7f7f7f7f7f7f7f7f) + (king << 9 & 0xfefefefefefefefe);
                 else
                     pawn = (king >> 9 & 0x7f7f7f7f7f7f7f7f) + (king >> 7 & 0xfefefefefefefefe);
-                if (uint64_t p = pawn & getPieces<-C, Pawn>())
-                    generateTargetCapture<true>(list, p, Pawn);
+                pawn &= getPieces<-C, Pawn>();
+                ASSERT(popcount(pawn)==1);
+                generateTargetCapture<true>(list, pawn, Pawn);
+                if (pawn == cep.enPassant) {
+					if (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & cep.enPassant<<1 & getPins<C,2+C>())
+						*list++ = Move(bit(p), bit(p) + C*8-1, Pawn, Pawn, true);
+
+					if (uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & cep.enPassant>>1 & getPins<C,2-C>())
+						*list++ = Move(bit(p), bit(p) + C*8+1, Pawn, Pawn, true);
+                }
+
             }
         } else {
 			// test, if capturing an adjacent checking piece with the king is possible
@@ -358,7 +387,8 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 
         for (uint64_t p = kingAttacks[check & 0xf][kingSq]
                         & ~getAttacks<-C, All>()
-                        & getPieces<-C,Pawn>(); p; p &= p-1)
+                        & getPieces<-C,Pawn>()
+                        & ~pawn; p; p &= p-1)
             *list++ = Move(kingSq, bit(p), King, Pawn);
 
         return list;
@@ -367,7 +397,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
     list = generateCaptureMoves<true>( list );
 
     unsigned int from, to;
-    for (uint64_t p = getPieces<C,Pawn>() & ~rank<7>() & shift<-C*8>(~occupied1) & pins[CI].pins; p; p &= p-1) {
+    for (uint64_t p = getPieces<C,Pawn>() & ~rank<7>() & shift<-C*8>(~occupied1) & getPins<C,2>(); p; p &= p-1) {
         from = bit(p);
         to = from + C*dirOffsets[2];
         *list++ = Move(from, to, Pawn);
@@ -382,7 +412,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
         to = from + C*dirOffsets[2]+1;
         *list++ = Move(from, to, Pawn);
     }
-    for (uint64_t p = getPieces<C,Pawn>() & rank<2>() & shift<-C*8>(~occupied1) & shift<-C*16>(~occupied1) & pins[CI].pins; p; p &= p-1) {
+    for (uint64_t p = getPieces<C,Pawn>() & rank<2>() & shift<-C*8>(~occupied1) & shift<-C*16>(~occupied1) & getPins<C,2>(); p; p &= p-1) {
         from = bit(p);
         to = from + 2*C*dirOffsets[2];
         *list++ = Move (from, to, Pawn);
@@ -399,11 +429,11 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
      */
     if (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & cep.enPassant<<1 & getPins<C,2+C>())
     	if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
-    		*list++ = Move(bit(p), bit(p) + C*8-1, Pawn, Pawn, false, 8);
+    		*list++ = Move(bit(p), bit(p) + C*8-1, Pawn, Pawn, true);
 
     if (uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & cep.enPassant>>1 & getPins<C,2-C>())
     	if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
-    		*list++ = Move(bit(p), bit(p) + C*8+1, Pawn, Pawn, false, 8);
+    		*list++ = Move(bit(p), bit(p) + C*8+1, Pawn, Pawn, true);
     
     //Knight moves. If a knight is pinned, it can't move at all.
     for (uint64_t p = getPieces<C, Knight>() & pins[CI].pins; p; p &= p-1) {
@@ -428,8 +458,17 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 		__v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
 		__v2di pin02 = from2 & pins[CI].dir02;
 		__v2di pin13 = from2 & pins[CI].dir13;
-		pin02 = _mm_cmpeq_epi64(pin02, zero);
-		pin13 = _mm_cmpeq_epi64(pin13, zero);
+#ifdef __SSE4_1__        
+        pin02 = _mm_cmpeq_epi64(pin02, zero);
+        pin13 = _mm_cmpeq_epi64(pin13, zero);
+#else
+        pin02 = _mm_cmpeq_epi32(pin02, zero);
+        pin13 = _mm_cmpeq_epi32(pin13, zero);
+        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
+        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
+        pin02 = pin02 & pin02s;
+        pin13 = pin13 & pin13s;
+#endif
 		pin02 = ~pin02 & a02;
 		pin13 = ~pin13 & a13;
 		for (uint64_t a=fold(pin02|pin13) & ~occupied1; a; a&=a-1) {

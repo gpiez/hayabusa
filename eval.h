@@ -105,8 +105,6 @@ class Eval {
     static __v16qi kMask0[nSquares];
     static __v16qi kMask1[nSquares];
     static __thread PawnEntry pawnEntry;
-    RawScore inline mobilityValue(uint64_t, uint64_t, __v2di, __v2di, __v2di, __v2di, __v2di, __v2di, uint64_t) const;
-    template<Colors C> void inline mobilityBits(const BoardBase &, uint64_t &, __v2di &, __v2di &, __v2di &, uint64_t &, uint64_t &) const;
     void initPS();
     void initZobrist();
     static void initTables();
@@ -119,7 +117,10 @@ class Eval {
     RawScore pieces(const PieceList&, int) const;
     RawScore pawns(const BoardBase&) const;
     template<Colors C> void EvalMate(const ColoredBoard<C>&) const;
-
+    template<Colors C>
+    void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
+    template<Colors C>
+    RawScore mobilityValue( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1]) const;
 public:
     Eval();
     RawScore eval(const BoardBase&) const;  ///TODO should be template<C>

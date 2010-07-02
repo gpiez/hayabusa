@@ -364,53 +364,25 @@ RawScore Eval::pieces(const PieceList&, int ) const {
     return value;
 }
 
-template<Colors C, unsigned int xoffset>
+template<Colors C>
 PawnEntry::Shield evalShield(const BoardBase &b) {
 
-    static const unsigned int CI = (White-C)/(White-Black);    // ColorIndex, 0 for White, 1 for Black
-    static const uint8_t pov = CI*56;    //for xoring square values to the other side
+    uint64_t p = b.getPieces<C,Pawn>();
+    uint64_t kside = file<'f'>() | file<'g'>() | file<'h'>();
+    uint64_t qside = file<'a'>() | file<'b'>() | file<'c'>();
 
-    int lshield = 0;
-    int light = 0;
-    int dark = 0;
+    unsigned kshield = 4*popcount(kside & rank<C,2>() & p)
+                     + 3*popcount(kside & rank<C,3>() & p)
+    				 + 2*popcount(kside & rank<C,4>() & p);
 
-    if (b.pieces[pov^(a2+xoffset)] == C*Pawn) {
-        light++;
-        lshield += 4;
-    } else if (b.pieces[pov^(a3+xoffset)] == C*Pawn) {
-        dark++;
-        lshield += 3;
-    } else if (b.pieces[pov^(a4+xoffset)] == C*Pawn) {
-        light++;
-        lshield += 2;
-    }
-
-    if (b.pieces[pov^(b2+xoffset)] == C*Pawn) {
-        dark++;
-        lshield += 4;
-    } else if (b.pieces[pov^(b3+xoffset)] == C*Pawn) {
-        light++;
-        lshield += 3;
-    } else if (b.pieces[pov^(b4+xoffset)] == C*Pawn) {
-        dark++;
-        lshield += 2;
-    }
-
-    if (b.pieces[pov^(c2+xoffset)] == C*Pawn) {
-        light++;
-        lshield += 4;
-    } else if (b.pieces[pov^(c3+xoffset)] == C*Pawn) {
-        dark++;
-        lshield += 3;
-    } else if (b.pieces[pov^(c4+xoffset)] == C*Pawn) {
-        light++;
-        lshield += 2;
-    }
+    unsigned qshield = 4*popcount(qside & rank<C,2>() & p)
+                     + 3*popcount(qside & rank<C,3>() & p)
+    				 + 2*popcount(qside & rank<C,4>() & p);
 
     PawnEntry::Shield ret;
-    ret.weakLight = ! (((C == White) ^ (xoffset == 0)) ? light : dark);
-    ret.weakDark = ! (((C == White) ^ (xoffset == 0)) ? dark : light);
-    ret.value = lshield;
+    ret.weakLight = 0;
+    ret.weakDark = 0;
+    ret.value = kshield + qshield;
     return ret;
 }
 
@@ -422,10 +394,8 @@ RawScore Eval::pawns(const BoardBase& b) const {
     } else {
         stats.ptmiss++;
         pawnEntry.score = 0;
-#ifdef BITBOARD
-#else
-        uint64_t wpawn = b.pieceList[0].bitBoard<Pawn>();
-        uint64_t bpawn = b.pieceList[1].bitBoard<Pawn>();
+        uint64_t wpawn = b.getPieces<White,Pawn>();
+        uint64_t bpawn = b.getPieces<Black,Pawn>();
 
         uint64_t wAbove = wpawn << 8 | wpawn << 16;
         wAbove |= wAbove << 16 | wAbove << 32;
@@ -499,16 +469,15 @@ RawScore Eval::pawns(const BoardBase& b) const {
         pawnEntry.score += pawnHalfIsolated * (popcount15(wRightIsolani|wLeftIsolani) - popcount15(bRightIsolani|bLeftIsolani));
         pawnEntry.score += pawnIsolated * (popcount15(wRightIsolani&wLeftIsolani) - popcount15(bRightIsolani&bLeftIsolani));
 
-        pawnEntry.lShield[0] = evalShield<White, 0>(b);
-        pawnEntry.rShield[0] = evalShield<White, 5>(b);
-        pawnEntry.lShield[1] = evalShield<Black, 0>(b);
-        pawnEntry.rShield[1] = evalShield<Black, 5>(b);
+        pawnEntry.lShield[0] = evalShield<White>(b);
+        pawnEntry.rShield[0] = evalShield<White>(b);
+        pawnEntry.lShield[1] = evalShield<Black>(b);
+        pawnEntry.rShield[1] = evalShield<Black>(b);
         pawnEntry.upperKey = k >> PawnEntry::upperShift;
         pawnEntry.w = wpawn;
         pawnEntry.b = bpawn;
         if (k >> PawnEntry::upperShift)
             pt->store(st, pawnEntry);
-#endif        
     }
     return pawnEntry.score;
 }
@@ -555,101 +524,6 @@ RawScore Eval::eval(const BoardBase& b) const {
     return b.keyScore.score + pawns(b) + mobility(b);
 }
 
-template<Colors C>
-void Eval::mobilityBits(const BoardBase &b, uint64_t &occupied,
-                        __v2di &rookbits, __v2di &bishopbits, __v2di &knightbits,
-                        uint64_t &queen0bits, uint64_t &pawnbits) const {
-
-    // possible attLens for dir=0, cacheline border =|
-    //     0.1 0.2 0.3 | 0.4 0.5 0.6 0.7 |
-    // 1.0 1.1 1.2 1.3 | 1.4 1.5 1.6
-    // 2.0 2.1 2.2 2.3 | 2.4 2.5
-    // 3.0 3.1 3.2 3.3 | 3.4
-    // 4.0 4.1 4.2 4.3 |
-    // 5.0 5.1 5.2
-    // 6.0 6.1
-    // 7.0
-    // memory effectively used is 12 cachlines = 768 byte, total 35 blocks a 768 = 26.25 kByte
-#ifdef BITBOARD
-#else   
-    uint64_t rooks = b.pieceList[C==Black].getAllMasked<Rook>();
-
-    uint64_t rook0 = (uint8_t)rooks;    // 0xff if no rook
-    uint64_t rook0bits = mobBits[0][b.attLen[0][rook0]] | mobBits[2][b.attLen[0][rook0|0x80]];
-    rook0bits = (rook0bits << (uint8_t)rook0) | (rook0bits >> (64-(uint8_t)rook0));
-    occupied = bits[rook0];
-    
-    uint64_t rook1 = (uint8_t)(rooks >> 8);        // attLen[0][0xff] is always 0.0
-    uint64_t rook1bits = mobBits[0][b.attLen[0][rook1]] | mobBits[2][b.attLen[0][rook1|0x80]];
-    rook1bits = (rook1bits << (uint8_t)rook1) | (rook1bits >> (64-(uint8_t)rook1));
-    rookbits = _mm_set_epi64x(rook0bits, rook1bits);
-    occupied |= bits[rook1];
-//    occupied |= bits2[rooks & 0xffff];
-
-    uint64_t bishops = b.pieceList[C==Black].getAllMasked<Bishop>();
-    
-    uint64_t bishop0 = (uint8_t)bishops;    // 0xff if no bishop
-    uint64_t bishop0bits = mobBits[1][b.attLen[0][bishop0|0x40]] | mobBits[3][b.attLen[0][bishop0|0xC0]];
-    bishop0bits = (bishop0bits << (uint8_t)bishop0) | (bishop0bits >> (64-(uint8_t)bishop0));
-    occupied |= bits[bishop0];
-
-    uint64_t bishop1 = (uint8_t)(bishops >> 8);        // attLen[0][0xff] is always 0.0
-    uint64_t bishop1bits = mobBits[1][b.attLen[0][bishop1|0x40]] | mobBits[3][b.attLen[0][bishop1|0xC0]];
-    bishop1bits = (bishop1bits << (uint8_t)bishop1) | (bishop1bits >> (64-(uint8_t)bishop1));
-    bishopbits =_mm_set_epi64x(bishop0bits, bishop1bits);
-    occupied |= bits[bishop1];
-//    occupied |= bits2[bishops & 0xffff];
-
-    uint64_t knights = b.pieceList[C==Black].getAllMasked<Knight>();
-    uint64_t knight0bits = knightBits[(uint8_t)knights];
-    uint64_t knight1bits = knightBits[(uint8_t)(knights >> 8)];
-    knightbits =_mm_set_epi64x(knight0bits, knight1bits);
-    occupied |= bits[(uint8_t)knights];
-    occupied |= bits[(uint8_t)(knights >> 8)];
-//    ASSERT((bits[(uint8_t)knights] | bits[(uint8_t)(knights >> 8)]) == bits2[knights & 0xffff]);
-//    occupied |= bits2[knights & 0xffff];
-
-#define REUSE_PAWN_HASH 1
-#if REUSE_PAWN_HASH    
-    if (C == White) {
-        occupied |= pawnEntry.w;
-        pawnbits = ((pawnEntry.w << 9) & ~0x0101010101010101) | ((pawnEntry.w << 7) & ~0x8080808080808080);
-    } else {
-        occupied |= pawnEntry.b;
-        pawnbits = ((pawnEntry.b >> 7) & ~0x0101010101010101) | ((pawnEntry.b >> 9) & ~0x8080808080808080);
-    }
-#else    
-    uint64_t pawns = b.pieceList[C==Black].getAllMasked<Pawn>();
-    uint32_t pawnsHi = pawns >> 32;
-    uint32_t pawnsLo = pawns;
-    uint64_t pawn0bits = pawnBits[C==Black][(uint8_t)pawnsLo];
-    occupied |= bits[(uint8_t)pawnsLo];
-    uint64_t pawn1bits = pawnBits[C==Black][(uint8_t)pawnsHi];
-    occupied |= bits[(uint8_t)pawnsHi];
-    pawn0bits |= pawnBits[C==Black][(uint8_t)(pawnsLo>>8)];
-    occupied |= bits[(uint8_t)(pawnsLo>>8)];
-    pawn1bits |= pawnBits[C==Black][(uint8_t)(pawnsHi>>8)];
-    occupied |= bits[(uint8_t)(pawnsHi>>8)];
-    pawn0bits |= pawnBits[C==Black][(uint8_t)(pawnsLo>>16)];
-    occupied |= bits[(uint8_t)(pawnsLo>>16)];
-    pawn1bits |= pawnBits[C==Black][(uint8_t)(pawnsHi>>16)];
-    occupied |= bits[(uint8_t)(pawnsHi>>16)];
-    pawn0bits |= pawnBits[C==Black][pawnsLo>>24];
-    occupied |= bits[pawnsLo>>24];
-    pawn1bits |= pawnBits[C==Black][pawnsHi>>24];
-    occupied |= bits[pawnsHi>>24];
-    pawnbits = (pawn0bits | pawn1bits);
-#endif
-
-    uint8_t queen0 = b.pieceList[C==Black].getAllMasked<Queen>();
-    queen0bits = mobBits[0][b.attLen[0][queen0]] | mobBits[2][b.attLen[0][queen0|0x80]]
-        | mobBits[1][b.attLen[0][queen0|0x40]] | mobBits[3][b.attLen[0][queen0|0xC0]];
-    queen0bits = (queen0bits << queen0) | (queen0bits >> (64-queen0));
-    occupied |= bits[queen0];
-
-#endif
-}
-
 // double popcount of two quadwords
 __v2di pop2count(__v2di x) {
     
@@ -682,11 +556,6 @@ RawScore look2up(__v2di x, __v16qi tab) {
     __v8hi y = _mm_shuffle_epi8(tab, x);
     return _mm_extract_epi16(y, 0) + _mm_extract_epi16(y, 4);
 }
-
-static const __v16qi bmobtab = { 0, 1, 3, 6, 10, 13, 15, 17, 18, 19, 20, 20, 20, 20, 20, 20 };
-static const __v16qi kmobtab = { 0, 3, 7, 12, 17, 19, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20 };
-static const __v16qi rmobtab = { 0, 1, 2, 6, 10, 13, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15 };
-static const RawScore qmobtab[28] = { 0, 0, 1, 1, 2, 3, 5, 7, 8, 8, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
 
 void printBit(uint64_t bits) {
     QTextStream cout(stdout);
@@ -732,42 +601,73 @@ void printBit(__v2di bits) {
     cout << endl;
 }
 
+static const RawScore mobValues[nPieces+1][32] = {
+	{0},	// nothing
+	{ 0, 1, 2, 6, 10, 13, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15 }, //rook
+	{ 0, 1, 3, 6, 10, 13, 15, 17, 18, 19, 20, 20, 20, 20, 20, 20 }, //bishop
+	{ 0, 0, 1, 1, 2, 3, 5, 7, 8, 8, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 },
+	{ 0, 3, 7, 12, 17, 19, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20 },
+	{0},
+	{0}
+};
 
-RawScore Eval::mobilityValue( uint64_t occupied, uint64_t pawnbits, __v2di bishopbits, __v2di knightbits, __v2di rookbits,
-                              __v2di bishopbitsw, __v2di knightbitsw, __v2di rookbitsw, uint64_t queen0bitsw) const {
-
-    __v2di restricted = _mm_set_epi64x( ~(occupied | pawnbits), ~(occupied | pawnbits) );
-    __v2di mob = pop2count(bishopbitsw & restricted);
-    RawScore score = look2up(mob, bmobtab);
-
-    mob = pop2count(knightbitsw & restricted);
-    score += look2up(mob, kmobtab);
-
-    __v2di minorbits = bishopbits | knightbits;
-    restricted &=~ (_mm_shuffle_epi32(minorbits, 0x4e) | minorbits);
-    mob = pop2count(rookbitsw & restricted);
-    score += look2up(mob, rmobtab);
-    
-    restricted &=~ (_mm_shuffle_epi32(rookbits, 0x4e) | rookbits);
-    uint64_t mob2 = popcount(queen0bitsw & _mm_cvtsi128_si64x(restricted));
-    score += qmobtab[mob2];
+template<Colors C>
+RawScore Eval::mobilityValue( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1]) const {
+    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+	RawScore score = 0;
+    const __v2di* psingle = b.single[CI];
+    const Move* pmove = b.moves[CI];
+    const __v2di zero = _mm_set1_epi64x(0);
+    for(;;) {
+        Move m = *pmove++;
+		if (!m.data) break;
+        __v2di a02 = *psingle++;
+		__v2di a13 = *psingle++;
+#ifdef USE_PINS_IN_MOBILITY
+		__v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
+		__v2di pin02 = from2 & pins[CI].dir02;
+		__v2di pin13 = from2 & pins[CI].dir13;
+#ifdef __SSE4_1__
+        pin02 = _mm_cmpeq_epi64(pin02, zero);
+        pin13 = _mm_cmpeq_epi64(pin13, zero);
+#else
+        pin02 = _mm_cmpeq_epi32(pin02, zero);
+        pin13 = _mm_cmpeq_epi32(pin13, zero);
+        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
+        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
+        pin02 = pin02 & pin02s;
+        pin13 = pin13 & pin13s;
+#endif
+		pin02 = ~pin02 & a02;
+		pin13 = ~pin13 & a13;
+		uint64_t mob = fold(pin02|pin13);
+#else
+		uint64_t mob = fold(a02|a13);
+#endif
+		score += mobValues[m.piece()][popcount(mob & restrictions[CI][m.piece()])];
+    }
 
     return score;
 }
 
-RawScore Eval::mobility(const BoardBase& b) const {
-    uint64_t occupiedw, occupiedb;
-    __v2di rookbitsw, bishopbitsw, knightbitsw;
-    __v2di rookbitsb, bishopbitsb, knightbitsb;
-    uint64_t queen0bitsw, pawnbitsw;
-    uint64_t queen0bitsb, pawnbitsb;
-    
-    mobilityBits<White>(b, occupiedw, rookbitsw, bishopbitsw, knightbitsw, queen0bitsw, pawnbitsw);
-    mobilityBits<Black>(b, occupiedb, rookbitsb, bishopbitsb, knightbitsb, queen0bitsb, pawnbitsb);
+template<Colors C>
+void Eval::mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const {
+    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+	uint64_t r = b.getPieces<C,Rook>() + b.getPieces<C,Bishop>() +
+				 b.getPieces<C,Queen>()+ b.getPieces<C,Knight>() +
+				 b.getPieces<C,Pawn>() + b.getPieces<C,King>();
+	restrictions[CI][Knight] = restrictions[CI][Bishop] = r |= b.getAttacks<-C,Pawn>();
+	restrictions[CI][Rook] = r |= b.getAttacks<-C,Knight>() | b.getAttacks<-C,Bishop>();
+	restrictions[CI][Queen] = r |= b.getAttacks<-C,Rook>();
+}
 
-    return
-      mobilityValue( occupiedw, pawnbitsb, bishopbitsb, knightbitsb, rookbitsb, bishopbitsw, knightbitsw, rookbitsw, queen0bitsw) -
-    mobilityValue( occupiedb, pawnbitsw, bishopbitsw, knightbitsw, rookbitsw, bishopbitsb, knightbitsb, rookbitsb, queen0bitsb);
+RawScore Eval::mobility(const BoardBase& b) const {
+	uint64_t restrictions[nColors][nPieces+1];
+
+	mobilityRestrictions<White>(b, restrictions);
+	mobilityRestrictions<Black>(b, restrictions);
+
+    return mobilityValue<White>(b, restrictions) - mobilityValue<Black>(b, restrictions);
 }
 
 // bit 0 = blocked for enemy king

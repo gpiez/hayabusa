@@ -19,7 +19,12 @@
 #ifndef BOARDBASE_TCC_
 #define BOARDBASE_TCC_
 
+#ifdef __SSE4_1__
 #include <smmintrin.h>
+#endif
+#ifdef __SSSE3__
+#include <tmmintrin.h>
+#endif
 
 #include "boardbase.h"
 #include "boardbase.tcc"
@@ -140,7 +145,6 @@ void BoardBase::buildAttacks() {
         maskedDir02 &= mask02x[sq];
         *psingle++ = maskedDir02;
         *psingle++ = maskedDir13;
-        *pmove++ = Move(sq, 0, Queen);
         *pmove++ = Move(sq, 0, Queen);
         dir02 |= maskedDir02;
         dir13 |= maskedDir13;

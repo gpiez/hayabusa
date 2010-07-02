@@ -180,5 +180,17 @@ uint64_t shift(uint64_t b) {
         return b >> -N;
 }
 
-extern "C" __m128i broadcastTab[256] ALIGN_XMM;
+template<Colors C,int R>
+uint64_t rank() {
+    static_assert( R>=1 && R<=8, "Wrong Rank" );
+    return 0xffULL << (C == White ? R*8-8:64-8*R);
+}
+
+template<char F>
+uint64_t file() {
+    static_assert( F>='a' && F<='h', "Wrong File" );
+    return 0x0101010101010101ULL << (F-'a');
+}
+
+//extern "C" __m128i broadcastTab[256] ALIGN_XMM;
 #endif /* CONSTANTS_H_ */

@@ -22,14 +22,14 @@
 std::string Move::string() const
 {
 	std::string temp;
-//    temp += " RBQN K"[piece() & 7];
+    temp += (const char*[]){"","R","B","Q","N","","K"}[piece() & 7];
 	temp += (from() & 7) + 'a';
 	temp += (from() >> 3) + '1';
 	temp += capture() ? 'x' : '-';
 	temp += (to() & 7) + 'a';
 	temp += (to() >> 3) + '1';
     if (isSpecial()) 
-        if ((piece() & 7) != King)
+        if ((piece() & 7) < Pawn)
             temp += " RBQN"[piece() & 7];
     
 	return temp;

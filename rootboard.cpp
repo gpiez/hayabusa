@@ -33,14 +33,17 @@ RootBoard::RootBoard(Console *c):
 	
 	timeBudget(300000),
 	movesToDo(40),
+	iMove(0),
 	currentLine(line),
-	console(c)
+	console(c),
+	color(White)
 {
 	tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
     for (int p=-nPieces; p<=(int)nPieces; ++p)
         for (unsigned int sq=0; sq<nSquares; ++sq)
             estimatedError[p+nPieces][sq] = initialError;
 
+    boards[0].wb.init();
 	#ifdef QT_GUI_LIB
 	statWidget = new StatWidget(*this);
 	statWidget->show();

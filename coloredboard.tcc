@@ -101,9 +101,13 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
                 next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4);
             }
             ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>()));
-        } else {
+        } else if (piece == Pawn) {
+        	// en passant
+            next->occupied2 = _mm_set1_epi64x(occupied1 ^ from ^ to ^ shift<-C*8>(to));
+            next->getPieces<C,Pawn>() ^= from + to;
+            next->getPieces<-C,Pawn>() ^= shift<-C*8>(to);
+        } else{
             // promotion
-            ASSERT(m.captureOffset() == 0);
             next->occupied2 = _mm_set1_epi64x(occupied1 ^ (from + (m.capture() ? 0:to)));
             next->getPieces<C,Pawn>() ^= from;
             next->getPieces<C>(piece) ^= to;
@@ -111,14 +115,11 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
         }
     } else {
         // standard move, e. p. is handled by captureOffset
-        next->fiftyMoves = (m.capture() & 7) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
+        next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
         next->cep.enPassant = m.piece()==Pawn ? to & shift<C*16>(from) & rank<4>() & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1) : 0;
-        next->occupied2 = _mm_set1_epi64x(occupied1 ^ (from + (m.capture() & 7 ? 0:to)));
+        next->occupied2 = _mm_set1_epi64x(occupied1 ^ (from + (m.capture() ? 0:to)));
         next->getPieces<C>(m.piece()) ^= from + to;
-        if (C == White)
-            next->getPieces<-C>(m.capture() & 7) ^= to >> m.captureOffset();
-        else
-            next->getPieces<-C>(m.capture() & 7) ^= to << m.captureOffset();
+        next->getPieces<-C>(m.capture()) ^= to;
         
     }
 #else
@@ -177,8 +178,8 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
     	if (piece == King) {
             ASSERT(m.capture() == 0);
     		__v8hi estKing = keyScore.vector
-				- eval.getKSVector(piece, m.from())
-				+ eval.getKSVector(piece, m.to());
+				- eval.getKSVector(C*King, m.from())
+				+ eval.getKSVector(C*King, m.to());
             if (m.to() == (pov^g1)) {
             	return estKing - eval.getKSVector(C*Rook, pov^h1)
             				   + eval.getKSVector(C*Rook, pov^f1);
@@ -186,6 +187,11 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
             	return estKing - eval.getKSVector(C*Rook, pov^a1)
             				   + eval.getKSVector(C*Rook, pov^d1);
             }
+    	} else if (piece == Pawn) {
+    		return keyScore.vector - eval.getKSVector(C*Pawn, m.from())
+    						       + eval.getKSVector(C*Pawn, m.to())
+    						       - eval.getKSVector(-C*Pawn, m.to()-C*8);
+
     	} else {
     		return keyScore.vector - eval.getKSVector(C*Pawn, m.from())
     						       + eval.getKSVector(C*piece, m.to())
@@ -195,7 +201,7 @@ __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
         return keyScore.vector
             - eval.getKSVector(C*m.piece(), m.from())
             + eval.getKSVector(C*m.piece(), m.to())
-            - eval.getKSVector(-C*(m.capture() & 7), m.to() - C*m.captureOffset());
+            - eval.getKSVector(-C*m.capture(), m.to());
     }
 }
 

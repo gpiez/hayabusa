@@ -171,7 +171,8 @@ void TestRootBoard::generateCaptures() {
 //				std::cout << k->string() << std::endl;
 				asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 				tsc = (a + (d << 32));
-				ColoredBoard<Black> bb(b->boards[0].wb, *k);
+				__v8hi est = b->boards[0].wb.estimatedEval(*k, b->eval);
+				ColoredBoard<Black> bb(b->boards[0].wb, *k, est);
 				blah += bb.getZobrist();
 				asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 				movetimes[i][j] += (a + (d << 32)) - tsc - overhead;

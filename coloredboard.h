@@ -56,10 +56,10 @@ public:
     inline __v8hi estimatedEval(const Move m, const Eval& rb, uint64_t&) const;
     void generateTargetCapture(Move* &list, unsigned int to, unsigned int cap) const;
 #endif    
-    ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m) {
-        prev.doMove(this, m);
-        buildAttacks();
-    }
+//    ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m) {
+//        prev.doMove(this, m);
+//        buildAttacks();
+//    }
 
 /*    operator const ColoredBoard<(Colors)-C>& () const {
         return *(ColoredBoard<(Colors)-C>*)(void*)this;
@@ -105,13 +105,7 @@ private:
     
     template<int R>
     uint64_t rank() const {
-        static_assert( R>=1 && R<=8, "Wrong Rank" );
-        return 0xffULL << (C == White ? R*8-8:64-8*R);
-    }
-    template<char F>
-    uint64_t file() const {
-        static_assert( F>='a' && F<='h', "Wrong File" );
-        return 0x0101010101010101ULL << (F-'a');
+    	return ::rank<C,R>();
     }
 #ifdef BITBOARD
 #else    
