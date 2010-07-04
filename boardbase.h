@@ -23,11 +23,7 @@
 #include <pch.h>
 #endif
 
-#include <emmintrin.h>
-
-#include "attacks.h"
 #include "length.h"
-#include "piecelist.h"
 #include "transpositiontable.h"
 #include "score.h"
 #include "eval.h"
@@ -71,52 +67,48 @@ class RootBoard;
 struct BoardBase {
 #ifdef BITBOARD
     union {
-        __v2di occupied2;
-        uint64_t occupied1;
+    __v2di occupied2;
+    uint64_t occupied1;
     };
-    union {
-        struct {
-        __v2di dir02;   // 0, if piece at this position is pinned in dir 0/2
-        __v2di dir13;   // 0, if piece at this position is pinned in dir 1/3
-        uint64_t pins;
-        };
-        uint64_t dir[4];
-    } pins[nColors];
+    uint64_t pieces[13];        // piece bits, offset 
+    uint64_t attacks[15];
+    uint64_t pins[2];
     union {
     	struct {
         __v2di d02;
         __v2di d13;
     	};
     	uint64_t d[4];
-    } datt[nColors],			// sum of all directed attacks, for each of the 4 main directions
+    } dpins[nColors],
+      datt[nColors],			// sum of all directed attacks, for each of the 4 main directions
       kingIncoming[nColors];
-    uint64_t pieces[16];
-    uint64_t attacks[16];
-    __v2di single[nColors][32];
-    Move moves[nColors][16];
+    struct MoveTemplate {
+    	Move move;
+    	__v2di d02, d13;
+    } single[nColors][32];
+
     static __v2di mask02x[nSquares]; // 1 KByte  file : row, excluding square
     static __v2di dir02mask[nSquares]; // 1 KByte  file : row, excluding square
     static __v2di dir13mask[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
     static __v2di doublebits[nSquares]; // 1 KByte    1<<sq  : 1<<sq
     static __v2di doublereverse[nSquares]; // 1 KByte    1<<sq  : 1<<sq
-    static const __v16qi swap16; // needs to be initialized to swap the bytes in both quad-words
     static uint64_t knightAttacks[nSquares];
     static uint64_t kingAttacks[16][nSquares];
     static uint64_t epTab[nPieces+1][nSquares];
     template<int C, Pieces P>
     uint64_t getPieces() const {
-        static_assert(P>0 && P<=All, "Wrong Piece");
-        return pieces[nPieces+1 + C*P];
+        static_assert(P>0 && P<=King, "Wrong Piece");
+        return pieces[nPieces + C*P];
     }
     template<int C, Pieces P>
     uint64_t& getPieces() {
-        static_assert(P>0 && P<=All, "Wrong Piece");
-        return pieces[nPieces+1 + C*P];
+        static_assert(P>0 && P<=King, "Wrong Piece");
+        return pieces[nPieces + C*P];
     }
     template<int C>
     uint64_t& getPieces(unsigned int p) {
         ASSERT(p <= King && p>=0);
-        return pieces[nPieces+1 + C*p];
+        return pieces[nPieces + C*p];
     }
     template<int C, Pieces P>
     uint64_t getAttacks() const {
@@ -131,7 +123,7 @@ struct BoardBase {
     template<Colors C, unsigned int dir>
     uint64_t getPins() const {
         enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-        return pins[CI].dir[((dir & 1) << 1) + ((dir & 2) >> 1)];
+        return dpins[CI].d[((dir & 1) << 1) + ((dir & 2) >> 1)];
     }
     template<Colors C>
     bool inCheck() const {
@@ -142,10 +134,10 @@ struct BoardBase {
         occupied2 |= _mm_set1_epi64x(1ULL << pos);
     }
 
-    __v2di build02Attack(const __v2di o, const unsigned sq) const;
-    __v2di build13Attack(const __v2di o, const unsigned sq) const;
-    template<Colors C> void buildAttacks();
-    template<Colors C> void buildPins();
+    inline __v2di build02Attack(const unsigned sq) const;
+    inline __v2di build13Attack(const unsigned sq) const;
+    template<Colors C> inline void buildAttacks();
+    template<Colors C> inline void buildPins();
     void buildAttacks();
 #else
     LongIndex    attVec[nDirs/2][nSquares];        //0x100

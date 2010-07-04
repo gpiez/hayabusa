@@ -29,45 +29,45 @@ void ColoredBoard<C>::generateTargetMove(Move* &list, uint64_t tobit ) const {
 #ifdef BITBOARD
     //special case where movin a pawn blocks a check
     //move is only legal if it is not pinned
-    for (uint64_t p = getPieces<C,Pawn>() & shift<-C*8>(tobit) & pins[CI].pins & rank<7>(); p; p &= p-1) {
+    for (uint64_t p = getPieces<C,Pawn>() & shift<-C*8>(tobit) & pins[CI] & rank<7>(); p; p &= p-1) {
         *list++ = Move(bit(p), bit(p) + C*8, Queen, 0, true);
         *list++ = Move(bit(p), bit(p) + C*8, Knight, 0, true);
         *list++ = Move(bit(p), bit(p) + C*8, Rook, 0, true);
         *list++ = Move(bit(p), bit(p) + C*8, Bishop, 0, true);
     }
 
-    for (uint64_t p = getPieces<C,Pawn>() & shift<-C*8>(tobit) & pins[CI].pins & ~rank<7>(); p; p &= p-1)
+    for (uint64_t p = getPieces<C,Pawn>() & shift<-C*8>(tobit) & pins[CI] & ~rank<7>(); p; p &= p-1)
         *list++ = Move(bit(p), bit(p) + C*8, Pawn);
 
-    for (uint64_t p = getPieces<C,Pawn>() & shift<-C*16>(tobit) & pins[CI].pins & rank<2>() & ~shift<-C*8>(occupied1); p; p &= p-1)
+    for (uint64_t p = getPieces<C,Pawn>() & shift<-C*16>(tobit) & pins[CI] & rank<2>() & ~shift<-C*8>(occupied1); p; p &= p-1)
         *list++=  Move(bit(p), bit(p) + C*16, Pawn);
     
     for ( uint64_t p = getAttacks<C,Knight>() & tobit; p; p &= p-1 ) {
         unsigned to = bit(p);
-        for ( uint64_t f = getPieces<C,Knight>() & pins[CI].pins & knightAttacks[to]; f; f &= f-1)
+        for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1)
         	*list++ = Move(bit(f), to, Knight);
     }
 
     /* Check for attacks from sliding pieces. Bishop/Rook/Queen attacks are
      * stored in single[], with a mov template matching the attack in move[]
      */
-    const __v2di* psingle = single[CI];
-    const Move* pmove = moves[CI];
+    const MoveTemplate* psingle = single[CI];
     const __v2di zero = _mm_set1_epi64x(0);
     const __v2di d2 = _mm_set1_epi64x(tobit);
     for(;;) {
-        Move m = *pmove++;
+        Move m = psingle->move;
 		if (!m.data) break;
-        __v2di a02 = *psingle++;
-		__v2di a13 = *psingle++;
+        __v2di a02 = psingle->d02;
+		__v2di a13 = psingle->d13;
+		psingle++;
 #ifdef __SSE4_1__        
 		if (!_mm_testz_si128(d2, (a02|a13))) {
 #else
         if (fold(d2 & (a02|a13))) {
 #endif            
 			__v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
-			__v2di pin02 = from2 & pins[CI].dir02;
-			__v2di pin13 = from2 & pins[CI].dir13;
+			__v2di pin02 = from2 & dpins[CI].d02;
+			__v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__            
 			pin02 = _mm_cmpeq_epi64(pin02, zero);
 			pin13 = _mm_cmpeq_epi64(pin13, zero);
@@ -402,16 +402,6 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
         to = from + C*dirOffsets[2];
         *list++ = Move(from, to, Pawn);
     }
-    for (uint64_t p = getPieces<C,Pawn>() & ~rank<7>() & ~file<'a'>() & shift<-C*8+1>(getPieces<-C, All>()) & getPins<C,2+C>(); p; p &= p-1) {
-        from = bit(p);
-        to = from + C*dirOffsets[2]-1;
-        *list++ = Move(from, to, Pawn);
-    }
-    for (uint64_t p = getPieces<C,Pawn>() & ~rank<7>() & ~file<'h'>() & shift<-C*8-1>(getPieces<-C, All>()) & getPins<C,2-C>(); p; p &= p-1) {
-        from = bit(p);
-        to = from + C*dirOffsets[2]+1;
-        *list++ = Move(from, to, Pawn);
-    }
     for (uint64_t p = getPieces<C,Pawn>() & rank<2>() & shift<-C*8>(~occupied1) & shift<-C*16>(~occupied1) & getPins<C,2>(); p; p &= p-1) {
         from = bit(p);
         to = from + 2*C*dirOffsets[2];
@@ -436,7 +426,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
     		*list++ = Move(bit(p), bit(p) + C*8+1, Pawn, Pawn, true);
     
     //Knight moves. If a knight is pinned, it can't move at all.
-    for (uint64_t p = getPieces<C, Knight>() & pins[CI].pins; p; p &= p-1) {
+    for (uint64_t p = getPieces<C, Knight>() & pins[CI]; p; p &= p-1) {
         from = bit(p);
         for (uint64_t q = knightAttacks[from] & ~occupied1; q; q &= q-1)
             *list++ = Move(from, bit(q), Knight);
@@ -447,17 +437,17 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
      * attack information stored in singel[] in the same order as they were
      * generated earlier in buildAttacks()
      */
-    const __v2di* psingle = single[CI];
-    const Move* pmove = moves[CI];
+    const MoveTemplate* psingle = single[CI];
     const __v2di zero = _mm_set1_epi64x(0);
     for(;;) {
-        Move m = *pmove++;
+        Move m = psingle->move;
 		if (!m.data) break;
-        __v2di a02 = *psingle++;
-		__v2di a13 = *psingle++;
+        __v2di a02 = psingle->d02;
+		__v2di a13 = psingle->d13;
+		psingle++;
 		__v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
-		__v2di pin02 = from2 & pins[CI].dir02;
-		__v2di pin13 = from2 & pins[CI].dir13;
+		__v2di pin02 = from2 & dpins[CI].d02;
+		__v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__        
         pin02 = _mm_cmpeq_epi64(pin02, zero);
         pin13 = _mm_cmpeq_epi64(pin13, zero);

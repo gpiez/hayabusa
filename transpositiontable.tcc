@@ -116,7 +116,7 @@ bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* 
 	stats.ptuse += possibleUse;
 	return false;
 }
-
+//#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"
 template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
@@ -146,6 +146,7 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
 	}
 	subTable->entries[i] = entry;
 }
+//#pragma GCC diagnostic pop
 
 template<unsigned int assoc, typename Key>
 void TranspositionTable<PawnEntry, assoc, Key>::store(Sub<PawnEntry, assoc>* subTable, PawnEntry entry) {

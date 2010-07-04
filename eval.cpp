@@ -25,12 +25,12 @@
 
 __thread PawnEntry Eval::pawnEntry;
 
-uint32_t Eval::borderTab4_0[nSquares];
-uint32_t Eval::borderTab321[nSquares];
-uint32_t Eval::borderTab567[nSquares];
-
-__v16qi Eval::kMask0[nSquares];
-__v16qi Eval::kMask1[nSquares];
+// uint32_t Eval::borderTab4_0[nSquares];
+// uint32_t Eval::borderTab321[nSquares];
+// uint32_t Eval::borderTab567[nSquares];
+// 
+// __v16qi Eval::kMask0[nSquares];
+// __v16qi Eval::kMask1[nSquares];
 
 int squareControl[nSquares];
 //void sigmoid(Score* p, unsigned int n, double start, double end, double dcenter, double width) {
@@ -161,7 +161,7 @@ static inline uint64_t popcount2( uint64_t x )
 }
 
 #else
-#define popcount(x) __builtin_popcountll(x)
+#define popcount15(x) __builtin_popcountll(x)
 #define popcount2(x) __builtin_popcountll(x)
 #endif
 
@@ -333,7 +333,7 @@ void Eval::initZobrist() {
 }
 
 void Eval::initTables() {
-    for (unsigned int x = 0; x<nFiles; ++x)
+/*    for (unsigned int x = 0; x<nFiles; ++x)
     for (unsigned int y = 0; y<nRows; ++y) {
         uint64_t oking = x+y*nFiles;
         uint64_t offset = (oking + 010) & 020;    // 070-077 -> 080, 060-067 -> 060
@@ -347,7 +347,7 @@ void Eval::initTables() {
         }
         kMask0[oking] = (__v16qi&)b.pieces[offset];
         kMask1[oking] = (__v16qi&)b.pieces[offset-0x10];
-    }
+    }*/
 }
 
 RawScore Eval::pieces(const PieceList&, int ) const {
@@ -382,7 +382,8 @@ PawnEntry::Shield evalShield(const BoardBase &b) {
     PawnEntry::Shield ret;
     ret.weakLight = 0;
     ret.weakDark = 0;
-    ret.value = kshield + qshield;
+    ret.qside = qshield;
+    ret.kside = kshield;
     return ret;
 }
 
@@ -469,10 +470,8 @@ RawScore Eval::pawns(const BoardBase& b) const {
         pawnEntry.score += pawnHalfIsolated * (popcount15(wRightIsolani|wLeftIsolani) - popcount15(bRightIsolani|bLeftIsolani));
         pawnEntry.score += pawnIsolated * (popcount15(wRightIsolani&wLeftIsolani) - popcount15(bRightIsolani&bLeftIsolani));
 
-        pawnEntry.lShield[0] = evalShield<White>(b);
-        pawnEntry.rShield[0] = evalShield<White>(b);
-        pawnEntry.lShield[1] = evalShield<Black>(b);
-        pawnEntry.rShield[1] = evalShield<Black>(b);
+        pawnEntry.shield[0] = evalShield<White>(b);
+        pawnEntry.shield[1] = evalShield<Black>(b);
         pawnEntry.upperKey = k >> PawnEntry::upperShift;
         pawnEntry.w = wpawn;
         pawnEntry.b = bpawn;
@@ -480,48 +479,6 @@ RawScore Eval::pawns(const BoardBase& b) const {
             pt->store(st, pawnEntry);
     }
     return pawnEntry.score;
-}
-
-RawScore Eval::eval(const BoardBase& b) const {
-#if defined(MYDEBUG)
-    RawScore value = 0;
-#ifdef BITBOARD
-#else
-    for (int pi = 0; pi <= 1; ++pi) {
-        int C = 1-pi*2;        
-        uint8_t king = b.pieceList[pi].getKing();
-        value += getPS(C*King, king);
-        for (uint8_t i = b.pieceList[pi][Pawn]; i > 0;) {
-            --i;
-            uint8_t pawn = b.pieceList[pi].getPawn(i);
-            value += getPS(C*Pawn, pawn);
-        }
-        for (uint8_t i = b.pieceList[pi][Rook]; i > 0;) {
-            --i;
-            uint8_t rook = b.pieceList[pi].get(Rook, i);
-            value += getPS(C*Rook, rook);
-        }
-        for (uint8_t i = b.pieceList[pi][Bishop]; i > 0;) {
-            --i;
-            uint8_t bishop = b.pieceList[pi].get(Bishop, i);
-            value += getPS(C*Bishop, bishop);
-        }
-        for (uint8_t i = b.pieceList[pi][Knight]; i > 0;) {
-            --i;
-            uint8_t knight = b.pieceList[pi].get(Knight, i);
-            value += getPS(C*Knight, knight);
-        }
-        for (uint8_t i = b.pieceList[pi][Queen]; i > 0;) {
-            --i;
-            uint8_t queen = b.pieceList[pi].get(Queen, i);
-            value += getPS(C*Queen, queen);
-        }
-    }
-    if (value != b.keyScore.score) asm("int3");
-#endif    
-
-#endif
-    return b.keyScore.score + pawns(b) + mobility(b);
 }
 
 // double popcount of two quadwords
@@ -612,17 +569,17 @@ static const RawScore mobValues[nPieces+1][32] = {
 };
 
 template<Colors C>
-RawScore Eval::mobilityValue( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1]) const {
+inline RawScore Eval::mobilityValue( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1]) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
 	RawScore score = 0;
-    const __v2di* psingle = b.single[CI];
-    const Move* pmove = b.moves[CI];
+    const BoardBase::MoveTemplate* psingle = b.single[CI];
     const __v2di zero = _mm_set1_epi64x(0);
     for(;;) {
-        Move m = *pmove++;
+        Move m = psingle->move;
 		if (!m.data) break;
-        __v2di a02 = *psingle++;
-		__v2di a13 = *psingle++;
+        __v2di a02 = psingle->d02;
+		__v2di a13 = psingle->d13;
+		psingle++;
 #ifdef USE_PINS_IN_MOBILITY
 		__v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
 		__v2di pin02 = from2 & pins[CI].dir02;
@@ -644,14 +601,19 @@ RawScore Eval::mobilityValue( const BoardBase &b, const uint64_t (&restrictions)
 #else
 		uint64_t mob = fold(a02|a13);
 #endif
-		score += mobValues[m.piece()][popcount(mob & restrictions[CI][m.piece()])];
+		score += mobValues[m.piece()][popcount(mob & ~restrictions[CI][m.piece()])];
+    }
+
+    for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
+        uint64_t sq = bit(p);
+        score += mobValues[Knight][popcount15(b.knightAttacks[sq] & ~restrictions[CI][Knight])];
     }
 
     return score;
 }
 
 template<Colors C>
-void Eval::mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const {
+inline void Eval::mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
 	uint64_t r = b.getPieces<C,Rook>() + b.getPieces<C,Bishop>() +
 				 b.getPieces<C,Queen>()+ b.getPieces<C,Knight>() +
@@ -661,13 +623,12 @@ void Eval::mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nCo
 	restrictions[CI][Queen] = r |= b.getAttacks<-C,Rook>();
 }
 
-RawScore Eval::mobility(const BoardBase& b) const {
+template<Colors C>
+inline RawScore Eval::mobility(const BoardBase& b) const {
 	uint64_t restrictions[nColors][nPieces+1];
 
 	mobilityRestrictions<White>(b, restrictions);
-	mobilityRestrictions<Black>(b, restrictions);
-
-    return mobilityValue<White>(b, restrictions) - mobilityValue<Black>(b, restrictions);
+	return mobilityValue<White>(b, restrictions);
 }
 
 // bit 0 = blocked for enemy king
@@ -712,4 +673,77 @@ void Eval::EvalMate(const ColoredBoard<C>& b) const {
     uint32_t p321 = reinterpret_cast<uint32_t&>(b.pieces[oking+7]) | borderTab321[oking];
     uint32_t p567 = reinterpret_cast<uint32_t&>(b.pieces[oking-9]) | borderTab567[oking];
     uint64_t king8 = (p321 & 0xffffff) + ((p4_0 & 0xffL) << 24) + ((p4_0 & 0xff0000L) << 32) + ((p567 & 0xffffffL) << 40);*/
+}
+
+static const int kattTable[] = { 5, 6, 8, 10, 10, 10, 10, 10, 10 };
+static const int kdefTable[] = { 10,10,10,10,10,10,10, 9, 8, 7, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5};
+
+template<Colors C>
+RawScore Eval::attack(const BoardBase& b) const {
+    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+	uint64_t king = b.getPieces<-C,King>();
+	Sides side;
+	if (king & (rank<C,8>() | rank<C,7>()) & (file<'a'>() | file<'b'>() | file<'c'>())) {
+		side = QSide;
+	} else if (king & (rank<C,8>() | rank<C,7>()) & (file<'f'>() | file<'g'>() | file<'h'>())) {
+		side = KSide;
+	} else if (b.cep.castling.color[EI].q && b.cep.castling.color[EI].k) {
+		side = pawnEntry.shield[EI].kside>=pawnEntry.shield[EI].qside ? KSide:QSide;
+	} else if (b.cep.castling.color[EI].q) {
+		side = QSide;
+	} else if (b.cep.castling.color[EI].k) {
+		side = KSide;
+	} else
+		side = Middle;
+
+	RawScore def = 0;
+	if (side == KSide) def = pawnEntry.shield[EI].kside;
+	else if (side == QSide) def = pawnEntry.shield[EI].qside;
+
+	unsigned katt = popcount15(b.getAttacks<-C,King>() & b.getAttacks<C,All>());
+	return kattTable[katt] * kdefTable[def];
+}
+
+RawScore Eval::eval(const BoardBase& b) const {
+#if defined(MYDEBUG)
+    RawScore value = 0;
+#ifdef BITBOARD
+#else
+    for (int pi = 0; pi <= 1; ++pi) {
+        int C = 1-pi*2;
+        uint8_t king = b.pieceList[pi].getKing();
+        value += getPS(C*King, king);
+        for (uint8_t i = b.pieceList[pi][Pawn]; i > 0;) {
+            --i;
+            uint8_t pawn = b.pieceList[pi].getPawn(i);
+            value += getPS(C*Pawn, pawn);
+        }
+        for (uint8_t i = b.pieceList[pi][Rook]; i > 0;) {
+            --i;
+            uint8_t rook = b.pieceList[pi].get(Rook, i);
+            value += getPS(C*Rook, rook);
+        }
+        for (uint8_t i = b.pieceList[pi][Bishop]; i > 0;) {
+            --i;
+            uint8_t bishop = b.pieceList[pi].get(Bishop, i);
+            value += getPS(C*Bishop, bishop);
+        }
+        for (uint8_t i = b.pieceList[pi][Knight]; i > 0;) {
+            --i;
+            uint8_t knight = b.pieceList[pi].get(Knight, i);
+            value += getPS(C*Knight, knight);
+        }
+        for (uint8_t i = b.pieceList[pi][Queen]; i > 0;) {
+            --i;
+            uint8_t queen = b.pieceList[pi].get(Queen, i);
+            value += getPS(C*Queen, queen);
+        }
+    }
+    if (value != b.keyScore.score) asm("int3");
+#endif
+
+#endif
+    return b.keyScore.score + pawns(b)
+    				+ mobility<White>(b) + attack<White>(b)
+    				- mobility<Black>(b) - attack<Black>(b);
 }

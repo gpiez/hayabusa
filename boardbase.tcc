@@ -19,13 +19,6 @@
 #ifndef BOARDBASE_TCC_
 #define BOARDBASE_TCC_
 
-#ifdef __SSE4_1__
-#include <smmintrin.h>
-#endif
-#ifdef __SSSE3__
-#include <tmmintrin.h>
-#endif
-
 #include "boardbase.h"
 #include "boardbase.tcc"
 #include "rootboard.h"
@@ -40,8 +33,10 @@ union Xmm {
     };
 };
 
-inline __v2di BoardBase::build13Attack(const __v2di o, const unsigned sq) const {
-    __v2di maskedDirs = o & dir13mask[sq];
+inline __v2di BoardBase::build13Attack(const unsigned sq) const {
+	const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
+
+    __v2di maskedDirs = occupied2 & dir13mask[sq];
     __v2di reverse = _mm_shuffle_epi8(maskedDirs, swap16);
     maskedDirs -= doublebits[sq];
     reverse -= doublereverse[sq];
@@ -51,12 +46,16 @@ inline __v2di BoardBase::build13Attack(const __v2di o, const unsigned sq) const 
     return maskedDirs;
 }
 
-inline __v2di BoardBase::build02Attack(const __v2di o, const unsigned sq) const {
+inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
-    __v2di maskedDir02 = (o|b02) & dir02mask[sq];
-    __v2di lz = _mm_sll_epi64(maskedDir02, _mm_cvtsi64_si128(63-sq));
-    uint64_t hi = 3ULL << (sq - __builtin_clzll(_mm_cvtsi128_si64x(_mm_unpackhi_epi64(lz,lz)))); // TODO use hi and lo as index for a table instead of mm_set_epi
-    uint64_t lo = 3ULL << (sq - __builtin_clzll(_mm_cvtsi128_si64x(lz)));
+
+    __v2di maskedDir02 = (occupied2|b02) & dir02mask[sq];
+    uint64_t d0 = _mm_cvtsi128_si64x(maskedDir02);
+    uint64_t d2 = _mm_cvtsi128_si64x(_mm_unpackhi_epi64(maskedDir02,maskedDir02));
+    d0 <<= 63-sq;
+    d2 <<= 63-sq;
+    uint64_t lo = __rolq(6, sq + __bsrq(d0));
+    uint64_t hi = __rolq(6, sq + __bsrq(d2));
     maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
     maskedDir02 &= mask02x[sq];
     return maskedDir02;
@@ -69,88 +68,68 @@ void BoardBase::buildAttacks() {
     const __v2di o = occupied2;
     const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
     const __v2di zero = _mm_set1_epi64x(0);
-    
+    const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
+
     p = getPieces<C, Knight>();
     a = 0;
     while(p) {
-        int sq = __builtin_ctzll(p);
+        uint64_t sq = bit(p);
         p &= p-1;
         a |= knightAttacks[sq];
     }
     getAttacks<C, Knight>() = a;
     getAttacks<C, All>() = a;
     
-    __v2di* psingle = single[CI];
-    Move* pmove = moves[CI];
+    MoveTemplate* psingle = single[CI];
+//    Move* pmove = moves[CI];
     __v2di dir13 = _mm_set1_epi64x(0);
     p = getPieces<C, Bishop>();
-    a = 0;
     while(p) {
-        int sq = __builtin_ctzll(p);
+        uint64_t sq = bit(p);
         p &= p-1;													// lat  #op
-        __v2di maskedDirs = o & dir13mask[sq];				// 4    4
-        __v2di reverse = _mm_shuffle_epi8(maskedDirs, swap16);      // 1    2
-        maskedDirs -= doublebits[sq];							    // 3    2
-        reverse -= doublereverse[sq];                               // 3    2
-        reverse = _mm_shuffle_epi8(reverse, swap16);                // 1    2
-        maskedDirs ^= reverse;                                      // 1    1
-        maskedDirs &= dir13mask[sq];                                // 1    2
-        *psingle++ = zero;
-        *psingle++ = maskedDirs;
-        *pmove++ = Move(sq, 0, Bishop);
-        dir13 |= maskedDirs;                                        // 1    1
-        a |= fold(dir13);										    // 2    3
+        __v2di a13 = build13Attack(sq);
+        psingle->move = Move(sq, 0, Bishop);
+        psingle->d02 = zero;
+        psingle->d13 = a13;
+        psingle++;
+        dir13 |= a13;                                        // 1    1
     }															    // 18   22
+    a = fold(dir13);
     getAttacks<C, Bishop>() = a;
     getAttacks<C, All>() |= a;
     
     __v2di dir02 = _mm_set1_epi64x(0);
     p = getPieces<C, Rook>();
-    a = 0;
     while(p) {
-        unsigned int sq = __builtin_ctzll(p);
+        uint64_t sq = bit(p);
         p &= p-1;
-        __v2di maskedDir02 = (o|b02) & dir02mask[sq];
-        __v2di lz = _mm_sll_epi64(maskedDir02, _mm_cvtsi64_si128(63-sq));
-        uint64_t hi = 3ULL << (sq - __builtin_clzll(_mm_cvtsi128_si64x(_mm_unpackhi_epi64(lz,lz)))); // TODO use hi and lo as index for a table instead of mm_set_epi
-        uint64_t lo = 3ULL << (sq - __builtin_clzll(_mm_cvtsi128_si64x(lz)));
-        maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
-        maskedDir02 &= mask02x[sq];
-        *psingle++ = maskedDir02;
-        *psingle++ = zero;
-        *pmove++ = Move(sq, 0, Rook);
-        dir02 |= maskedDir02;
-        a |= fold(dir02);
+        __v2di a02 = build02Attack(sq);
+        psingle->move = Move(sq, 0, Rook);
+        psingle->d02 = a02;
+        psingle->d13 = zero;
+        psingle++;
+        dir02 |= a02;
     }
+    a = fold(dir02);
     getAttacks<C, Rook>() = a;
     getAttacks<C, All>() |= a;
     
     p = getPieces<C, Queen>();
     a = 0;
     while(p) {
-        int sq = __builtin_ctzll(p);
+        uint64_t sq = bit(p);
         p &= p-1;
-        __v2di maskedDir13 = o & dir13mask[sq];
-        __v2di maskedDir02 = (o|b02) & dir02mask[sq];
-        __v2di reverse13 = _mm_shuffle_epi8(maskedDir13, swap16);
-        __v2di lz = _mm_sll_epi64(maskedDir02, _mm_cvtsi64_si128(63-sq));
-        maskedDir13 -= doublebits[sq];
-        reverse13 -= doublereverse[sq];
-        uint64_t hi = 3ULL << (sq - __builtin_clzll(_mm_cvtsi128_si64x(_mm_unpackhi_epi64(lz,lz))));
-        uint64_t lo = 3ULL << (sq - __builtin_clzll(_mm_cvtsi128_si64x(lz)));
-        reverse13 = _mm_shuffle_epi8(reverse13, swap16);
-        maskedDir13 ^= reverse13;
-        maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
-        maskedDir13 &= dir13mask[sq];
-        maskedDir02 &= mask02x[sq];
-        *psingle++ = maskedDir02;
-        *psingle++ = maskedDir13;
-        *pmove++ = Move(sq, 0, Queen);
-        dir02 |= maskedDir02;
-        dir13 |= maskedDir13;
-        a |= fold(maskedDir13 | maskedDir02);
+        __v2di a13 = build13Attack(sq);
+        __v2di a02 = build02Attack(sq);
+        psingle->move = Move(sq, 0, Queen);
+        psingle->d02 = a02;
+        psingle->d13 = a13;
+        psingle++;
+        dir02 |= a02;
+        dir13 |= a13;
+        a |= fold(a13 | a02);
     }
-    *pmove = Move(0,0,0);
+    psingle->move = Move(0,0,0);
     getAttacks<C, Queen>() = a;
     getAttacks<C, All>() |= a;
     datt[CI].d02 = dir02;
@@ -173,34 +152,23 @@ template<Colors C>
 void BoardBase::buildPins() {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     const __v2di o = occupied2;
-    const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
+
     uint64_t p = getPieces<C, King>();
-    int sq = __builtin_ctzll(p);
+    uint64_t sq = bit(p);
     getAttacks<C, All>() |= getAttacks<C, King>() = kingAttacks[0][sq];
 
-    __v2di maskedDir13 = o & dir13mask[sq];
-    __v2di maskedDir02 = (o|b02) & dir02mask[sq];
-    __v2di reverse13 = _mm_shuffle_epi8(maskedDir13, swap16);
-    __v2di lz = _mm_sll_epi64(maskedDir02, _mm_cvtsi64_si128(63-sq));
-    maskedDir13 -= doublebits[sq];
-    reverse13 -= doublereverse[sq];
-    uint64_t hi = 3ULL << (sq - __builtin_clzll(_mm_cvtsi128_si64x(_mm_unpackhi_epi64(lz,lz))));
-    uint64_t lo = 3ULL << (sq - __builtin_clzll(_mm_cvtsi128_si64x(lz)));
-    reverse13 = _mm_shuffle_epi8(reverse13, swap16);
-    maskedDir13 ^= reverse13;
-    maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
-    maskedDir13 &= dir13mask[sq];
-    maskedDir02 &= mask02x[sq];
+    __v2di maskedDir13 = build13Attack(sq);
+    __v2di maskedDir02 = build02Attack(sq);
     kingIncoming[CI].d13 = maskedDir13;
     kingIncoming[CI].d02 = maskedDir02;
     __v2di dir02 = ~(maskedDir02 & datt[EI].d02);
     __v2di dir13 = ~(maskedDir13 & datt[EI].d13);
     __v2di dir20 = _mm_shuffle_epi32(dir02, 0x4e);
     __v2di dir31 = _mm_shuffle_epi32(dir13, 0x4e);
-    pins[CI].dir02 = dir20 & dir13 & dir31;
-    pins[CI].dir13 = dir31 & dir02 & dir20;
-    __v2di pins2 = pins[CI].dir02 & pins[CI].dir13;
-    pins[CI].pins = _mm_cvtsi128_si64(_mm_unpackhi_epi64(pins2, pins2))
+    dpins[CI].d02 = dir20 & dir13 & dir31;
+    dpins[CI].d13 = dir31 & dir02 & dir20;
+    __v2di pins2 = dpins[CI].d02 & dpins[CI].d13;
+    pins[CI] = _mm_cvtsi128_si64(_mm_unpackhi_epi64(pins2, pins2))
          & _mm_cvtsi128_si64(pins2);
 }
 

@@ -23,7 +23,7 @@
 #include <pch.h>
 #endif
 
-#include <emmintrin.h>	//SSE2 for m128i
+#include <x86intrin.h>
 
 //#define static_assert(x) char __y[(x) ? 1 : -1 ] __attribute__((unused));
 
@@ -69,6 +69,8 @@ enum SpecialMoves: uint8_t {
 #endif
 
 enum Phase { root, trunk, tree, leaf, vein };
+
+enum Sides { KSide, QSide, Middle };
 
 static const int initialError = 100;
 static const unsigned int nHashPassers = 2;
@@ -152,19 +154,23 @@ static const __v16qi zeroToFifteen = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
 #endif
 
 static inline uint64_t popcount(uint64_t x) {
+#ifdef __SSE4_2__
+    return _popcnt64(x);
+#else
     x -=  x>>1 & 0x5555555555555555;
     x  = ( x>>2 & 0x3333333333333333 ) + ( x & 0x3333333333333333 );
     x  = (( x>>4 )+x) & 0x0f0f0f0f0f0f0f0f;
     x *= 0x0101010101010101;
     return  x>>56;
+#endif
 }
 
 static inline unsigned int bit(uint64_t x) {
-    return __builtin_ctzll(x);
+    return __bsfq(x);
 }
 
 static inline unsigned int bit(unsigned int x) {
-    return __builtin_ctz(x);
+    return __bsfd(x);
 }
 
 static inline uint64_t fold(__v2di hilo) {
@@ -172,6 +178,8 @@ static inline uint64_t fold(__v2di hilo) {
         | _mm_cvtsi128_si64(hilo);
 }
 
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wall"
 template<int N>
 uint64_t shift(uint64_t b) {
     if (N > 0)
@@ -179,6 +187,7 @@ uint64_t shift(uint64_t b) {
     else
         return b >> -N;
 }
+//#pragma GCC diagnostic pop
 
 template<Colors C,int R>
 uint64_t rank() {

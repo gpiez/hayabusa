@@ -87,10 +87,11 @@ struct PawnEntry {
     uint16_t upperKey;
     int16_t score;
     struct Shield {
-        uint8_t value;
+        uint8_t qside;
+        uint8_t kside;
         uint8_t weakLight;
         uint8_t weakDark;
-    } lShield[nColors], rShield[nColors];
+    } shield[nColors];
     enum { upperShift = 16 };
     uint8_t passers[nColors][nHashPassers];
     uint8_t openFiles[nColors];

@@ -33,101 +33,9 @@ void TestRootBoard::initTestCase() {
 }
 
 void TestRootBoard::setPiece() {
-	
-	b->setup("/ w - -");
-#if 0	
-	QCOMPARE(b.getLen(0, d4), 4U);
-	QCOMPARE(b.getLen(4, f4), 5U);
-	b.setPiece(Queen, e4);
-	QCOMPARE(b.getLen(0, d4), 1U);
-	QCOMPARE(b.getLen(4, f4), 1U);
-	QVERIFY(b.attackedBy<Queen>(f4));
-	QVERIFY(b.attackedBy<Queen>(d4));
-	QVERIFY(b.attackedBy<Queen>(e3));
-	QVERIFY(b.attackedBy<Queen>(e5));
-
-	b.setPiece(Rook, b4);
-
-	QVERIFY(b.attackedBy<Queen>(f4));
-	QVERIFY(b.attackedBy<Queen>(d4));
-	QVERIFY(b.attackedBy<Queen>(e3));
-	QVERIFY(b.attackedBy<Queen>(e5));
-
-	b.clrPiece(&b, Queen, e4);
-
-	QVERIFY(!b.attackedBy<Queen>(f4));
-	QVERIFY(!b.attackedBy<Queen>(d4));
-	QVERIFY(!b.attackedBy<Queen>(e3));
-	QVERIFY(!b.attackedBy<Queen>(e5));
-
-	QVERIFY(b.attackedBy<Rook>(d4));
-	QVERIFY(b.attackedBy<Rook>(a4));
-	QVERIFY(b.attackedBy<Rook>(b8));
-	QVERIFY(b.attackedBy<Rook>(b1));
-
-	b.setPiece(Knight, c7);
-
-	QVERIFY(b.attackedBy<Knight>(e8));
-	QVERIFY(b.attackedBy<Knight>(e6));
-	QVERIFY(b.attackedBy<Knight>(d5));
-
-	b.setPiece(Pawn, d4);
-
-	QVERIFY(b.attackedBy<Pawn>(e5));
-	QVERIFY(b.attackedBy<Pawn>(c5));
-
-	b.setPiece(King, h1);
-
-	QVERIFY(b.attackedBy<King>(g1));
-	QVERIFY(b.attackedBy<King>(g2));
-	QVERIFY(b.attackedBy<King>(h2));
-
-	b.setPiece(-Pawn, d5);
-
-	QVERIFY(b.attackedBy<-Pawn>(e4));
-	QVERIFY(b.attackedBy<-Pawn>(c4));
-
-	QBENCHMARK {
-	b.setPiece(Rook, g4);
-	b.clrPiece(&b, Rook, g4);
-	b.setPiece(Rook, g8);
-	b.clrPiece(&b, Rook, g8);
-	}
-#endif
 }
 
 void TestRootBoard::pieceList() {
-#ifndef BITBOARD    
-	PieceList p;
-	p.init();
-	p.add(Queen, d1);
-	QCOMPARE((unsigned int )p[Queen], 1U);
-	p.add(Rook, a1);
-	QCOMPARE((unsigned int )p[Rook], 1U);
-	p.add(Bishop, c1);
-	QCOMPARE((unsigned int )p[Bishop], 1U);
-	p.add(King, e1);
-	QCOMPARE((unsigned int )p[King], 1U);
-	p.add(Knight, b1);
-	QCOMPARE((unsigned int )p[Knight], 1U);
-	p.add(Pawn, a2);
-	QCOMPARE((unsigned int )p[Pawn], 1U);
-	p.add(Pawn, b2);
-	QCOMPARE((unsigned int )p[Pawn], 2U);
-
-	QCOMPARE((unsigned int )p.getKing(), (unsigned int )e1);
-	QCOMPARE((unsigned int )p.getPawn(0), (unsigned int )b2);
-	QCOMPARE((unsigned int )p.getPawn(1), (unsigned int )a2);
-	QCOMPARE((unsigned int )p.get(Rook, 0), (unsigned int )a1);
-
-	p.move(a2, h8);
-	QCOMPARE((unsigned int )p.getPawn(1), (unsigned int )h8);
-
-	p.sub(Pawn, h8);
-	QCOMPARE((unsigned int )p.getKing(), (unsigned int )e1);
-	QCOMPARE((unsigned int )p.getPawn(0), (unsigned int )b2);
-	QCOMPARE((unsigned int )p.get(Rook,0), (unsigned int )a1);
-#endif
 }
 
 void TestRootBoard::generateCaptures() {
@@ -137,21 +45,36 @@ void TestRootBoard::generateCaptures() {
 	if( sched_setaffinity( 0, sizeof(mask), &mask ) == -1 )
 		qDebug() << "Could not set CPU Affinity" << endl;
 	static const unsigned testCases = 200;
-	static const int iter = 256;
+	static const int iter = 1000;
 	typedef QVector<uint64_t> Sample;
 	QVector<Sample> times(testCases, Sample(iter));
 	QVector<Sample> movetimes(testCases, Sample(iter));
+	QVector<Sample> captimes(testCases, Sample(iter));
 	Move list[256];
 	uint64_t sum=0;
 	uint64_t movesum=0;
 	uint64_t nmoves=0;
+	uint64_t ncap =0;
 	uint64_t a, d, tsc;
 	Key blah;
 	Move* end;
+	Colors color[testCases];
+	for (unsigned int i = testCases; i;) {
+		--i;
+		b->setup(testPositions[i]);
+		color[i] = b->color;
+		if (i) {
+			b->boards[i] = b->boards[0];
+		}
+		movetimes[i].reserve(iter*2);
+		times[i].reserve(iter*2);
+		captimes[i].reserve(iter*2);
+	}
 	for (int j = 0; j < iter; ++j) {
 		nmoves = 0;
+		ncap=0;
 		for (unsigned int i = 0; i < testCases; ++i) {
-			b->setup(testPositions[i]);
+//			b->setup(testPositions[i]);
 			uint64_t  overhead;
 			/*
 			 asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
@@ -160,10 +83,27 @@ void TestRootBoard::generateCaptures() {
 			 overhead = (a + (d << 32)) - tsc;
 			 */
 			overhead = 272;
-			b->boards[0].wb.buildAttacks();
+			if (color[i] == White)
+				b->boards[i].wb.buildAttacks();
+			else
+				b->boards[i].bb.buildAttacks();
+
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			tsc = (a + (d << 32));
-			end = b->boards[0].wb.generateMoves(list);
+			if (color[i] == White)
+				end = b->boards[i].wb.generateCaptureMoves<false>(list);
+			else
+				end = b->boards[i].bb.generateCaptureMoves<false>(list);
+			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
+			ncap += end - list;
+			captimes[i][j] = (a + (d << 32)) - tsc - overhead;
+
+			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
+			tsc = (a + (d << 32));
+			if (color[i] == White)
+				end = b->boards[i].wb.generateMoves(list);
+			else
+				end = b->boards[i].bb.generateMoves(list);
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			nmoves += end - list;
 			times[i][j] = (a + (d << 32)) - tsc - overhead;
@@ -171,9 +111,15 @@ void TestRootBoard::generateCaptures() {
 //				std::cout << k->string() << std::endl;
 				asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 				tsc = (a + (d << 32));
-				__v8hi est = b->boards[0].wb.estimatedEval(*k, b->eval);
-				ColoredBoard<Black> bb(b->boards[0].wb, *k, est);
-				blah += bb.getZobrist();
+				if (color[i] == White) {
+					__v8hi est = b->boards[i].wb.estimatedEval(*k, b->eval);
+					ColoredBoard<Black> bb(b->boards[i].wb, *k, est);
+					blah += bb.getZobrist();
+				} else {
+					__v8hi est = b->boards[i].bb.estimatedEval(*k, b->eval);
+					ColoredBoard<White> bb(b->boards[i].bb, *k, est);
+					blah += bb.getZobrist();
+				}
 				asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 				movetimes[i][j] += (a + (d << 32)) - tsc - overhead;
 			}
@@ -183,16 +129,22 @@ void TestRootBoard::generateCaptures() {
 	}
 	for (QVector<Sample>::Iterator i = times.begin(); i != times.end(); ++i) {
 		qSort(*i);
-		sum += (*i)[iter / 16];
+		sum += (*i)[iter / 2];
+	}
+	uint64_t capsum=0;
+	for (QVector<Sample>::Iterator i = captimes.begin(); i != captimes.end(); ++i) {
+		qSort(*i);
+		capsum += (*i)[iter / 2];
 	}
 	for (QVector<Sample>::Iterator i = movetimes.begin(); i != movetimes.end(); ++i) {
 		qSort(*i);
-		movesum += (*i)[iter / 16];
+		movesum += (*i)[iter / 2];
 	}
 
 	QTextStream xout(stderr);
     xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << 3750.0*nmoves/sum << " generated Mmoves/s, " << 3750.0*nmoves/movesum << " executed Mmoves/s" << endl;
-	xout << blah;
+    xout << ncap << " Captures, " << capsum/ncap << " Clocks, " << 3750.0*ncap/capsum << " generated Mmoves/s, " /*<< 3750.0*ncap/movesum << " executed Mmoves/s" */<< endl;
+	xout << blah << endl;
 	xout << dec;
 
 }

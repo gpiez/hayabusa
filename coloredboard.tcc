@@ -76,11 +76,11 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
     xmm0 = _mm_load_si128((__m128i*)pieces+4);
     xmm1 = _mm_load_si128((__m128i*)pieces+5);
     xmm2 = _mm_load_si128((__m128i*)pieces+6);
-    xmm3 = _mm_load_si128((__m128i*)pieces+7);
+//    xmm3 = _mm_load_si128((__m128i*)pieces+7);
     _mm_store_si128((__m128i*)next->pieces+4 , xmm0);
     _mm_store_si128((__m128i*)next->pieces+5, xmm1);
     _mm_store_si128((__m128i*)next->pieces+6, xmm2);
-    _mm_store_si128((__m128i*)next->pieces+7, xmm3);
+//    _mm_store_si128((__m128i*)next->pieces+7, xmm3);
 
     next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
     

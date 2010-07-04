@@ -47,10 +47,16 @@ struct SquareEval {
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986 );
 
+struct CompoundScore {
+	RawScore    opening;
+	RawScore    endgame;
+};
+
 union KeyScore {
     struct {
-        RawScore    score;
-        RawScore    endgame;
+    	RawScore    score;
+    	RawScore    endgame;
+//    	CompoundScore  score;
         PawnKey        pawnKey;
         Key            key;
     };
@@ -99,11 +105,11 @@ class Eval {
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
     
     RawScore controls[nSquares];
-    static uint32_t borderTab4_0[nSquares];
+/*    static uint32_t borderTab4_0[nSquares];
     static uint32_t borderTab321[nSquares];
     static uint32_t borderTab567[nSquares];
     static __v16qi kMask0[nSquares];
-    static __v16qi kMask1[nSquares];
+    static __v16qi kMask1[nSquares];*/
     static __thread PawnEntry pawnEntry;
     void initPS();
     void initZobrist();
@@ -111,8 +117,10 @@ class Eval {
     unsigned int attackHash( unsigned int  pos );
     int squareControl();
 
+    template<Colors C>
     RawScore mobility(const BoardBase&) const;
     RawScore defense(const BoardBase&) const;
+    template<Colors C>
     RawScore attack(const BoardBase&) const;
     RawScore pieces(const PieceList&, int) const;
     RawScore pawns(const BoardBase&) const;

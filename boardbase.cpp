@@ -28,7 +28,6 @@ __v2di BoardBase::dir02mask[nSquares]; // 1 KByte  file : row, including square
 __v2di BoardBase::dir13mask[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
 __v2di BoardBase::doublebits[nSquares]; // 1 KByte    1<<sq  : 1<<sq
 __v2di BoardBase::doublereverse[nSquares]; // 1 KByte    1<<sq  : 1<<sq
-const __v16qi BoardBase::swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
 uint64_t BoardBase::knightAttacks[nSquares];
 uint64_t BoardBase::kingAttacks[16][nSquares];
 
@@ -120,7 +119,6 @@ void BoardBase::initTables() {
             }
             kingAttacks[mask][x+y*nRows] = p;
         }
-
     }
 }
 
