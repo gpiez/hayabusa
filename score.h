@@ -30,26 +30,30 @@ typedef int16_t RawScore;
 
 template<Colors C> struct ScoreBase
 {
-    RawScore v; //Absolute score. Less is good for black, more is good for white.
+    int v; //Absolute score. Less is good for black, more is good for white.
 
     enum { isNotShared = true };
     
     ScoreBase() {};
     explicit ScoreBase (const ScoreBase& a) { v = a.v; };
     
-    bool operator >= (RawScore a) const {
+    bool operator >= (int a) const {
         if ( C==White ) return v>=a;
         else            return v<=a;
     }
-    bool operator > (RawScore a) const {
+    bool operator <= (int a) const {
+        if ( C==White ) return v<=a;
+        else            return v>=a;
+    }
+    bool operator > (int a) const {
         if ( C==White ) return v>a;
         else            return v<a;
     }
-    bool operator < (RawScore a) const {
+    bool operator < (int a) const {
         if ( C==White ) return v<a;
         else            return v>a;
     }
-    void max(const RawScore b) {
+    void max(const int b) {
         if (*this < b) 
             v = b;
     }
@@ -77,7 +81,7 @@ template<Colors C> struct Score: ScoreBase<C>
 
     using ScoreBase<C>::max;
     
-    bool max(const RawScore b, const Move n)         {
+    bool max(const int b, const Move n)         {
         if (*this < b) {
             v = b;
             m = n;
@@ -125,7 +129,7 @@ public:
         return notReady;
     }
 
-    bool max(const RawScore b)         {
+    bool max(const int b)         {
         std::lock_guard<std::recursive_mutex> lock(valueMutex);
         if (*this < b) {
             v = b;
@@ -133,7 +137,7 @@ public:
         }
         return false;
     }
-    bool max(const RawScore b, const Move n)         {
+    bool max(const int b, const Move n)         {
         std::lock_guard<std::recursive_mutex> lock(valueMutex);
         if (*this < b) {
             v = b;
