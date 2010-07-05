@@ -87,36 +87,21 @@ template<Colors C, Phase P, typename A, typename B, typename T>
 bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, const A& alpha, B& beta) {
     stats.node++;
     KeyScore estimate;
-#ifdef BITBOARD
     estimate.vector = prev.estimatedEval(m, eval);
     RawScore& eE = estimatedError[nPieces + C*(m.piece()&7)][m.to()];
-#else    
-    uint64_t nextcep;
-    estimate.vector = prev.estimatedEval(m, eval, nextcep);
-    RawScore& eE = estimatedError[nPieces + prev.pieces[m.from]][m.to];
-#endif    
     if (P == leaf || P == vein) {
         ScoreBase<C> current(alpha);
-        current.max(estimate.score-C*eE);
+        current.max(estimate.score.calc(prev, eval)-C*eE);
         if (current >= beta.v) {  // from the view of beta, current is a bad move,
             stats.leafcut++;    // so neither update beta nor return true
             return false;
         }
     }
-#ifdef BITBOARD
     Key z;
     const ColoredBoard<C> b(prev, m, estimate.vector);
     if (P != vein) {
         z = b.getZobrist();
     }
-#else
-    Key z;
-    if (P != vein) {
-        z = estimate.key + nextcep + (C+1);
-        tt->prefetchSubTable(z);
-    }
-    const ColoredBoard<C> b(prev, m, estimate.vector, nextcep);
-#endif    
 	if (WorkThread::isMain) *currentLine++ = m;
 
 //    std::string moves;
@@ -125,7 +110,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
 //    std::cout << std::setw(7) << alpha.v << std::setw(7) << beta.v << " " << moves << " ### " << stats.node;
 //    usleep(100000);
 
-    ASSERT(b.keyScore.score == estimate.score);
+    ASSERT(b.keyScore.score.calc(prev, eval) == estimate.score.calc(prev, eval));
     ASSERT(P == vein || z == b.getZobrist());
     if (prev.CI == b.CI) {
         if (b.template inCheck<(Colors)-C>()) {
@@ -142,6 +127,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
     Move ttMove(0,0,0);
     unsigned int ttDepth = 0;
     A current(alpha);    // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
+//    if (abs(current.v) == 2) asm("int3");
     bool alreadyVisited;
     bool betaNode = false;
     bool alphaNode = false;
@@ -185,9 +171,12 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
     Move* end;
     if ((P == leaf || P == vein) /*&& (b.template attacks<(C-Black)/2>(b.pieceList[(White-C)/2].getKing()) & attackMask) == 0*/) {
         stats.eval++;
-        RawScore realScore = eval.eval(b);
+        int realScore = eval.eval(b);
         current.max(realScore);
-        RawScore error = C*(estimate.score - realScore);
+//        if (abs(current.v) == 2) asm("int3");
+
+        static const int minEstimatedError = 10;
+        int error = C*(estimate.score.calc(b, eval) - realScore) + minEstimatedError;
         if (WorkThread::isMain) {
             if (eE < error) eE = error;
             else eE--;
@@ -222,11 +211,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
 //    // move best move from tt / history to front
     if (ttMove.data)
         for (Move* i = list; i<end; ++i)
-#ifdef BITBOARD            
             if ((ttMove.from() == i->from()) & (ttMove.to() == i->to())) {
-#else
-            if ((ttMove.from == i->from) & (ttMove.to == i->to)) {
-#endif                
                 ttMove = *i;
                 *i = *list;
                 *list = ttMove;
@@ -265,15 +250,19 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
             if (depth <= 1 /*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
                 search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
             else { // possible null search in tree or trunk
-                typename B::Base null;
-                null.v = current.v + C;
-                if (depth > 1 && current.v != -infinity*C && (i != list || !betaNode)) {
+            	bool pruneNull = false;
+            	if (depth > 1 && current.v != -infinity*C && (i != list || betaNode)) {
+            		typename B::Base null;
+            		typename A::Base nalpha(current);
+            		null.v = current.v + C;
+//                nalpha(alpha);
                     if (depth > 4)
-                        search<C, tree>(b, *i, depth-4, current, null);
+                        search<C, tree>(b, *i, depth-4, nalpha, null);
                     else
-                        search<C, leaf>(b, *i, 0, current, null);
+                        search<C, leaf>(b, *i, 0, nalpha, null);
+                    pruneNull = nalpha >= null.v;
                 }
-                if (current < null.v) {
+            	if (!pruneNull) {
                     if (P == tree || A::isNotShared || depth < Options::splitDepth) {
             /*                if (i != list)
                                 search<(Colors)-C, tree>(b, *i, depth-1, null, current);
@@ -329,7 +318,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
         stored.from |= current.m.from();
         stored.to |= current.m.to();
         if (!alreadyVisited && WorkThread::isMain) tt->unmark(st);
-        if (!alreadyVisited && current.v)    // don't overwerite current variant
+        if (!alreadyVisited)    // don't overwerite current variant
             tt->store(st, stored);
     }
 //    std::cout << std::setw(7) << alpha.v << std::setw(7) << beta.v << " " << moves;
