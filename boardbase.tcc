@@ -25,14 +25,6 @@
 
 #ifdef BITBOARD
 
-union Xmm {
-    __v2di xmm;
-    struct {
-        uint64_t hi;
-        uint64_t lo;
-    };
-};
-
 inline __v2di BoardBase::build13Attack(const unsigned sq) const {
 	const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
 
@@ -59,16 +51,14 @@ inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
     maskedDir02 &= mask02x[sq];
     return maskedDir02;
+//    return _mm_set1_epi64x(att0Tab[attLen0[sq]][sq], att2Tab[attLen2[sq]][sq]);
 }
 
 template<Colors C>
 void BoardBase::buildAttacks() {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     uint64_t p, a;
-    const __v2di o = occupied2;
-    const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
     const __v2di zero = _mm_set1_epi64x(0);
-    const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
 
     p = getPieces<C, Knight>();
     a = 0;
@@ -151,8 +141,7 @@ void BoardBase::buildAttacks() {
 template<Colors C>
 void BoardBase::buildPins() {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-    const __v2di o = occupied2;
-
+    
     uint64_t p = getPieces<C, King>();
     uint64_t sq = bit(p);
     getAttacks<C, All>() |= getAttacks<C, King>() = kingAttacks[0][sq];
