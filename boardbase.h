@@ -106,6 +106,11 @@ struct BoardBase {
         return pieces[nPieces + C*P];
     }
     template<int C>
+    uint64_t getPieces(unsigned int p) const {
+        ASSERT(p <= King && p>=0);
+        return pieces[nPieces + C*p];
+    }
+    template<int C>
     uint64_t& getPieces(unsigned int p) {
         ASSERT(p <= King && p>=0);
         return pieces[nPieces + C*p];
