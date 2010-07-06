@@ -417,11 +417,11 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
 	 * attacking piece are on one line. Although neither pawn is pinned, the capture
 	 * is illegal, since both pieces are removed and the king will be in check
      */
-    if (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & cep.enPassant<<1 & getPins<C,2+C>())
+    if (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & rank<5>() & cep.enPassant<<1 & getPins<C,2+C>())
     	if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
     		*list++ = Move(bit(p), bit(p) + C*8-1, Pawn, Pawn, true);
 
-    if (uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & cep.enPassant>>1 & getPins<C,2-C>())
+    if (uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & rank<5>() & cep.enPassant>>1 & getPins<C,2-C>())
     	if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
     		*list++ = Move(bit(p), bit(p) + C*8+1, Pawn, Pawn, true);
     
