@@ -49,16 +49,32 @@ Move RootBoard::rootSearch() {
     QDateTime softBudget = startTime.addMSecs( timeBudget/(2*movesToDo) );
     QDateTime hardBudget = startTime.addMSecs( 2*timeBudget / (movesToDo + 1) );
 
+    nMoves = lastMove - firstMove;
     for (depth=2; depth<maxDepth; depth++) {
         QDateTime currentStart = QDateTime::currentDateTime();
         SharedScore<C> alpha; alpha.v = -infinity*C;
         SharedScore<(Colors)-C> beta; beta.v = infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
 //        SearchFlag f = null;
         QTextStream xout(stderr);
-    
+
+        currentMoveIndex = 0;
         for (Move* currentMove = firstMove; currentMove < lastMove; currentMove++) {
+        	currentMoveIndex++;
             //xout << depth << ":" << currentMove->string();
 //            Search<2,2,1,2,8,2,2,1,2,8>::search<(Colors)-C, trunk>(tt, eval, b, *currentMove, depth-1, beta, alpha);
+        	bool pruneNull = false;
+        	if (alpha.v != -infinity*C && currentMove != firstMove) {
+        		SharedScore<(Colors)-C> null;
+        		SharedScore<C> nalpha(alpha);
+        		null.v = alpha.v + C;
+//                nalpha(alpha);
+                if (depth > 4)
+                    search<C, tree>(b, *currentMove, depth-4, nalpha, null);
+                else
+                    search<C, leaf>(b, *currentMove, 0, nalpha, null);
+                pruneNull = nalpha >= null.v;
+            }
+        	if (!pruneNull)
             if (search<(Colors)-C, trunk>(b, *currentMove, depth-1, beta, alpha)) {
                 bestMove = *currentMove;
                 *currentMove = *firstMove;
