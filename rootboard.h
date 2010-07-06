@@ -62,6 +62,8 @@ class RootBoard {
     RawScore estimatedError[nPieces*2+1][nSquares];
     Move line[nMaxGameLength];
     Move* currentLine;
+    int currentMoveIndex;
+    int nMoves;
 
 public:
     Eval eval;

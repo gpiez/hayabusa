@@ -59,6 +59,10 @@ StatWidget::StatWidget(const RootBoard& rb):
     QFont fixed;
     fixed.setFamily("Consolas");
     bestLine->setFont(fixed);
+    QSizePolicy sp;
+    sp = widgetBoard->sizePolicy();
+    sp.setHeightForWidth(true);
+    widgetBoard->setSizePolicy(sp);
     QTimer* t = new QTimer(this);
     connect(t, SIGNAL(timeout()), this, SLOT(update()));
     qRegisterMetaType<uint64_t>("uint64_t");

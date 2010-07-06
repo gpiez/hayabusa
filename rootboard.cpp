@@ -222,7 +222,9 @@ void RootBoard::ttClear()
 }
 
 std::string RootBoard::getLine() const {
-    std::string temp;
+    std::stringstream ss;
+    ss << std::setw(2) << currentMoveIndex << "/" << std::setw(2) << nMoves << " ";
+    std::string temp(ss.str());
     for (const Move* i=line; i<currentLine; ++i) {
         temp += i->string() + " ";
     }
