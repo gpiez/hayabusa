@@ -43,6 +43,9 @@ struct Move {
     unsigned int to() const {
         return (uint8_t)(data >> 8);
     }
+    unsigned int fromto() const {
+        return (uint16_t)data;
+    }
     unsigned int capture() const {
         return (uint8_t)(data >> 16);
     }

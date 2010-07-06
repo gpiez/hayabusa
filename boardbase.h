@@ -134,9 +134,10 @@ struct BoardBase {
     bool inCheck() const {
         return getPieces<C,King>() & getAttacks<-C,All>();
     }
-    template<Colors C> void setPiece(unsigned int piece, unsigned int pos) {
+    template<Colors C> void setPiece(unsigned int piece, unsigned int pos, const Eval& e) {
         getPieces<C>(piece) |= 1ULL << pos;
         occupied2 |= _mm_set1_epi64x(1ULL << pos);
+        keyScore.vector += e.getKSVector(C*piece, pos);
     }
 
     inline __v2di build02Attack(const unsigned sq) const;

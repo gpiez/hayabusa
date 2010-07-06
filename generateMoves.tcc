@@ -317,18 +317,18 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
             if (check == 16) {
             	// attack by knight, try to capture it.
                 if (uint64_t p = knightAttacks[kingSq] & getPieces<-C, Knight>())
-                    generateTargetCapture<true>(list, p, Knight);
+                    generateTargetCapture<true>(list, list, p, Knight);
             } else if (check & 0xf) {
             	// attack by a single sliding piece. determine position
             	// and try to capture it. generate blocking moves
             	uint64_t i02 = fold(kingIncoming[CI].d02) & getAttacks<C,All>();
             	uint64_t i13 = fold(kingIncoming[CI].d13) & getAttacks<C,All>();
                 if (uint64_t p = (i02|i13) & getPieces<-C,Queen>())
-                    generateTargetCapture<true>(list, p, Queen);
+                    generateTargetCapture<true>(list, list, p, Queen);
                 if (uint64_t p = i02 & getPieces<-C,Rook>())
-                    generateTargetCapture<true>(list, p, Rook);
+                    generateTargetCapture<true>(list, list, p, Rook);
                 if (uint64_t p = i13 & getPieces<-C,Bishop>())
-                    generateTargetCapture<true>(list, p, Bishop);
+                    generateTargetCapture<true>(list, list, p, Bishop);
 
                 if (uint64_t p = datt[EI].d[bit(check)] & kingIncoming[CI].d[bit(check)] & ~occupied1)
                     generateTargetMove(list, p);
@@ -341,7 +341,7 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
                     pawn = (king >> 9 & 0x7f7f7f7f7f7f7f7f) + (king >> 7 & 0xfefefefefefefefe);
                 pawn &= getPieces<-C, Pawn>();
                 ASSERT(popcount(pawn)==1);
-                generateTargetCapture<true>(list, pawn, Pawn);
+                generateTargetCapture<true>(list, list, pawn, Pawn);
                 if (pawn == cep.enPassant) {
 					if (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & cep.enPassant<<1 & getPins<C,2+C>())
 						*list++ = Move(bit(p), bit(p) + C*8-1, Pawn, Pawn, true);
@@ -394,7 +394,9 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
         return list;
     }
 
-    list = generateCaptureMoves<true>( list );
+    Move* badStart = list + 192;
+    Move* bad = badStart;
+    list = generateCaptureMoves<true>( list, bad );
 
     unsigned int from, to;
     for (uint64_t p = getPieces<C,Pawn>() & ~rank<7>() & shift<-C*8>(~occupied1) & getPins<C,2>(); p; p &= p-1) {
@@ -792,6 +794,8 @@ Move* ColoredBoard<C>::generateMoves(Move* list) const {
         *list++ = (Move) {{ from, to, }};
 
 #endif    
+    for (Move* i=badStart; i<bad; ++i)
+        	*list++ = *i;
     return list;
 }
 

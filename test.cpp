@@ -90,10 +90,11 @@ void TestRootBoard::generateCaptures() {
 
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			tsc = (a + (d << 32));
+			Move* bad=list;
 			if (color[i] == White)
-				end = b->boards[i].wb.generateCaptureMoves<false>(list);
+				end = b->boards[i].wb.generateCaptureMoves<false>(list, bad);
 			else
-				end = b->boards[i].bb.generateCaptureMoves<false>(list);
+				end = b->boards[i].bb.generateCaptureMoves<false>(list, bad);
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			ncap += end - list;
 			captimes[i][j] = (a + (d << 32)) - tsc - overhead;

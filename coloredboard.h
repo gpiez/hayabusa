@@ -47,7 +47,7 @@ public:
 #ifdef BITBOARD
     template<typename T> ColoredBoard(const T& prev, Move m, __v8hi est);
     inline __v8hi estimatedEval(const Move m, const Eval& rb) const;
-    template<bool> void generateTargetCapture(Move* &list, uint64_t to, unsigned int cap) const;
+    template<bool> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned int cap) const;
 #else
     ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, const Eval&);
     ColoredBoard(const ColoredBoard<(Colors)-C>& prev, Move m, __v8hi est, uint64_t cep);
@@ -65,7 +65,7 @@ public:
         return *(ColoredBoard<(Colors)-C>*)(void*)this;
     }*/
     static void initTables();
-    template<bool> Move* generateCaptureMoves(Move* list) const;
+    template<bool> Move* generateCaptureMoves(Move* list, Move* &bad) const;
     Move* generateMoves(Move* list) const;
     template<typename T>
     void doMove(T* next, Move m) const;

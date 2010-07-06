@@ -185,17 +185,25 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
 
     Move list[256];
     Move* end;
-    if ((P == leaf || P == vein) /*&& (b.template attacks<(C-Black)/2>(b.pieceList[(White-C)/2].getKing()) & attackMask) == 0*/) {
+    if (P == leaf || P == vein) {
         stats.eval++;
         int realScore = eval.eval(b);
         current.max(realScore);
 //        if (abs(current.v) == 2) asm("int3");
 
-        static const int minEstimatedError = 10;
+        static const int minEstimatedError = 100;
         int error = C*(estimate.score.calc(b, eval) - realScore) + minEstimatedError;
         if (WorkThread::isMain) {
             if (eE < error) eE = error;
             else eE--;
+        }
+        if (current >= beta.v) {  // from the view of beta, current is a bad move,
+            stats.leafcut++;    // so neither update beta nor return true
+            if (P!=vein)
+            	if (WorkThread::isMain && !alreadyVisited) tt->unmark(st);
+        	if (WorkThread::isMain) --currentLine;
+            return false;
+
         }
         // if (P==leaf) std::cout << " leaf " << current.v << std::endl;
         // else std::cout << " vein " << current.v << std::endl;
@@ -211,8 +219,13 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
                 if (i->capture())
                     *j++ = *i;
             end = j;
-        } else
-            end = b.template generateCaptureMoves<false>(list);
+        } else {
+            Move* badStart = list + 192;
+            Move* bad = badStart;
+            end = b.template generateCaptureMoves<false>(list, bad);
+        	for (Move* i=badStart; i<bad; ++i)
+        	  	*end++ = *i;
+        }
     } else {
         end = b.generateMoves(list);
         if (end == list) {
@@ -224,24 +237,51 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
 
 //    TestGame::recordBoard(C, b);
 
-//    // move best move from tt / history to front
-    if (ttMove.data)
-        for (Move* i = list; i<end; ++i)
-            if ((ttMove.from() == i->from()) & (ttMove.to() == i->to())) {
-                ttMove = *i;
-                *i = *list;
-                *list = ttMove;
+/*
+    for (Move* i = list; i<end; ++i) {
+        if(currentLine->fromto() == i->fromto()) {
+        	Move first = list[0];
+        	list[0] = *i;
+            for (Move* j = list+1; j<i; ++j) {
+                Move second = *j;
+                *j = first;
+                first = second;
+            }
+            *i = first;
+        }
+    }
+*/
+
+    // move best move from tt / history to front
+    if (ttMove.data && ttMove.fromto() != list[0].fromto()) {
+    	Move first = list[0];
+        for (Move* i = list+1; i<end; ++i) {
+            Move second = *i;
+            if (ttMove.fromto() == second.fromto()) {
+                list[0] = second;
                 break;
             }
+            *i = first;
+            first = second;
+        }
+    }
 
-    for (unsigned int d = ((ttDepth+1)&~1) + (~depth&1) + 1; d < depth; d+=2) {
+    if (0 && !alphaNode)
+    for (unsigned int d = (depth+1)%2 + 1; d < depth; d+=2) {
+    	if (d<=ttDepth) continue;
         for (Move* i = list; i<end; ++i) {
             ASSERT(d>0);
             if (d == 1 ? search<(Colors)-C, leaf, B, A>(b, *i, 0, beta, current)
                 : search<(Colors)-C, tree, B, A>(b, *i, d-1, beta, current)) {
                 ASSERT(current.m.data == i->data);
-                *i = *list;
-                *list = current.m;
+            	Move first = list[0];
+            	list[0] = current.m;
+                for (Move* j = list+1; j<i; ++j) {
+                    Move second = *j;
+                    *j = first;
+                    first = second;
+                }
+                *i = first;
             }
             if (current >= beta.v) {
                 if (d+2 >= depth)
@@ -267,7 +307,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
                 search<(Colors)-C, leaf>(b, *i, 0, (typename B::Base&)beta, current);
             else { // possible null search in tree or trunk
             	bool pruneNull = false;
-            	if (depth > 1 && current.v != -infinity*C && (i != list || betaNode)) {
+            	if (depth > 1 && current.v != -infinity*C && (i != list || alphaNode)) {
             		typename B::Base null;
             		typename A::Base nalpha(current);
             		null.v = current.v + C;
@@ -315,6 +355,8 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
         }
     }
 
+    if (current >= beta.v)
+    	*currentLine = current.m;
     // if there are queued jobs started from _this_ node, do them first
     if (P == trunk) {
         Job* job;
