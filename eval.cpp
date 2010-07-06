@@ -659,41 +659,17 @@ int Eval::attack(const BoardBase& b) const {
 int Eval::eval(const BoardBase& b) const {
 #if defined(MYDEBUG)
     int value = 0;
-#ifdef BITBOARD
-#else
-    for (int pi = 0; pi <= 1; ++pi) {
-        int C = 1-pi*2;
-        uint8_t king = b.pieceList[pi].getKing();
-        value += getPS(C*King, king);
-        for (uint8_t i = b.pieceList[pi][Pawn]; i > 0;) {
-            --i;
-            uint8_t pawn = b.pieceList[pi].getPawn(i);
-            value += getPS(C*Pawn, pawn);
-        }
-        for (uint8_t i = b.pieceList[pi][Rook]; i > 0;) {
-            --i;
-            uint8_t rook = b.pieceList[pi].get(Rook, i);
-            value += getPS(C*Rook, rook);
-        }
-        for (uint8_t i = b.pieceList[pi][Bishop]; i > 0;) {
-            --i;
-            uint8_t bishop = b.pieceList[pi].get(Bishop, i);
-            value += getPS(C*Bishop, bishop);
-        }
-        for (uint8_t i = b.pieceList[pi][Knight]; i > 0;) {
-            --i;
-            uint8_t knight = b.pieceList[pi].get(Knight, i);
-            value += getPS(C*Knight, knight);
-        }
-        for (uint8_t i = b.pieceList[pi][Queen]; i > 0;) {
-            --i;
-            uint8_t queen = b.pieceList[pi].get(Queen, i);
-            value += getPS(C*Queen, queen);
-        }
+    for (int p=Rook; p<=King; ++p) {
+    	for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
+    		unsigned sq=bit(x);
+    		value += getPS( p, sq).calc(b, *this);
+    	}
+    	for (uint64_t x=b.getPieces<Black>(p); x; x&=x-1) {
+    		unsigned sq=bit(x);
+    		value += getPS(-p, sq).calc(b, *this);
+    	}
     }
-    if (value != b.keyScore.score) asm("int3");
-#endif
-
+    if (value != b.keyScore.score.calc(b, *this)) asm("int3");
 #endif
     pawns(b);
     return b.keyScore.score.calc(b, *this) + pawns(b)
