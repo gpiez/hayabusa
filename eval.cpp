@@ -590,41 +590,7 @@ inline int Eval::mobility(const BoardBase& b) const {
 //
 template<Colors C>
 void Eval::EvalMate(const ColoredBoard<C>& b) const {
-#ifdef BITBOARD
-#else
-    uint8_t oking = b.getOKing();
-    uint64_t offset = (oking + 010) & 020;    // 070-077 -> 080, 060-067 -> 060
-    const __v16qi zero = _mm_set1_epi8(0);
-    const __v16qi low4bits = _mm_set1_epi8(0xf);
-    const __v16qi mateBits = _mm_set_epi8(0,0,0,2,0,4,6,6,0,8,10,10,12,12,14,14);
-    __v16qi m0 = kMask0[oking];
-    __v16qi m1 = kMask1[oking];
-    __v16qi p0 = (_mm_load_si128(&b.pieces[offset]) & m0) < zero;
-    __v16qi p1 = (_mm_load_si128(&b.pieces[offset-0x10]) & m1) < zero;
-    __v16qi sa0 = _mm_load_si128(&b.shortAttack[b.CI][offset]) & m0;
-    __v16qi sa1 = _mm_load_si128(&b.shortAttack[b.CI][offset-0x10]) & m1;
-    sa0 |= _mm_srli_epi16(sa0, nNBits);
-    sa1 |= _mm_srli_epi16(sa1, nNBits);
-    __v16qi la0 = _mm_load_si128(&b.longAttack[b.CI][offset]) & m0;
-    __v16qi la1 = _mm_load_si128(&b.longAttack[b.CI][offset-0x10]) & m1;
-//B bit 2->2, R bit 0->1, Q bit 4->3
-    la0 |= (la0 + la0) | (__v16qi)_mm_srli_epi16(la0, nRBits + nBBits - 3) | sa0;
-    la1 |= (la1 + la1) | (__v16qi)_mm_srli_epi16(la1, nRBits + nBBits - 3) | sa1;
-    la0 &= low4bits;
-    la1 &= low4bits;
-    la0 = _mm_shuffle_epi8(mateBits, la0);
-    la1 = _mm_shuffle_epi8(mateBits, la1);
-    la0 = _mm_slli_epi16(la0, 4);
-    la1 = _mm_slli_epi16(la1, 4);
-    __v16qi ed0 = zero == ((_mm_load_si128(&b.shortAttack[b.EI][offset]) | _mm_load_si128(&b.longAttack[b.EI][offset])) & m0);
-    __v16qi ed1 = zero == ((_mm_load_si128(&b.shortAttack[b.EI][offset-0x10]) | _mm_load_si128(&b.longAttack[b.EI][offset-0x10])) & m1);
-#endif
-
-    /*    p4_0 |= (reinterpret_cast<uint32_t&>(b.longAttack[(1-C)/2][oking-1]) & (attackMaskLong | attackMaskLong << 8 | attackMaskLong << 16));
-        p4_0 |= borderTab4_0[oking];
-        uint32_t p321 = reinterpret_cast<uint32_t&>(b.pieces[oking+7]) | borderTab321[oking];
-        uint32_t p567 = reinterpret_cast<uint32_t&>(b.pieces[oking-9]) | borderTab567[oking];
-        uint64_t king8 = (p321 & 0xffffff) + ((p4_0 & 0xffL) << 24) + ((p4_0 & 0xff0000L) << 32) + ((p567 & 0xffffffL) << 40);*/
+	uint64_t esacpes;
 }
 
 static const int kattTable[] = { 5, 6, 8, 10, 10, 10, 10, 10, 10 };

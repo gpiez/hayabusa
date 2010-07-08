@@ -106,6 +106,16 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned int depth, co
     stats.node++;
     KeyScore estimate;
     estimate.vector = prev.estimatedEval(m, eval);
+/*
+    prefetching is not very effective for core2, probably because each access
+    is completely random and causes not only a cache miss, but additionally a
+    tlb miss, which stalls the processor almost als long as the actual memory
+    access would without. It gets slightly more useful, if 2M pages are used.
+    Speed increase measured as 1-2% with 4k pages and ~5% witch 2M pages. 2M
+    alone increase the speed by ~2%.
+*/
+    if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
+
     RawScore& eE = estimatedError[nPieces + C*(m.piece()&7)][m.to()];
     if (P == leaf || P == vein) {
         ScoreBase<C> current(alpha);

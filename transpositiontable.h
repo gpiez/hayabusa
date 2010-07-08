@@ -66,7 +66,7 @@ public:
         return &table[k & mask];
     }
     void prefetchSubTable( Key k ) {
-        _mm_prefetch(&table[k & mask], _MM_HINT_T1);
+        _mm_prefetch(&table[k & mask], _MM_HINT_NTA);
     }
 
     bool retrieve(const SubTable* subTable, Key k, Entry& ret, bool&) const ;
