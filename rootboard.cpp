@@ -176,21 +176,21 @@ void RootBoard::go(QStringList )
 		job = new RootSearchJob<White>(*this);
 	else
 		job = new RootSearchJob<Black>(*this);
-	WorkThread::findFree()->startJob(job);
+	WorkThread::findFree()->queueJob(0, job);
 }
 
 void RootBoard::perft(unsigned int depth) {
 	if (color == White)
-		WorkThread::findFree()->startJob(new RootPerftJob<White>(*this, depth));
+		WorkThread::findFree()->queueJob(0, new RootPerftJob<White>(*this, depth));
 	else
-		WorkThread::findFree()->startJob(new RootPerftJob<Black>(*this, depth));
+		WorkThread::findFree()->queueJob(0, new RootPerftJob<Black>(*this, depth));
 }
 
 void RootBoard::divide(unsigned int depth) {
 	if (color == White)
-		WorkThread::findFree()->startJob(new RootDivideJob<White>(*this, depth));
+		WorkThread::findFree()->queueJob(0, new RootDivideJob<White>(*this, depth));
 	else
-		WorkThread::findFree()->startJob(new RootDivideJob<Black>(*this, depth));
+		WorkThread::findFree()->queueJob(0, new RootDivideJob<Black>(*this, depth));
 }
 
 void update(uint64_t& r, uint64_t v) {

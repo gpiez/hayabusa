@@ -72,6 +72,7 @@ enum Phase { root, trunk, tree, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
 
+static const int nullReduction = 3;
 static const int initialError = 100;
 static const unsigned int nHashPassers = 2;
 static const unsigned int nTTLocks = 1;

@@ -50,14 +50,13 @@ void TestRootBoard::generateCaptures() {
 	QVector<Sample> times(testCases, Sample(iter));
 	QVector<Sample> movetimes(testCases, Sample(iter));
 	QVector<Sample> captimes(testCases, Sample(iter));
-	Move list[256];
+	Move moveList[256];
 	uint64_t sum=0;
 	uint64_t movesum=0;
 	uint64_t nmoves=0;
 	uint64_t ncap =0;
 	uint64_t a, d, tsc;
 	Key blah;
-	Move* end;
 	Colors color[testCases];
 	for (unsigned int i = testCases; i;) {
 		--i;
@@ -90,25 +89,26 @@ void TestRootBoard::generateCaptures() {
 
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			tsc = (a + (d << 32));
-			Move* bad=list;
+			Move* good = moveList+192;
+			Move* bad = good;
 			if (color[i] == White)
-				end = b->boards[i].wb.generateCaptureMoves<false>(list, bad);
+				b->boards[i].wb.generateCaptureMoves<false>(good, bad);
 			else
-				end = b->boards[i].bb.generateCaptureMoves<false>(list, bad);
+				b->boards[i].bb.generateCaptureMoves<false>(good, bad);
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
-			ncap += end - list;
+			ncap += bad - good;
 			captimes[i][j] = (a + (d << 32)) - tsc - overhead;
 
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			tsc = (a + (d << 32));
 			if (color[i] == White)
-				end = b->boards[i].wb.generateMoves(list);
+				b->boards[i].wb.generateMoves(good, bad);
 			else
-				end = b->boards[i].bb.generateMoves(list);
+				b->boards[i].bb.generateMoves(good, bad);
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
-			nmoves += end - list;
+			nmoves += bad - good;
 			times[i][j] = (a + (d << 32)) - tsc - overhead;
-			for (Move* k=list; k<end; ++k) {
+			for (Move* k=good; k<bad; ++k) {
 //				std::cout << k->string() << std::endl;
 				asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 				tsc = (a + (d << 32));
@@ -154,35 +154,35 @@ void TestRootBoard::perft() {
 //	Zobrist::test();
 
 	b->setup("4k2r/8/8/8/8/6nB/8/4K2R w Kk - 0 1");
-  	WorkThread::findFree()->startJob(new RootPerftJob<White>(*b, 8));
+  	WorkThread::findFree()->queueJob(0, new RootPerftJob<White>(*b, 8));
  	QCOMPARE( c->getAnswer(), std::string("9941334384"));
 
  	b->setup("rnbqk2r/pppp1Np1/8/2b4p/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 1");
- 	WorkThread::findFree()->startJob(new RootPerftJob<White>(*b, 6));
+ 	WorkThread::findFree()->queueJob(0, new RootPerftJob<White>(*b, 6));
  	QCOMPARE( c->getAnswer(), std::string("1273001810"));
 
 	b->setup("r3k2r/B1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1");
-	WorkThread::findFree()->startJob(new RootPerftJob<Black>(*b, 5));
+	WorkThread::findFree()->queueJob(0, new RootPerftJob<Black>(*b, 5));
 	QCOMPARE( c->getAnswer(), std::string("176577789"));
 
 	b->setup("5n1n/4kPPP/////pppK4/N1N5 w - - 0 1");
-	WorkThread::findFree()->startJob(new RootPerftJob<White>(*b, 6));
+	WorkThread::findFree()->queueJob(0, new RootPerftJob<White>(*b, 6));
 	QCOMPARE( c->getAnswer(), std::string("71179139"));
 
 	b->setup("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1");
-	WorkThread::findFree()->startJob(new RootPerftJob<Black>(*b, 6));
+	WorkThread::findFree()->queueJob(0, new RootPerftJob<Black>(*b, 6));
 	QCOMPARE( c->getAnswer(), std::string("71179139"));
 
 	b->setup();
-	WorkThread::findFree()->startJob(new RootPerftJob<White>(*b, 6));
+	WorkThread::findFree()->queueJob(0, new RootPerftJob<White>(*b, 6));
 	QCOMPARE( c->getAnswer(), std::string("119060324"));
 
 	b->setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-	WorkThread::findFree()->startJob(new RootPerftJob<White>(*b, 5));
+	WorkThread::findFree()->queueJob(0, new RootPerftJob<White>(*b, 5));
 	QCOMPARE( c->getAnswer(), std::string("193690690"));
 
 	b->setup("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
-	WorkThread::findFree()->startJob(new RootPerftJob<White>(*b, 7));
+	WorkThread::findFree()->queueJob(0, new RootPerftJob<White>(*b, 7));
 	QCOMPARE( c->getAnswer(), std::string("178633661"));
 
 }

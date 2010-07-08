@@ -23,44 +23,14 @@
 
 template<Colors C>
 template<bool UPromo>
-void ColoredBoard<C>::generateTargetCapture(Move* &list, Move* &bad, uint64_t d, const unsigned int cap) const {
+void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d, const unsigned int cap) const {
 	static const int val[nPieces+1] = { 0, 5, 3, 9, 3, 1, 100 };
-	// pawn capture to the absolute right, dir = 1 for white and 3 for black
-	for(uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & shift<-C*8-1>(d) & getPins<C,2-C>();p ;p &= p-1) {
-		unsigned from = bit(p);
-		unsigned to = from + C*8+1;
-		if (rank<7>() & (p&-p)) {
-			*list++ = Move(from, to, Queen, cap, true);
-			if (UPromo) {
-				*list++ = Move(from, to, Knight, cap, true);
-				*list++ = Move(from, to, Rook, cap, true);
-				*list++ = Move(from, to, Bishop, cap, true);
-			}
-		} else
-			*list++ = Move(from, to, Pawn, cap);
-	}
-	// left
-	for (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & shift<-C*8+1>(d) & getPins<C,2+C>();p ;p &= p-1) {
-		unsigned from = bit(p);
-		unsigned to = from + C*8-1;
-		if (rank<7>() & (p&-p)) {
-			*list++ = Move(from, to, Queen, cap, true);
-			if (UPromo) {
-				*list++ = Move(from, to, Knight, cap, true);
-				*list++ = Move(from, to, Rook, cap, true);
-				*list++ = Move(from, to, Bishop, cap, true);
-			}
-		} else
-			*list++ = Move(from, to, Pawn, cap);
-	}
     /*
-     * Knight captures something. Can't move at all if pinned.
+     * King captures something.
      */
-    for ( uint64_t p = getAttacks<C,Knight>() & d; p; p &= p-1 ) {
-        unsigned to = bit(p);
-        Move* &l = cap == Pawn && p & -p & getAttacks<-C,Pawn>() ? bad : list;
-        for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1)
-        	*l++ = Move(bit(f), to, Knight, cap);
+    for ( uint64_t p = getAttacks<C,King>() & d & ~getAttacks<-C,All>(); p; p &= p-1 ) {
+        unsigned from = bit(getPieces<C,King>());
+        *--good = Move(from, bit(p), King, cap);
     }
     /* Check for attacks from sliding pieces. Bishop/Rook/Queen attacks are
      * stored in single[], with a mov template matching the attack in move[]
@@ -98,22 +68,52 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, Move* &bad, uint64_t d,
             for (uint64_t a=fold(pin02|pin13); a; a&=a-1) {
             	Move n;
             	n.data = m.data + Move(0, bit(a), 0, cap).data;
-                Move* &l = val[cap] < val[m.piece()]
-                        && a & -a & (                        getAttacks<-C,Pawn>() |
-                				     ((m.piece() & 1)     ? (getAttacks<-C,Knight>()|getAttacks<-C,Bishop>()) : 0) |
-                				     ((m.piece() == Queen)?  getAttacks<-C,Rook>() : 0)
-                				    ) ? bad : list;
-                *l++ = n;
+            	if ( val[cap] < val[m.piece()] &&
+            		 a & -a & (                        getAttacks<-C,Pawn>() |
+                			   ((m.piece() & 1)     ? (getAttacks<-C,Knight>()|getAttacks<-C,Bishop>()) : 0) |
+                			   ((m.piece() == Queen)?  getAttacks<-C,Rook>() : 0)
+                			  )
+                   ) *bad++ = n;
+            	else *--good = n;
             }
         }
     }
-    /*
-     * King captures something.
-     */
-    for ( uint64_t p = getAttacks<C,King>() & d & ~getAttacks<-C,All>(); p; p &= p-1 ) {
-        unsigned from = bit(getPieces<C,King>());
-        *list++ = Move(from, bit(p), King, cap);
+    // Knight captures something. Can't move at all if pinned.
+    for ( uint64_t p = getAttacks<C,Knight>() & d; p; p &= p-1 ) {
+        unsigned to = bit(p);
+        for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1)
+            if (cap == Pawn && p & -p & getAttacks<-C,Pawn>())
+            	*bad++ = Move(bit(f), to, Knight, cap);
+            else *--good = Move(bit(f), to, Knight, cap);
     }
+	// pawn capture to the absolute right, dir = 1 for white and 3 for black
+	for(uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & shift<-C*8-1>(d) & getPins<C,2-C>();p ;p &= p-1) {
+		unsigned from = bit(p);
+		unsigned to = from + C*8+1;
+		if (rank<7>() & (p&-p)) {
+			if (UPromo) {
+				*--good = Move(from, to, Knight, cap, true);
+				*--good = Move(from, to, Rook, cap, true);
+				*--good = Move(from, to, Bishop, cap, true);
+			}
+			*--good = Move(from, to, Queen, cap, true);
+		} else
+			*--good = Move(from, to, Pawn, cap);
+	}
+	// left
+	for (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & shift<-C*8+1>(d) & getPins<C,2+C>();p ;p &= p-1) {
+		unsigned from = bit(p);
+		unsigned to = from + C*8-1;
+		if (rank<7>() & (p&-p)) {
+			if (UPromo) {
+				*--good = Move(from, to, Knight, cap, true);
+				*--good = Move(from, to, Rook, cap, true);
+				*--good = Move(from, to, Bishop, cap, true);
+			}
+			*--good = Move(from, to, Queen, cap, true);
+		} else
+			*--good = Move(from, to, Pawn, cap);
+	}
 }
 /*
  * Generate all pawn to queen promotions and capture moves for each kind of piece.
@@ -122,44 +122,36 @@ void ColoredBoard<C>::generateTargetCapture(Move* &list, Move* &bad, uint64_t d,
  */
 template<Colors C>
 template<bool UPromo>
-Move* ColoredBoard<C>::generateCaptureMoves( Move* list, Move* &bad) const {
+void ColoredBoard<C>::generateCaptureMoves( Move* &good, Move* &bad) const {
     /*
      * Generate non-capturing queen promotions. Capturing promotions are handled in
      * generateTargetCaptures().
      */
-//	Move* badStart = list+64;
-//	Move* bad = badStart;
+    if (uint64_t p = getPieces<-C,Pawn>() & getAttacks<C,All>())
+        generateTargetCapture<UPromo>(good, bad, p, Pawn);
+
+    if (uint64_t p = getPieces<-C,Knight>() & getAttacks<C,All>())
+        generateTargetCapture<UPromo>(good, bad, p, Knight);
+
+    if (uint64_t p = getPieces<-C,Bishop>() & getAttacks<C,All>())
+        generateTargetCapture<UPromo>(good, bad, p, Bishop);
+
+    if (uint64_t p = getPieces<-C,Rook>() & getAttacks<C,All>())
+        generateTargetCapture<UPromo>(good, bad, p, Rook);
+
+    if (uint64_t p = getPieces<-C,Queen>() & getAttacks<C,All>())
+        generateTargetCapture<UPromo>(good, bad, p, Queen);
 
     uint8_t to, sq;
     for (uint64_t p = getPieces<C,Pawn>() & rank<7>() & shift<-C*8>(~occupied1) & pins[CI]; p; p &= p-1) {
         sq = bit(p);
         to = sq + C*dirOffsets[2];
-        *list++ = Move(sq, to, Queen, 0, true);
         if (UPromo) {
-            *list++ = Move(sq, to, Knight, 0, true);
-            *list++ = Move(sq, to, Rook, 0, true);
-            *list++ = Move(sq, to, Bishop, 0, true);
+            *--good = Move(sq, to, Knight, 0, true);
+            *--good = Move(sq, to, Rook, 0, true);
+            *--good = Move(sq, to, Bishop, 0, true);
         }
+        *--good = Move(sq, to, Queen, 0, true);
     }
-
-    if (uint64_t p = getPieces<-C,Queen>() & getAttacks<C,All>())
-        generateTargetCapture<UPromo>(list, bad, p, Queen);
-
-    if (uint64_t p = getPieces<-C,Rook>() & getAttacks<C,All>())
-        generateTargetCapture<UPromo>(list, bad, p, Rook);
-
-    if (uint64_t p = getPieces<-C,Bishop>() & getAttacks<C,All>())
-        generateTargetCapture<UPromo>(list, bad, p, Bishop);
-
-    if (uint64_t p = getPieces<-C,Knight>() & getAttacks<C,All>())
-        generateTargetCapture<UPromo>(list, bad, p, Knight);
-
-    if (uint64_t p = getPieces<-C,Pawn>() & getAttacks<C,All>())
-        generateTargetCapture<UPromo>(list, bad, p, Pawn);
-
-//    for (Move* i=badStart; i<bad; ++i)
-//    	*list++ = *i;
-
-    return list;
 }
 #endif /* GENERATECAPTUREMOVES_TCC_ */

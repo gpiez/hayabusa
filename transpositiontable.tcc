@@ -207,10 +207,12 @@ std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C
 		ttMove = Move(subentry.from, subentry.to, 0);
 	}
 
-	Move list[256];
-	Move* const end = b.generateMoves(list);
+	Move moveList[256];
+	Move* good=moveList+192;
+	Move* bad=good;
+	b.generateMoves(good, bad);
 	if (ttMove.data)
-		for (Move *i=list; i<end; ++i) {
+		for (Move *i=good; i<bad; ++i) {
 #ifdef BITBOARD            
 			if (i->from() == ttMove.from() && i->to() == ttMove.to()) {
 #else                

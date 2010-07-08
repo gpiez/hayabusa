@@ -69,11 +69,19 @@ template<Colors C> struct Score: ScoreBase<C>
     typedef Score<C> Base;
 
     Score() {};
+    explicit Score (int a) {
+    	v = a;
+    	m.data = 0;
+    }
     explicit Score (const Score& a):
         ScoreBase<C>(a) {
         m.data = 0;
     };
-    
+
+    Score<C>& unshared() {
+    	return *this;
+    }
+
     void join() const {};
     unsigned int isNotReady() const { return 0; }
     void setReady() {};
@@ -95,6 +103,7 @@ template<Colors C> struct SharedScore: public Score<C>
 {
     using Score<C>::v;
     using Score<C>::m;
+
     typedef Score<C> Base;
     
     enum { isNotShared = false };
@@ -121,6 +130,17 @@ public:
         notReady(0)
 //        depending(0)
     {
+    }
+
+    explicit SharedScore(int a):
+        Score<C>(a),
+        notReady(0)
+//        depending(0)
+    {
+    }
+
+    Score<C>& unshared() {
+    	return *(Score<C>*)this;
     }
 
     void join();
