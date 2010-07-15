@@ -69,12 +69,12 @@ struct BoardBase {
     	__v2di d02, d13;
     } single[nColors][2+2+1+8];					//+352
 
-    static __v2di mask02x[nSquares]; // 1 KByte  file : row, excluding square
-    static __v2di dir02mask[nSquares]; // 1 KByte  file : row, excluding square
-    static __v2di dir13mask[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
-    static __v2di doublebits[nSquares]; // 1 KByte    1<<sq  : 1<<sq
-    static __v2di doublereverse[nSquares]; // 1 KByte    1<<sq  : 1<<sq
-    static uint64_t knightAttacks[nSquares];
+    static const __v2di mask02x[nSquares]; // 1 KByte  file : row, excluding square
+    static const __v2di mask02b[nSquares]; // 1 KByte  file : row, excluding square
+    static const __v2di mask13x[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
+    static const __v2di doublebits[nSquares]; // 1 KByte    1<<sq  : 1<<sq
+    static const __v2di doublereverse[nSquares]; // 1 KByte    1<<sq  : 1<<sq
+    static const uint64_t knightAttacks[nSquares];
     static uint64_t kingAttacks[16][nSquares];
     static uint64_t epTab[nPieces+1][nSquares];
     template<int C, Pieces P>

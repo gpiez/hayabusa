@@ -28,20 +28,20 @@
 inline __v2di BoardBase::build13Attack(const unsigned sq) const {
 	const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
 
-    __v2di maskedDirs = occupied2 & dir13mask[sq];
+    __v2di maskedDirs = occupied2 & mask13x[sq];
     __v2di reverse = _mm_shuffle_epi8(maskedDirs, swap16);
     maskedDirs -= doublebits[sq];
     reverse -= doublereverse[sq];
     reverse = _mm_shuffle_epi8(reverse, swap16);
     maskedDirs ^= reverse;
-    maskedDirs &= dir13mask[sq];
+    maskedDirs &= mask13x[sq];
     return maskedDirs;
 }
 
 inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
 
-    __v2di maskedDir02 = (occupied2|b02) & dir02mask[sq];
+    __v2di maskedDir02 = (occupied2|b02) & mask02b[sq];
     uint64_t d0 = _mm_cvtsi128_si64x(maskedDir02);
     uint64_t d2 = _mm_cvtsi128_si64x(_mm_unpackhi_epi64(maskedDir02,maskedDir02));
     d0 <<= 63-sq;
