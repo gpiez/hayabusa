@@ -147,10 +147,13 @@ void WorkThread::stop() {
 }
 
 void WorkThread::stopAll() {
-    std::unique_lock<std::mutex> lock(runningMutex);
+    runningMutex.lock();
     foreach(Job* j, jobs)
         delete j;
     jobs.clear();
+    foreach(WorkThread* th, threads)
+    	th->doStop = true;
+    runningMutex.unlock();
     foreach(WorkThread* th, threads)
         th->stop();
 }
@@ -161,7 +164,7 @@ Job* WorkThread::getJob(Key parent) {
 }
 
 bool WorkThread::canQueued(Key k, int shared) {
-	if (shared >= 2*WorkThread::nThreads-1) return false;
+	if (shared >= 2*(signed)WorkThread::nThreads-1) return false;
     std::unique_lock<std::mutex> lock(runningMutex);
     return (unsigned)jobs.count(k) < nThreads;
 //    return (unsigned)jobs.size() < nThreads;

@@ -59,16 +59,53 @@ StatWidget::StatWidget(const RootBoard& rb):
     QFont fixed;
     fixed.setFamily("Consolas");
     bestLine->setFont(fixed);
+/*
     QSizePolicy sp;
     sp = widgetBoard->sizePolicy();
     sp.setHeightForWidth(true);
     widgetBoard->setSizePolicy(sp);
+*/
+    int pp = 0;
+    for (int i=0; i<50; i++) {
+    	pal[pp++] = QColor(i,i,255-i);
+    }
+    for (int i=0; i<50; i++) {
+    	pal[pp++] = QColor(50, 50+2*i, 205-2*i);
+    }
+    for (int i=0; i<28; i++) {
+    	pal[pp++] = QColor(50+(i*50)/28,150-(i*50)/28,105-(i*5)/55);
+    }
+    for (int i=0; i<28; i++) {
+    	pal[pp++] = QColor(100+(i*50)/28,100+(i*50)/28,100-i*2);
+    }
+    for (int i=0; i<50; i++) {
+    	pal[pp++] = QColor(150+i, 150+i, 44-(i*44)/50);
+    }
+    for (int i=0; i<50; i++) {
+    	pal[pp++] = QColor(150+i, 150-2*i, i);
+    }
+    ASSERT(pp==256);
+
+    minipm[0][Rook] = ww1;
+    minipm[0][Bishop] = ww2;
+    minipm[0][Queen] = ww3;
+    minipm[0][Knight] = ww4;
+    minipm[0][Pawn] = ww5;
+    minipm[0][King] = ww6;
+
+    minipm[1][Rook] = wb1;
+    minipm[1][Bishop] = wb2;
+    minipm[1][Queen] = wb3;
+    minipm[1][Knight] = wb4;
+    minipm[1][Pawn] = wb5;
+    minipm[1][King] = wb6;
+
     QTimer* t = new QTimer(this);
     connect(t, SIGNAL(timeout()), this, SLOT(update()));
     qRegisterMetaType<uint64_t>("uint64_t");
     connect(rb.console, SIGNAL(signalIterationDone(unsigned int, uint64_t, std::string, int)), this, SLOT(updateLine(unsigned int, uint64_t, std::string, int)));
     t->setInterval(1000);
-    update();
+//    update();
     t->start();
 }
 
@@ -133,7 +170,7 @@ void StatWidget::update()
 void StatWidget::updateBoard()
 {
     static int oldsize = 0;
-    int size=qMin( widgetBoard->width(), widgetBoard->height() )/8;
+    int size=qMin( position->width(), position->height() )/8;
     if (size != oldsize) {
         oldsize = size;
         QImage wScaled[6], bScaled[6];
@@ -145,9 +182,10 @@ void StatWidget::updateBoard()
             bScaled[i] = bPieces[i].scaled( QSize( size*11/8, size*11/8 ), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ).copy(size*3/16, size*3/16, size, size);
         }
 
-        QPixmap boardPixmap(widgetBoard->size());
+        QPixmap boardPixmap(position->size());
         boardPixmap.fill(QColor(0, 0, 0, 0));
         QPainter pa( &boardPixmap );
+        pa.setPen(Qt::NoPen);
 
         for ( int x=0; x<8; x++ )
             for ( int y=0; y<8; y++ ) {
@@ -164,7 +202,6 @@ void StatWidget::updateBoard()
 				rb.currentBoard().getPieces<Black,Queen>() & p ? -Queen:
 				rb.currentBoard().getPieces<Black,Bishop>() & p ? -Bishop:
 				rb.currentBoard().getPieces<Black,Rook>() & p ? -Rook:0;
-                pa.setPen(Qt::NoPen);
                 pa.setBrush(QBrush((x^y)&1 ? QColor(128,128,128):QColor(192,192,192) ));
                 pa.drawRect(x*size, y*size, size, size);
                 if ( type > 0 )
@@ -173,10 +210,26 @@ void StatWidget::updateBoard()
                     pa.drawImage( x*size, y*size, bScaled[-type-1] );
             }
 
-        QPalette palette;
-        widgetBoard->setAutoFillBackground(true);
-        palette.setBrush(widgetBoard->backgroundRole(), QBrush(boardPixmap));
-        widgetBoard->setPalette(palette);
+        position->setPixmap(boardPixmap);
     }
+
+    for (int c=-1; c<=1; c+=2)
+    	for (int p=Rook; p<=King; ++p) {
+    		int size = (qMin(ww1->height(), ww1->width()))/8;
+    		QPixmap pm(size*8, size*8);
+	        pm.fill(QColor(0, 0, 0, 0));
+			QPainter pa( &pm );
+            pa.setPen(Qt::NoPen);
+			for ( int x=0; x<8; x++ )
+				for ( int y=0; y<8; y++ ) {
+					int ee = rb.estimatedError[nPieces + c*p][x+(7-y)*8];
+//					int ee = sqrt(rb.avgE2[nPieces + c*p][x+(7-y)*8] / rb.avgN[nPieces + c*p][x+(7-y)*8] - pow(rb.avgE[nPieces + c*p][x+(7-y)*8] / rb.avgN[nPieces + c*p][x+(7-y)*8], 2.0));
+					if (ee > 127) ee = 127;
+					if (ee<-128) ee = -128;
+	                pa.setBrush(QBrush(pal[ee+128]));
+					pa.drawRect(x*size,y*size,size,size);
+				}
+			minipm[(1-c)/2][p]->setPixmap(pm);
+        }
 }
 #endif // QT_GUI_LIB

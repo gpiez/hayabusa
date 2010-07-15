@@ -35,7 +35,8 @@ class StatWidget: public QWidget, private Ui::Statsui
 	
 	const RootBoard& rb;
     QImage wPieces[6], bPieces[6];
-	
+	QColor pal[256];
+	QLabel* minipm[2][7];
 private slots:
 	void update();
     void updateBoard();
