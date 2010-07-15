@@ -27,21 +27,19 @@ int ld(unsigned int x) {
 
 void printTemplate(int WR, int WB, int WQ, int WN, int WP,
                    int BR, int BB, int BQ, int BN, int BP) {
-    QTextStream out(stdout);
     if (abs(WR*5+WB*3+WQ*9+WN*3+WP - BR*5-BB*3-BQ*9-BN*3-BP) > 14) {
-        out << "template<int WP, int BP> struct Search<" <<
+        std::cout << "template<int WP, int BP> struct Search<" <<
         WR << "," << WB << "," << WQ << "," << WN << "," << "WP" << "," <<
         BR << "," << BB << "," << BQ << "," << BN << "," << "BP" <<
-        ">: SearchBase {" << endl;
-        out << "template<Colors C, Phase P, typename A, typename B>" << endl;
-        out << "static bool search(TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt, const Eval& e, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int d, const A& a, B& beta) {" << endl;
-        out << "    return defaultSearch<C,P>(tt, e, b, m, d, a, beta); }};" << endl;
+        ">: SearchBase {" << std::endl;
+        std::cout << "template<Colors C, Phase P, typename A, typename B>" << std::endl;
+        std::cout << "static bool search(TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt, const Eval& e, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int d, const A& a, B& beta) {" << std::endl;
+        std::cout << "    return defaultSearch<C,P>(tt, e, b, m, d, a, beta); }};" << std::endl;
     }
 }
 
 int main(int, char** argv) {
-	QTextStream out(stdout);
-	//out << "pieceList = " << ld(sizeof(shortAttacks[0])) << '\n';
+	//std::cout << "pieceList = " << ld(sizeof(shortAttacks[0])) << '\n';
 
     if (argv[1] && QString("templates") == argv[1]) {
         for (int WR = 0; WR <= 2; ++WR)
@@ -64,28 +62,104 @@ int main(int, char** argv) {
 						if (abs(u*v)==2)
 							if (x+u >= 0 && x+u<8 && y+v>=0 && y+v<8)
 								bits |= 1ULL << (x+u+(y+v)*8);
-				out << showbase << hex << bits << ",";
+				std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ",";
 				if (x == 7)
-					out << endl;
+					std::cout << std::endl;
 				else
-					out << " ";
+					std::cout << " ";
 			}
 	} else if (argv[1] && QString("pawnbits") == argv[1]) {
 		for (int v=1; v>=-1; v-=2) {
-			out << "{";
+			std::cout << "{";
 			for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
 				 {
 					uint64_t bits=0;
 					for (int u=-1; u<=1; u+=2)
 						if (x+u >= 0 && x+u<8 && y+v>=0 && y+v<8)
 							bits |= 1ULL << (x+u+(y+v)*8);
-					out << showbase << hex << bits << ",";
+					std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ",";
 					if (x == 7)
-						out << endl;
+						std::cout << std::endl;
 					else
-						out << " ";
+						std::cout << " ";
 				}
-			out << "}," << endl;
+			std::cout << "}," << std::endl;
+		}
+	} else if (argv[1] && QString("doublebits") == argv[1]) {
+		std::cout << "{";
+		for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
+			 {
+				uint64_t bits= 1ULL << (x+y*8);
+				std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ", 0x" << std::setw(16) << bits << " }, ";
+				if (x == 7)
+					std::cout << std::endl;
+				else
+					std::cout << " ";
+			}
+		std::cout << "}," << std::endl;
+	} else if (argv[1] && QString("doublereverse") == argv[1]) {
+		std::cout << "{";
+		for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
+			 {
+				uint64_t bits= 1ULL << (x+(7-y)*8);
+				std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ", 0x" << std::setw(16) << bits << " }, ";
+				if (x == 7)
+					std::cout << std::endl;
+				else
+					std::cout << " ";
+			}
+		std::cout << "}," << std::endl;
+	} else if (argv[1] && QString("masks") == argv[1]) {
+		for (int y = 0; y < (signed)nRows; ++y)
+		for (int x = 0; x < (signed)nFiles; ++x) {
+			uint64_t p=0;
+			int dx=1, dy=0;
+			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+				p |= 1ULL << (x0+y0*nRows);
+			dx=-1;
+			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+				p |= 1ULL << (x0+y0*nRows);
+			uint64_t dir0 = p;
+			if (x==0)
+				p |= 1ULL << (x+y*nRows);
+			uint64_t dir0x = p;
+
+			p=0; dx=0; dy=1;
+			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+				p |= 1ULL << (x0+y0*nRows);
+			dy=-1;
+			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+				p |= 1ULL << (x0+y0*nRows);
+			uint64_t dir2 = p;
+			if (y==0)
+				p |= 1ULL << (x+y*nRows);
+			uint64_t dir2x = p;
+
+			p=0; dx=1; dy=1;
+			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+				p |= 1ULL << (x0+y0*nRows);
+			dx=-1; dy=-1;
+			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+				p |= 1ULL << (x0+y0*nRows);
+			uint64_t dir1 = p;
+
+			p=0; dx=1; dy=-1;
+			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+				p |= 1ULL << (x0+y0*nRows);
+			dx=-1; dy=1;
+			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+				p |= 1ULL << (x0+y0*nRows);
+			uint64_t dir3 = p;
+
+			std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << dir0x << ", 0x" << std::setw(16) << dir2x << " }, ";
+			if (x == 7)
+				std::cout << std::endl;
+			else
+				std::cout << " ";
+
+//			mask02x[x+y*nRows] = _mm_set_epi64x(dir2, dir0);
+//			mask02b[x+y*nRows] = _mm_set_epi64x(dir2x, dir0x);
+//			mask13x[x+y*nRows] = _mm_set_epi64x(dir3, dir1);
 		}
 	} else if (argv[1] && QString("mobbits") == argv[1]) {
 		for (int d=0; d<4; ++d) {
@@ -104,13 +178,13 @@ int main(int, char** argv) {
 							bits |= 1ULL << bitnr;
 						}
 					}
-					out << showbase << hex << bits << ",";
+					std::cout  << "0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ",";
 					if (r == 7)
-						out << endl;
+						std::cout << std::endl;
 					else
-						out << " ";
+						std::cout << " ";
 				}
-			out << "}," << endl;
+			std::cout << "}," << std::endl;
 		}
 	} else {
 #ifndef BITBOARD        
