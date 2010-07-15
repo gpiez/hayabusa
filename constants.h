@@ -68,7 +68,7 @@ enum SpecialMoves: uint8_t {
 };
 #endif
 
-enum Phase { root, trunk, tree, leaf, vein };
+enum Phase { root, trunk, tree, mate, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
 
@@ -76,7 +76,8 @@ static const int nullReduction = 3;
 static const int initialError = 100;
 static const unsigned int nHashPassers = 2;
 static const unsigned int nTTLocks = 1;
-static const unsigned int nMaxMoves = 256; // maximum possible moves in a position
+static const unsigned int maxMoves = 256; // maximum possible moves in a position
+static const unsigned int goodMoves = 192; // maximum possible good moves in a position
 static const unsigned int nMaxGameLength = 5000; // maximum possible moves in a position
 static const int infinity = 10000;
 static const unsigned int maxDepth = 64;
