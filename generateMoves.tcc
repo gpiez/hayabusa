@@ -166,6 +166,7 @@ void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
         }
 
         // non capturing check evasions
+        ASSERT(popcount(check & 0xf) <= 2);
         for (uint64_t p = kingAttacks[check & 0xf][kingSq] & ~getAttacks<-C, All>() & ~occupied1; p; p &= p-1)
             *bad++ = Move(kingSq, bit(p), King);
 
