@@ -41,11 +41,6 @@
  */
 class BoardBase;
 
-struct SquareEval {
-    RawScore    controls[nPieces*2 + 1];    //piece may move there unharmed.
-    RawScore    attacks[nPieces*2 + 1];        //piece attacks/defends square.
-};
-
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986 );
 
@@ -144,12 +139,12 @@ class Eval {
     template<Colors C> int attack(const BoardBase&) const;
     int pieces(const BoardBase&) const;
     int pawns(const BoardBase&) const;
-    template<Colors C> void EvalMate(const ColoredBoard<C>&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
     template<Colors C> int mobility( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1]) const;
 public:
     Eval();
     int eval(const BoardBase&) const;
+    template<Colors C> Move evalMate(const BoardBase&) const;
     CompoundScore getPS(int8_t piece, uint8_t square) const {
         ASSERT(square < nSquares);
         ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
