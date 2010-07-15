@@ -35,6 +35,9 @@ class WorkThread;
 class Console;
 template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
+typedef Key RepetitionKeys[100];
+extern __thread RepetitionKeys keys;
+extern __thread int ply;
 
 /* Board representing a position with history, color to move, castling and en
  * passant status. Has an associated Eval object and holds multiple worker
@@ -42,11 +45,28 @@ template<class T> class Result;
  */
 class RootBoard {
 	friend class TestRootBoard;
-	
 	struct {
 		ColoredBoard<White> wb;
 		ColoredBoard<Black> bb;
 	} boards[nMaxGameLength];
+
+
+	template<Colors C>
+	inline bool find(const ColoredBoard<C>& b, Key k) {
+		for (int i = ply-4; i>=ply-b.fiftyMoves; i-=2) {
+			ASSERT(i>=0);
+			if (keys[i] == k) return true;
+		}
+		return false;
+	}
+	inline void store(Key k) {
+		keys[ply] = k;
+	}
+	template<Colors C>
+	inline void clone(const ColoredBoard<C>& b, RepetitionKeys& other) {
+		for (int i = ply-4; i>=ply-b.fiftyMoves; --i)
+			keys[i] = other[i];
+	}
 
 	#ifdef QT_GUI_LIB
     StatWidget* statWidget;
@@ -58,12 +78,13 @@ class RootBoard {
 	QDateTime startTime;
 
 //	template<Colors C> ColoredBoard<C>& currentBoard();
-	unsigned int getAndDecAvailableThreads();
-    RawScore estimatedError[nPieces*2+1][nSquares];
+//	unsigned int getAndDecAvailableThreads();
+
     Move line[nMaxGameLength];
     Move* currentLine;
     int currentMoveIndex;
     int nMoves;
+    static __thread int lastPositionalEval;
 
 public:
     Eval eval;
@@ -73,7 +94,10 @@ public:
 	Console* console;
 	Colors color;
 	Move bestMove;
-	
+    RawScore estimatedError[nPieces*2+1][nSquares];
+	double avgE[nPieces*2+1][nSquares];
+	double avgE2[nPieces*2+1][nSquares];
+	double avgN[nPieces*2+1][nSquares];
 	RootBoard(Console*);
 	template<Colors C> const ColoredBoard<C>& currentBoard() const;
     const BoardBase& currentBoard() const;
@@ -92,5 +116,6 @@ public:
 	Stats getStats() const;
     std::string getLine() const;
 	void ttClear();
+	bool doMove(Move);
 };
 #endif

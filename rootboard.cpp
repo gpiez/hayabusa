@@ -29,8 +29,15 @@
 #include "statwidget.h"
 #endif
 
+__thread int RootBoard::lastPositionalEval;
+/*
+__thread unsigned RootBoard::ply;
+__thread RootBoard::RepetitionKeys RootBoard::keys;
+*/
+__thread int ply;
+__thread RepetitionKeys keys;
+
 RootBoard::RootBoard(Console *c):
-	
 	timeBudget(300000),
 	movesToDo(40),
 	iMove(0),
@@ -40,10 +47,14 @@ RootBoard::RootBoard(Console *c):
 {
 	tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
     for (int p=-nPieces; p<=(int)nPieces; ++p)
-        for (unsigned int sq=0; sq<nSquares; ++sq)
+        for (unsigned int sq=0; sq<nSquares; ++sq) {
             estimatedError[p+nPieces][sq] = initialError;
+            avgE[p+nPieces][sq] = 0.0;
+            avgN[p+nPieces][sq] = 0.001;
+        }
 
     boards[0].wb.init();
+    ply = 0;
 	#ifdef QT_GUI_LIB
 	statWidget = new StatWidget(*this);
 	statWidget->show();
@@ -229,4 +240,34 @@ std::string RootBoard::getLine() const {
         temp += i->string() + " ";
     }
     return temp;
+}
+
+// returns true on error
+bool RootBoard::doMove(Move m) {
+	WorkThread::stopAll();
+	Move list[maxMoves];
+	Move* good = list+goodMoves;
+	Move* bad = good;
+	if (color == White)
+		currentBoard<White>().generateMoves(good, bad);
+	else
+		currentBoard<Black>().generateMoves(good, bad);
+
+	for (Move* i=good; i<bad; ++i) {
+		if (i->fromto() == m.fromto()) {
+			if (m.piece() == 0 || m.piece() == i->piece()) {
+				if (color == White) {
+					color = Black;
+					ColoredBoard<Black>* next = &boards[iMove].bb;
+					currentBoard<White>().doMove(next, m);
+				} else {
+					color = White;
+					ColoredBoard<White>* next = &boards[++iMove].wb;
+					currentBoard<Black>().doMove(next, m);
+				}
+				return false;
+			}
+		}
+	}
+	return true;
 }
