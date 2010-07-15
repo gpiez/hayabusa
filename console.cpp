@@ -26,6 +26,7 @@
 #include "coloredboard.tcc"
 #include "options.h"
 #include "testpositions.h"
+#include "transpositiontable.tcc"
 
 namespace Options {
 unsigned int splitDepth = 1000;
