@@ -28,7 +28,7 @@
 #include "testpositions.h"
 
 namespace Options {
-unsigned int splitDepth = 5;
+unsigned int splitDepth = 1000;
 int humanreadable = 0;
 int hash = 0x1000000;
 }
@@ -40,8 +40,6 @@ Console::Console(QCoreApplication* parent):
     cout(stdout, QIODevice::WriteOnly)
 {
     BoardBase::initTables();
-    ColoredBoard<White>::initTables();
-    ColoredBoard<Black>::initTables();
     WorkThread::init();
     board = new RootBoard(this);
     board->setup();
@@ -108,8 +106,38 @@ void Console::delayedEnable() {
     notifier->setEnabled(true);
 }
 
-void Console::tryMove(QStringList cmd) {
-    qDebug() << "trymove" << cmd;
+void Console::tryMove(QStringList cmds) {
+	std::string mstr = cmds[0].toLower().toStdString();
+	if (mstr.length() < 4 || mstr.length() > 5) {
+		send("move '" + mstr + "' not understood");
+		return;
+	}
+	int piece;
+	if (mstr.length() == 5) {
+		switch (mstr[5]) {
+		case 'q':
+			piece = Queen;
+			break;
+		case 'r':
+			piece = Rook;
+			break;
+		case 'b':
+			piece = Bishop;
+			break;
+		case 'n':
+		case 'k':
+			piece = Knight;
+			break;
+		default:
+			send("move '" + mstr + "' not understood");
+			return;
+		}
+	} else
+		piece = 0;
+	Move m(mstr[0] -'a' + (mstr[1]-'1')*8, mstr[2]-'a' + (mstr[3]-'1')*8, piece);
+	if (board->doMove(m)) {
+		send("move '" + mstr + "' illegal");
+	}
 }
 
 void Console::perft(QStringList cmds) {
