@@ -25,6 +25,8 @@
 #include "transpositiontable.tcc"
 #include "console.h"
 #include "workthread.h"
+#include "nodemodel.h"
+#include "nodedelegate.h"
 
 __thread Stats stats;
 
@@ -49,7 +51,8 @@ static void splitImage( QImage* piecesSet, QImage piecesImage )
 
 
 StatWidget::StatWidget(const RootBoard& rb):
-    rb(rb)
+    rb(rb),
+    tree(NULL)
 {
     setupUi(this);
     QImage wset( ":/setwhite.png" );
@@ -100,6 +103,9 @@ StatWidget::StatWidget(const RootBoard& rb):
     minipm[1][Pawn] = wb5;
     minipm[1][King] = wb6;
 
+	NodeDelegate* delegate = new NodeDelegate;
+	treeView->setItemDelegate( delegate );
+
     QTimer* t = new QTimer(this);
     connect(t, SIGNAL(timeout()), this, SLOT(update()));
     qRegisterMetaType<uint64_t>("uint64_t");
@@ -139,6 +145,7 @@ QString number(T n) {
 
 void StatWidget::update()
 {
+	treeView->doItemsLayout();
     updateBoard();
     currentLine->setText(QString::fromStdString(rb.getLine()));
     static QList<Stats> prev;
@@ -232,4 +239,11 @@ void StatWidget::updateBoard()
 			minipm[(1-c)/2][p]->setPixmap(pm);
         }
 }
+
+void StatWidget::createModel() {
+	delete tree;
+	tree = new NodeModel(this);
+	treeView->setModel( tree );
+}
+
 #endif // QT_GUI_LIB

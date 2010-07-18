@@ -29,6 +29,7 @@
 #include "stats.h"
 #ifdef QT_GUI_LIB
 #include "statwidget.h"
+#include "nodeitem.h"
 #endif
 
 class WorkThread;
@@ -43,7 +44,12 @@ extern __thread int ply;
  * passant status. Has an associated Eval object and holds multiple worker
  * threads. Contains information about the time budget.
  */
+#ifdef QT_GUI_LIB
+class RootBoard: QObject {
+	Q_OBJECT
+#else
 class RootBoard {
+#endif
 	friend class TestRootBoard;
 	struct {
 		ColoredBoard<White> wb;
@@ -104,7 +110,7 @@ public:
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<Colors C> Move rootSearch();
-	template<Colors C, Phase P, typename A, typename B, typename T> bool search(const T& prev, Move m, unsigned int depth, const A& alpha, B& beta);
+	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(const T& prev, Move m, unsigned int depth, const A& alpha, B& beta, NodeItem*);
 	void perft(unsigned int depth);
 	void divide(unsigned int depth);
 	template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
@@ -117,5 +123,7 @@ public:
     std::string getLine() const;
 	void ttClear();
 	bool doMove(Move);
+signals:
+	void createModel();
 };
 #endif

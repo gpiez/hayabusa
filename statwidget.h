@@ -26,8 +26,10 @@
 #ifdef QT_GUI_LIB
 
 #include "ui_stats.h"
+#include "nodemodel.h"
 
 class RootBoard;
+class NodeModel;
 
 class StatWidget: public QWidget, private Ui::Statsui
 {
@@ -43,9 +45,12 @@ private slots:
 	void updateLine(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
 	
 public:
+	NodeModel* volatile tree;
+	void setMoveTree();
 	StatWidget(const RootBoard&);
 	virtual ~StatWidget();
-	
+public slots:
+	void createModel();
 };
 #endif // QT_GUI_LIB
 #endif // STATWIDGET_H
