@@ -26,6 +26,7 @@ SET(USE_QTGUI FALSE CACHE BOOL "Build the QT interface")
 IF (USE_QTGUI)
 	SET(QT_DONT_USE_QTGUI FALSE)
 	SET(hayabusa_UIS stats.ui)
+	SET(hayabusa_MOC_H rootboard.h)
 ELSE(USE_QTGUI)
 	SET(QT_DONT_USE_QTGUI TRUE)
 ENDIF(USE_QTGUI)
@@ -37,8 +38,8 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
 SET(hayabusa_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
-                   move.cpp statwidget.cpp testgame.cpp)
-SET(hayabusa_MOC_H jobs.h console.h statwidget.h)
+                   move.cpp statwidget.cpp testgame.cpp nodeitem.cpp nodemodel.cpp nodedelegate.cpp)
+SET(hayabusa_MOC_H ${hayabusa_MOC_H} jobs.h console.h statwidget.h nodemodel.h nodedelegate.h)
 SET(hayabusa_RCCS hayabusa.qrc)
 
 SET(test_SRCS test.cpp ${hayabusa_SRCS})
@@ -70,19 +71,19 @@ add_precompiled_header(hayabusa pch.h)
 
 TARGET_LINK_LIBRARIES (hayabusa ${QT_LIBRARIES})
 
+ADD_EXECUTABLE(test ${test_SRCS} ${test_MOC_SRCS} ${hayabusa_UIS_H} ${hayabusa_RCC_SRCS} )
+set_source_files_properties(test.cpp PROPERTIES COMPILE_FLAGS "-DQT_TEST")
+TARGET_LINK_LIBRARIES (test ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
+
 find_library(HUGE_PAGES hugetlbfs)
 
 if(HUGE_PAGES)
     SET(HUGE_BDT FALSE CACHE BOOL "Link BSS, DATA, TEXT into huge pages")
 	ADD_DEFINITIONS(-DHAVE_HUGE_PAGES)
 	TARGET_LINK_LIBRARIES(hayabusa hugetlbfs)
+	TARGET_LINK_LIBRARIES(test hugetlbfs)
 	find_path(HUGETLBFS_LD_PATH ld.hugetlbfs PATH_SUFFIXES share/libhugetlbfs)
 	if(HUGE_BDT)
 	    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -B ${HUGETLBFS_LD_PATH} -Wl,-hugetlbfs-align")
 	endif(HUGE_BDT)
 ENDIF(HUGE_PAGES)
-
-
-ADD_EXECUTABLE(test ${test_SRCS} ${test_MOC_SRCS} ${hayabusa_UIS_H} ${hayabusa_RCC_SRCS} )
-set_source_files_properties(test.cpp PROPERTIES COMPILE_FLAGS "-DQT_TEST")
-TARGET_LINK_LIBRARIES (test ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
