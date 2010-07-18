@@ -55,13 +55,14 @@ class SearchJob: public Job {
     unsigned int depth;
     const A& alpha;
     B& beta;
+    NodeItem* node;
 public:
-    SearchJob(RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta):
-        rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta) {
+    SearchJob(RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta, NodeItem* node):
+        rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), node(node) {
         beta.setNotReady();
     };
     void job() {
-        rb.search<C, trunk>(b, m, depth, alpha, beta);
+        rb.search<C, trunk>(b, m, depth, alpha, beta, node);
         beta.setReady();
     }
 };
