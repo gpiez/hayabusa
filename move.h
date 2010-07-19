@@ -25,7 +25,6 @@
 
 #include "constants.h"
 
-#ifdef BITBOARD
 struct Move {
     int32_t data;
 
@@ -57,16 +56,4 @@ struct Move {
     }
     std::string string() const;
 };
-#else
-union Move {
-	struct {
-	uint8_t from;
-	uint8_t to;
-	int8_t capture;			// TODO currently only a bit would suffice, otherwise this should logically be uint, for use in set/clrPiece, which also accept a uint
-	uint8_t special;
-	};
-	uint32_t data;
-	std::string string() const;
-};
-#endif
 #endif /* MOVE_H_ */

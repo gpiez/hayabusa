@@ -91,16 +91,13 @@ Qt::ItemFlags NodeModel::flags( const QModelIndex &index ) const
 	return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }
 
-QVariant NodeModel::data( const QModelIndex &index, int role ) const
+QVariant NodeModel::data(const QModelIndex &, int) const
 {
 	return QVariant();
 }
 
 QVariant NodeModel::headerData( int /*section*/, Qt::Orientation /*orientation*/, int /*role*/ ) const
 {
-	// if ( orientation == Qt::Horizontal && role == Qt::DisplayRole )
-	//return "header";//rootItem->data(section);
-
 	return QVariant();
 }
 

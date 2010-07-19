@@ -38,7 +38,6 @@ template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
 typedef Key RepetitionKeys[100];
 extern __thread RepetitionKeys keys;
-extern __thread int ply;
 
 /* Board representing a position with history, color to move, castling and en
  * passant status. Has an associated Eval object and holds multiple worker
@@ -47,10 +46,17 @@ extern __thread int ply;
 #ifdef QT_GUI_LIB
 class RootBoard: QObject {
 	Q_OBJECT
+    StatWidget* statWidget;
+signals:
+	void createModel();
+private:
 #else
 class RootBoard {
 #endif
 	friend class TestRootBoard;
+	struct Killer {
+		int move[2];
+	};
 	struct {
 		ColoredBoard<White> wb;
 		ColoredBoard<Black> bb;
@@ -58,39 +64,36 @@ class RootBoard {
 
 
 	template<Colors C>
-	inline bool find(const ColoredBoard<C>& b, Key k) {
-		for (int i = ply-4; i>=ply-b.fiftyMoves; i-=2) {
-			ASSERT(i>=0);
-			if (keys[i] == k) return true;
+	inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) {
+		for (unsigned i = ply; i+b.fiftyMoves >= ply+4; i-=2) {
+			ASSERT(i<=100);
+			if (keys[i-4] == k) return true;
 		}
 		return false;
 	}
-	inline void store(Key k) {
+	inline void store(Key k, unsigned ply) {
 		keys[ply] = k;
 	}
 	template<Colors C>
-	inline void clone(const ColoredBoard<C>& b, RepetitionKeys& other) {
-		for (int i = ply-4; i>=ply-b.fiftyMoves; --i)
+	inline void clone(const ColoredBoard<C>& b, RepetitionKeys& other, unsigned ply) {
+		if (ply >= 4) for (int i = ply-4; i+b.fiftyMoves >= ply; --i)
 			keys[i] = other[i];
 	}
 
-	#ifdef QT_GUI_LIB
-    StatWidget* statWidget;
-	#endif
-
 	unsigned int timeBudget;
 	unsigned int movesToDo;
-	unsigned int iMove;				// current half move index
+	unsigned int iMove;				// current half move index of game
 	QDateTime startTime;
 
 //	template<Colors C> ColoredBoard<C>& currentBoard();
 //	unsigned int getAndDecAvailableThreads();
 
-    Move line[nMaxGameLength];
-    Move* currentLine;
     int currentMoveIndex;
     int nMoves;
     static __thread int lastPositionalEval;
+    Move line[nMaxGameLength];
+    unsigned currentPly;
+    static __thread Killer killer[maxMoves];
 
 public:
     Eval eval;
@@ -110,7 +113,7 @@ public:
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<Colors C> Move rootSearch();
-	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(const T& prev, Move m, unsigned int depth, const A& alpha, B& beta, NodeItem*);
+	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, NodeItem*);
 	void perft(unsigned int depth);
 	void divide(unsigned int depth);
 	template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
@@ -123,7 +126,5 @@ public:
     std::string getLine() const;
 	void ttClear();
 	bool doMove(Move);
-signals:
-	void createModel();
 };
 #endif

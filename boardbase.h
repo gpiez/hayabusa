@@ -128,7 +128,7 @@ struct BoardBase {
     template<Colors C> inline void buildPins();
     void buildAttacks();
     KeyScore keyScore;
-    int fiftyMoves;
+    unsigned fiftyMoves;
     CastlingAndEP cep;
     static Castling castlingMask[nSquares];
     void init();

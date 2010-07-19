@@ -30,18 +30,19 @@
 #endif
 
 __thread int RootBoard::lastPositionalEval;
+__thread RootBoard::Killer RootBoard::killer[maxMoves];
+
 /*
 __thread unsigned RootBoard::ply;
 __thread RootBoard::RepetitionKeys RootBoard::keys;
 */
-__thread int ply;
 __thread RepetitionKeys keys;
 
 RootBoard::RootBoard(Console *c):
 	timeBudget(300000),
 	movesToDo(40),
 	iMove(0),
-	currentLine(line),
+	currentPly(0),
 	console(c),
 	color(White)
 {
@@ -54,7 +55,6 @@ RootBoard::RootBoard(Console *c):
         }
 
     boards[0].wb.init();
-    ply = 0;
 	#ifdef QT_GUI_LIB
 	statWidget = new StatWidget(*this);
 	statWidget->show();
@@ -236,8 +236,8 @@ std::string RootBoard::getLine() const {
     std::stringstream ss;
     ss << std::setw(2) << currentMoveIndex << "/" << std::setw(2) << nMoves << " ";
     std::string temp(ss.str());
-    for (const Move* i=line; i<currentLine; ++i) {
-        temp += i->string() + " ";
+    for (unsigned i=0; i<=currentPly; ++i) {
+        temp += line[i].string() + " ";
     }
     return temp;
 }
