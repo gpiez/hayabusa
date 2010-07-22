@@ -25,9 +25,12 @@ struct NodeData {
 	uint64_t key;
 	Move move;
 	int id;
+	int nodes;
 	short int alpha, beta, bestEval, ply;
 	char nodeType;
 	char searchType;
+	char depth;
+	char moveColor, nodeColor;
 };
 
 class NodeItem: public NodeData {

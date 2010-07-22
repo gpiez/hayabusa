@@ -46,6 +46,8 @@ class Console: public QObject {
     void isready(QStringList);
     void uci(QStringList);
     void debug(QStringList);
+    void ordering(QStringList);
+
 private slots:
     void privateSend(std::string);
     

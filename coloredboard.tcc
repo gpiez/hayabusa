@@ -86,7 +86,10 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
         }
     } else {
         // standard move, e. p. is handled by captureOffset
-        next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
+    	if (next->CI == CI)
+    		next->fiftyMoves = 0;
+    	else
+    		next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
         next->cep.enPassant = m.piece()==Pawn ? to & shift<C*16>(from) & rank<4>() & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1) : 0;
         next->occupied2 = _mm_set1_epi64x(occupied1 ^ (from + (m.capture() ? 0:to)));
         next->getPieces<C>(m.piece()) ^= from + to;

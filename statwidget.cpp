@@ -147,7 +147,7 @@ void StatWidget::update()
 {
 	treeView->doItemsLayout();
     updateBoard();
-    currentLine->setText(QString::fromStdString(rb.getLine()));
+    setWindowTitle(QString::fromStdString(rb.getLine()));
     static QList<Stats> prev;
     prev.append(rb.getStats());
     if (prev.size() > 10)

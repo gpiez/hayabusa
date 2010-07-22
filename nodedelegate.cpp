@@ -19,13 +19,13 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
 	if ( item->move.fromto() ) {
 		str1 = QString().fromStdString(item->move.string());
 
-		str2 = QString( "  [%1 %2]\n %3" ).arg( item->alpha ).arg( item->beta ).arg( item->bestEval );
+		str2 = QString( "D%4 [%1 %2]\n %3" ).arg( item->alpha ).arg( item->beta ).arg( item->bestEval ).arg( (int)item->depth );
 	} else {
 		str1 = QString( "Iteration %1" ).arg( item->ply );
 		str2 = "";
 	}
 
-	str2+=QString( " psqv: %1 ply: %2 " ).arg( 0 /*FIXME*/ ).arg( item->ply );
+	str2+=QString( " ply: %1 " ).arg( item->ply );
 	switch(item->nodeType) {
 	case NodePrecut:
 		str2 += "Precut";
@@ -63,7 +63,7 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
 		str2 += "<Vein>";
 		break;
 	}
-	str2 += QString( " id %1 key %2" ).arg( item->id ).arg(item->key);
+	str2 += QString( " size: %2" ).arg(item->nodes);
 /*
 	if ( index.parent().isValid() )
 		if ( static_cast<NodeItem*>( index.parent().internalPointer() )->bestMove.fromto() == item->move.fromto() )
@@ -71,9 +71,19 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
 */
 
 	QRect coor = option.rect;
+	if (item->moveColor == White) {
+		painter->setPen(Qt::white);
+	} else {
+		painter->setPen(Qt::black);
+	}
+
 	painter->drawText( coor, Qt::AlignVCenter | Qt::AlignLeft, str1 );
-	painter->setPen( Qt::black );
 	coor.setLeft( coor.left() + 50 );
+	if (item->nodeColor == White) {
+		painter->setPen(Qt::white);
+	} else {
+		painter->setPen(Qt::black);
+	}
 	painter->drawText( coor, Qt::AlignTop | Qt::AlignLeft, str2 );
 }
 

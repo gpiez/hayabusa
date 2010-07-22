@@ -112,7 +112,7 @@ public:
     const BoardBase& currentBoard() const;
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
-	template<Colors C> Move rootSearch();
+	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
 	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, NodeItem*);
 	void perft(unsigned int depth);
 	void divide(unsigned int depth);

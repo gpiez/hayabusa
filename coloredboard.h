@@ -46,7 +46,7 @@ public:
     template<bool> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned int cap) const;
     static void initTables();
     template<bool> void generateCaptureMoves(Move* &list, Move* &bad) const;
-    template<bool AbortOnFirst> bool generateMateMoves( Move* &good) const;
+    template<bool AbortOnFirst> bool generateMateMoves( Move** good = NULL) const;
     void generateMoves(Move* &good, Move* &bad) const;
     template<typename T>
     void doMove(T* next, Move m) const;

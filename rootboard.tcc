@@ -52,7 +52,7 @@ static const unsigned dMaxCapture = 12;
 static const unsigned dMaxThreat = 8;
 
 template<Colors C>
-Move RootBoard::rootSearch() {
+Move RootBoard::rootSearch(unsigned int endDepth) {
 /*
 	std::cout << std::hex << qMate<0>() << std::endl;
 	std::cout << std::hex << qMate<2>() << std::endl;
@@ -67,7 +67,7 @@ Move RootBoard::rootSearch() {
 	while (!statWidget->tree);
 #endif
     WorkThread::isMain = true;
-    const ColoredBoard<C>& b = currentBoard<C>();//color == White ? &boards[iMove].wb : &boards[iMove].bb;
+    const ColoredBoard<C>& b = currentBoard<C>();
     const unsigned ply=0;
     store(b.getZobrist(), ply);
     stats.node++;
@@ -81,7 +81,7 @@ Move RootBoard::rootSearch() {
     QDateTime hardBudget = startTime.addMSecs( 2*timeBudget / (movesToDo + 1) );
 
     nMoves = bad-good;
-    for (depth=dMaxCapture+dMaxThreat+2; depth<maxDepth; depth++) {
+    for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth; depth++) {
 #ifdef QT_GUI_LIB
 		NodeData data;
 		data.move.data = 0;
@@ -103,9 +103,9 @@ Move RootBoard::rootSearch() {
         		null.v = alpha.v + C;
 //                nalpha(alpha);
                 if (depth > nullReduction+1 + dMaxThreat + dMaxCapture)
-                    search<C, tree>(b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+1, node);
+                    search<C, tree>(b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, node);
                 else
-                    search<C, leaf>(b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+1, node);
+                    search<C, leaf>(b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, node);
                 pruneNull = nalpha >= null.v;
             }
         	if (!pruneNull)
@@ -117,6 +117,8 @@ Move RootBoard::rootSearch() {
             std::string newBestLine = tt->bestLine(*this);
             emit console->iterationDone(depth, stats.node, newBestLine, alpha.v);
             //if (QDateTime::currentDateTime() > hardBudget) break;
+            if (alpha >= infinity*C) break;
+            if (alpha <= -infinity*C) break;
         }
         std::stringstream g;
         if (Options::humanreadable) g.imbue(std::locale("de_DE"));
@@ -151,6 +153,10 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 	data.ply = ply;
 	data.key = estimate.key;
 	data.searchType = P;
+	data.depth = depth;
+	data.moveColor = prev.CI == 0 ? White:Black;
+	data.nodeColor = C;
+	uint64_t startnode = stats.node++;
 	NodeItem* node = stats.node < MAX_NODES && stats.node > MIN_NODES ? new NodeItem(data, parent) : 0;
 //	if (node && node->id == 67636) asm("int3");
 #endif
@@ -167,14 +173,14 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     RawScore& eE = estimatedError[nPieces + C*(m.piece()&7)][m.to()];
 
     bool threatened = false;
-	Move* dummy = NULL;
 
     if (P==leaf) {
-    	threatened = ((fold(prev.doublebits[m.to()] & prev.kingIncoming[CI].d02) && m.piece() & Rook)
+    	if (CI != prev.CI)
+    		threatened = ((fold(prev.doublebits[m.to()] & prev.kingIncoming[CI].d02) && m.piece() & Rook)
     				 || (fold(prev.doublebits[m.to()] & prev.kingIncoming[CI].d13) && m.piece() & Bishop)
     				 || (BoardBase::knightAttacks[m.to()] & prev.template getPieces<-C,King>() && m.piece() == Knight));
     	if (!threatened) {
-    		threatened = prev.template generateMateMoves<true>(dummy); //TODO accept only mate threatening moves
+    		threatened = prev.template generateMateMoves<true>(); //TODO accept only mate threatening moves
     	}
     }
 
@@ -190,7 +196,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     }
 
     const ColoredBoard<C> b(prev, m, estimate.vector);
-	bool threatening = b.template generateMateMoves<true>(dummy);
+	bool threatening = b.template generateMateMoves<true>();
     ASSERT(ply >= b.fiftyMoves);
     Key z;
     if (P != vein) {
@@ -301,7 +307,14 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 
 				}
 				b.template generateCaptureMoves<false>(good, bad);
-				if ( P == leaf ) b.template generateMateMoves<false>(good);
+				if ( P == leaf ) b.template generateMateMoves<false>(&good);
+				if ( P == leaf && alpha < 0 && ply>2 && b.fiftyMoves>2) {
+					if (line[ply].from() == line[ply-2].to() && line[ply].to() == line[ply-2].from()) {
+						ASSERT(line[ply-1].capture() == 0);
+						*--good = Move(line[ply-1].to(), line[ply-1].from(), line[ply-1].piece());
+						threatening = true;
+					}
+				}
 			}
 		} else {
 			lastPositionalEval = eval.eval(b) - estimate.score.calc(b, eval);
@@ -314,36 +327,40 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 			}
 		}
 
-//		Move* afterGoodCap;
-//		for (afterGoodCap = good; afterGoodCap<bad; ++afterGoodCap)
-//			if (afterGoodCap->capture() == 0) break;
-//
-//		// move best move from tt / history to front
-//		for (Move* i = afterGoodCap; i<bad; ++i) {
-//			if (i->data == killer[ply].move[0]) {
-//				*i = *afterGoodCap;
-//				afterGoodCap++->data = killer[ply].move[0];
-//				break;
-//			}
-//		}
-//		// move best move from tt / history to front
-//		for (Move* i = afterGoodCap; i<bad; ++i) {
-//			if (i->data == killer[ply].move[1]) {
-//				*i = *afterGoodCap;
-//				afterGoodCap++->data = killer[ply].move[1];
-//				break;
-//			}
-//		}
+		Move* afterGoodCap;
+		for (afterGoodCap = good; afterGoodCap<bad; ++afterGoodCap)
+			if (afterGoodCap->capture() == 0) break;
+
+		Move k0, k1;
+		k0.data = killer[ply].move[0];
+		k1.data = killer[ply].move[1];
+
+		// move best move from tt / history to front
+		for (Move* i = afterGoodCap+1; i<bad; ++i) {
+			if (i->data == k0.data) {
+				*i = *afterGoodCap;
+				*afterGoodCap++ = k0;
+				break;
+			}
+		}
+		// move best move from tt / history to front
+		for (Move* i = afterGoodCap+1; i<bad; ++i) {
+			if (i->data == k1.data) {
+				*i = *afterGoodCap;
+				*afterGoodCap++ = k1;
+				break;
+			}
+		}
 		// move best move from tt / history to front
 		if (ttMove.data && ttMove.fromto() != good[0].fromto()) {
 			Move first = good[0];
 			for (Move* i = good+1; i<bad; ++i) {
 				Move second = *i;
+				*i = first;
 				if (ttMove.fromto() == second.fromto()) {
 					good[0] = second;
 					break;
 				}
-				*i = first;
 				first = second;
 			}
 		}
@@ -399,23 +416,31 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 						null.v = current.v + C;
 	//                nalpha(alpha);
 						if (depth > nullReduction+1 + dMaxCapture + dMaxThreat)
-							search<C, tree>(b, *i, depth-(nullReduction+1), nalpha, null, ply+1, node);
+							search<C, tree>(b, *i, depth-(nullReduction+1), nalpha, null, ply+2, node);
 						else
-							search<C, leaf>(b, *i, depth-(nullReduction+1), nalpha, null, ply+1 ,node);
+							search<C, leaf>(b, *i, depth-(nullReduction+1), nalpha, null, ply+2 ,node);
 						pruneNull = nalpha >= null.v;
 					}
 					if (!pruneNull) {
 						if (P == tree || A::isNotShared || depth < Options::splitDepth + dMaxCapture + dMaxThreat) {
-	/*
-							bool research = true;
-							if (i > good) {
-								typename A::Base nalpha(current);
-								research = search<(Colors)-C, tree>(b, *i, depth-2, beta, nalpha);
-							}
-							if (research) {
-	*/
+//							int reduction = depth > 1 + dMaxCapture + dMaxThreat
+//								 && i > good+2
+//								 && i->capture() == 0
+//								 && !i->isSpecial()
+//								 && !threatened
+//								 && !threatening
+//								 && !((fold(b.doublebits[i->to()] & b.kingIncoming[EI].d02) && i->piece() & Rook)
+//					    		   || (fold(b.doublebits[i->to()] & b.kingIncoming[EI].d13) && i->piece() & Bishop)
+//					    		   || (BoardBase::knightAttacks[i->to()] & b.template getPieces<-C,King>() && i->piece() == Knight));
+//							bool research = true;
+//							if (reduction) {
+//								reduction += (__bsrq(depth) + __bsrq(i-good))/2;
+//								typename A::Base nalpha(current);
+//								research = search<(Colors)-C, tree>(b, *i, depth-reduction-1, beta, nalpha, ply+1, node);
+//							}
+//							if (research) {
 								search<(Colors)-C, tree>(b, *i, depth-1, beta, current, ply+1, node);
-	//                        }
+//	                        }
 						// Multi threaded search: After the first move try to find a free thread, otherwise do a normal
 						// search but stay in trunk. To avoid multithreading search at cut off nodes
 						// where it would be useless.
@@ -455,7 +480,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         stored.upperKey |= z >> stored.upperShift;
         stored.score |= current.v;
         stored.loBound |= current > alpha.v;
-        if (current > alpha.v && current.m.capture() == 0 && current.m.data != killer[ply].move[0]) {
+        if (current > alpha.v && current.m.capture() == 0 && current.m.data != killer[ply].move[0] && !b.template inCheck<C>()) {
         	killer[ply].move[1] = killer[ply].move[0];
         	killer[ply].move[0] = current.m.data;
         }
@@ -464,7 +489,12 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         stored.to |= current.m.to();
         tt->store(st, stored);
     }
-	if (node) node->bestEval = current.v;
+#ifdef QT_GUI_LIB
+	if (node) {
+		node->bestEval = current.v;
+		node->nodes = stats.node - startnode;
+	}
+#endif
     return beta.max(current.v, m);
 }
 

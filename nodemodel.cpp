@@ -91,8 +91,11 @@ Qt::ItemFlags NodeModel::flags( const QModelIndex &index ) const
 	return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }
 
-QVariant NodeModel::data(const QModelIndex &, int) const
+QVariant NodeModel::data(const QModelIndex& index, int role) const
 {
+	if (role == Qt::ToolTipRole) {
+		return static_cast<NodeItem*>(index.internalPointer())->id;
+	}
 	return QVariant();
 }
 

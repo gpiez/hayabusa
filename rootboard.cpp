@@ -236,7 +236,7 @@ std::string RootBoard::getLine() const {
     std::stringstream ss;
     ss << std::setw(2) << currentMoveIndex << "/" << std::setw(2) << nMoves << " ";
     std::string temp(ss.str());
-    for (unsigned i=0; i<=currentPly; ++i) {
+    for (unsigned i=1; i<=currentPly; ++i) {
         temp += line[i].string() + " ";
     }
     return temp;

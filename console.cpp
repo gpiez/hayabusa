@@ -45,8 +45,6 @@ Console::Console(QCoreApplication* parent):
     board = new RootBoard(this);
     board->setup();
     
-    dispatcher["perft"] = &Console::perft;
-    dispatcher["divide"] = &Console::divide;
     dispatcher["uci"] = &Console::uci;
     dispatcher["debug"] = &Console::debug;
     dispatcher["isready"] = &Console::isready;
@@ -58,6 +56,10 @@ Console::Console(QCoreApplication* parent):
     dispatcher["stop"] = &Console::stop;
     dispatcher["ponderhit"] = &Console::ponderhit;
     dispatcher["quit"] = &Console::quit;
+
+    dispatcher["perft"] = &Console::perft;
+    dispatcher["divide"] = &Console::divide;
+    dispatcher["ordering"] = &Console::ordering;
     
     notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
     connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
@@ -279,4 +281,15 @@ QHash<QString, QStringList> Console::parse(QStringList cmds, QStringList tokens)
             cmds.mid(tokenPositions.keys().at(i)+1, tokenPositions.keys().at(i+1)-tokenPositions.keys().at(i)-1);
     }
     return tokenValues;
+}
+
+void Console::ordering(QStringList) {
+	for (unsigned int i = sizeof(testPositions)/sizeof(char*); i;) {
+		--i;
+		board->setup(testPositions[i]);
+		if (board->color == White)
+			board->rootSearch<White>(9);
+		else
+			board->rootSearch<Black>(9);
+	}
 }

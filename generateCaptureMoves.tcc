@@ -157,7 +157,7 @@ void ColoredBoard<C>::generateCaptureMoves( Move* &good, Move* &bad) const {
 
 template<Colors C>
 template<bool AbortOnFirst>
-bool ColoredBoard<C>::generateMateMoves( Move* &good ) const {
+bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     uint64_t king = getPieces<-C,King>();
     unsigned k = bit(king);
@@ -229,7 +229,7 @@ bool ColoredBoard<C>::generateMateMoves( Move* &good ) const {
 
 	uint64_t bmate = 0;
 
-#if 0
+#if 1  //TODO knight mate is possible with one escape square
 	uint64_t nblock = getPieces<-C,Rook>() | getPieces<-C,Queen>() | getPieces<-C,Bishop>() | getPieces<-C,Knight>() | getPieces<-C,Pawn>()
                     | getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Bishop>()                          | getAttacks<C,Pawn>();
 	uint64_t nescape = getAttacks<-C,King>() & ~nblock;
@@ -239,7 +239,7 @@ bool ColoredBoard<C>::generateMateMoves( Move* &good ) const {
 	        unsigned to = bit(p);
 	        for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1) {
 				if (AbortOnFirst) return true;
-	        	*--good = Move(bit(f), to, Knight);
+	        	*--*good = Move(bit(f), to, Knight);
 	        }
 	    }
 	}
@@ -270,7 +270,7 @@ bool ColoredBoard<C>::generateMateMoves( Move* &good ) const {
 				if (AbortOnFirst) return true;
 				Move n;
 				n.data = psingle->move.data + Move(0, bit(a), 0).data;
-				*--good = n;
+				*--*good = n;
 			}
 		}
     } else
@@ -300,7 +300,7 @@ bool ColoredBoard<C>::generateMateMoves( Move* &good ) const {
 				if (AbortOnFirst) return true;
 				Move n;
 				n.data = psingle->move.data + Move(0, bit(a), 0).data;
-				*--good = n;
+				*--*good = n;
 			}
 		}
     } else
@@ -330,7 +330,7 @@ bool ColoredBoard<C>::generateMateMoves( Move* &good ) const {
 				if (AbortOnFirst) return true;
 				Move n;
 				n.data = psingle->move.data + Move(0, bit(a), 0).data;
-				*--good = n;
+				*--*good = n;
 			}
 		}
     }
