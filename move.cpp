@@ -29,8 +29,10 @@ std::string Move::string() const
 	temp += (to() & 7) + 'a';
 	temp += (to() >> 3) + '1';
     if (isSpecial()) 
-        if ((piece() & 7) < Pawn)
+        if ((piece() & 7) < Pawn) {
             temp += " RBQN"[piece() & 7];
+            temp = temp.substr(1);
+        }
     
 	return temp;
 }

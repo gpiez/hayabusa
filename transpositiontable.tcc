@@ -173,16 +173,16 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 	size = nEntries*sizeof(SubTable);
 	
 	while (!table) {
-#		ifdef HAVE_HUGE_PAGES
+#ifdef HAVE_HUGE_PAGES
 			table = (SubTable *) get_huge_pages(s, GHP_DEFAULT);
 			usesHugePages = true;
 			if (table) break;
-			qWarning() << "Could not allocate" << size << "bytes in huge pages";
-#       endif
+			std::cerr << "Could not allocate" << size << "bytes in huge pages" << std::endl;
+#endif
 		table = new SubTable[nEntries];
 		usesHugePages = false;
 		if (table) break;
-		qWarning() << "Could not allocate" << size << "bytes";
+		std::cerr << "Could not allocate" << size << "bytes" << std::endl;
 		size >>= 1;
 		nEntries >>= 1;
 	}

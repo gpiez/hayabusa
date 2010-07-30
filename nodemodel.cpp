@@ -24,10 +24,16 @@
 #include "nodemodel.h"
 
 NodeModel::NodeModel( QObject* parent ):
-		QAbstractItemModel( parent )
+		QAbstractItemModel( parent ),
+		rootItem(NULL)
 {
-	NodeData rootData = {};
-	rootItem = new NodeItem( rootData );
+    init();
+}
+
+void NodeModel::init() {
+    delete rootItem;
+    NodeData rootData = {};
+    rootItem = new NodeItem( rootData );
 }
 
 NodeModel::~NodeModel()

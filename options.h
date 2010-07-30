@@ -21,4 +21,5 @@ namespace Options {
     extern unsigned int splitDepth;
     extern int humanreadable;
     extern int hash;
+    extern bool quiet;
 }

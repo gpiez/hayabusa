@@ -52,7 +52,7 @@ static const unsigned dMaxCapture = 12;
 static const unsigned dMaxThreat = 8;
 
 template<Colors C>
-Move RootBoard::rootSearch(unsigned int endDepth) {
+Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
 /*
 	std::cout << std::hex << qMate<0>() << std::endl;
 	std::cout << std::hex << qMate<2>() << std::endl;
@@ -60,15 +60,13 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 	std::cout << std::hex << qMate<6>() << std::endl;
 */
 #ifdef QT_GUI_LIB
-	connect(this,SIGNAL(createModel()), statWidget, SLOT(createModel()));
-//	statWidget->createModel();
-	emit(createModel());
-//	sleep(1);
 	while (!statWidget->tree);
+	statWidget->emptyTree();
 #endif
     WorkThread::isMain = true;
     const ColoredBoard<C>& b = currentBoard<C>();
     const unsigned ply=0;
+    fiftyMovesRoot = b.fiftyMoves;
     store(b.getZobrist(), ply);
     stats.node++;
     Move moveList[maxMoves];
@@ -81,7 +79,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     QDateTime hardBudget = startTime.addMSecs( 2*timeBudget / (movesToDo + 1) );
 
     nMoves = bad-good;
-    for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth; depth++) {
+    for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < endNode; depth++) {
 #ifdef QT_GUI_LIB
 		NodeData data;
 		data.move.data = 0;
@@ -115,7 +113,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 *good = bestMove;
             }
             std::string newBestLine = tt->bestLine(*this);
-            emit console->iterationDone(depth, stats.node, newBestLine, alpha.v);
+            uint64_t n = stats.node;
+            emit console->iterationDone(depth, n, newBestLine, alpha.v);
             //if (QDateTime::currentDateTime() > hardBudget) break;
             if (alpha >= infinity*C) break;
             if (alpha <= -infinity*C) break;
@@ -175,7 +174,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     bool threatened = false;
 
     if (P==leaf) {
-    	if (CI != prev.CI)
+    	if (CI != (int)prev.CI)
     		threatened = ((fold(prev.doublebits[m.to()] & prev.kingIncoming[CI].d02) && m.piece() & Rook)
     				 || (fold(prev.doublebits[m.to()] & prev.kingIncoming[CI].d13) && m.piece() & Bishop)
     				 || (BoardBase::knightAttacks[m.to()] & prev.template getPieces<-C,King>() && m.piece() == Knight));
@@ -197,7 +196,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 
     const ColoredBoard<C> b(prev, m, estimate.vector);
 	bool threatening = b.template generateMateMoves<true>();
-    ASSERT(ply >= b.fiftyMoves);
+    ASSERT(ply+fiftyMovesRoot >= b.fiftyMoves);
     Key z;
     if (P != vein) {
     	z = b.getZobrist();
@@ -331,26 +330,71 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 		for (afterGoodCap = good; afterGoodCap<bad; ++afterGoodCap)
 			if (afterGoodCap->capture() == 0) break;
 
-		Move k0, k1;
-		k0.data = killer[ply].move[0];
-		k1.data = killer[ply].move[1];
-
+        Move k0, k1, k2, k3, k4, k5;
+        k0.data = killer[ply].move[0];
+        k1.data = killer[ply].move[1];
+        k2.data = killer[ply].move[2];
+        if (ply>=2) {
+            k3.data = killer[ply-2].move[0];
+            k4.data = killer[ply-2].move[1];
+            k5.data = killer[ply-2].move[2];
+        } else 
+            k3.data = k4.data = k5.data = 0;
+        
 		// move best move from tt / history to front
 		for (Move* i = afterGoodCap+1; i<bad; ++i) {
-			if (i->data == k0.data) {
+			if (i->to() == k0.to() && i->piece() == k0.piece()) {
+			    Move temp = *i;
 				*i = *afterGoodCap;
-				*afterGoodCap++ = k0;
+				*afterGoodCap++ = temp;
 				break;
 			}
 		}
-		// move best move from tt / history to front
-		for (Move* i = afterGoodCap+1; i<bad; ++i) {
-			if (i->data == k1.data) {
-				*i = *afterGoodCap;
-				*afterGoodCap++ = k1;
-				break;
-			}
-		}
+        // move best move from tt / history to front
+        for (Move* i = afterGoodCap+1; i<bad; ++i) {
+            if (i->to() == k1.to() && i->piece() == k1.piece()) {
+                Move temp = *i;
+                *i = *afterGoodCap;
+                *afterGoodCap++ = temp;
+                break;
+            }
+        }
+        // move best move from tt / history to front
+        for (Move* i = afterGoodCap+1; i<bad; ++i) {
+            if (i->to() == k2.to() && i->piece() == k2.piece()) {
+                Move temp = *i;
+                *i = *afterGoodCap;
+                *afterGoodCap++ = temp;
+                break;
+            }
+        }
+        // move best move from tt / history to front
+        for (Move* i = afterGoodCap+1; i<bad; ++i) {
+            if (i->to() == k3.to() && i->piece() == k3.piece()) {
+                Move temp = *i;
+                *i = *afterGoodCap;
+                *afterGoodCap++ = temp;
+                break;
+            }
+        }
+        // move best move from tt / history to front
+        for (Move* i = afterGoodCap+1; i<bad; ++i) {
+            if (i->to() == k4.to() && i->piece() == k4.piece()) {
+                Move temp = *i;
+                *i = *afterGoodCap;
+                *afterGoodCap++ = temp;
+                break;
+            }
+        }
+        // move best move from tt / history to front
+        for (Move* i = afterGoodCap+1; i<bad; ++i) {
+            if (i->to() == k5.to() && i->piece() == k5.piece()) {
+                Move temp = *i;
+                *i = *afterGoodCap;
+                *afterGoodCap++ = temp;
+                break;
+            }
+        }
 		// move best move from tt / history to front
 		if (ttMove.data && ttMove.fromto() != good[0].fromto()) {
 			Move first = good[0];
@@ -363,6 +407,11 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 				}
 				first = second;
 			}
+		}
+		
+		Move* endSort = moveList+192;
+		if (endSort > afterGoodCap+1) {
+		    history.sort<C>(afterGoodCap, endSort-afterGoodCap);
 		}
 
 	//    if (!alphaNode)
@@ -480,9 +529,24 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         stored.upperKey |= z >> stored.upperShift;
         stored.score |= current.v;
         stored.loBound |= current > alpha.v;
-        if (current > alpha.v && current.m.capture() == 0 && current.m.data != killer[ply].move[0] && !b.template inCheck<C>()) {
-        	killer[ply].move[1] = killer[ply].move[0];
-        	killer[ply].move[0] = current.m.data;
+        if (current > alpha.v && current.m.capture() == 0)
+            history.good<C>(current.m);
+        if (current > alpha.v && current.m.capture() == 0) {
+            Move k0;
+            k0.data = killer[ply].move[0];
+            if (current.m.to() == k0.to() && current.m.piece() == k0.piece()) {
+            } else {
+                Move k1;
+                k1.data = killer[ply].move[1];
+                if (current.m.to() == k1.to() && current.m.piece() == k1.piece()) {
+                    killer[ply].move[1] = killer[ply].move[0];
+                    killer[ply].move[0] = current.m.data;                
+                } else {
+                    killer[ply].move[2] = killer[ply].move[1];
+                    killer[ply].move[1] = killer[ply].move[0];
+                    killer[ply].move[0] = current.m.data;
+                }   
+            }
         }
         stored.hiBound |= current < beta.v;
         stored.from |= current.m.from();
@@ -599,5 +663,23 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
     pt->store(pe, stored);
     update(result, n);
 }
+
+template<Colors C>
+inline bool RootBoard::find(const ColoredBoard<C>& b, Key k, unsigned ply) {
+    for (unsigned i = ply+fiftyMovesRoot; i+b.fiftyMoves >= ply+fiftyMovesRoot+4; i-=2) {
+        ASSERT(i<=100);
+        if (keys[i-4] == k) return true;
+    }
+    return false;
+}
+inline void RootBoard::store(Key k, unsigned ply) {
+    keys[ply+fiftyMovesRoot] = k;
+}
+template<Colors C>
+inline void RootBoard::clone(const ColoredBoard<C>& b, RepetitionKeys& other, unsigned ply) {
+    for (int i = ply+fiftyMovesRoot; i+b.fiftyMoves >= ply+fiftyMovesRoot; --i)
+        keys[i] = other[i];
+}
+
 
 #endif

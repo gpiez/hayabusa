@@ -51,8 +51,7 @@ static void splitImage( QImage* piecesSet, QImage piecesImage )
 
 
 StatWidget::StatWidget(const RootBoard& rb):
-    rb(rb),
-    tree(NULL)
+    rb(rb)
 {
     setupUi(this);
     QImage wset( ":/setwhite.png" );
@@ -62,12 +61,7 @@ StatWidget::StatWidget(const RootBoard& rb):
     QFont fixed;
     fixed.setFamily("Consolas");
     bestLine->setFont(fixed);
-/*
-    QSizePolicy sp;
-    sp = widgetBoard->sizePolicy();
-    sp.setHeightForWidth(true);
-    widgetBoard->setSizePolicy(sp);
-*/
+
     int pp = 0;
     for (int i=0; i<50; i++) {
     	pal[pp++] = QColor(i,i,255-i);
@@ -103,6 +97,9 @@ StatWidget::StatWidget(const RootBoard& rb):
     minipm[1][Pawn] = wb5;
     minipm[1][King] = wb6;
 
+    tree = new NodeModel(this);
+    treeView->setModel( tree );
+
 	NodeDelegate* delegate = new NodeDelegate;
 	treeView->setItemDelegate( delegate );
 
@@ -111,7 +108,6 @@ StatWidget::StatWidget(const RootBoard& rb):
     qRegisterMetaType<uint64_t>("uint64_t");
     connect(rb.console, SIGNAL(signalIterationDone(unsigned int, uint64_t, std::string, int)), this, SLOT(updateLine(unsigned int, uint64_t, std::string, int)));
     t->setInterval(1000);
-//    update();
     t->start();
 }
 
@@ -127,7 +123,7 @@ void StatWidget::updateLine(unsigned int depth, uint64_t nodes, std::string line
     if (line.substr(0, 5) != oldBestLine.substr(0, 5) || depth != oldDepth || bestScore != bestScore) {
         oldBestLine = line;
         oldDepth = depth;
-        //bestLine->moveCursor(QTextCursor::Start);
+        bestLine->moveCursor(QTextCursor::Start);
         bestLine->appendPlainText(QString("%1 %2 %3 %4 ").arg(depth, 2).arg(nodes, 15).arg(rb.getTime(), 15).arg(bestScore/100.0, 6, 'f', 2) + QString::fromStdString(line) );
         Ui_Statsui::depth->setText("Depth: " + QString::number(depth));
     }
@@ -240,10 +236,8 @@ void StatWidget::updateBoard()
         }
 }
 
-void StatWidget::createModel() {
-	delete tree;
-	tree = new NodeModel(this);
-	treeView->setModel( tree );
+void StatWidget::emptyTree() {
+	tree->init();
 }
 
 #endif // QT_GUI_LIB

@@ -27,6 +27,7 @@
 #include "coloredboard.h"
 #include "result.h"
 #include "stats.h"
+#include "history.h"
 #ifdef QT_GUI_LIB
 #include "statwidget.h"
 #include "nodeitem.h"
@@ -55,30 +56,12 @@ class RootBoard {
 #endif
 	friend class TestRootBoard;
 	struct Killer {
-		int move[2];
+		int move[3];
 	};
 	struct {
 		ColoredBoard<White> wb;
 		ColoredBoard<Black> bb;
 	} boards[nMaxGameLength];
-
-
-	template<Colors C>
-	inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) {
-		for (unsigned i = ply; i+b.fiftyMoves >= ply+4; i-=2) {
-			ASSERT(i<=100);
-			if (keys[i-4] == k) return true;
-		}
-		return false;
-	}
-	inline void store(Key k, unsigned ply) {
-		keys[ply] = k;
-	}
-	template<Colors C>
-	inline void clone(const ColoredBoard<C>& b, RepetitionKeys& other, unsigned ply) {
-		if (ply >= 4) for (int i = ply-4; i+b.fiftyMoves >= ply; --i)
-			keys[i] = other[i];
-	}
 
 	unsigned int timeBudget;
 	unsigned int movesToDo;
@@ -94,6 +77,12 @@ class RootBoard {
     Move line[nMaxGameLength];
     unsigned currentPly;
     static __thread Killer killer[maxMoves];
+    unsigned fiftyMovesRoot;
+    History history;
+
+    template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply);
+    inline void store(Key k, unsigned ply);
+    template<Colors C> inline void clone(const ColoredBoard<C>& b, RepetitionKeys& other, unsigned ply);
 
 public:
     Eval eval;
@@ -112,7 +101,7 @@ public:
     const BoardBase& currentBoard() const;
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
-	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
+	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth, uint64_t endNode = ~0);
 	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, NodeItem*);
 	void perft(unsigned int depth);
 	void divide(unsigned int depth);

@@ -47,7 +47,7 @@ public:
 	NodeItem* getParent() const;
 
 private:
-	static std::mutex m;
+	static std::recursive_mutex m;
 	void appendChild( NodeItem* child);
 	QList<NodeItem*> children;
 	NodeItem* parent;

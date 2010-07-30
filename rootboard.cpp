@@ -25,6 +25,7 @@
 #include "jobs.h"
 #include "transpositiontable.h"
 #include "transpositiontable.tcc"
+#include "history.cpp"
 #ifdef QT_GUI_LIB
 #include "statwidget.h"
 #endif
@@ -56,7 +57,7 @@ RootBoard::RootBoard(Console *c):
 
     boards[0].wb.init();
 	#ifdef QT_GUI_LIB
-	statWidget = new StatWidget(*this);
+    statWidget = new StatWidget(*this);
 	statWidget->show();
 	#endif
 }
@@ -158,16 +159,20 @@ const BoardBase& RootBoard::setup(QString fen) {
 	for ( unsigned int p=0; p<(unsigned int)castling.length(); p++ )
 		switch ( castling[p].toLatin1() ) {
 		case 'Q':
-			board.cep.castling.color[0].q = true;
+		    if (board.getPieces<White, King>() & 1ULL<<e1 && board.getPieces<White, Rook>() & 1ULL<<a1)
+		        board.cep.castling.color[0].q = true;
 			break;
 		case 'K':
-			board.cep.castling.color[0].k = true;
+            if (board.getPieces<White, King>() & 1ULL<<e1 && board.getPieces<White, Rook>() & 1ULL<<h1)
+                board.cep.castling.color[0].k = true;
 			break;
 		case 'q':
-			board.cep.castling.color[1].q = true;
+		    if (board.getPieces<Black, King>() & 1ULL<<e8 && board.getPieces<Black, Rook>() & 1ULL<<a8)
+		        board.cep.castling.color[1].q = true;
 			break;
 		case 'k':
-			board.cep.castling.color[1].k = true;
+            if (board.getPieces<Black, King>() & 1ULL<<e8 && board.getPieces<Black, Rook>() & 1ULL<<h8)
+                board.cep.castling.color[1].k = true;
 			break;
 		}
 

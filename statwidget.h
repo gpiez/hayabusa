@@ -49,8 +49,9 @@ public:
 	void setMoveTree();
 	StatWidget(const RootBoard&);
 	virtual ~StatWidget();
+	
 public slots:
-	void createModel();
+	void emptyTree();
 };
 #endif // QT_GUI_LIB
 #endif // STATWIDGET_H

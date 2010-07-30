@@ -45,7 +45,8 @@ public:
 		return rootItem;
 	}
 	void newData(NodeItem* node);
-
+	void init();
+	
 private:
 	void setupModelData(const QStringList &lines, NodeItem *parent);
 

@@ -32,6 +32,7 @@ namespace Options {
 unsigned int splitDepth = 1000;
 int humanreadable = 0;
 int hash = 0x1000000;
+bool quiet = false;
 }
 
 Console::Console(QCoreApplication* parent):
@@ -182,6 +183,8 @@ void Console::setoption(QStringList cmds) {
         } else if (name == "hash") {
             Options::hash = data.toInt();
             if (Options::hash) board->tt->setSize(Options::hash*0x100000ULL);
+        } else if (name == "quiet") {
+            Options::quiet = data.toInt();
         }
     }
 }
@@ -261,7 +264,8 @@ void Console::iterationDone(unsigned int depth, uint64_t nodes, std::string line
 
 void Console::privateSend(std::string str)
 {
-    std::cout << str << std::endl;
+    if (!Options::quiet)
+        std::cout << str << std::endl;
 }
 
 void Console::send(std::string str) {
@@ -283,13 +287,34 @@ QHash<QString, QStringList> Console::parse(QStringList cmds, QStringList tokens)
     return tokenValues;
 }
 
-void Console::ordering(QStringList) {
-	for (unsigned int i = sizeof(testPositions)/sizeof(char*); i;) {
-		--i;
-		board->setup(testPositions[i]);
-		if (board->color == White)
-			board->rootSearch<White>(9);
-		else
-			board->rootSearch<Black>(9);
-	}
+void Console::ordering(QStringList cmds) {
+    static const unsigned nPos = sizeof(testPositions)/sizeof(char*);
+    Options::quiet = true;
+    if (cmds.size() > 1 && cmds[1] == "init") {
+        for (unsigned int i = 0; i<nPos; ++i) {
+            stats.node=0;
+            board->setup(testPositions[i]);
+            if (board->color == White)
+                board->rootSearch<White>(32, 1000000);
+            else
+                board->rootSearch<Black>(32, 1000000);
+            std::cout << board->depth-1 << "," << std::endl;
+        }
+    } else {
+        double sum=0.0;
+        double tested=0.0;
+        for (unsigned int i = 0; i<nPos; ++i) {
+            if (testDepths[i] == 51) continue;
+            tested++;
+            stats.node=0;
+            board->setup(testPositions[i]);
+            if (board->color == White)
+                board->rootSearch<White>(testDepths[i]-20);
+            else
+                board->rootSearch<Black>(testDepths[i]-20);
+            std::cout << std::setw(4) << i << "(" << testDepths[i]-20 << "):" << std::setw(10) << stats.node << std::endl;
+            sum += log(stats.node);
+        }
+        std::cout << std::setw(20) << exp(sum/tested) << std::endl;
+    }
 }

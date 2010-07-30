@@ -12,7 +12,7 @@
 #include "nodeitem.h"
 #include "stats.h"
 
-std::mutex NodeItem::m;
+std::recursive_mutex NodeItem::m;
 
 NodeItem::NodeItem( const NodeData& nodeData_ ):
 		NodeData( nodeData_ ),

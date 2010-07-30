@@ -220,7 +220,8 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
 		rmate2 |= kingIncoming[EI].d[0] & ~getAttacks<-C,King>();
 	if ((rescape & 0x8280000000000282) == 0)
 		rmate2 |= kingIncoming[EI].d[2] & ~getAttacks<-C,King>();
-	rmate2 &= getAttacks<C,Rook>() | getAttacks<C,Queen>();;
+	rmate2 &= getAttacks<C,Rook>() | getAttacks<C,Queen>();
+	rmate2 &= ~getAttacks<-C,All>();
 	rmate |= rmate2;
 
 	uint64_t bblock = getPieces<-C,Rook>() | getPieces<-C,Queen>() | getPieces<-C,Bishop>() | getPieces<-C,Knight>() | getPieces<-C,Pawn>()
