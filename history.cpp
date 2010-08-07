@@ -12,85 +12,97 @@
 #include "history.h"
 
 const __v16qi History::uinctab[16] = {
-    { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 }
 };
 
 const __v16qi History::sinctab[16] = {
-    { 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1 },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1 },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1 },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1 },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 }
+    { 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0 }
 };
 
-History::History():
-    sum(1)
+History::History()
 {
-    for (int p=-nPieces; p<nPieces; ++p) if (p) {
-        for (unsigned sq=0; sq<nSquares; ++sq) {
-            v[p + nPieces][sq] = 0;
+    init();
+}
+
+void History::init() {
+    for (unsigned d=0; d<maxDepth; ++d) {
+        sum[d] = 0;
+        for (unsigned p=0; p<2*nPieces+1; ++p) if (p) {
+            for (unsigned sq=0; sq<nSquares; ++sq) {
+                v[d][p][sq] = 0;
+            }
         }
     }
 }
 
 template<Colors C>
-void History::good(Move m) {
-    sum++;
-    if (++v[C*(m.piece() & 7) + nPieces][m.to()] > maxHistory) {
-        sum >>= 1;
-        for (int p=1; p<nPieces; ++p) 
+void History::good(Move m, unsigned ply) {
+    if (maxHistory < (v[ply][C*(m.piece() & 7) + nPieces][m.to()] = ++sum[ply])) {
+        sum[ply] -= maxHistory/2;
+        for (unsigned p=1; p<nPieces; ++p) 
             for (unsigned sq=0; sq<nSquares; ++sq) 
-                v[C*p + nPieces][sq] >>= 1;
+                v[ply][C*p + nPieces][sq] = std::max(v[ply][C*p + nPieces][sq] - maxHistory/2, 0);
             
     }
 }
 
 template<Colors C>
-void History::bad(Move m) {
-    sum++;
-    if (--v[C*m.piece() + nPieces][m.to()] < -maxHistory) {
-        sum >>= 1;
-        for (int p=1; p<nPieces; ++p) 
-            for (unsigned sq=0; sq<nSquares; ++sq) 
-                v[C*p + nPieces][sq] >>= 1;
-            
+int History::get(Move m, unsigned ply) {
+    int value = v[ply][C*(m.piece() & 7) + nPieces][m.to()];
+
+    if (!value && ply>2) {
+        value = v[ply-2][C*(m.piece() & 7) + nPieces][m.to()] - sum[ply-2];
     }
-    
+
+    if (!value && ply<maxDepth-2) {
+        value = v[ply+2][C*(m.piece() & 7) + nPieces][m.to()] - sum[ply+2];
+    }
+
+/*
+    if (!value && ply>4) {
+        value = v[ply-4][C*(m.piece() & 7) + nPieces][m.to()] - sum[ply-4];
+    }
+
+    if (!value && ply<maxDepth-4) {
+        value = v[ply+4][C*(m.piece() & 7) + nPieces][m.to()] - sum[ply+4];
+    }
+*/
+
+    return value;
 }
 
 template<Colors C>
-int History::get(Move m) {
-    return v[C*(m.piece() & 7) + nPieces][m.to()];
-}
-
-template<Colors C>
-void History::sort(Move* list, unsigned n) {
+void History::sort(Move* list, unsigned n, unsigned ply) {
     /*
      * Four groups of 16 counters for the 4 fourbit digits, which are the
      * keys for sorting. Counter group 3 is for the most significant nibble,
@@ -114,7 +126,7 @@ void History::sort(Move* list, unsigned n) {
     
     for (unsigned i = 0; i<n; ++i) {
         mList0[i].m = list[i];
-        int score = get<C>(list[i]);
+        int score = get<C>(list[i], ply);
         unsigned nibble0 = score & 0xf;
         unsigned nibble1 = score >> 4 & 0xf;
         unsigned nibble2 = score >> 8 & 0xf;

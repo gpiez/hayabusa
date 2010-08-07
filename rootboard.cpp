@@ -31,7 +31,6 @@
 #endif
 
 __thread int RootBoard::lastPositionalEval;
-__thread RootBoard::Killer RootBoard::killer[maxMoves];
 
 /*
 __thread unsigned RootBoard::ply;
@@ -182,6 +181,7 @@ const BoardBase& RootBoard::setup(QString fen) {
 		qWarning() << "error importing e. p. move " << enPassant;
 
 	board.buildAttacks();
+	history.init();
 	return board;
 }
 

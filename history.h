@@ -13,17 +13,18 @@
 #endif
 
 class History {
-    uint16_t v[nTotalPieces+1][nSquares];
-    int sum;
+    int v[maxDepth][nTotalPieces+1][nSquares];
+    int sum[maxDepth];
     static const __v16qi uinctab[16];
     static const __v16qi sinctab[16];
     
 public:
     History();
-    template<Colors C> void good(Move);
+    void init();
+    template<Colors C> void good(Move, unsigned ply);
     template<Colors C> void bad(Move);
-    template<Colors C> int get(Move);
-    template<Colors C> void sort(Move* begin, unsigned n);
+    template<Colors C> int get(Move, unsigned ply);
+    template<Colors C> void sort(Move* begin, unsigned n, unsigned ply);
 };
 
 #endif /* HISTORY_H_ */

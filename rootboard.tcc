@@ -117,7 +117,6 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
             emit console->iterationDone(depth, n, newBestLine, alpha.v);
             //if (QDateTime::currentDateTime() > hardBudget) break;
             if (alpha >= infinity*C) break;
-            if (alpha <= -infinity*C) break;
         }
         std::stringstream g;
         if (Options::humanreadable) g.imbue(std::locale("de_DE"));
@@ -125,6 +124,8 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
         g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
           << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
         emit console->send(g.str());
+        if (alpha <= -infinity*C) break;
+        if (alpha >= infinity*C) break;
     }
     return bestMove;
 }
@@ -330,71 +331,11 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 		for (afterGoodCap = good; afterGoodCap<bad; ++afterGoodCap)
 			if (afterGoodCap->capture() == 0) break;
 
-        Move k0, k1, k2, k3, k4, k5;
-        k0.data = killer[ply].move[0];
-        k1.data = killer[ply].move[1];
-        k2.data = killer[ply].move[2];
-        if (ply>=2) {
-            k3.data = killer[ply-2].move[0];
-            k4.data = killer[ply-2].move[1];
-            k5.data = killer[ply-2].move[2];
-        } else 
-            k3.data = k4.data = k5.data = 0;
-        
-		// move best move from tt / history to front
-		for (Move* i = afterGoodCap+1; i<bad; ++i) {
-			if (i->to() == k0.to() && i->piece() == k0.piece()) {
-			    Move temp = *i;
-				*i = *afterGoodCap;
-				*afterGoodCap++ = temp;
-				break;
-			}
-		}
-        // move best move from tt / history to front
-        for (Move* i = afterGoodCap+1; i<bad; ++i) {
-            if (i->to() == k1.to() && i->piece() == k1.piece()) {
-                Move temp = *i;
-                *i = *afterGoodCap;
-                *afterGoodCap++ = temp;
-                break;
-            }
+        Move* endSort = moveList+192;
+        if (endSort > afterGoodCap+1) {
+            history.sort<C>(afterGoodCap, endSort-afterGoodCap, ply);
         }
-        // move best move from tt / history to front
-        for (Move* i = afterGoodCap+1; i<bad; ++i) {
-            if (i->to() == k2.to() && i->piece() == k2.piece()) {
-                Move temp = *i;
-                *i = *afterGoodCap;
-                *afterGoodCap++ = temp;
-                break;
-            }
-        }
-        // move best move from tt / history to front
-        for (Move* i = afterGoodCap+1; i<bad; ++i) {
-            if (i->to() == k3.to() && i->piece() == k3.piece()) {
-                Move temp = *i;
-                *i = *afterGoodCap;
-                *afterGoodCap++ = temp;
-                break;
-            }
-        }
-        // move best move from tt / history to front
-        for (Move* i = afterGoodCap+1; i<bad; ++i) {
-            if (i->to() == k4.to() && i->piece() == k4.piece()) {
-                Move temp = *i;
-                *i = *afterGoodCap;
-                *afterGoodCap++ = temp;
-                break;
-            }
-        }
-        // move best move from tt / history to front
-        for (Move* i = afterGoodCap+1; i<bad; ++i) {
-            if (i->to() == k5.to() && i->piece() == k5.piece()) {
-                Move temp = *i;
-                *i = *afterGoodCap;
-                *afterGoodCap++ = temp;
-                break;
-            }
-        }
+
 		// move best move from tt / history to front
 		if (ttMove.data && ttMove.fromto() != good[0].fromto()) {
 			Move first = good[0];
@@ -409,13 +350,10 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 			}
 		}
 		
-		Move* endSort = moveList+192;
-		if (endSort > afterGoodCap+1) {
-		    history.sort<C>(afterGoodCap, endSort-afterGoodCap);
-		}
-
-	//    if (!alphaNode)
+//	    if (!alphaNode)
 		for (unsigned int d = (depth+1)%2 + 1 + dMaxCapture + dMaxThreat; d < depth; d+=2) {
+//		if (depth > 2 + dMaxCapture + dMaxThreat && depth > ttDepth+2) {
+//		    unsigned d = depth-2;
 			if (d<=ttDepth) continue;
 			for (Move* i = good; i<bad; ++i) {
 //				if (!i->data) continue;
@@ -529,25 +467,8 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         stored.upperKey |= z >> stored.upperShift;
         stored.score |= current.v;
         stored.loBound |= current > alpha.v;
-        if (current > alpha.v && current.m.capture() == 0)
-            history.good<C>(current.m);
-        if (current > alpha.v && current.m.capture() == 0) {
-            Move k0;
-            k0.data = killer[ply].move[0];
-            if (current.m.to() == k0.to() && current.m.piece() == k0.piece()) {
-            } else {
-                Move k1;
-                k1.data = killer[ply].move[1];
-                if (current.m.to() == k1.to() && current.m.piece() == k1.piece()) {
-                    killer[ply].move[1] = killer[ply].move[0];
-                    killer[ply].move[0] = current.m.data;                
-                } else {
-                    killer[ply].move[2] = killer[ply].move[1];
-                    killer[ply].move[1] = killer[ply].move[0];
-                    killer[ply].move[0] = current.m.data;
-                }   
-            }
-        }
+        if (current > alpha.v && current.m.capture() == 0 && current.m.data)
+            history.good<C>(current.m, ply);
         stored.hiBound |= current < beta.v;
         stored.from |= current.m.from();
         stored.to |= current.m.to();

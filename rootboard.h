@@ -55,9 +55,6 @@ private:
 class RootBoard {
 #endif
 	friend class TestRootBoard;
-	struct Killer {
-		int move[3];
-	};
 	struct {
 		ColoredBoard<White> wb;
 		ColoredBoard<Black> bb;
@@ -76,9 +73,8 @@ class RootBoard {
     static __thread int lastPositionalEval;
     Move line[nMaxGameLength];
     unsigned currentPly;
-    static __thread Killer killer[maxMoves];
     unsigned fiftyMovesRoot;
-    History history;
+    History history;        // FIXME probably needs to be thread local
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply);
     inline void store(Key k, unsigned ply);
