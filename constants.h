@@ -72,7 +72,7 @@ enum Phase { root, trunk, tree, mate, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
 
-static const int16_t maxHistory = 10000;
+static const int maxHistory = 65536;
 static const int nullReduction = 3;
 static const int initialError = 100;
 static const unsigned int nHashPassers = 2;
