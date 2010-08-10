@@ -101,17 +101,17 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
         		null.v = alpha.v + C;
 //                nalpha(alpha);
                 if (depth > nullReduction+1 + dMaxThreat + dMaxCapture)
-                    search<C, tree>(b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, node);
+                    search<C, tree>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, node);
                 else
-                    search<C, leaf>(b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, node);
+                    search<C, leaf>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, node);
                 pruneNull = nalpha >= null.v;
             }
         	if (!pruneNull)
-            if (search<(Colors)-C, trunk>(b, *currentMove, depth-1, beta, alpha, ply+1, node)) {
-                bestMove = *currentMove;
-                *currentMove = *good;
-                *good = bestMove;
-            }
+                if (search<(Colors)-C, trunk>(currentMove == good ? NodePV:NodeFailHigh, b, *currentMove, depth-1, beta, alpha, ply+1, node)) {
+                    bestMove = *currentMove;
+                    memmove(good, good+1, sizeof(Move) * (currentMove-good));
+                    *good = bestMove;
+                }
             std::string newBestLine = tt->bestLine(*this);
             uint64_t n = stats.node;
             emit console->iterationDone(depth, n, newBestLine, alpha.v);
@@ -140,7 +140,7 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
 template<Colors C, Phase P, typename A, typename B, typename T>
-bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const A& alpha, B& beta, const unsigned ply, NodeItem* parent) {
+bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, const unsigned depth, const A& alpha, B& beta, const unsigned ply, NodeItem* parent) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     stats.node++;
     KeyScore estimate;
@@ -307,7 +307,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 
 				}
 				b.template generateCaptureMoves<false>(good, bad);
-				if ( P == leaf ) b.template generateMateMoves<false>(&good);
+                if ( P == leaf ) b.template generateMateMoves<false>(&good);
 				if ( P == leaf && alpha < 0 && ply>2 && b.fiftyMoves>2) {
 					if (line[ply].from() == line[ply-2].to() && line[ply].to() == line[ply-2].from()) {
 						ASSERT(line[ply-1].capture() == 0);
@@ -328,7 +328,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 		}
 
 		Move* afterGoodCap;
-		for (afterGoodCap = good; afterGoodCap<bad; ++afterGoodCap)
+		for (afterGoodCap = good; /*afterGoodCap<good+1 &&*/ afterGoodCap<bad; ++afterGoodCap)
 			if (afterGoodCap->capture() == 0) break;
 
         Move* endSort = moveList+192;
@@ -350,17 +350,26 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 			}
 		}
 		
-//	    if (!alphaNode)
+	    if (!alphaNode)
 		for (unsigned int d = (depth+1)%2 + 1 + dMaxCapture + dMaxThreat; d < depth; d+=2) {
 //		if (depth > 2 + dMaxCapture + dMaxThreat && depth > ttDepth+2) {
 //		    unsigned d = depth-2;
 			if (d<=ttDepth) continue;
 			for (Move* i = good; i<bad; ++i) {
+	            NodeType nextNodeType;
+	            if (nodeType == NodeFailHigh)
+	                nextNodeType = NodeFailLow;
+	            else if (nodeType == NodeFailLow)
+	                nextNodeType = NodeFailHigh;
+	            else if (i == good)
+	                nextNodeType = NodePV;
+	            else
+	                nextNodeType = NodeFailHigh;
 //				if (!i->data) continue;
 				ASSERT(d>0);
-				if (d <= 1 + dMaxCapture + dMaxThreat ? search<(Colors)-C, leaf, B, A>(b, *i, d - 1, beta, current, ply+1, node) :
-	//                d == depth-4 ? search<(Colors)-C, tree, B, A>(b, *i, d-1, B(C*infinity), current) :
-								   search<(Colors)-C, tree, B, A>(b, *i, d-1, beta, current, ply+1, node)) {
+				if (d <= 1 + dMaxCapture + dMaxThreat ? search<(Colors)-C, leaf, B, A>(nextNodeType, b, *i, d - 1, beta, current, ply+1, node) :
+	//                d == depth-4 ? search<(Colors)-C, tree, B, A>(nextNodeType, b, *i, d-1, B(C*infinity), current) :
+								   search<(Colors)-C, tree, B, A>(nextNodeType, b, *i, d-1, beta, current, ply+1, node)) {
 					ASSERT(current.m.data == i->data);
 					Move first = good[0];
 					good[0] = current.m;
@@ -381,10 +390,19 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 		}
 
 		for (Move* i = good; i<bad && current < beta.v; ++i) {
-//			if (!i->data) continue;
+		    NodeType nextNodeType;
+		    if (nodeType == NodeFailHigh)
+		        nextNodeType = NodeFailLow;
+		    else if (nodeType == NodeFailLow)
+                nextNodeType = NodeFailHigh;
+		    else if (i == good)
+		        nextNodeType = NodePV;
+		    else
+		        nextNodeType = NodeFailHigh;
+		    //			if (!i->data) continue;
 			// Stay in leaf search if it already is or change to it if the next depth would be 0
 			if ((P == leaf && !threatening && !threatened) || P == vein || depth <= dMaxCapture + 1)
-				search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current, ply+1, node);
+				search<(Colors)-C, vein>(nextNodeType, b, *i, 0, beta.unshared(), current, ply+1, node);
 			else {
 	//            if (WorkThread::doStop) return false;
 				if (depth <= dMaxCapture + dMaxThreat + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/) {
@@ -393,7 +411,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 						search<(Colors)-C, tree>(b, *i, 1, beta.unshared(), current);
 					else
 	*/
-						search<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), current, ply+1, node);
+						search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-1, beta.unshared(), current, ply+1, node);
 				}
 				else { // possible null search in tree or trunk
 					bool pruneNull = false;
@@ -403,9 +421,9 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 						null.v = current.v + C;
 	//                nalpha(alpha);
 						if (depth > nullReduction+1 + dMaxCapture + dMaxThreat)
-							search<C, tree>(b, *i, depth-(nullReduction+1), nalpha, null, ply+2, node);
+							search<C, tree>(nextNodeType, b, *i, depth-(nullReduction+1), nalpha, null, ply+2, node);
 						else
-							search<C, leaf>(b, *i, depth-(nullReduction+1), nalpha, null, ply+2 ,node);
+							search<C, leaf>(nextNodeType, b, *i, depth-(nullReduction+1), nalpha, null, ply+2 ,node);
 						pruneNull = nalpha >= null.v;
 					}
 					if (!pruneNull) {
@@ -426,22 +444,22 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 //								research = search<(Colors)-C, tree>(b, *i, depth-reduction-1, beta, nalpha, ply+1, node);
 //							}
 //							if (research) {
-								search<(Colors)-C, tree>(b, *i, depth-1, beta, current, ply+1, node);
+								search<(Colors)-C, tree>(nextNodeType, b, *i, depth-1, beta, current, ply+1, node);
 //	                        }
 						// Multi threaded search: After the first move try to find a free thread, otherwise do a normal
 						// search but stay in trunk. To avoid multithreading search at cut off nodes
 						// where it would be useless.
 						} else if (depth == Options::splitDepth + dMaxCapture + dMaxThreat) {
 							if (i > good && WorkThread::canQueued(z, current.isNotReady())) {
-								WorkThread::queueJob(z, new SearchJob<(Colors)-C, typename B::Base, A>(*this, b, *i, depth-1, beta.unshared(), current, ply+1, node));
+								WorkThread::queueJob(z, new SearchJob<(Colors)-C, typename B::Base, A>(nextNodeType, *this, b, *i, depth-1, beta.unshared(), current, ply+1, node));
 							} else {
-								search<(Colors)-C, P>(b, *i, depth-1, beta.unshared(), current, ply+1, node);
+								search<(Colors)-C, P>(nextNodeType, b, *i, depth-1, beta.unshared(), current, ply+1, node);
 							}
 						} else {
 							if (i > good && WorkThread::canQueued(z, current.isNotReady())) {
-								WorkThread::queueJob(z, new SearchJob<(Colors)-C,B,A>(*this, b, *i, depth-1, beta, current, ply+1, node));
+								WorkThread::queueJob(z, new SearchJob<(Colors)-C,B,A>(nextNodeType, *this, b, *i, depth-1, beta, current, ply+1, node));
 							} else {
-								search<(Colors)-C, P>(b, *i, depth-1, beta, current, ply+1, node);
+								search<(Colors)-C, P>(nextNodeType, b, *i, depth-1, beta, current, ply+1, node);
 							}
 						}
 					}
