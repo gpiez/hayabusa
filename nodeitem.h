@@ -16,7 +16,7 @@
 
 #include "move.h"
 
-enum NodeType { NodeFull, NodeTT, NodePrecut, NodeNull, NodeFutile, NodeMate, NodePresearch, NodeIllegal, NodeRepetition };
+enum NodeType { NodeFull, NodeTT, NodePrecut, NodeNull, NodeFutile, NodeMate, NodePresearch, NodeIllegal, NodeRepetition, NodeFailHigh, NodeFailLow, NodePV };
 
 #define MIN_NODES 0
 #define MAX_NODES 10000000

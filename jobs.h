@@ -27,6 +27,7 @@
 #include "console.h"
 #include "boardbase.h"
 #include "workthread.h"
+#include "nodeitem.h"
 
 // Abstract base class for functions called to be executed by a different thread
 // To execute a function in a different thread, create a ***Job object with the
@@ -49,6 +50,7 @@ signals:
 
 template<Colors C, typename A, typename B>
 class SearchJob: public Job {
+    NodeType n;
     RootBoard& rb;
     const ColoredBoard<(Colors)-C>& b;
     Move m;
@@ -58,12 +60,12 @@ class SearchJob: public Job {
     unsigned& ply;
     NodeItem* node;
 public:
-    SearchJob(RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, NodeItem* node):
-        rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), node(node) {
+    SearchJob(NodeType n, RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, NodeItem* node):
+        n(n), rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), node(node) {
         beta.setNotReady();
     };
     void job() {
-        rb.search<C, trunk>(b, m, depth, alpha, beta, ply, node);
+        rb.search<C, trunk>(n, b, m, depth, alpha, beta, ply, node);
         beta.setReady();
     }
 };
