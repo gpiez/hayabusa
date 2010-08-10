@@ -13,7 +13,7 @@
 #endif
 
 class History {
-    int v[maxDepth][nTotalPieces+1][nSquares];
+    uint16_t v[maxDepth][nTotalPieces+1][nSquares];
     int sum[maxDepth];
     static const __v16qi uinctab[16];
     static const __v16qi sinctab[16];

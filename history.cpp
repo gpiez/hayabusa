@@ -56,24 +56,35 @@ History::History()
 
 void History::init() {
     for (unsigned d=0; d<maxDepth; ++d) {
-        sum[d] = 0;
-        for (unsigned p=0; p<2*nPieces+1; ++p) if (p) {
-            for (unsigned sq=0; sq<nSquares; ++sq) {
-                v[d][p][sq] = 0;
-            }
-        }
+        sum[d] = 1;
+        for (unsigned p=0; p<2*nPieces+1; ++p) if (p) 
+                for (unsigned sq=0; sq<nSquares; ++sq) 
+                    v[d][p][sq] = 0;
     }
 }
 
 template<Colors C>
 void History::good(Move m, unsigned ply) {
-    if (maxHistory < (v[ply][C*(m.piece() & 7) + nPieces][m.to()] = ++sum[ply])) {
-        sum[ply] -= maxHistory/2;
-        for (unsigned p=1; p<nPieces; ++p) 
-            for (unsigned sq=0; sq<nSquares; ++sq) 
-                v[ply][C*p + nPieces][sq] = std::max(v[ply][C*p + nPieces][sq] - maxHistory/2, 0);
-            
+/*
+    int& i = hashIndex(m);
+    if (i == 0) return;
+    memmove(k, k+1, i);
+    i = 0;
+*/    
+    uint16_t& h = v[ply][C*(m.piece() & 7) + nPieces][m.to()];
+    
+    if (h == sum[ply]) return;
+    
+    if (maxHistory > ++sum[ply]) {
+        h = sum[ply];
+        return;
     }
+    
+    h = maxHistory/2;
+    sum[ply] = maxHistory/2;
+    for (unsigned p=1; p<nPieces; ++p) 
+        for (unsigned sq=0; sq<nSquares; ++sq) 
+            v[ply][C*p + nPieces][sq] = std::max(v[ply][C*p + nPieces][sq] - maxHistory/2, 0);
 }
 
 template<Colors C>
