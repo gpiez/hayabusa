@@ -27,4 +27,3 @@ void SharedScore<C>::join() {
 		readyCond.wait(lock);
 	WorkThread::idle(-1);
 }
-
