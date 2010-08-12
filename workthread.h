@@ -47,7 +47,7 @@ class WorkThread/*: public QThread*/ {
     Colors color;
     Job* job;
     Key key;
-
+    Stats* stats;
     void stop();
     
 public:
@@ -56,12 +56,11 @@ public:
     static __thread bool isMain;
     static unsigned int running;
 
-    Stats* pstats;
-
     WorkThread();
     virtual ~WorkThread();
     void run();
-
+    const Stats* getStats();
+    
     static void stopAll();
     static void queueJob(Key, Job*);
     static bool canQueued(Key, int);

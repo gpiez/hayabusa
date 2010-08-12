@@ -33,6 +33,7 @@ unsigned int WorkThread::nThreads = 0;
 QVector<WorkThread*> WorkThread::threads;
 __thread bool WorkThread::isMain = false;
 volatile bool WorkThread::doStop = false;
+__thread Stats stats;
 
 WorkThread::WorkThread():
     isStopped(true),
@@ -46,8 +47,12 @@ WorkThread::~WorkThread()
 {
 }
 
+const Stats* WorkThread::getStats() {
+    return stats;
+}
+
 void WorkThread::run() {
-    pstats = &stats;
+    stats = &::stats;
     std::unique_lock<std::mutex> lock(runningMutex);
 #ifdef __linux__    
     std::stringstream name;
@@ -78,7 +83,7 @@ void WorkThread::run() {
                 }
             }
             if (!job) starting.wait(lock);//starting is signalled by StartJob() or QJob()
-            stats.jobs++;
+            stats->jobs++;
         } while(!job);
         isStopped = false;
         doStop = false;
