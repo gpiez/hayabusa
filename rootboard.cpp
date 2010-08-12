@@ -31,11 +31,6 @@
 #endif
 
 __thread int RootBoard::lastPositionalEval;
-
-/*
-__thread unsigned RootBoard::ply;
-__thread RootBoard::RepetitionKeys RootBoard::keys;
-*/
 __thread RepetitionKeys keys;
 
 RootBoard::RootBoard(Console *c):
@@ -227,7 +222,7 @@ Stats RootBoard::getStats() const {
 	Stats sum = {{0}};
 	foreach(WorkThread* th, WorkThread::getThreads()) {
 		for (unsigned int i=0; i<sizeof(Stats)/sizeof(uint64_t); ++i)
-			sum.data[i] += th->pstats->data[i];
+			sum.data[i] += th->getStats()->data[i];
 	}
 	return sum;
 }
