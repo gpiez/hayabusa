@@ -58,14 +58,28 @@ class SearchJob: public Job {
     const A& alpha;
     B& beta;
     unsigned& ply;
+#ifdef QT_GUI_LIB       
     NodeItem* node;
+#endif    
 public:
-    SearchJob(NodeType n, RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, NodeItem* node):
-        n(n), rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), node(node) {
+    SearchJob(NodeType n, RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply
+#ifdef QT_GUI_LIB       
+        , NodeItem* node
+#endif
+        ):
+        n(n), rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply)
+#ifdef QT_GUI_LIB
+    , node(node) 
+#endif
+    {
         beta.setNotReady();
     };
     void job() {
-        rb.search<C, trunk>(n, b, m, depth, alpha, beta, ply, node);
+        rb.search<C, trunk>(n, b, m, depth, alpha, beta, ply
+#ifdef QT_GUI_LIB       
+                        , node
+#endif                        
+                        );
         beta.setReady();
     }
 };
