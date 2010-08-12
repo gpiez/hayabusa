@@ -70,7 +70,7 @@ void BoardBase::buildAttacks() {
     getAttacks<C, Knight>() = a;
     getAttacks<C, All>() = a;
     
-    MoveTemplate* psingle = single[CI];
+    MoveTemplateB* bs = bsingle[CI];
 //    Move* pmove = moves[CI];
     __v2di dir13 = _mm_set1_epi64x(0);
     p = getPieces<C, Bishop>();
@@ -78,32 +78,35 @@ void BoardBase::buildAttacks() {
         uint64_t sq = bit(p);
         p &= p-1;													// lat  #op
         __v2di a13 = build13Attack(sq);
-        psingle->move = Move(sq, 0, Bishop);
-        psingle->d02 = zero;
-        psingle->d13 = a13;
-        psingle++;
+        bs->move = Move(sq, 0, Bishop);
+//        psingle->d02 = zero;
+        bs->d13 = a13;
+        bs++;
         dir13 |= a13;                                        // 1    1
     }															    // 18   22
+    bs->move = Move(0,0,0);
     a = fold(dir13);
     getAttacks<C, Bishop>() = a;
     getAttacks<C, All>() |= a;
     
+    MoveTemplateR* rs = rsingle[CI];
     __v2di dir02 = _mm_set1_epi64x(0);
     p = getPieces<C, Rook>();
     while(p) {
         uint64_t sq = bit(p);
         p &= p-1;
         __v2di a02 = build02Attack(sq);
-        psingle->move = Move(sq, 0, Rook);
-        psingle->d02 = a02;
-        psingle->d13 = zero;
-        psingle++;
+        rs->move = Move(sq, 0, Rook);
+        rs->d02 = a02;
+        rs++;
         dir02 |= a02;
     }
+    rs->move = Move(0,0,0);
     a = fold(dir02);
     getAttacks<C, Rook>() = a;
     getAttacks<C, All>() |= a;
     
+    MoveTemplateQ* qs = qsingle[CI];
     p = getPieces<C, Queen>();
     a = 0;
     while(p) {
@@ -111,15 +114,15 @@ void BoardBase::buildAttacks() {
         p &= p-1;
         __v2di a13 = build13Attack(sq);
         __v2di a02 = build02Attack(sq);
-        psingle->move = Move(sq, 0, Queen);
-        psingle->d02 = a02;
-        psingle->d13 = a13;
-        psingle++;
+        qs->move = Move(sq, 0, Queen);
+        qs->d02 = a02;
+        qs->d13 = a13;
+        qs++;
         dir02 |= a02;
         dir13 |= a13;
         a |= fold(a13 | a02);
     }
-    psingle->move = Move(0,0,0);
+    qs->move = Move(0,0,0);
     getAttacks<C, Queen>() = a;
     getAttacks<C, All>() |= a;
     datt[CI].d02 = dir02;

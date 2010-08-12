@@ -64,10 +64,21 @@ struct BoardBase {
     } dpins[nColors],							//+256
       datt[nColors],			 				//+288 sum of all directed attacks, for each of the 4 main directions
       kingIncoming[nColors];					//+320
-    struct MoveTemplate {
+    
+    struct MoveTemplateB {
     	Move move;
-    	__v2di d02, d13;
-    } single[nColors][2+2+1+8];					//+352
+    	__v2di d13;
+    } bsingle[nColors][2+8+1];				    //704
+
+    struct MoveTemplateR {
+        Move move;
+        __v2di d02;
+    } rsingle[nColors][2+8+1];                   //704
+
+    struct MoveTemplateQ {
+        Move move;
+        __v2di d02, d13;
+    } qsingle[nColors][1+8+1];                   //960
 
     static const __v2di mask02x[nSquares]; // 1 KByte  file : row, excluding square
     static const __v2di mask02b[nSquares]; // 1 KByte  file : row, excluding square
@@ -77,6 +88,7 @@ struct BoardBase {
     static const uint64_t knightAttacks[nSquares];
     static uint64_t kingAttacks[16][nSquares];
     static uint64_t epTab[nPieces+1][nSquares];
+    
     template<int C, Pieces P>
     uint64_t getPieces() const {
         static_assert(P>0 && P<=King, "Wrong Piece");
