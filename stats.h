@@ -25,8 +25,9 @@
 
 #include <stdint.h>
 
-//Making stats thread local speeds up the program by a large factor.
-extern __thread union Stats {
+// This is thread local defined in workthread.cpp, because thread local storage
+// speeds up the program by a large factor.
+union Stats {
 	struct {
 	uint64_t	node;
 	uint64_t	internalNode;
@@ -47,6 +48,8 @@ extern __thread union Stats {
     uint64_t    jobs;
 	};
 	uint64_t data[];
-} stats;
+};
+
+extern __thread Stats stats;
 
 #endif
