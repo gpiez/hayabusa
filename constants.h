@@ -72,6 +72,8 @@ enum Phase { root, trunk, tree, mate, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
 
+enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut, NodeNull, NodeFutile, NodeMate, NodePresearch, NodeIllegal, NodeRepetition };
+
 static const int maxHistory = 65536;
 static const int nullReduction = 3;
 static const int initialError = 100;
