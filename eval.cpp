@@ -426,13 +426,63 @@ template<Colors C>
 inline int Eval::mobility( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1]) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int score = 0;
-    const BoardBase::MoveTemplate* psingle = b.single[CI];
-    for (;;) {
-        Move m = psingle->move;
-        if (!m.data) break;
-        __v2di a02 = psingle->d02;
-        __v2di a13 = psingle->d13;
-        psingle++;
+    
+    for (const BoardBase::MoveTemplateB* bs = b.bsingle[CI]; bs->move.data; ++bs) {
+        Move m = bs->move;
+        __v2di a13 = bs->d13;
+#ifdef USE_PINS_IN_MOBILITY
+        __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
+        __v2di pin13 = from2 & pins[CI].dir13;
+#ifdef __SSE4_1__
+        pin13 = _mm_cmpeq_epi64(pin13, zero);
+#else
+        pin13 = _mm_cmpeq_epi32(pin13, zero);
+        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
+        pin13 = pin13 & pin13s;
+#endif
+        pin13 = ~pin13 & a13;
+        uint64_t mob = fold(pin13);
+#else
+        uint64_t mob = fold(a13);
+#endif
+        mob = popcount(mob & ~restrictions[CI][Bishop]);
+        ASSERT(mob <= 13 || m.piece() != Bishop);
+        ASSERT(mob <= 14 || m.piece() != Rook);
+        ASSERT(mob <= 27 || m.piece() != Queen);
+        
+        score += mobValues[Bishop][mob];
+    }
+
+    for (const BoardBase::MoveTemplateR* rs = b.rsingle[CI]; rs->move.data; ++rs) {
+        Move m = rs->move;
+        __v2di a02 = rs->d02;
+#ifdef USE_PINS_IN_MOBILITY
+        __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
+        __v2di pin02 = from2 & pins[CI].dir02;
+#ifdef __SSE4_1__
+        pin02 = _mm_cmpeq_epi64(pin02, zero);
+#else
+        pin02 = _mm_cmpeq_epi32(pin02, zero);
+        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
+        pin02 = pin02 & pin02s;
+#endif
+        pin02 = ~pin02 & a02;
+        uint64_t mob = fold(pin02);
+#else
+        uint64_t mob = fold(a02);
+#endif
+        mob = popcount(mob & ~restrictions[CI][Rook]);
+        ASSERT(mob <= 13 || m.piece() != Bishop);
+        ASSERT(mob <= 14 || m.piece() != Rook);
+        ASSERT(mob <= 27 || m.piece() != Queen);
+        
+        score += mobValues[Rook][mob];
+    }
+    
+    for (const BoardBase::MoveTemplateQ* qs = b.qsingle[CI]; qs->move.data; ++qs) {
+        Move m = qs->move;
+        __v2di a02 = qs->d02;
+        __v2di a13 = qs->d13;
 #ifdef USE_PINS_IN_MOBILITY
         __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
         __v2di pin02 = from2 & pins[CI].dir02;
@@ -454,12 +504,12 @@ inline int Eval::mobility( const BoardBase &b, const uint64_t (&restrictions)[nC
 #else
         uint64_t mob = fold(a02|a13);
 #endif
-        mob = popcount(mob & ~restrictions[CI][m.piece()]);
+        mob = popcount(mob & ~restrictions[CI][Queen]);
         ASSERT(mob <= 13 || m.piece() != Bishop);
         ASSERT(mob <= 14 || m.piece() != Rook);
         ASSERT(mob <= 27 || m.piece() != Queen);
         
-        score += mobValues[m.piece()][mob];
+        score += mobValues[Queen][mob];
     }
 
     for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
