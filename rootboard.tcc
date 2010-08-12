@@ -95,7 +95,9 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
         QDateTime currentStart = QDateTime::currentDateTime();
         SharedScore<C> alpha; alpha.v = -infinity*C;
         SharedScore<(Colors)-C> beta; beta.v = infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
-        QTextStream xout(stderr);
+        std::stringstream g;
+        if (Options::humanreadable) g.imbue(std::locale("de_DE"));
+        else                        g.imbue(std::locale("C"));
 
         currentMoveIndex = 0;
         for (Move* currentMove = good; currentMove < bad; currentMove++) {
@@ -119,16 +121,15 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
                         memmove(good+1, good, sizeof(Move) * (currentMove-good));
                         *good = bestMove;
                     }
+                    g.str("");
+                    g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
+                      << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
+                    emit console->send(g.str());
                 }
-            std::string newBestLine = tt->bestLine(*this);
-            uint64_t n = stats.node;
-            emit console->iterationDone(depth, n, newBestLine, alpha.v);
             //if (QDateTime::currentDateTime() > hardBudget) break;
             if (alpha >= infinity*C) break;
         }
-        std::stringstream g;
-        if (Options::humanreadable) g.imbue(std::locale("de_DE"));
-        else                        g.imbue(std::locale("C"));
+        g.str("");
         g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
           << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
         emit console->send(g.str());
