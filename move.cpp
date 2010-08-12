@@ -22,6 +22,9 @@
 std::string Move::string() const
 {
 	std::string temp;
+	if (!data) {
+	    return "null";
+	}
     temp += (const char*[]){"","R","B","Q","N","","K"}[piece() & 7];
 	temp += (from() & 7) + 'a';
 	temp += (from() >> 3) + '1';
@@ -32,6 +35,11 @@ std::string Move::string() const
         if ((piece() & 7) < Pawn) {
             temp += " RBQN"[piece() & 7];
             temp = temp.substr(1);
+        } else {
+            if ((to() & 7) == 6)
+                return "0-0";
+            else
+                return "0-0-0";
         }
     
 	return temp;
