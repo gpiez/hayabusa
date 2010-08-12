@@ -97,8 +97,12 @@ public:
     const BoardBase& currentBoard() const;
 	void go(QStringList);
 	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
-	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth, uint64_t endNode = ~0);
-	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, NodeItem*);
+	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth, uint64_t endNode = ~0);	
+	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply
+#ifdef QT_GUI_LIB	    
+	    , NodeItem*
+#endif	    
+	    );
 	void perft(unsigned int depth);
 	void divide(unsigned int depth);
 	template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
