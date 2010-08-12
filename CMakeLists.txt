@@ -38,7 +38,8 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
 SET(hayabusa_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
-                   move.cpp statwidget.cpp testgame.cpp nodeitem.cpp nodemodel.cpp nodedelegate.cpp)
+                   move.cpp testgame.cpp 
+                   statwidget.cpp  nodeitem.cpp nodemodel.cpp nodedelegate.cpp)
 SET(hayabusa_MOC_H ${hayabusa_MOC_H} jobs.h console.h statwidget.h nodemodel.h nodedelegate.h)
 SET(hayabusa_RCCS hayabusa.qrc)
 

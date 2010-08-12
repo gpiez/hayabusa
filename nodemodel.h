@@ -25,6 +25,8 @@
 #include <pch.h>
 #endif
 
+#ifdef QT_GUI_LIB
+
 #include "nodeitem.h"
 
 class NodeModel: public QAbstractItemModel {
@@ -52,5 +54,7 @@ private:
 
 	NodeItem *rootItem;
 };
+
+#endif
 
 #endif
