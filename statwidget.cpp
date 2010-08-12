@@ -28,8 +28,6 @@
 #include "nodemodel.h"
 #include "nodedelegate.h"
 
-__thread Stats stats;
-
 static void splitImage( QImage* piecesSet, QImage piecesImage )
 {
     int x = piecesImage.width()/6;
