@@ -104,7 +104,7 @@ StatWidget::StatWidget(const RootBoard& rb):
     QTimer* t = new QTimer(this);
     connect(t, SIGNAL(timeout()), this, SLOT(update()));
     qRegisterMetaType<uint64_t>("uint64_t");
-    connect(rb.console, SIGNAL(signalIterationDone(unsigned int, uint64_t, std::string, int)), this, SLOT(updateLine(unsigned int, uint64_t, std::string, int)));
+    connect(rb.console, SIGNAL(signalSend(std::string)), this, SLOT(updateLine(std::string)));
     t->setInterval(1000);
     t->start();
 }
@@ -113,18 +113,10 @@ StatWidget::~StatWidget()
 {
 }
 
-void StatWidget::updateLine(unsigned int depth, uint64_t nodes, std::string line, int bestScore)
+void StatWidget::updateLine(std::string line)
 {
-    static std::string oldBestLine;
-    static unsigned int oldDepth;
-    
-    if (line.substr(0, 5) != oldBestLine.substr(0, 5) || depth != oldDepth || bestScore != bestScore) {
-        oldBestLine = line;
-        oldDepth = depth;
-        bestLine->moveCursor(QTextCursor::Start);
-        bestLine->appendPlainText(QString("%1 %2 %3 %4 ").arg(depth, 2).arg(nodes, 15).arg(rb.getTime(), 15).arg(bestScore/100.0, 6, 'f', 2) + QString::fromStdString(line) );
-        Ui_Statsui::depth->setText("Depth: " + QString::number(depth));
-    }
+//        bestLine->moveCursor(QTextCursor::Start);
+        bestLine->appendPlainText(QString::fromStdString(line));
 }
 /* Store the last 10 stats for a sliding average */
 template<typename T>
@@ -141,6 +133,7 @@ void StatWidget::update()
 {
 	treeView->doItemsLayout();
     updateBoard();
+    Ui_Statsui::depth->setText("Depth: " + QString::number(rb.depth));
     setWindowTitle(QString::fromStdString(rb.getLine()));
     static QList<Stats> prev;
     prev.append(rb.getStats());

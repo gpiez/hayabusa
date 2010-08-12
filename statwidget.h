@@ -42,7 +42,7 @@ class StatWidget: public QWidget, private Ui::Statsui
 private slots:
 	void update();
     void updateBoard();
-	void updateLine(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
+	void updateLine(std::string line);
 	
 public:
 	NodeModel* volatile tree;
