@@ -51,19 +51,16 @@ void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
      */
     const __v2di zero = _mm_set1_epi64x(0);
     const __v2di d2 = _mm_set1_epi64x(tobit);
-    for(const MoveTemplate* psingle = single[CI]; psingle->move.data; psingle++) {
-        __v2di a02 = psingle->d02;
-		__v2di a13 = psingle->d13;
+    for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
+		__v2di a13 = bs->d13;
 #ifdef __SSE4_1__        
-		if (!_mm_testz_si128(d2, (a02|a13))) {
+		if (!_mm_testz_si128(d2, a13)) {
 #else
         if (fold(d2 & (a02|a13))) {
 #endif            
-			__v2di from2 = _mm_set1_epi64x(1ULL<<psingle->move.from());
-			__v2di pin02 = from2 & dpins[CI].d02;
+			__v2di from2 = _mm_set1_epi64x(1ULL<<bs->move.from());
 			__v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__            
-			pin02 = _mm_cmpeq_epi64(pin02, zero);
 			pin13 = _mm_cmpeq_epi64(pin13, zero);
 #else
             pin02 = _mm_cmpeq_epi32(pin02, zero);
@@ -73,11 +70,67 @@ void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
             pin02 = pin02 & pin02s;
             pin13 = pin13 & pin13s;
 #endif
-			pin02 = ~pin02 & d2 & a02;
 			pin13 = ~pin13 & d2 & a13;
-			for (uint64_t a=fold(pin02|pin13); a; a&=a-1) {
+			for (uint64_t a=fold(pin13); a; a&=a-1) {
 				Move n;
-            	n.data = psingle->move.data + Move(0, bit(a), 0).data;
+            	n.data = bs->move.data + Move(0, bit(a), 0).data;
+                *bad++ = n;
+            }
+        }
+    }
+		
+    for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
+        __v2di a02 = rs->d02;
+#ifdef __SSE4_1__        
+        if (!_mm_testz_si128(d2, a02)) {
+#else
+        if (fold(d2 & (a02|a13))) {
+#endif            
+            __v2di from2 = _mm_set1_epi64x(1ULL<<rs->move.from());
+            __v2di pin02 = from2 & dpins[CI].d02;
+#ifdef __SSE4_1__            
+            pin02 = _mm_cmpeq_epi64(pin02, zero);
+#else
+            pin02 = _mm_cmpeq_epi32(pin02, zero);
+            __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
+            pin02 = pin02 & pin02s;
+#endif
+            pin02 = ~pin02 & d2 & a02;
+            for (uint64_t a=fold(pin02); a; a&=a-1) {
+                Move n;
+                n.data = rs->move.data + Move(0, bit(a), 0).data;
+                *bad++ = n;
+            }
+        }
+    }
+        
+    for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
+        __v2di a02 = qs->d02;
+        __v2di a13 = qs->d13;
+#ifdef __SSE4_1__        
+        if (!_mm_testz_si128(d2, (a02|a13))) {
+#else
+        if (fold(d2 & (a02|a13))) {
+#endif            
+            __v2di from2 = _mm_set1_epi64x(1ULL<<qs->move.from());
+            __v2di pin02 = from2 & dpins[CI].d02;
+            __v2di pin13 = from2 & dpins[CI].d13;
+#ifdef __SSE4_1__            
+            pin02 = _mm_cmpeq_epi64(pin02, zero);
+            pin13 = _mm_cmpeq_epi64(pin13, zero);
+#else
+            pin02 = _mm_cmpeq_epi32(pin02, zero);
+            pin13 = _mm_cmpeq_epi32(pin13, zero);
+            __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
+            __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
+            pin02 = pin02 & pin02s;
+            pin13 = pin13 & pin13s;
+#endif
+            pin02 = ~pin02 & d2 & a02;
+            pin13 = ~pin13 & d2 & a13;
+            for (uint64_t a=fold(pin02|pin13); a; a&=a-1) {
+                Move n;
+                n.data = qs->move.data + Move(0, bit(a), 0).data;
                 *bad++ = n;
             }
         }
@@ -227,12 +280,50 @@ void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
      * generated earlier in buildAttacks()
      */
     const __v2di zero = _mm_set1_epi64x(0);
-    for(const MoveTemplate* psingle = single[CI]; psingle->move.data; psingle++) {
-        __v2di a02 = psingle->d02;
-		__v2di a13 = psingle->d13;
-		__v2di from2 = _mm_set1_epi64x(1ULL << psingle->move.from());
-		__v2di pin02 = from2 & dpins[CI].d02;
+    for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
+		__v2di a13 = bs->d13;
+		__v2di from2 = _mm_set1_epi64x(1ULL << bs->move.from());
 		__v2di pin13 = from2 & dpins[CI].d13;
+#ifdef __SSE4_1__        
+        pin13 = _mm_cmpeq_epi64(pin13, zero);
+#else
+        pin13 = _mm_cmpeq_epi32(pin13, zero);
+        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
+        pin13 = pin13 & pin13s;
+#endif
+		pin13 = ~pin13 & a13;
+		for (uint64_t a=fold(pin13) & ~occupied1; a; a&=a-1) {
+			Move n;
+			n.data = bs->move.data + Move(0, bit(a), 0).data;
+			*--good = n;
+        }
+    }
+
+    for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
+        __v2di a02 = rs->d02;
+        __v2di from2 = _mm_set1_epi64x(1ULL << rs->move.from());
+        __v2di pin02 = from2 & dpins[CI].d02;
+#ifdef __SSE4_1__        
+        pin02 = _mm_cmpeq_epi64(pin02, zero);
+#else
+        pin02 = _mm_cmpeq_epi32(pin02, zero);
+        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
+        pin02 = pin02 & pin02s;
+#endif
+        pin02 = ~pin02 & a02;
+        for (uint64_t a=fold(pin02) & ~occupied1; a; a&=a-1) {
+            Move n;
+            n.data = rs->move.data + Move(0, bit(a), 0).data;
+            *--good = n;
+        }
+    }
+    
+    for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
+        __v2di a02 = qs->d02;
+        __v2di a13 = qs->d13;
+        __v2di from2 = _mm_set1_epi64x(1ULL << qs->move.from());
+        __v2di pin02 = from2 & dpins[CI].d02;
+        __v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__        
         pin02 = _mm_cmpeq_epi64(pin02, zero);
         pin13 = _mm_cmpeq_epi64(pin13, zero);
@@ -244,15 +335,15 @@ void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
         pin02 = pin02 & pin02s;
         pin13 = pin13 & pin13s;
 #endif
-		pin02 = ~pin02 & a02;
-		pin13 = ~pin13 & a13;
-		for (uint64_t a=fold(pin02|pin13) & ~occupied1; a; a&=a-1) {
-			Move n;
-			n.data = psingle->move.data + Move(0, bit(a), 0).data;
-			*--good = n;
+        pin02 = ~pin02 & a02;
+        pin13 = ~pin13 & a13;
+        for (uint64_t a=fold(pin02|pin13) & ~occupied1; a; a&=a-1) {
+            Move n;
+            n.data = qs->move.data + Move(0, bit(a), 0).data;
+            *--good = n;
         }
     }
-    /* castling
+/* castling
      * test the castling flags,
      * if there is enough free space besides the king (ATTACKLEN)
      * if the king-squares are not under attack, a test if we are in check is
