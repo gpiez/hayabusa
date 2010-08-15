@@ -48,10 +48,9 @@ union CastlingAndEP {
 class RootBoard;
 
 struct BoardBase {
-    union {
-    __v2di occupied2;
+    uint64_t occupied[nColors];
     uint64_t occupied1;
-    };
+    uint64_t fill;
     uint64_t pins[nColors];						// +16
     uint64_t attacks[nPieces+1][nColors];		// +32
     uint64_t pieces[nPieces+1][nColors];        // +144
@@ -64,7 +63,7 @@ struct BoardBase {
     } dpins[nColors],							//+256
       datt[nColors],			 				//+288 sum of all directed attacks, for each of the 4 main directions
       kingIncoming[nColors];					//+320
-    
+
     struct MoveTemplateB {
     	Move move;
     	__v2di d13;
@@ -88,7 +87,7 @@ struct BoardBase {
     static const uint64_t knightAttacks[nSquares];
     static uint64_t kingAttacks[16][nSquares];
     static uint64_t epTab[nPieces+1][nSquares];
-    
+
     template<int C, Pieces P>
     uint64_t getPieces() const {
         static_assert(P>0 && P<=King, "Wrong Piece");
@@ -129,8 +128,10 @@ struct BoardBase {
         return getPieces<C,King>() & getAttacks<-C,All>();
     }
     template<Colors C> void setPiece(unsigned int piece, unsigned int pos, const Eval& e) {
+        enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
         getPieces<C>(piece) |= 1ULL << pos;
-        occupied2 |= _mm_set1_epi64x(1ULL << pos);
+        occupied[CI] |= 1ULL << pos;
+        occupied1 |= 1ULL << pos;
         keyScore.vector += e.getKSVector(C*piece, pos);
     }
 
@@ -144,9 +145,8 @@ struct BoardBase {
     CastlingAndEP cep;
     static Castling castlingMask[nSquares];
     void init();
-    void print();
-
-
+    void print() const;
+    int getPiece(unsigned pos) const;
     static void initTables();
 
 } ALIGN_CACHE;                                    //sum:        3C0

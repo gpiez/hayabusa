@@ -54,7 +54,7 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
     _mm_store_si128((__m128i*)next->pieces+6, xmm3);
 
     next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
-    
+
     if (m.isSpecial()) {
         next->fiftyMoves = 0;
         next->cep.enPassant = 0;
@@ -62,24 +62,27 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
         if (piece == King) {
             ASSERT(m.capture() == 0);
             next->getPieces<C,King>() ^= from + to;
+            next->occupied[EI] = occupied[EI];
             if (m.to() == (pov^g1)) {
                 // short castling
-                next->occupied2 = _mm_set1_epi64x(occupied1 ^ (0b1111ULL << m.from()));
+                next->occupied[CI] = occupied[CI] ^ 0b1111ULL << m.from();
                 next->getPieces<C,Rook>() ^= (from + to) << 1;
             } else {
                 // long castling
-                next->occupied2 = _mm_set1_epi64x(occupied1 ^ (0b11101ULL << (m.to() & 070)));
+                next->occupied[CI] = occupied[CI] ^ 0b11101ULL << (m.to() & 070);
                 next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4);
             }
             ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>()));
         } else if (piece == Pawn) {
         	// en passant
-            next->occupied2 = _mm_set1_epi64x(occupied1 ^ from ^ to ^ shift<-C*8>(to));
+            next->occupied[CI] = occupied[CI] ^ from + to;
+            next->occupied[EI] = occupied[EI] ^ shift<-C*8>(to);
             next->getPieces<C,Pawn>() ^= from + to;
             next->getPieces<-C,Pawn>() ^= shift<-C*8>(to);
-        } else{
+        } else {
             // promotion
-            next->occupied2 = _mm_set1_epi64x(occupied1 ^ (from + (m.capture() ? 0:to)));
+            next->occupied[CI] = occupied[CI] ^ from + to;
+            next->occupied[EI] = occupied[EI] ^ (m.capture()? to:0);
             next->getPieces<C,Pawn>() ^= from;
             next->getPieces<C>(piece) ^= to;
             next->getPieces<-C>(m.capture()) ^= to;
@@ -91,11 +94,12 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
     	else
     		next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
         next->cep.enPassant = m.piece()==Pawn ? to & shift<C*16>(from) & rank<4>() & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1) : 0;
-        next->occupied2 = _mm_set1_epi64x(occupied1 ^ (from + (m.capture() ? 0:to)));
+        next->occupied[CI] = occupied[CI] ^ from + to;
+        next->occupied[EI] = occupied[EI] ^ (m.capture() ? to:0);
         next->getPieces<C>(m.piece()) ^= from + to;
         next->getPieces<-C>(m.capture()) ^= to;
-        
     }
+    next->occupied1 = next->occupied[CI] | next->occupied[EI];
 }
 
 template<Colors C>

@@ -458,12 +458,11 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 							search<C, leaf>(nextNodeType, b, *i, depth-(nullReduction+1), nalpha, null, ply+2 NODE);
 						pruneNull = nalpha >= null.v;
 						if (pruneNull) {
-/*
+
                             if (depth > 2*nullReduction + dMaxCapture + dMaxThreat) {
                                 search<(Colors)-C, tree>(nextNodeType, b, *i, depth-2*nullReduction, beta, nalpha, ply+1, node);
                                 pruneNull = current >= nalpha.v;
                             }
-*/
 /*
                             else
                                 search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-2*nullReduction, beta, nalpha, ply+1, node);

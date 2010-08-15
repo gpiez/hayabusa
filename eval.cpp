@@ -426,7 +426,7 @@ template<Colors C>
 inline int Eval::mobility( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1]) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int score = 0;
-    
+
     for (const BoardBase::MoveTemplateB* bs = b.bsingle[CI]; bs->move.data; ++bs) {
         Move m = bs->move;
         __v2di a13 = bs->d13;
@@ -449,7 +449,7 @@ inline int Eval::mobility( const BoardBase &b, const uint64_t (&restrictions)[nC
         ASSERT(mob <= 13 || m.piece() != Bishop);
         ASSERT(mob <= 14 || m.piece() != Rook);
         ASSERT(mob <= 27 || m.piece() != Queen);
-        
+
         score += mobValues[Bishop][mob];
     }
 
@@ -475,10 +475,10 @@ inline int Eval::mobility( const BoardBase &b, const uint64_t (&restrictions)[nC
         ASSERT(mob <= 13 || m.piece() != Bishop);
         ASSERT(mob <= 14 || m.piece() != Rook);
         ASSERT(mob <= 27 || m.piece() != Queen);
-        
+
         score += mobValues[Rook][mob];
     }
-    
+
     for (const BoardBase::MoveTemplateQ* qs = b.qsingle[CI]; qs->move.data; ++qs) {
         Move m = qs->move;
         __v2di a02 = qs->d02;
@@ -508,7 +508,7 @@ inline int Eval::mobility( const BoardBase &b, const uint64_t (&restrictions)[nC
         ASSERT(mob <= 13 || m.piece() != Bishop);
         ASSERT(mob <= 14 || m.piece() != Rook);
         ASSERT(mob <= 27 || m.piece() != Queen);
-        
+
         score += mobValues[Queen][mob];
     }
 
@@ -583,7 +583,7 @@ int Eval::eval(const BoardBase& b) const {
     		value += getPS(-p, sq).calc(b, *this);
     	}
     }
-    if (value != b.keyScore.score.calc(b, *this)) asm("int3");
+//    if (value != b.keyScore.score.calc(b, *this)) asm("int3");
 #endif
     pawns(b);
     return b.keyScore.score.calc(b, *this) + pawns(b)

@@ -28,7 +28,7 @@
 inline __v2di BoardBase::build13Attack(const unsigned sq) const {
 	const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
 
-    __v2di maskedDirs = occupied2 & mask13x[sq];
+    __v2di maskedDirs = _mm_set1_epi64x(occupied1) & mask13x[sq];
     __v2di reverse = _mm_shuffle_epi8(maskedDirs, swap16);
     maskedDirs -= doublebits[sq];
     reverse -= doublereverse[sq];
@@ -41,13 +41,13 @@ inline __v2di BoardBase::build13Attack(const unsigned sq) const {
 inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
 
-    __v2di maskedDir02 = (occupied2|b02) & mask02b[sq];
+    __v2di maskedDir02 = (_mm_set1_epi64x(occupied1)|b02) & mask02b[sq];
     uint64_t d0 = _mm_cvtsi128_si64x(maskedDir02);
     uint64_t d2 = _mm_cvtsi128_si64x(_mm_unpackhi_epi64(maskedDir02,maskedDir02));
     d0 <<= 63-sq;
     d2 <<= 63-sq;
-    uint64_t lo = __rolq(6, sq + __bsrq(d0));
-    uint64_t hi = __rolq(6, sq + __bsrq(d2));
+    uint64_t lo = rol(6, sq + __bsrq(d0));
+    uint64_t hi = rol(6, sq + __bsrq(d2));
     maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
     maskedDir02 &= mask02x[sq];
     return maskedDir02;
@@ -69,7 +69,7 @@ void BoardBase::buildAttacks() {
     }
     getAttacks<C, Knight>() = a;
     getAttacks<C, All>() = a;
-    
+
     MoveTemplateB* bs = bsingle[CI];
 //    Move* pmove = moves[CI];
     __v2di dir13 = _mm_set1_epi64x(0);
@@ -88,7 +88,7 @@ void BoardBase::buildAttacks() {
     a = fold(dir13);
     getAttacks<C, Bishop>() = a;
     getAttacks<C, All>() |= a;
-    
+
     MoveTemplateR* rs = rsingle[CI];
     __v2di dir02 = _mm_set1_epi64x(0);
     p = getPieces<C, Rook>();
@@ -105,7 +105,7 @@ void BoardBase::buildAttacks() {
     a = fold(dir02);
     getAttacks<C, Rook>() = a;
     getAttacks<C, All>() |= a;
-    
+
     MoveTemplateQ* qs = qsingle[CI];
     p = getPieces<C, Queen>();
     a = 0;
@@ -127,7 +127,7 @@ void BoardBase::buildAttacks() {
     getAttacks<C, All>() |= a;
     datt[CI].d02 = dir02;
     datt[CI].d13 = dir13;
-    
+
     p = getPieces<C, Pawn>();
     if (C == White)
         getAttacks<C, All>() |= getAttacks<C, Pawn>() = (p << 7 & 0x7f7f7f7f7f7f7f7f) | (p << 9 & 0xfefefefefefefefe);
@@ -144,7 +144,7 @@ void BoardBase::buildAttacks() {
 template<Colors C>
 void BoardBase::buildPins() {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-    
+
     uint64_t p = getPieces<C, King>();
     uint64_t sq = bit(p);
     getAttacks<C, All>() |= getAttacks<C, King>() = kingAttacks[0][sq];

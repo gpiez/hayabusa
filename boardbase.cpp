@@ -209,7 +209,7 @@ void BoardBase::initTables() {
 // The default constructor should not be initialized, because the contents
 // of the constructed object are generated anyway.
 void BoardBase::init() {
-    *this = (BoardBase){{{0}}};
+    *this = (BoardBase){{0}};
     keyScore.pawnKey = 0x12345678;
 /*
     for (unsigned int dir = 0; dir < nDirs; ++dir) {
@@ -233,15 +233,33 @@ void BoardBase::init() {
 */
 }
 
-void BoardBase::print() {
+int BoardBase::getPiece(unsigned pos) const {
+    uint64_t p = 1ULL << pos;
+    return
+    getPieces<White,King>() & p ? King:
+    getPieces<White,Pawn>() & p ? Pawn:
+    getPieces<White,Knight>() & p ? Knight:
+    getPieces<White,Queen>() & p ? Queen:
+    getPieces<White,Bishop>() & p ? Bishop:
+    getPieces<White,Rook>() & p ? Rook:
+    getPieces<Black,King>() & p ? -King:
+    getPieces<Black,Pawn>() & p ? -Pawn:
+    getPieces<Black,Knight>() & p ? -Knight:
+    getPieces<Black,Queen>() & p ? -Queen:
+    getPieces<Black,Bishop>() & p ? -Bishop:
+    getPieces<Black,Rook>() & p ? -Rook:0;
+}
+
+void BoardBase::print() const {
     static const QChar chessPieces[nTotalPieces] =
-        { L'♚', L'♟', L'♞', L'♛', L'♝', L'♜', ' ', L'♖', L'♗', L'♕', L'♘', L'♙', L'♔' };
+//        { L'♚', L'♟', L'♞', L'♛', L'♝', L'♜', ' ', L'♖', L'♗', L'♕', L'♘', L'♙', L'♔' };
+        { 'k', 'p', 'n', 'q', 'b', 'r', ' ', 'R', 'B', 'Q', 'N', 'P', 'K' };
     QTextStream xout(stderr);
     xout.setCodec("UTF-8");
     xout << "--------------------------------" << endl;
-    for (unsigned int y = 7; y < nRows; --y) {
+    for (unsigned int y = 0; y < nRows; ++y) {
         for (unsigned int x = 0; x < nFiles; ++x) {
-            xout << "| " << chessPieces[6] << ' ';
+            xout << "| " << chessPieces[6 + getPiece((7-y)*8+x)] << ' ';
         }
         xout << endl << "--------------------------------" << endl;
     }

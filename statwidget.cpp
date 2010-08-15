@@ -183,19 +183,7 @@ void StatWidget::updateBoard()
 
         for ( int x=0; x<8; x++ )
             for ( int y=0; y<8; y++ ) {
-            	uint64_t p = 1ULL << (x+(7-y)*8);
-                int type = rb.currentBoard().getPieces<White,King>() & p ? King:
-                rb.currentBoard().getPieces<White,Pawn>() & p ? Pawn:
-                rb.currentBoard().getPieces<White,Knight>() & p ? Knight:
-                rb.currentBoard().getPieces<White,Queen>() & p ? Queen:
-                rb.currentBoard().getPieces<White,Bishop>() & p ? Bishop:
-                rb.currentBoard().getPieces<White,Rook>() & p ? Rook:
-                rb.currentBoard().getPieces<Black,King>() & p ? -King:
-				rb.currentBoard().getPieces<Black,Pawn>() & p ? -Pawn:
-				rb.currentBoard().getPieces<Black,Knight>() & p ? -Knight:
-				rb.currentBoard().getPieces<Black,Queen>() & p ? -Queen:
-				rb.currentBoard().getPieces<Black,Bishop>() & p ? -Bishop:
-				rb.currentBoard().getPieces<Black,Rook>() & p ? -Rook:0;
+                int type = rb.currentBoard().getPiece(x+(7-y)*8);
                 pa.setBrush(QBrush((x^y)&1 ? QColor(128,128,128):QColor(192,192,192) ));
                 pa.drawRect(x*size, y*size, size, size);
                 if ( type > 0 )

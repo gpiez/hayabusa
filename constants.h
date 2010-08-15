@@ -170,8 +170,20 @@ static inline uint64_t popcount(uint64_t x) {
 #endif
 }
 
+static inline uint64_t ror(uint64_t x, unsigned k) {
+    return __rorq(x, k);
+}
+
+static inline uint64_t rol(uint64_t x, unsigned k) {
+    return __rolq(x, k);
+}
+
 static inline unsigned int bit(uint64_t x) {
     return __bsfq(x);
+}
+
+static inline unsigned int bitr(uint64_t x) {
+    return __bsrq(x);
 }
 
 static inline unsigned int bit(unsigned int x) {
