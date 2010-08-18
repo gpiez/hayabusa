@@ -42,7 +42,7 @@
 #define ALIGN_CACHE __attribute__((aligned(CACHE_LINE_SIZE)))
 #define ALIGN_PAGE __attribute__((aligned(4096)))
 
-enum SearchFlag { null = 1 };
+enum GamePhase { Opening, Endgame };
 
 enum Pieces: unsigned int { Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6, All = 7 };
 
@@ -125,7 +125,7 @@ static const unsigned int nKPAttackBits = 1;	// king attacks from enemy pawn
 static const int dirOffsets[8] = { 1, 9, 8, 7, -1, -9, -8, -7 };
 static const int xOffsets[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 static const int yOffsets[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
-
+static const int materialTab[nPieces+1] = { 0, 5, 3, 9, 3, 0, 0 };
 #ifndef BITBOARD
 static const int xShortOffsets[nPieces+1][nDirs] = {
 	{},

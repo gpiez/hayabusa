@@ -57,7 +57,7 @@ CompoundScore Eval::r_p[17];
 CompoundScore Eval::q_p[17];
 int Eval::pawnBackward = -10;
 int Eval::pawnBackwardOpen = -20;
-int Eval::pawnPasser[8] = { 0, 50, 50, 60, 80, 110, 150, 0 };
+int Eval::pawnPasser[8] = { 0, 50, 50, 60, 80, 115, 160, 0 };
 int Eval::pawnHalfIsolated = -5;
 int Eval::pawnIsolated = -30 - Eval::pawnBackwardOpen;
 
@@ -86,14 +86,19 @@ static inline uint64_t popcount2( uint64_t x )
 #define popcount2(x) __builtin_popcountll(x)
 #endif
 
+int CompoundScore::calc(const BoardBase& b, const Eval& ) const
+{
+    return b.material >= 30 ? opening : endgame;
+}
+
 Eval::Eval() {
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
 //    pt->setSize(0x100000000);
-    pawn = 100;
-    knight = 325;            // + 16 Pawns * 3 = 342 == 3 7/16s
-    bishop = 325;
-    rook = 500;
-    queen = 925;
+    pawn = 80;
+    knight = 275;   // +25 psq = 300
+    bishop = 284;   // +16 psq = 300
+    rook = 430;     // +20 psq = 450
+    queen = 900;    // +25 psq = 925
 
     bishopPair = 50;
     knightAlone = -125;
@@ -132,41 +137,156 @@ Eval::Eval() {
 }
 
 void Eval::initPS() {
-    CompoundScore rook[nSquares] = {{{0}}};
-    CompoundScore bishop[nSquares] = {{{0}}};
-    CompoundScore queen[nSquares] = {{{0}}};
-    CompoundScore knight[nSquares] = {{{0}}};
-    CompoundScore pawn[nSquares] = {{{0}}};
-    CompoundScore king[nSquares] = {{{0}}};
+    // highest rank (eight) comes first, for convenience.
+    // while initializing it is flipped top-down.
+    RawScore rook[2][nSquares] = {{
+ 4,  4, 10, 12, 12, 10,  4,  4,
+12, 12, 18, 20, 20, 18, 12, 12,
+ 5,  5, 11, 13, 13, 11,  5,  5,
+ 3,  3,  9, 11, 11,  9,  3,  3,
+ 2,  2,  8, 10, 10,  8,  2,  2,
+ 1,  1,  7,  9,  9,  7,  1,  1,
+ 0,  0,  6,  8,  8,  6,  0,  0,
+ 0,  0,  6,  8,  8,  6,  0,  0,
+},{
+ 0, 10, 11, 12, 12, 11, 10,  0,
+10, 20, 21, 22, 22, 21, 20, 10,
+11, 21, 22, 23, 23, 22, 21, 11,
+12, 22, 23, 24, 24, 23, 22, 12,
+12, 22, 23, 24, 24, 23, 22, 12,
+11, 21, 22, 23, 23, 22, 21, 11,
+10, 20, 21, 22, 22, 21, 20, 10,
+ 0, 10, 11, 12, 12, 11, 10,  0
+}};
+
+    RawScore bishop[2][nSquares] = {{
+ 0,  4,  8,  7,  7,  8,  4,  0,
+ 4,  8, 12, 11, 11, 12,  8,  4,
+ 8, 12, 16, 15, 15, 16, 12,  8,
+ 8, 12, 16, 15, 15, 16, 12,  8,
+ 8, 12, 16, 15, 15, 16, 12,  8,
+ 8, 12, 16, 15, 15, 16, 12,  8,
+ 4,  8, 12, 11, 11, 12,  8,  4,
+ 0,  4,  8,  7,  7,  8,  4,  0
+},{
+ 0,  3,  6,  9,  9,  6,  3,  0,
+ 3,  6,  9, 12, 12,  9,  6,  3,
+ 6,  9, 12, 15, 15, 12,  9,  6,
+ 9, 12, 15, 18, 18, 15, 12,  9,
+ 9, 12, 15, 18, 18, 15, 12,  9,
+ 6,  9, 12, 15, 15, 12,  9,  6,
+ 3,  6,  9, 12, 12,  9,  6,  3,
+ 0,  3,  6,  9,  9,  6,  3,  0
+}};
+
+    RawScore queen[2][nSquares] = {{
+ 0,  8, 10, 12, 12, 10,  8,  0,
+10, 18, 20, 22, 22, 20, 18, 10,
+12, 20, 22, 24, 24, 22, 20, 12,
+13, 21, 23, 25, 25, 23, 21, 13,
+12, 20, 22, 24, 24, 22, 20, 12,
+10, 18, 20, 22, 22, 20, 18, 10,
+ 8, 16, 18, 20, 20, 18, 16,  8,
+ 0,  8, 10, 12, 12, 10,  8,  0
+},{
+ 0,  6, 10, 12, 12, 10,  6,  0,
+ 6, 12, 16, 18, 18, 16, 12,  6,
+10, 16, 20, 22, 22, 20, 16, 10,
+12, 18, 22, 24, 24, 22, 18, 12,
+12, 18, 22, 24, 24, 22, 18, 12,
+10, 16, 20, 22, 22, 20, 16, 10,
+ 6, 12, 16, 18, 18, 16, 12,  6,
+ 0,  6, 10, 12, 12, 10,  6,  0
+}};
+
+    RawScore knight[2][nSquares] = {{
+ 0,  4,  6,  8,  8,  6,  4,  0,
+ 4, 10, 14, 17, 17, 14, 10,  4,
+ 8, 16, 22, 25, 25, 22, 16,  8,
+ 7, 14, 21, 23, 23, 21, 14,  7,
+ 6, 12, 18, 20, 20, 18, 12,  6,
+ 5, 10, 15, 15, 15, 15, 10,  5,
+ 3,  5, 10, 10, 10, 10,  5,  3,
+ 0,  2,  4,  6,  6,  4,  2,  0
+},{
+ 0,  6,  8, 10, 10,  8,  6,  0,
+ 6, 12, 14, 16, 16, 14, 12,  6,
+ 8, 14, 16, 18, 18, 16, 14,  8,
+10, 16, 18, 20, 20, 18, 16, 10,
+10, 16, 18, 20, 20, 18, 16, 10,
+ 8, 14, 16, 18, 18, 16, 14,  8,
+ 6, 12, 14, 16, 16, 14, 12,  6,
+ 0,  6,  8, 10, 10,  8,  6,  0
+}};
+
+    RawScore pawn[2][nSquares] = {{
+ 0,  0,  0,  0,  0,  0,  0,  0,
+10, 22, 26, 30, 30, 26, 22, 10,
+ 6, 18, 22, 26, 26, 22, 18,  6,
+ 3, 15, 19, 23, 23, 19, 15,  3,
+ 1, 13, 17, 21, 21, 17, 13,  1,
+ 0, 12, 16, 20, 20, 16, 12,  0,
+ 0, 12, 16, 20, 20, 16, 12,  0,
+ 0,  0,  0,  0,  0,  0,  0,  0
+},{
+ 0,  0,  0,  0,  0,  0,  0,  0,
+10, 26, 28, 30, 30, 28, 26, 10,
+ 6, 22, 24, 26, 26, 24, 22,  6,
+ 3, 19, 21, 23, 23, 21, 19,  3,
+ 1, 17, 19, 21, 21, 19, 17,  1,
+ 0, 16, 18, 20, 20, 18, 16,  0,
+ 0, 16, 18, 20, 20, 18, 16,  0,
+ 0,  0,  0,  0,  0,  0,  0,  0
+}};
+
+    RawScore king[2][nSquares] = {{
+-90, -90, -95, -100, -100, -95, -90, -90,
+-90, -90, -95, -100, -100, -95, -90, -90,
+-90, -90, -95, -100, -100, -95, -90, -90,
+-40, -40, -45, -50, -50, -45, -40, -40,
+-10, -10, -15, -20, -20, -15, -10, -10,
+ 0,  0, -5, -10, -10, -5,  0,  0,
+10, 10,  5,  0,  0,  5, 10, 10,
+10, 10,  5,  0,  0,  5, 10, 10
+},{
+ 0,  4,  8, 12, 12,  8,  4,  0,
+ 9, 13, 17, 21, 21, 17, 13,  9,
+18, 22, 26, 30, 30, 26, 22, 18,
+17, 21, 25, 29, 29, 25, 21, 17,
+14, 18, 22, 26, 26, 22, 18, 14,
+10, 14, 18, 22, 22, 18, 14, 10,
+ 5,  9, 13, 17, 17, 13,  9,  5,
+ 0,  4,  8, 12, 12,  8,  4,  0
+}};
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Pawn, sq) = Eval::pawn + pawn[sq ^ 0x38];
-        getPS(-Pawn, sq) = - (Eval::pawn + pawn[sq]);
+        getPS( Pawn, sq) = Eval::pawn + CompoundScore{ pawn[Opening][sq ^ 0x38], pawn[Endgame][sq ^ 0x38] };
+        getPS(-Pawn, sq ^ 070) = -getPS( Pawn, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Rook, sq)  = Eval::rook + rook[sq ^ 0x38];
-        getPS(-Rook, sq) = -(Eval::rook + rook[sq]);
+        getPS( Rook, sq)  = Eval::rook + CompoundScore{ rook[Opening][sq ^ 0x38], rook[Endgame][sq ^ 0x38] };
+        getPS(-Rook, sq ^ 070) = -getPS( Rook, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Bishop, sq) = Eval::bishop + bishop[sq ^ 0x38];
-        getPS(-Bishop, sq) = -(Eval::bishop + bishop[sq]);
+        getPS( Bishop, sq) = Eval::bishop + CompoundScore{ bishop[Opening][sq ^ 0x38], bishop[Endgame][sq ^ 0x38] };
+        getPS(-Bishop, sq ^ 070) = -getPS( Bishop, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Knight, sq) = Eval::knight + knight[sq ^ 0x38];
-        getPS(-Knight, sq) = -(Eval::knight + knight[sq]);
+        getPS( Knight, sq) = Eval::knight + CompoundScore{ knight[Opening][sq ^ 0x38], knight[Endgame][sq ^ 0x38] };
+        getPS(-Knight, sq ^ 070) = -getPS( Knight, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Queen, sq) = Eval::queen + queen[sq ^ 0x38];
-        getPS(-Queen, sq) = -(Eval::queen + queen[sq]);
+        getPS( Queen, sq) = Eval::queen + CompoundScore{ queen[Opening][sq ^ 0x38], queen[Endgame][sq ^ 0x38] };
+        getPS(-Queen, sq ^ 070) = -getPS( Queen, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( King, sq) = king[sq ^ 0x38];
-        getPS(-King, sq) = - king[sq];
+        getPS( King, sq) = CompoundScore{ king[Opening][sq ^ 0x38], king[Endgame][sq ^ 0x38] };
+        getPS(-King, sq ^ 070) = -getPS( King, sq);
     }
 
 }
@@ -414,10 +534,10 @@ static const int8_t mobValues[nPieces+1][32] = {
     // unoccupied and not attacked by a less valuable piece
     // 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27
     {  0 },                                                                // nothing
-    {  0,  1,  1,  4,  8, 12, 15, 17, 18, 19, 20, 20, 20, 20, 20 }, //rook
-    {  0,  1,  3,  6, 10, 15, 19, 22, 23, 24, 25, 25, 25, 25 }, //bishop
-//    {  0,  1,  3,  5,  7,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20 },
-    {  0,  3,  7, 12, 17, 21, 24, 25, 25 },
+    {  0,  3,  6,  9, 12, 14, 16, 18, 20, 22, 23, 24, 25, 25, 25 }, //rook
+    {  0,  3,  5,  7,  9, 10, 11, 12, 13, 14, 15, 16, 16, 16 }, //bishop
+    {  0,  3,  5,  7,  9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20 },
+    {  0,  6, 11, 15, 18, 20, 22, 24, 25 },
     {  0 },
     {  0 }
 };
@@ -445,7 +565,7 @@ inline int Eval::mobility( const BoardBase &b, const uint64_t (&restrictions)[nC
 #else
         uint64_t mob = fold(a13);
 #endif
-        mob = popcount(mob & ~restrictions[CI][Bishop]);
+        mob = popcount15(mob & ~restrictions[CI][Bishop]);
         ASSERT(mob <= 13 || m.piece() != Bishop);
         ASSERT(mob <= 14 || m.piece() != Rook);
         ASSERT(mob <= 27 || m.piece() != Queen);
@@ -471,7 +591,7 @@ inline int Eval::mobility( const BoardBase &b, const uint64_t (&restrictions)[nC
 #else
         uint64_t mob = fold(a02);
 #endif
-        mob = popcount(mob & ~restrictions[CI][Rook]);
+        mob = popcount15(mob & ~restrictions[CI][Rook]);
         ASSERT(mob <= 13 || m.piece() != Bishop);
         ASSERT(mob <= 14 || m.piece() != Rook);
         ASSERT(mob <= 27 || m.piece() != Queen);
@@ -583,10 +703,14 @@ int Eval::eval(const BoardBase& b) const {
     		value += getPS(-p, sq).calc(b, *this);
     	}
     }
-//    if (value != b.keyScore.score.calc(b, *this)) asm("int3");
+    if (value != b.keyScore.score.calc(b, *this)) asm("int3");
 #endif
     pawns(b);
-    return b.keyScore.score.calc(b, *this) + pawns(b)
-           + mobility<White>(b) + attack<White>(b)
-           - mobility<Black>(b) - attack<Black>(b);
+    int e = b.keyScore.score.calc(b, *this) + pawns(b)
+           + mobility<White>(b)
+           - mobility<Black>(b);
+    if (b.material >= 15)
+        e += attack<White>(b) - attack<Black>(b);
+
+    return e;
 }

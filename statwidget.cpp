@@ -204,8 +204,12 @@ void StatWidget::updateBoard()
             pa.setPen(Qt::NoPen);
 			for ( int x=0; x<8; x++ )
 				for ( int y=0; y<8; y++ ) {
-					int ee = rb.estimatedError[nPieces + c*p][x+(7-y)*8];
-//					int ee = sqrt(rb.avgE2[nPieces + c*p][x+(7-y)*8] / rb.avgN[nPieces + c*p][x+(7-y)*8] - pow(rb.avgE[nPieces + c*p][x+(7-y)*8] / rb.avgN[nPieces + c*p][x+(7-y)*8], 2.0));
+					int ee;
+                    if (radioButtonPSQ->isChecked())
+                        ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard(), rb.eval) - c*(int[]){0,450,300,925,300,100,0}[p]);
+                    else
+                        ee = rb.estimatedError[nPieces + c*p][x+(7-y)*8];
+
 					if (ee > 127) ee = 127;
 					if (ee<-128) ee = -128;
 	                pa.setBrush(QBrush(pal[ee+128]));

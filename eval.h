@@ -39,21 +39,15 @@
  * v = (sum over pieces (v_inhPieces * n_inhPieces) + n_totalInhPieces^2 * v_totalInh) * squareValue
  * squareValue = attack_king(dist_king) + attack_piece(dist_piece) + attack_pawn(dist_pawn) + const
  */
-class BoardBase;
 
-template<typename T>
-void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986 );
+struct CompoundScore {
+    RawScore    opening;
+    RawScore    endgame;
 
-union CompoundScore {
-    struct {
-	RawScore    opening;
-	RawScore    endgame;
-    };
-    int data;
-    
     CompoundScore operator + (const CompoundScore& x) const {
         CompoundScore temp;
-        temp.data = x.data + data;
+        temp.opening = x.opening + opening;
+        temp.endgame = x.endgame + endgame;
         return temp;
     }
     CompoundScore operator - () const {
@@ -62,9 +56,7 @@ union CompoundScore {
         temp.endgame = -endgame;
         return temp;
     }
-    int calc(const BoardBase&, const Eval&) const {
-        return opening;
-    }
+    int calc(const BoardBase& b, const Eval&) const;
     void operator = (int x) {
         opening = x;
         endgame = x;
@@ -73,12 +65,15 @@ union CompoundScore {
 
 union KeyScore {
     struct {
-    	CompoundScore  score;
+        CompoundScore  score;
         PawnKey        pawnKey;
         Key            key;
     };
     __v8hi vector;
 };
+
+template<typename T>
+void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986 );
 
 union Parameters {
     struct {
@@ -104,7 +99,7 @@ class PieceList;
 class BoardBase;
 class Eval {
     KeyScore zobristPieceSquare[nTotalPieces][nSquares];
-    
+
     static CompoundScore pawn, knight, bishop, rook, queen;
     static CompoundScore bishopPair;
     static CompoundScore knightAlone;
@@ -119,9 +114,9 @@ class Eval {
     static int pawnIsolated;
     static int pawnHalfIsolated;
     static int pawnPasser[8];
-    
+
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
-    
+
     RawScore controls[nSquares];
 /*    static uint32_t borderTab4_0[nSquares];
     static uint32_t borderTab321[nSquares];

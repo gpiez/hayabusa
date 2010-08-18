@@ -68,6 +68,161 @@ int main(int, char** argv) {
 				else
 					std::cout << " ";
 			}
+    } else if (argv[1] && QString("psqr") == argv[1]) {
+        int xopen[8] = { 0, 0, 6, 8, 8, 6, 0, 0 };
+        int xend[8] = { 0, 10, 11, 12, 12, 11, 10, 0};
+        int yopen[8] = { 0, 0, 1, 2, 3, 5, 12, 4 };
+        int yend[8] = { 0, 10, 11, 12, 12, 11, 10, 0};
+
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xopen[x] + yopen[7-y];
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}," << std::endl;
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xend[x] + yend[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}" << std::endl;
+    } else if (argv[1] && QString("psqb") == argv[1]) {
+        int xopen[8] = { 0, 4, 8, 7, 7, 8, 4, 0 };
+        int xend[8] = { 0, 3, 6, 9, 9, 6, 3, 0};
+        int yopen[8] = { 0, 4, 8, 8, 8, 8, 4, 0 };
+        int yend[8] = { 0, 3, 6, 9, 9, 6, 3, 0};
+
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xopen[x] + yopen[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}," << std::endl;
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xend[x] + yend[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}" << std::endl;
+    } else if (argv[1] && QString("psqn") == argv[1]) {
+        int xopen[8] = { 0, 8, 10, 12, 12, 10, 8, 0 };
+        int xend[8] = { 0, 6, 10, 12, 12, 10, 6, 0};
+        int yopen[8] = { 0, 8, 10, 12, 13, 12, 10, 0 };
+        int yend[8] = { 0, 6, 10, 12, 12, 10, 6, 0};
+
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xopen[x] + yopen[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}," << std::endl;
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xend[x] + yend[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}" << std::endl;
+    } else if (argv[1] && QString("psqq") == argv[1]) {
+        int xopen[8] = { 0, 2, 7, 7, 7, 7, 2, 0 };
+        int xend[8] = { 0, 6, 8, 10, 10, 8, 6, 0};
+        int yopen[8] = { 0, 3, 5, 7, 9, 10, 10, 4 };
+        int yend[8] = { 0, 6, 8, 10, 10, 8, 6, 0};
+
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xopen[x] + yopen[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}," << std::endl;
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xend[x] + yend[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}" << std::endl;
+    } else if (argv[1] && QString("psqp") == argv[1]) {
+        int xopen[8] = { 0, 12, 16, 20, 20, 16, 12, 0 };
+        int xend[8] =  { 0, 25, 25, 25, 25, 25, 25, 0 };
+        int yopen[8] = { 0, 0, 1, 3,  6, 10, 15, 0 };
+        int yend[8] =  { 0, 0, 2, 6, 12, 20, 30, 0 };
+
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xopen[x] + yopen[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}," << std::endl;
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xend[x] + yend[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}" << std::endl;
+    } else if (argv[1] && QString("psqk") == argv[1]) {
+        int xopen[8] = { 10, 10, 5, 0, 0, 5, 10, 10 };
+        int xend[8] =  { 0, 4, 8, 12, 12, 8, 4, 0 };
+        int yopen[8] = { 0, 0, -10, -20, -50, -100, -100, -100 };
+        int yend[8] =  { 0, 5, 10, 14, 17, 18, 9, 0 };
+
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xopen[x] + yopen[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}," << std::endl;
+        std::cout << "{" << std::endl;
+        for (int y=0; y<8; ++y) {
+            for (int x=0; x<8; ++x)  {
+                std::cout << std::setw(2) << xend[x] + yend[7-y];
+                if (x<7) std::cout << ", ";
+            }
+            if (y<7) std::cout << ",";
+            std::cout << std::endl;
+        }
+        std::cout << "}" << std::endl;
 	} else if (argv[1] && QString("pawnbits") == argv[1]) {
 		for (int v=1; v>=-1; v-=2) {
 			std::cout << "{";
@@ -187,7 +342,7 @@ int main(int, char** argv) {
 			std::cout << "}," << std::endl;
 		}
 	} else {
-#ifndef BITBOARD        
+#ifndef BITBOARD
 		use(longAttack);
 		use(shortAttack);
 		use(attVec);
@@ -207,7 +362,7 @@ int main(int, char** argv) {
 		out << "shortColor = " << sizeof(shortAttacks[0][0][0]) << '\n';
 		out << "shortPiece = " << ld(sizeof(shortAttacks[0])) << '\n';
 		out << "shortPos = " << ld(sizeof(shortAttacks[0][0])) << '\n';
-#endif        
+#endif
 	}
 
 	return 0;

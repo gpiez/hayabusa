@@ -27,16 +27,17 @@
 #include "move.h"
 
 typedef int16_t RawScore;
+class BoardBase;
 
 template<Colors C> struct ScoreBase
 {
     int v; //Absolute score. Less is good for black, more is good for white.
 
     enum { isNotShared = true };
-    
+
     ScoreBase() {};
     explicit ScoreBase (const ScoreBase& a) { v = a.v; };
-    
+
     bool operator >= (int a) const {
         if ( C==White ) return v>=a;
         else            return v<=a;
@@ -54,7 +55,7 @@ template<Colors C> struct ScoreBase
         else            return v>a;
     }
     void max(const int b) {
-        if (*this < b) 
+        if (*this < b)
             v = b;
     }
 };
@@ -88,7 +89,7 @@ template<Colors C> struct Score: ScoreBase<C>
     void setNotReady() {};
 
     using ScoreBase<C>::max;
-    
+
     bool max(const int b, const Move n)         {
         if (*this < b) {
             v = b;
@@ -105,9 +106,9 @@ template<Colors C> struct SharedScore: public Score<C>
     using Score<C>::m;
 
     typedef Score<C> Base;
-    
+
     enum { isNotShared = false };
-    
+
     volatile unsigned int notReady;
     std::recursive_mutex valueMutex;
     std::condition_variable readyCond;
@@ -180,6 +181,5 @@ public:
 //        ASSERT(notReady <= 6);    //queued jobs + running
     }
 };
-
 
 #endif // SCORE_H

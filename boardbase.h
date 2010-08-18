@@ -79,6 +79,8 @@ struct BoardBase {
         __v2di d02, d13;
     } qsingle[nColors][1+8+1];                   //960
 
+    int material;
+
     static const __v2di mask02x[nSquares]; // 1 KByte  file : row, excluding square
     static const __v2di mask02b[nSquares]; // 1 KByte  file : row, excluding square
     static const __v2di mask13x[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
@@ -133,6 +135,7 @@ struct BoardBase {
         occupied[CI] |= 1ULL << pos;
         occupied1 |= 1ULL << pos;
         keyScore.vector += e.getKSVector(C*piece, pos);
+        material += materialTab[piece];
     }
 
     inline __v2di build02Attack(const unsigned sq) const;

@@ -63,6 +63,7 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
             ASSERT(m.capture() == 0);
             next->getPieces<C,King>() ^= from + to;
             next->occupied[EI] = occupied[EI];
+            next->material = material;
             if (m.to() == (pov^g1)) {
                 // short castling
                 next->occupied[CI] = occupied[CI] ^ 0b1111ULL << m.from();
@@ -75,17 +76,19 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
             ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>()));
         } else if (piece == Pawn) {
         	// en passant
-            next->occupied[CI] = occupied[CI] ^ from + to;
+            next->occupied[CI] = occupied[CI] ^ (from + to);
             next->occupied[EI] = occupied[EI] ^ shift<-C*8>(to);
             next->getPieces<C,Pawn>() ^= from + to;
             next->getPieces<-C,Pawn>() ^= shift<-C*8>(to);
+            next->material = material - materialTab[Pawn];
         } else {
             // promotion
-            next->occupied[CI] = occupied[CI] ^ from + to;
+            next->occupied[CI] = occupied[CI] ^ (from + to);
             next->occupied[EI] = occupied[EI] ^ (m.capture()? to:0);
             next->getPieces<C,Pawn>() ^= from;
             next->getPieces<C>(piece) ^= to;
             next->getPieces<-C>(m.capture()) ^= to;
+            next->material = material - materialTab[m.capture()] + materialTab[piece] - materialTab[Pawn];
         }
     } else {
         // standard move, e. p. is handled by captureOffset
@@ -94,10 +97,11 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
     	else
     		next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
         next->cep.enPassant = m.piece()==Pawn ? to & shift<C*16>(from) & rank<4>() & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1) : 0;
-        next->occupied[CI] = occupied[CI] ^ from + to;
+        next->occupied[CI] = occupied[CI] ^ (from + to);
         next->occupied[EI] = occupied[EI] ^ (m.capture() ? to:0);
         next->getPieces<C>(m.piece()) ^= from + to;
         next->getPieces<-C>(m.capture()) ^= to;
+        next->material = material - materialTab[m.capture()];
     }
     next->occupied1 = next->occupied[CI] | next->occupied[EI];
 }

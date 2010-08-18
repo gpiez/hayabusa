@@ -31,7 +31,7 @@ std::string Move::string() const
 	temp += capture() ? 'x' : '-';
 	temp += (to() & 7) + 'a';
 	temp += (to() >> 3) + '1';
-    if (isSpecial()) 
+    if (isSpecial()) {
         if ((piece() & 7) < Pawn) {
             temp += " RBQN"[piece() & 7];
             temp = temp.substr(1);
@@ -41,6 +41,6 @@ std::string Move::string() const
             else
                 return "0-0-0";
         }
-    
+    }
 	return temp;
 }
