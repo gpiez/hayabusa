@@ -63,8 +63,9 @@ public:
     WorkThread();
     virtual ~WorkThread();
     void run();
-    const Stats* getStats();
-
+    const Stats* getStats() {
+        return stats;
+    }
     static void stopAll();
     static void queueJob(Key, Job*);
     static bool canQueued(Key, int);

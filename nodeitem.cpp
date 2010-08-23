@@ -13,6 +13,7 @@
 #include "stats.h"
 
 std::recursive_mutex NodeItem::m;
+int NodeItem::nNodes = 0;
 
 NodeItem::NodeItem( const NodeData& nodeData_ ):
 		NodeData( nodeData_ ),

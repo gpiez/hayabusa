@@ -99,9 +99,10 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
 		data.move.data = 0;
 		data.ply = depth;
         NodeItem* node=0;
-        if (getStats().node < MAX_NODES && getStats().node > MIN_NODES) {
+        if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes > MIN_NODES) {
             NodeItem::m.lock();
             node = new NodeItem(data, statWidget->tree->root());
+            NodeItem::nNodes++;
             NodeItem::m.unlock();
         }
 #endif
@@ -222,21 +223,22 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
     KeyScore estimate;
     estimate.vector = prev.estimatedEval(m, eval);
 #ifdef QT_GUI_LIB
-	NodeData data = {};
-	data.alpha = alpha.v;
-	data.beta = beta.v;
-	data.move = m;
-	data.ply = ply;
-	data.key = estimate.key;
-	data.searchType = P;
-	data.depth = depth;
-	data.moveColor = prev.CI == 0 ? White:Black;
-	data.nodeColor = C;
 	uint64_t startnode = stats.node;
 	NodeItem* node = 0;
-    if (getStats().node < MAX_NODES && getStats().node > MIN_NODES) {
+    if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes > MIN_NODES) {
         NodeItem::m.lock();
+        NodeData data = {};
+        data.alpha = alpha.v;
+        data.beta = beta.v;
+        data.move = m;
+        data.ply = ply;
+        data.key = estimate.key;
+        data.searchType = P;
+        data.depth = depth;
+        data.moveColor = prev.CI == 0 ? White:Black;
+        data.nodeColor = C;
         node = new NodeItem(data, parent);
+        NodeItem::nNodes++;
         NodeItem::m.unlock();
     }
 //	if (node && node->id == 67636) asm("int3");

@@ -50,10 +50,6 @@ WorkThread::~WorkThread()
 {
 }
 
-const Stats* WorkThread::getStats() {
-    return stats;
-}
-
 void WorkThread::run() {
     stats = &::stats;
     std::unique_lock<std::mutex> lock(runningMutex);

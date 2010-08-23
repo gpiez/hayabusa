@@ -38,6 +38,7 @@ public:
 	NodeItem(const NodeData& _nodeData, NodeItem* _parent);
 	~NodeItem();
 
+    static int nNodes;
 	const NodeItem* child(int row);
 	NodeItem* lastChild();
 	int childCount() const;
