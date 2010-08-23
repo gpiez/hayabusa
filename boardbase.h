@@ -79,7 +79,7 @@ struct BoardBase {
         __v2di d02, d13;
     } qsingle[nColors][1+8+1];                   //960
 
-    int material;
+    unsigned material;
 
     static const __v2di mask02x[nSquares]; // 1 KByte  file : row, excluding square
     static const __v2di mask02b[nSquares]; // 1 KByte  file : row, excluding square
@@ -150,6 +150,16 @@ struct BoardBase {
     void init();
     void print() const;
     int getPiece(unsigned pos) const;
+    inline unsigned getPieceFromBit(uint64_t bit) const {
+        return
+            (getPieces<White,King>() | getPieces<Black,King>()) & bit ? King:
+            (getPieces<White,Pawn>() | getPieces<Black,Pawn>()) & bit ? Pawn:
+            (getPieces<White,Knight>() | getPieces<Black,Knight>()) & bit ? Knight:
+            (getPieces<White,Queen>() | getPieces<Black,Queen>()) & bit ? Queen:
+            (getPieces<White,Bishop>() | getPieces<Black,Bishop>()) & bit ? Bishop:
+            (getPieces<White,Rook>() | getPieces<Black,Rook>()) & bit ? Rook:
+            0;
+    }
     static void initTables();
 
 } ALIGN_CACHE;                                    //sum:        3C0

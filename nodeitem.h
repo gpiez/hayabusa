@@ -17,7 +17,7 @@
 #include "move.h"
 
 #define MIN_NODES 0
-#define MAX_NODES 40000000
+#define MAX_NODES 1000000
 
 struct NodeData {
 	uint64_t key;
@@ -44,9 +44,9 @@ public:
 	const NodeData& data() const;
 	int row();
 	NodeItem* getParent() const;
+    static std::recursive_mutex m;
 
 private:
-	static std::recursive_mutex m;
 	void appendChild( NodeItem* child);
 	QList<NodeItem*> children;
 	NodeItem* parent;

@@ -30,8 +30,8 @@
 #include "statwidget.h"
 #endif
 
-__thread int RootBoard::lastPositionalEval;
-__thread RepetitionKeys keys;
+unsigned RootBoard::dMaxCapture = 12;
+unsigned RootBoard::dMaxThreat = 8;
 
 RootBoard::RootBoard(Console *c):
 	timeBudget(300000),
@@ -73,37 +73,46 @@ const BoardBase& RootBoard::currentBoard() const {
         return currentBoard<Black>();
 }
 
-const BoardBase& RootBoard::setup(QString fen) {
+const BoardBase& RootBoard::setup(std::string fen) {
+    int info0 = fen.find(';')+1;
+    info0 = std::min(info0, (int)fen.find("bm"));
+    info0 = std::min(info0, (int)fen.find("id"));
 
-	QString piecePlacement, activeColor, castling, enPassant;
-	int fiftyTemp;
-	QTextStream str(&fen);
+    if (info0>1) {
+        info = fen.substr(info0);
+        fen = fen.substr(0, info0);
+    }
+
+	std::string piecePlacement, activeColor, castling, enPassant;
+	int fiftyTemp = 0;
+    iMove = 0;
+	std::istringstream str(fen);
 	str >> piecePlacement >> activeColor >> castling >> enPassant >> fiftyTemp >> iMove;
-	
-	switch ( activeColor[0].toLatin1() ) {
+
+	switch ( activeColor[0] ) {
 	case 'b':
 	case 'B':
 		color = Black;
 		break;
 	default:
-		qWarning() << "color to move not understood, assuming white";
+		std::cerr << "color to move not understood, assuming white" << std::endl;
 	case 'w':
 	case 'W':
 		color = White;
 		break;
 	}
-	
+
 	BoardBase& board = color == White ? (BoardBase&)currentBoard<White>() : (BoardBase&)currentBoard<Black>();
 
 	board.init();
 	board.fiftyMoves = fiftyTemp;
-	
+
 	unsigned int p,x,y;
 	for ( p=0, x=0, y=7; p<(unsigned int)piecePlacement.length(); p++, x++ ) {
 		unsigned int square = x + 8*y;
-		switch ( piecePlacement[p].toLatin1() ) {
+		switch ( piecePlacement[p] ) {
 		case '1'...'8':
-			x += piecePlacement[p].toLatin1() - '1';
+			x += piecePlacement[p] - '1';
 			break;
 		case 'k':
 			board.setPiece<Black>( King, square, eval);
@@ -151,7 +160,7 @@ const BoardBase& RootBoard::setup(QString fen) {
 	}
 
 	for ( unsigned int p=0; p<(unsigned int)castling.length(); p++ )
-		switch ( castling[p].toLatin1() ) {
+		switch ( castling[p] ) {
 		case 'Q':
 		    if (board.getPieces<White, King>() & 1ULL<<e1 && board.getPieces<White, Rook>() & 1ULL<<a1)
 		        board.cep.castling.color[0].q = true;
@@ -171,9 +180,9 @@ const BoardBase& RootBoard::setup(QString fen) {
 		}
 
 	if ( enPassant.length() == 2 && enPassant[0] >= 'a' && enPassant[0] <= 'h' && ( enPassant[1] == '3' || enPassant[1] == '6' ) )
-		board.cep.enPassant = 1ULL << (8 * ((enPassant[1].toLatin1() - '3' )/3 + 3) + enPassant[0].toLatin1() - 'a');
+		board.cep.enPassant = 1ULL << (8 * ((enPassant[1] - '3' )/3 + 3) + enPassant[0] - 'a');
 	else if ( enPassant != "-" )
-		qWarning() << "error importing e. p. move " << enPassant;
+		std::cerr << "error importing e. p. move " << enPassant << std::endl;
 
 	board.buildAttacks();
 	history.init();
@@ -249,9 +258,9 @@ bool RootBoard::doMove(Move m) {
 	Move* good = list+goodMoves;
 	Move* bad = good;
 	if (color == White)
-		currentBoard<White>().generateMoves(good, bad);
+		currentBoard<White>().generateMoves(good);
 	else
-		currentBoard<Black>().generateMoves(good, bad);
+		currentBoard<Black>().generateMoves(good);
 
 	for (Move* i=good; i<bad; ++i) {
 		if (i->fromto() == m.fromto()) {
@@ -270,4 +279,8 @@ bool RootBoard::doMove(Move m) {
 		}
 	}
 	return true;
+}
+
+std::string RootBoard::getInfo() const {
+    return info;
 }

@@ -29,6 +29,11 @@ class Job;
 class RootBoard;
 union Stats;
 
+extern __thread RepetitionKeys keys;
+extern __thread unsigned threadId;
+extern __thread bool isMain;
+extern __thread int lastPositionalEval;
+
 class WorkThread/*: public QThread*/ {
     static QMultiMap<Key, Job*> jobs;
     static QVector<WorkThread*> threads;
@@ -40,7 +45,7 @@ class WorkThread/*: public QThread*/ {
     std::mutex stoppedMutex;
     std::condition_variable stopped;
     volatile bool isStopped;
-    
+
     volatile bool keepRunning;
     volatile int result;
     BoardBase board;
@@ -49,18 +54,17 @@ class WorkThread/*: public QThread*/ {
     Key key;
     Stats* stats;
     void stop();
-    
+
 public:
     static volatile bool doStop;
     static unsigned int nThreads;
-    static __thread bool isMain;
     static unsigned int running;
 
     WorkThread();
     virtual ~WorkThread();
     void run();
     const Stats* getStats();
-    
+
     static void stopAll();
     static void queueJob(Key, Job*);
     static bool canQueued(Key, int);

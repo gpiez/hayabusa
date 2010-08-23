@@ -35,7 +35,7 @@ class ColoredBoard: public BoardBase {
 
     friend class TestRootBoard;
 //    static uint8_t diaPinTable[nDirs][256];
-    
+
 public:
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     static const uint8_t pov = CI*56;    //for xoring square values to the other side
@@ -46,13 +46,14 @@ public:
     template<bool> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned int cap) const;
     static void initTables();
     template<bool> void generateCaptureMoves(Move* &list, Move* &bad) const;
+    void generateCheckEvasions(Move* &list, Move* &bad) const;
     template<bool AbortOnFirst> bool generateMateMoves( Move** good = NULL) const;
-    void generateMoves(Move* &good, Move* &bad) const;
+    void generateMoves(Move* &good) const;
     template<typename T>
     void doMove(T* next, Move m) const;
     void doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t cep) const;
     Key getZobrist() const;
-private:    
+private:
     void generateTargetMove(Move* &good, uint64_t tobit) const;
     uint64_t perft(unsigned int depth) const;
     void divide(unsigned int depth) const;

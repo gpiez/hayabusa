@@ -157,7 +157,7 @@ template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::setSize(size_t s)
 {
 	freeMemory();
-	
+
 	s = qMin(s, (size_t) sysconf(_SC_PAGESIZE) * (size_t) sysconf(_SC_PHYS_PAGES));
 
 	nEntries = s/sizeof(SubTable);
@@ -171,7 +171,7 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 	nEntries++;
 	nEntries >>= 1;
 	size = nEntries*sizeof(SubTable);
-	
+
 	while (!table) {
 #ifdef HAVE_HUGE_PAGES
 			table = (SubTable *) get_huge_pages(s, GHP_DEFAULT);
@@ -210,14 +210,19 @@ std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C
 	Move moveList[256];
 	Move* good=moveList+192;
 	Move* bad=good;
-	b.generateMoves(good, bad);
+    if (b. template inCheck<C>())
+        b.generateCheckEvasions(good, bad);
+    else {
+        b.generateMoves(good);
+        b.template generateCaptureMoves<true>(good, bad);
+    }
 	if (ttMove.data)
 		for (Move *i=good; i<bad; ++i) {
-#ifdef BITBOARD            
+#ifdef BITBOARD
 			if (i->from() == ttMove.from() && i->to() == ttMove.to()) {
-#else                
+#else
             if (i->from == ttMove.from && i->to == ttMove.to) {
-#endif                
+#endif
 				line += " " + bestLineNext<(Colors)-C>(b, *i, visited, rb);
 				break;
 			}
@@ -238,4 +243,41 @@ std::string Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
 
 }
 
+namespace {
+inline int tt2Score(int s) {
+    if (s < 0x400 && s > -0x400)
+        return s;
+    if (s > 0) {
+        if (s < 0x600)
+            return s*2 - 0x400*1;
+        if (s < 0x700)
+            return s*4 - 0x600*3;
+        return s*16 - 0x700*15;
+    } else {
+        if (s > -0x600)
+            return s*2 + 0x400*1;
+        if (s > -0x700)
+            return s*4 + 0x600*3;
+        return s*16 + 0x700*15;
+    }
+}
+
+inline int score2tt(int s) {
+    if (s < 0x400 && s > -0x400)
+        return s;
+    if (s > 0) {
+        if (s<0x800)
+            return (s-0x400)/2 + 0x400;
+        if (s<0x1000)
+            return (s-0x800)/4 + 0x600;
+        return (s-0x1000)/16 + 0x700;
+    } else {
+        if (s>-0x800)
+            return (s+0x400)/2 - 0x400;
+        if (s>-0x1000)
+            return (s+0x800)/4 - 0x600;
+        return (s+0x1000)/16 - 0x700;
+    }
+}
+}
 #endif

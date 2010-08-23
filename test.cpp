@@ -102,9 +102,9 @@ void TestRootBoard::generateCaptures() {
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			tsc = (a + (d << 32));
 			if (color[i] == White)
-				b->boards[i].wb.generateMoves(good, bad);
+				b->boards[i].wb.generateMoves(good);
 			else
-				b->boards[i].bb.generateMoves(good, bad);
+                b->boards[i].bb.generateMoves(good);
 			asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
 			nmoves += bad - good;
 			times[i][j] = (a + (d << 32)) - tsc - overhead;

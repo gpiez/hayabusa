@@ -24,10 +24,12 @@ NodeItem::NodeItem( const NodeData& nodeData_, NodeItem* parent_ ):
 		parent( parent_ )
 {
 	id = stats.node;
+    m.lock();
 	if (parent_)
 		parent_->appendChild( this );
 	else
 		delete this;
+    m.unlock();
 }
 
 NodeItem::~NodeItem()

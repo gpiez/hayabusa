@@ -88,7 +88,7 @@ static inline uint64_t popcount2( uint64_t x )
 
 int CompoundScore::calc(const BoardBase& b, const Eval& ) const
 {
-    return b.material >= 30 ? opening : endgame;
+    return b.material >= endgameMaterial ? opening : endgame;
 }
 
 Eval::Eval() {
@@ -703,13 +703,14 @@ int Eval::eval(const BoardBase& b) const {
     		value += getPS(-p, sq).calc(b, *this);
     	}
     }
-    if (value != b.keyScore.score.calc(b, *this)) asm("int3");
+    int value2 = b.keyScore.score.calc(b, *this);
+    if (value != value2) asm("int3");
 #endif
     pawns(b);
     int e = b.keyScore.score.calc(b, *this) + pawns(b)
            + mobility<White>(b)
            - mobility<Black>(b);
-    if (b.material >= 15)
+    if (b.material >= endgameMaterial)
         e += attack<White>(b) - attack<Black>(b);
 
     return e;

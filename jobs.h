@@ -57,28 +57,29 @@ class SearchJob: public Job {
     unsigned int depth;
     const A& alpha;
     B& beta;
-    unsigned& ply;
-#ifdef QT_GUI_LIB       
+    unsigned ply;
+    unsigned parent;
+#ifdef QT_GUI_LIB
     NodeItem* node;
-#endif    
+#endif
 public:
-    SearchJob(NodeType n, RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply
-#ifdef QT_GUI_LIB       
+    SearchJob(NodeType n, RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent
+#ifdef QT_GUI_LIB
         , NodeItem* node
 #endif
         ):
-        n(n), rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply)
+        n(n), rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), parent(parent)
 #ifdef QT_GUI_LIB
-    , node(node) 
+    , node(node)
 #endif
     {
         beta.setNotReady();
     };
     void job() {
         rb.search<C, trunk>(n, b, m, depth, alpha, beta, ply
-#ifdef QT_GUI_LIB       
+#ifdef QT_GUI_LIB
                         , node
-#endif                        
+#endif
                         );
         beta.setReady();
     }
@@ -87,7 +88,7 @@ public:
 template<Colors C>
 class RootSearchJob: public signalJob {
     RootBoard& rb;
-    
+
 public:
     RootSearchJob(RootBoard& rb): rb(rb) {};
     void job() {
@@ -118,7 +119,7 @@ template<Colors C>
 class RootPerftJob: public signalJob {
     RootBoard& rb;
     unsigned int depth;
-    
+
 public:
     RootPerftJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
     void job() {

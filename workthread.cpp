@@ -31,9 +31,12 @@ unsigned int WorkThread::running = 0;
 volatile unsigned int WorkThread::sleeping = 0;
 unsigned int WorkThread::nThreads = 0;
 QVector<WorkThread*> WorkThread::threads;
-__thread bool WorkThread::isMain = false;
 volatile bool WorkThread::doStop = false;
 __thread Stats stats;
+__thread unsigned threadId = 0;
+__thread bool isMain = false;
+__thread int lastPositionalEval = 0;
+__thread RepetitionKeys keys;
 
 WorkThread::WorkThread():
     isStopped(true),
@@ -54,11 +57,11 @@ const Stats* WorkThread::getStats() {
 void WorkThread::run() {
     stats = &::stats;
     std::unique_lock<std::mutex> lock(runningMutex);
-#ifdef __linux__    
+#ifdef __linux__
     std::stringstream name;
     name << "WorkThread " << threads.indexOf(this);
     prctl(PR_SET_NAME, name.str().c_str() );
-#endif    
+#endif
     while(keepRunning) {
 
         isStopped = true;
@@ -207,3 +210,5 @@ WorkThread* WorkThread::findFree() {
 const QVector<WorkThread*>& WorkThread::getThreads() {
     return threads;
 }
+
+extern "C" void __throw_bad_alloc() { asm("int3"); }

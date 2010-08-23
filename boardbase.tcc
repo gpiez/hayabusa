@@ -58,7 +58,6 @@ template<Colors C>
 void BoardBase::buildAttacks() {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     uint64_t p, a;
-    const __v2di zero = _mm_set1_epi64x(0);
 
     p = getPieces<C, Knight>();
     a = 0;

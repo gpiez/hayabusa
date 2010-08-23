@@ -23,7 +23,6 @@
 #include <pch.h>
 #endif
 
-#include "constants.h"
 #include "move.h"
 #include "ttentry.h"
 
@@ -42,9 +41,9 @@ struct Sub {
  */
 template<typename Entry, unsigned assoc, typename Key>
 class Table {
-public:    
+public:
     typedef Sub<Entry, assoc> SubTable;
-private:        
+private:
     SubTable* table;		// TODO remove indirection level
     uint64_t mask;
     QReadWriteLock lock[nTTLocks];

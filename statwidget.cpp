@@ -134,7 +134,7 @@ void StatWidget::update()
 	treeView->doItemsLayout();
     updateBoard();
     Ui_Statsui::depth->setText("Depth: " + QString::number(rb.depth));
-    setWindowTitle(QString::fromStdString(rb.getLine()));
+    setWindowTitle(QString::fromStdString(rb.getInfo()).left(20) + QString::fromStdString(rb.getLine()));
     static QList<Stats> prev;
     prev.append(rb.getStats());
     if (prev.size() > 10)
@@ -195,27 +195,26 @@ void StatWidget::updateBoard()
         position->setPixmap(boardPixmap);
     }
 
+    size = (qMin(ww1->height(), ww1->width()))/8;
+    QPixmap pm(size*8, size*8);
+    QPainter pa( &pm );
     for (int c=-1; c<=1; c+=2)
-    	for (int p=Rook; p<=King; ++p) {
-    		int size = (qMin(ww1->height(), ww1->width()))/8;
-    		QPixmap pm(size*8, size*8);
-	        pm.fill(QColor(0, 0, 0, 0));
-			QPainter pa( &pm );
+        for (int p=Rook; p<=King; ++p) {
             pa.setPen(Qt::NoPen);
-			for ( int x=0; x<8; x++ )
-				for ( int y=0; y<8; y++ ) {
-					int ee;
+            for ( int x=0; x<8; x++ )
+                for ( int y=0; y<8; y++ ) {
+                    int ee;
                     if (radioButtonPSQ->isChecked())
                         ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard(), rb.eval) - c*(int[]){0,450,300,925,300,100,0}[p]);
                     else
                         ee = rb.estimatedError[nPieces + c*p][x+(7-y)*8];
 
-					if (ee > 127) ee = 127;
-					if (ee<-128) ee = -128;
-	                pa.setBrush(QBrush(pal[ee+128]));
-					pa.drawRect(x*size,y*size,size,size);
-				}
-			minipm[(1-c)/2][p]->setPixmap(pm);
+                    if (ee > 127) ee = 127;
+                    if (ee<-128) ee = -128;
+                    pa.setBrush(QBrush(pal[ee+128]));
+                    pa.drawRect(x*size,y*size,size,size);
+                }
+            minipm[(1-c)/2][p]->setPixmap(pm);
         }
 }
 

@@ -27,6 +27,7 @@
 #include "options.h"
 #include "testpositions.h"
 #include "transpositiontable.tcc"
+#include "rootboard.tcc"
 
 namespace Options {
 unsigned int splitDepth = 1000;
@@ -45,7 +46,7 @@ Console::Console(QCoreApplication* parent):
     WorkThread::init();
     board = new RootBoard(this);
     board->setup();
-    
+
     dispatcher["uci"] = &Console::uci;
     dispatcher["debug"] = &Console::debug;
     dispatcher["isready"] = &Console::isready;
@@ -61,11 +62,11 @@ Console::Console(QCoreApplication* parent):
     dispatcher["perft"] = &Console::perft;
     dispatcher["divide"] = &Console::divide;
     dispatcher["ordering"] = &Console::ordering;
-    
+
     notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
     connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
     connect(this, SIGNAL(signalSend(std::string)), this, SLOT(privateSend(std::string)));
-    
+
     QStringList args = QCoreApplication::arguments();
     args.removeFirst();
     QString argStr = args.join(" ");
@@ -78,7 +79,7 @@ Console::Console(QCoreApplication* parent):
             (this->*(dispatcher[cmds[0]]))(cmds);
         else
             tryMove(cmds);
-    
+
     }
 }
 
@@ -204,14 +205,13 @@ void Console::position(QStringList cmds) {
         board->setup();
     else if (cmds[1] == "fen") {
         QStringList fen = cmds.mid(2, m-2);
-        board->setup(fen.join(" "));
+        board->setup(fen.join(" ").toStdString());
     } else if (cmds[1] == "test") {
         QString search = cmds[2];
         for (unsigned int i = 0; i < sizeof(testPositions)/sizeof(char*); ++i) {
             QString pos(testPositions[i]);
             if (pos.contains(search)) {
-                QString fen = pos.left(pos.indexOf(';'));
-                board->setup(fen);
+                board->setup(pos.toStdString());
                 break;
             }
         }
@@ -278,7 +278,7 @@ QHash<QString, QStringList> Console::parse(QStringList cmds, QStringList tokens)
         if (cmds.indexOf(token)>0)
             tokenPositions[cmds.indexOf(token)] = token;
     tokenPositions[9999] = "";
-    
+
     QHash<QString, QStringList> tokenValues;
     for(int i=0; i<tokenPositions.keys().count()-1; ++i) {
         tokenValues[tokenPositions.values().at(i)] =

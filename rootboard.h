@@ -37,8 +37,6 @@ class WorkThread;
 class Console;
 template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
-typedef Key RepetitionKeys[100];
-extern __thread RepetitionKeys keys;
 
 /* Board representing a position with history, color to move, castling and en
  * passant status. Has an associated Eval object and holds multiple worker
@@ -60,6 +58,8 @@ class RootBoard {
 		ColoredBoard<Black> bb;
 	} boards[nMaxGameLength];
 
+    static unsigned dMaxCapture;
+    static unsigned dMaxThreat;
 	unsigned int timeBudget;
 	unsigned int movesToDo;
 	unsigned int iMove;				// current half move index of game
@@ -70,11 +70,11 @@ class RootBoard {
 
     int currentMoveIndex;
     int nMoves;
-    static __thread int lastPositionalEval;
     Move line[nMaxGameLength];
     unsigned currentPly;
     unsigned fiftyMovesRoot;
     History history;        // FIXME probably needs to be thread local
+    std::string info;
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply);
     inline void store(Key k, unsigned ply);
@@ -96,12 +96,12 @@ public:
 	template<Colors C> const ColoredBoard<C>& currentBoard() const;
     const BoardBase& currentBoard() const;
 	void go(QStringList);
-	const BoardBase& setup(QString fen = QString("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
-	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth, uint64_t endNode = ~0);	
+	const BoardBase& setup(std::string fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
+	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth, uint64_t endNode = ~0);
 	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply
-#ifdef QT_GUI_LIB	    
+#ifdef QT_GUI_LIB
 	    , NodeItem*
-#endif	    
+#endif
 	    );
 	void perft(unsigned int depth);
 	void divide(unsigned int depth);
@@ -115,5 +115,6 @@ public:
     std::string getLine() const;
 	void ttClear();
 	bool doMove(Move);
+    std::string getInfo() const;
 };
 #endif

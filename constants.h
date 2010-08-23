@@ -23,8 +23,6 @@
 #include <pch.h>
 #endif
 
-#include <x86intrin.h>
-
 //#define static_assert(x) char __y[(x) ? 1 : -1 ] __attribute__((unused));
 
 #ifndef NDEBUG
@@ -74,6 +72,11 @@ enum Sides { KSide, QSide, Middle };
 
 enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut, NodeNull, NodeFutile, NodeMate, NodePresearch, NodeIllegal, NodeRepetition };
 
+typedef uint64_t Key;
+typedef uint32_t PawnKey;
+typedef Key RepetitionKeys[100];
+
+static const unsigned int endgameMaterial = 30;
 static const int maxHistory = 65536;
 static const int nullReduction = 3;
 static const int initialError = 100;

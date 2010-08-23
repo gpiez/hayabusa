@@ -25,9 +25,6 @@
 
 #include "constants.h"
 
-typedef uint64_t Key;
-typedef uint32_t PawnKey;
-
 template <unsigned int pos, unsigned int width, typename T>
 struct Bitfield {
     static const unsigned int tBits = CHAR_BIT * sizeof(T);
@@ -104,7 +101,7 @@ struct PerftEntry {
     };
     enum { upperShift = 6 };
     uint64_t value;
-    
+
     void zero() { data = 0; };
 };
 
