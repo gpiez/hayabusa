@@ -60,6 +60,7 @@ int Eval::pawnBackwardOpen = -20;
 int Eval::pawnPasser[8] = { 0, 50, 50, 60, 80, 115, 160, 0 };
 int Eval::pawnHalfIsolated = -5;
 int Eval::pawnIsolated = -30 - Eval::pawnBackwardOpen;
+Parameters Eval::parameters;
 
 #if !defined(__SSE_4_2__)
 // popcount, which counts at most 15 ones, for counting pawns
@@ -104,6 +105,10 @@ Eval::Eval() {
     knightAlone = -125;
     bishopAlone = -100;
 
+    parameters.aspiration0 = 40;
+    parameters.aspiration1 = 5;
+    parameters.evalHardBudget = 20;
+    
     sigmoid(n_p_ram, 0, 75, 5);             // bonus for each pawn ram, max is 75
     sigmoid(n_p, -25, 25, 12);
 

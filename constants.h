@@ -42,7 +42,7 @@
 
 enum GamePhase { Opening, Endgame };
 
-enum Pieces: unsigned int { Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6, All = 7 };
+enum Pieces { NoPiece = 0, Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6, All = 7 };
 
 enum Colors { Black = -1, White = 1 };
 
@@ -76,6 +76,7 @@ typedef uint64_t Key;
 typedef uint32_t PawnKey;
 typedef Key RepetitionKeys[100];
 
+static const unsigned int maxThreadId = 255;
 static const unsigned int endgameMaterial = 30;
 static const int maxHistory = 65536;
 static const int nullReduction = 3;
@@ -198,8 +199,6 @@ static inline uint64_t fold(__v2di hilo) {
         | _mm_cvtsi128_si64(hilo);
 }
 
-//#pragma GCC diagnostic push
-//#pragma GCC diagnostic ignored "-Wall"
 template<int N>
 uint64_t shift(uint64_t b) {
     if (N > 0)
@@ -207,7 +206,6 @@ uint64_t shift(uint64_t b) {
     else
         return b >> -N;
 }
-//#pragma GCC diagnostic pop
 
 template<Colors C,int R>
 uint64_t rank() {

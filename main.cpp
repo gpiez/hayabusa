@@ -19,6 +19,7 @@
 #include <pch.h>
 
 #include "console.h"
+#include "stringlist.h"
 
 int main(int argc, char *argv[]) {
 #ifdef QT_GUI_LIB
@@ -28,6 +29,10 @@ int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
 #endif
     qRegisterMetaType<std::string>("std::string");
-    Console console(&app);
+    StringList args;
+    args.resize(argc-1);
+    std::copy(argv+1, argv+argc, args.begin());
+
+    Console console(&app, args);
     return app.exec();
 }

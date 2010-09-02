@@ -28,49 +28,50 @@
 
 class WorkThread;
 class RootBoard;
+class StringList;
 
 class Console: public QObject {
     Q_OBJECT
     friend class TestRootBoard;
-    void perft(QStringList);
-    void divide(QStringList);
-    void tryMove(QStringList);
-    void quit(QStringList);
-    void ponderhit(QStringList);
-    void stop(QStringList);
-    void go(QStringList);
-    void position(QStringList);
-    void ucinewgame(QStringList);
-    void reg(QStringList);
-    void setoption(QStringList);
-    void isready(QStringList);
-    void uci(QStringList);
-    void debug(QStringList);
-    void ordering(QStringList);
+    void perft(StringList);
+    void divide(StringList);
+    void tryMove(StringList);
+    void quit(StringList);
+    void ponderhit(StringList);
+    void stop(StringList);
+    void go(StringList);
+    void position(StringList);
+    void ucinewgame(StringList);
+    void reg(StringList);
+    void setoption(StringList);
+    void isready(StringList);
+    void uci(StringList);
+    void debug(StringList);
+    void ordering(StringList);
 
 private slots:
     void privateSend(std::string);
-    
+
 private:
     QCoreApplication* app;
     RootBoard* board;
     std::string answer;
     bool debugMode;
-    QMap<QString, QString> option;
-    QHash<QString, QStringList> parse(QStringList, QStringList);
-    QMap<QString, void (Console::*)(QStringList)> dispatcher;
-    
+    std::map<std::string, std::string> option;
+    std::map<std::string, StringList> parse(const StringList&, const StringList&);
+    std::map<std::string, void (Console::*)(StringList)> dispatcher;
+
 public:
     QTextStream cin;
     QTextStream cout;
     QSocketNotifier *notifier;
 
-    Console(QCoreApplication* parent);
+    Console(QCoreApplication* parent, StringList args);
     virtual ~Console();
     void iterationDone(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
     void info(int depth, int seldepth, uint64_t time, uint64_t nodes,
-                         QString pv, RawScore score, Move currMove, int currMoveNumber,
-                         int hashfull, int nps, int tbhits, int cpuload, QString currline);
+                         std::string pv, RawScore score, Move currMove, int currMoveNumber,
+                         int hashfull, int nps, int tbhits, int cpuload, std::string currline);
     void send(std::string);
 
 public slots:
@@ -78,12 +79,12 @@ public slots:
     void delayedEnable();
     void getResult(std::string);
     std::string getAnswer();
-    
+
 signals:
     void signalSend(std::string);
     void signalInfo(int depth, int seldepth, uint64_t time, uint64_t nodes,
-                         QString pv, RawScore score, Move currMove, int currMoveNumber,
-                         int hashfull, int nps, int tbhits, int cpuload, QString currline);
+                         std::string pv, RawScore score, Move currMove, int currMoveNumber,
+                         int hashfull, int nps, int tbhits, int cpuload, std::string currline);
     void signalIterationDone(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
 };
 

@@ -189,28 +189,67 @@ const BoardBase& RootBoard::setup(std::string fen) {
 	return board;
 }
 
-void RootBoard::go(QStringList )
+void RootBoard::go(const std::map<std::string, StringList>& param )
 {
+    infinite = param.count("infinite");
+
+    if (param.find("wtime") != param.end())
+        wtime = convert((*param.find("wtime")).second.front());
+
+    if (param.find("btime") != param.end())
+        btime = convert((*param.find("btime")).second.front());
+
+    if (param.find("winc") != param.end())
+        winc = convert((*param.find("winc")).second.front());
+
+    if (param.find("binc") != param.end())
+        binc = convert((*param.find("binc")).second.front());
+
+    if (param.find("movestogo") != param.end())
+        movestogo = convert((*param.find("movestogo")).second.front());
+    else
+        movestogo = 0;
+
+    if (param.find("depth") != param.end())
+        maxSearchDepth = convert((*param.find("depth")).second.front());
+    else
+        maxSearchDepth = 0;
+
+    if (param.find("nodes") != param.end())
+        maxSearchNodes = convert((*param.find("nodes")).second.front());
+    else
+        maxSearchNodes = 0;
+
+    if (param.find("mate") != param.end())
+        mate = convert((*param.find("mate")).second.front());
+    else
+        mate = 0;
+
+    if (param.find("movetime") != param.end())
+        movetime = convert((*param.find("movetime")).second.front());
+    else
+        movetime = 0;
+
 	Job* job;
 	if (color == White)
 		job = new RootSearchJob<White>(*this);
 	else
 		job = new RootSearchJob<Black>(*this);
-	WorkThread::findFree()->queueJob(0, job);
+	WorkThread::findFree()->queueJob(0U, job);
 }
 
 void RootBoard::perft(unsigned int depth) {
 	if (color == White)
-		WorkThread::findFree()->queueJob(0, new RootPerftJob<White>(*this, depth));
+		WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*this, depth));
 	else
-		WorkThread::findFree()->queueJob(0, new RootPerftJob<Black>(*this, depth));
+		WorkThread::findFree()->queueJob(0U, new RootPerftJob<Black>(*this, depth));
 }
 
 void RootBoard::divide(unsigned int depth) {
 	if (color == White)
-		WorkThread::findFree()->queueJob(0, new RootDivideJob<White>(*this, depth));
+		WorkThread::findFree()->queueJob(0U, new RootDivideJob<White>(*this, depth));
 	else
-		WorkThread::findFree()->queueJob(0, new RootDivideJob<Black>(*this, depth));
+		WorkThread::findFree()->queueJob(0U, new RootDivideJob<Black>(*this, depth));
 }
 
 void update(uint64_t& r, uint64_t v) {

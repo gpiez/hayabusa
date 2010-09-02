@@ -252,6 +252,8 @@ void ColoredBoard<C>::generateCaptureMoves( Move* &good, Move* &bad) const {
     }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
 template<Colors C>
 template<bool AbortOnFirst>
 bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
@@ -333,7 +335,7 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                 for (uint64_t a=fold(pin02) & rmate; a; a&=a-1) {
                     if (AbortOnFirst) return true;
                     Move n;
-                    n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a ^ (a & a-1))).data;
+                    n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a ^ (a & (a-1)))).data;
                     *--*good = n;
                 }
             }
@@ -479,7 +481,7 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                 for (uint64_t a=fold(pin02|pin13) & qmate; a; a&=a-1) {
                     if (AbortOnFirst) return true;
                     Move n;
-                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceFromBit(a ^ (a & a-1))).data;
+                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceFromBit(a ^ (a & (a-1)))).data;
                     *--*good = n;
                 }
             }
@@ -497,12 +499,10 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
             uint64_t bmate = 0;
             if ((bescape1357 & 0x10004) == 0) {
                 uint64_t b1 = kingIncoming[EI].d[2] & getAttacks<-C,King>();
-                ASSERT(b1==(king << 9 & ~file<'a'>() | king >> 9 & ~file<'h'>()));
                 bmate = b1;
             }
             if ((bescape1357 & 0x40001) == 0) {
                 uint64_t b1 = kingIncoming[EI].d[3] & getAttacks<-C,King>();
-                ASSERT(b1==(king << 7 & ~file<'h'>() | king >> 7 & ~file<'a'>()));
                 bmate |= b1;
             }
             bmate &= checkingMoves & attNotBishop & ~attNotEnemyKing;
@@ -564,7 +564,7 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                     for (uint64_t a=fold(pin13) & bmate; a; a&=a-1) {
                         if (AbortOnFirst) return true;
                         Move n;
-                        n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a ^ (a & a-1))).data;
+                        n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a ^ (a & (a-1)))).data;
                         *--*good = n;
                     }
                 }
@@ -609,5 +609,6 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
     }
     if (AbortOnFirst) return false;
 }
+#pragma GCC diagnostic pop
 
 #endif /* GENERATECAPTUREMOVES_TCC_ */

@@ -183,7 +183,7 @@ void BoardBase::initTables() {
 
     for (unsigned int right = 0; right < 8; ++right)
     for (unsigned int left = 0; left < 8-right; ++left) {
-        unsigned int lr = left*8+right;
+//        unsigned int lr = left*8+right;
         for (unsigned int dir = 0; dir < nDirs/2; ++dir)
         for (unsigned int y = 0; y < nRows; ++y)
         for (unsigned int x = 0; x < nFiles; ++x) {

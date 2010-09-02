@@ -2235,7 +2235,9 @@ static const char* testPositions[] = {
 "2rq1r1k/1b1nbp1p/3ppp/pp4P/4P/P1N3R/1PPB1QBP/R3K w - -; bm gxf6; id cg20100815"
 "/p3k1pp/3p/1PpPn//P5B/5KPP/ w - -; bm Bxe5; id cg20100814",
 "rnbk1b1r/pppp2pp//3N1p/2P3nq/6NP/PP1PPPP/R1BQKB1R b KQ; bm Nxf2; id Hodgson vs Turner 1997",
-"5k/1RR2p1r/6p/p2p/3p1KPP/3P1P/r// w - -; bm h5; id Shirov - Topalov 2008"
+"5k/1RR2p1r/6p/p2p/3p1KPP/3P1P/r// w - -; bm h5; id Shirov - Topalov 2008",
+"//1p3N1p/3K/Pk4P/2p4P w - -; bm Nh5; id Erich Eliskases vs Robert James Fischer (1960)",
+"/pp/b4k1/2r2pp/2P/1R1pP1PP/P2N1P/5K b - -; bm Rxc4; id Lubomir Ftacnik vs Alexey Aleksandrov (2008)"
 };
 
 static const unsigned testDepths[] = {

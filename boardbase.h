@@ -102,12 +102,12 @@ struct BoardBase {
     }
     template<int C>
     uint64_t getPieces(unsigned int p) const {
-        ASSERT(p <= King && p>=0);
+        ASSERT(p <= King);
         return pieces[p][C==Black];
     }
     template<int C>
     uint64_t& getPieces(unsigned int p) {
-        ASSERT(p <= King && p>=0);
+        ASSERT(p <= King);
         return pieces[p][C==Black];
     }
     template<int C, Pieces P>
@@ -158,7 +158,7 @@ struct BoardBase {
             (getPieces<White,Queen>() | getPieces<Black,Queen>()) & bit ? Queen:
             (getPieces<White,Bishop>() | getPieces<Black,Bishop>()) & bit ? Bishop:
             (getPieces<White,Rook>() | getPieces<Black,Rook>()) & bit ? Rook:
-            0;
+            NoPiece;
     }
     static void initTables();
 

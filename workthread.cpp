@@ -24,19 +24,22 @@
 #include "workthread.h"
 #include "jobs.h"
 
-QMultiMap<Key,Job*> WorkThread::jobs;
-//std::condition_variable WorkThread::starting;
-std::mutex WorkThread::runningMutex;
-unsigned int WorkThread::running = 0;
-volatile unsigned int WorkThread::sleeping = 0;
-unsigned int WorkThread::nThreads = 0;
-QVector<WorkThread*> WorkThread::threads;
-volatile bool WorkThread::doStop = false;
+std::multimap<unsigned,Job*>    WorkThread::jobs;
+std::mutex                      WorkThread::runningMutex;
+unsigned int                    WorkThread::running = 0;
+volatile unsigned int           WorkThread::waiting = 0;
+unsigned int                    WorkThread::nThreads = 0;
+std::vector<WorkThread*>        WorkThread::threads;
+volatile bool                   WorkThread::doStop = false;
+unsigned                        WorkThread::logWorkThreads;
+unsigned                        WorkThread::nWorkThreads;
+
 __thread Stats stats;
 __thread unsigned threadId = 0;
 __thread bool isMain = false;
 __thread int lastPositionalEval = 0;
 __thread RepetitionKeys keys;
+__thread WorkThread* workThread;
 
 WorkThread::WorkThread():
     isStopped(true),
@@ -52,76 +55,124 @@ WorkThread::~WorkThread()
 
 void WorkThread::run() {
     stats = &::stats;
+    threadId = &::threadId;
+    workThread = this;
+
     std::unique_lock<std::mutex> lock(runningMutex);
 #ifdef __linux__
     std::stringstream name;
-    name << "WorkThread " << threads.indexOf(this);
+    name << "WorkThread " << std::find(threads.begin(), threads.end(), this) - threads.begin();
     prctl(PR_SET_NAME, name.str().c_str() );
 #endif
     while(keepRunning) {
 
-        isStopped = true;
         if (doStop) stopped.notify_one();    //wake stop() function
         do {
-            if (!doStop && jobs.count()>0 && running<4) {
-                if (sleeping) {
-                    QMultiMap<Key, Job*>::iterator i = jobs.upperBound(key);
-                    if (i != jobs.begin()) {
-                        --i;
-//                        std::cerr << (key >> 56) << ":";
-                        key = i.key();
-//                        std::cerr << (key >> 56) << std::endl;
-                        job = jobs.take(key);
-                        running++;
-                    }
-                } else {
-                    key = jobs.keys().first();
-                    job = jobs.take(key);
-                    running++;
-//                    std::cerr << "deque " << i << " " <<(void*)job << " count " << jobs.count() << std::endl;
+            if (!doStop && jobs.size()>0 && running<nThreads) {
+                unsigned parent;
+                if (waiting)
+                    job = findGoodJob(parent);
+
+                if (!job) {
+                    auto last = jobs.end();
+                    --last;
+                    parent = (*last).first;
+                    job = (*last).second;
+                    jobs.erase(last);
                 }
+
+                getThreadId() = findFreeChild(parent);
+                ++running;
+//                 ASSERT(running <= nThreads);
+//                std::cerr << "deque:" << (void*)job << " parent:" << parent << " id:" << getThreadId() << " count:" << jobs.size() << std::endl;
             }
             if (!job) starting.wait(lock);//starting is signalled by StartJob() or QJob()
+            ASSERT(job);
             stats->jobs++;
         } while(!job);
         isStopped = false;
         doStop = false;
-        ASSERT(running <= 4);
-//        std::cerr << "start " << i << " " << (void*)job << " count " << jobs.count() << std::endl;
+//        std::cerr << "start:" << (void*)job << " parent:" << ((getThreadId()-1) >> logWorkThreads) << " id:" << getThreadId() << " count:" << jobs.size() << std::endl;
+//        ASSERT(running <= nThreads);
         runningMutex.unlock();
         job->job();             //returning the result must have happened here.
         runningMutex.lock();
-//        std::cerr << "end   " << i << " " << (void*)job << " count " << jobs.count() << std::endl;
+//        std::cerr << "end  :" << (void*)job << " parent:" << ((getThreadId()-1) >> logWorkThreads) << " id:" << getThreadId() << " count:" << jobs.size() << std::endl;
         delete job;
         job = NULL;
-        running--;
+        --running;
+        isStopped = true;
     }
+}
+
+// try to find jobs for children, grandchildren of a current waiting job
+Job* WorkThread::findGoodJob(unsigned& parent) {
+    ASSERT(jobs.size() > 0);
+    Job* j;
+
+    for (unsigned generation = 1; generation <= maxThreadId; generation*=nWorkThreads)
+        for (auto i=threads.begin(); i != threads.end(); ++i) {
+            if ((*i)->isWaiting) {
+                parent = (*i)->getThreadId();
+                auto ljob = jobs.lower_bound( parent   * generation);
+                auto ujob = jobs.upper_bound((parent+1)* generation);
+
+                if (ljob != ujob) {
+                    j = (*ljob).second;
+                    jobs.erase(ljob);
+                    --waiting;
+                    return j;
+                }
+            }
+        }
+    return NULL;
+}
+
+unsigned WorkThread::findFreeChild(unsigned parent) {
+    bool used[nWorkThreads];
+    for (unsigned i=0; i<nWorkThreads; ++i)
+        used[i] = false;
+
+    unsigned firstChild = parent*nWorkThreads+1;
+    foreach (WorkThread* ch, threads)
+        if (!ch->isStopped) {
+            if (ch->getThreadId() >= firstChild && ch->getThreadId() <  firstChild + nWorkThreads)
+                used[ch->getThreadId() - firstChild] = true;
+        }
+
+    for (unsigned i=0; i<nWorkThreads; ++i)
+        if (!used[i])
+            return i + firstChild;
+
+    foreach (WorkThread* ch, threads) {
+        std::cout << (void*)ch << " " << (void*)ch->job;
+        if (ch->job) std::cout << " " << ch->getThreadId();
+        std::cout << std::endl;
+    }
+    ASSERT(!"no free child ID");
+    return 0;
 }
 
 // Queue a job from a parent. This allows the parent later to start only its
 // own jobs.
-void WorkThread::queueJob(Key parent, Job *j) {
-    ASSERT(j);
+void WorkThread::queueJob(unsigned parent, Job *j) {
     std::unique_lock<std::mutex> lock(runningMutex);
-/*    for (int i = 0; i<threads.count(); ++i) {
-        WorkThread* th = threads[i];*/
-    if (running<4)
-    foreach (WorkThread* th, threads) {
-        if (th->isStopped) {
-            ASSERT(th->job == NULL);
-            th->isStopped = false;
-            th->job = j;
-//            std::cerr << "notfy " << i << " " << (void*)j << " count " << jobs.count() << std::endl;
-//            runningMutex.unlock();
-            running++;
-            th->starting.notify_one();
-            return;
+    if (running < nThreads)
+        foreach (WorkThread* th, threads) {
+            if (th->isStopped) {
+                ASSERT(th->job == NULL);
+                th->getThreadId() = findFreeChild(parent);
+                th->job = j;
+                th->isStopped = false;
+                ++running;
+//    std::cerr << "qstrt:" << (void*)j << " parent:" << parent << " id:" << th->getThreadId() << " count:" << jobs.size() << std::endl;
+                th->starting.notify_one();
+                return;
+            }
         }
-    }
 
-//    std::cerr << "queue " << (void*)j << " count " << jobs.count() << std::endl;
-    jobs.insertMulti(parent, j);
-//    starting.notify_all();
+    jobs.insert(std::pair<unsigned, Job*>(parent, j));
+//    std::cerr << "queue:" << (void*)j << " parent:" << parent << " count:" << jobs.size() << std::endl;
 }
 
 void WorkThread::idle(int n) {
@@ -129,17 +180,25 @@ void WorkThread::idle(int n) {
 //  jobs in child nodes, otherwise a unrelated node may be started and not
 //  finished, while join() continues, which increases the number of running and
 //  executed threads beyond the number of cores
-//    std::unique_lock<std::mutex> lock(runningMutex);
-//    running -= n;
-//    sleeping += n;
-    if (0 && n>0 && running < nThreads && jobs.count() > 0)
+    std::unique_lock<std::mutex> lock(runningMutex);
+    running -= n;
+    waiting += n;
+    workThread->isWaiting = true;
+    if (n>0 && running < nThreads && jobs.size() > 0)
         foreach (WorkThread* th, threads)
             if (th->isStopped) {
-                running++;
-                th->starting.notify_one();
-                break;
+                ASSERT(th->job == NULL);
+                unsigned parent;
+                th->job = th->findGoodJob(parent);
+                if (th->job) {
+                    th->getThreadId() = findFreeChild(parent);
+                    th->isStopped = false;
+                    ++running;
+//    std::cerr << "istrt:" << (void*)th->job << " parent:" << parent << " id:" << th->getThreadId() << " count:" << jobs.size() << std::endl;
+                    th->starting.notify_one();
+                    break;
+                }
             }
-    ASSERT(running <= 8);
 }
 
 void WorkThread::stop() {
@@ -152,8 +211,8 @@ void WorkThread::stop() {
 
 void WorkThread::stopAll() {
     runningMutex.lock();
-    foreach(Job* j, jobs)
-        delete j;
+    foreach(auto j, jobs)
+        delete j.second;
     jobs.clear();
     foreach(WorkThread* th, threads)
     	th->doStop = true;
@@ -162,32 +221,44 @@ void WorkThread::stopAll() {
         th->stop();
 }
 
-Job* WorkThread::getJob(Key parent) {
+Job* WorkThread::getJob(unsigned parent) {
     std::unique_lock<std::mutex> lock(runningMutex);
-    return jobs.take(parent);
+    return findJob(parent);
 }
 
-bool WorkThread::canQueued(Key k, int shared) {
-	if (shared >= 2*(signed)WorkThread::nThreads-1) return false;
+Job* WorkThread::findJob(unsigned parent) {
+    auto wjob = jobs.find(parent);
+    if (wjob != jobs.end()) {
+        Job* j = (*wjob).second;
+        jobs.erase(wjob);
+        return j;
+    }
+
+    return 0;
+}
+
+bool WorkThread::canQueued(unsigned parent, int ) {
     std::unique_lock<std::mutex> lock(runningMutex);
-    return (unsigned)jobs.count(k) < nThreads;
-//    return (unsigned)jobs.size() < nThreads;
+    return jobs.count(parent) < nThreads;
 }
 
 void WorkThread::printJobs() {
-    for (QMultiMap<Key, Job*>::iterator i=jobs.begin(); i!=jobs.end(); ++i) {
-        std::cout << i.key() << ": " << i.value() << std::endl;
+    for (auto i=jobs.begin(); i!=jobs.end(); ++i) {
+        std::cout << (*i).first << ": " << (*i).second << std::endl;
     }
 }
 
 void WorkThread::init() {
     nThreads = sysconf(_SC_NPROCESSORS_ONLN);
     if (nThreads == 0) nThreads = 1;
-
-    for (unsigned int i=0; i<nThreads*2-1; ++i) {
+    for (logWorkThreads = 0; 1U<<logWorkThreads < nThreads; ++logWorkThreads)
+        ;
+    if (logWorkThreads) ++logWorkThreads;
+    nWorkThreads = 1<<logWorkThreads;
+    for (unsigned int i=0; i<nWorkThreads; ++i) {
         WorkThread* th = new WorkThread();
         new std::thread(&WorkThread::run, th);
-        threads.append(th);
+        threads.push_back(th);
     }
 }
 
@@ -199,11 +270,11 @@ WorkThread* WorkThread::findFree() {
         if (!th->isStopped)
             ASSERT(!"still running jobs");
 #endif
-    return threads.first();
+    return threads.front();
 }
 
 
-const QVector<WorkThread*>& WorkThread::getThreads() {
+const std::vector< WorkThread* >& WorkThread::getThreads() {
     return threads;
 }
 

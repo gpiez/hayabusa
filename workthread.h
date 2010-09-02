@@ -35,10 +35,12 @@ extern __thread bool isMain;
 extern __thread int lastPositionalEval;
 
 class WorkThread/*: public QThread*/ {
-    static QMultiMap<Key, Job*> jobs;
-    static QVector<WorkThread*> threads;
+    static std::multimap<unsigned, Job*> jobs;
+    static std::vector<WorkThread*> threads;
     static std::mutex runningMutex;
-    static volatile unsigned int sleeping;
+    static volatile unsigned int waiting;
+    static unsigned logWorkThreads;
+    static unsigned nWorkThreads;
 
     std::condition_variable starting;		//locked by shared runningMutex
 
@@ -48,11 +50,13 @@ class WorkThread/*: public QThread*/ {
 
     volatile bool keepRunning;
     volatile int result;
+    bool isWaiting;
     BoardBase board;
     Colors color;
     Job* job;
     Key key;
     Stats* stats;
+    unsigned* threadId;
     void stop();
 
 public:
@@ -63,17 +67,24 @@ public:
     WorkThread();
     virtual ~WorkThread();
     void run();
-    const Stats* getStats() {
+    const Stats* getStats() const {
         return stats;
     }
+    unsigned& getThreadId() {
+        return *threadId;
+    }
+
+    static unsigned findFreeChild(unsigned parent);
     static void stopAll();
-    static void queueJob(Key, Job*);
-    static bool canQueued(Key, int);
-    static Job* getJob(Key);
+    static void queueJob(unsigned, Job*);
+    static bool canQueued(unsigned, int);
+    static Job* getJob(unsigned);
+    static Job* findJob(unsigned);
+    Job* findGoodJob(unsigned& parent);
     static void idle(int);
     static WorkThread* findFree();
     static void init();
-    static const QVector<WorkThread*>& getThreads();
+    static const std::vector<WorkThread*>& getThreads();
     static void printJobs();
 };
 

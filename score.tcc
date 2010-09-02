@@ -22,8 +22,10 @@
 template<Colors C>
 void SharedScore<C>::join() {
 	std::unique_lock<std::mutex> lock(readyMutex);
-	WorkThread::idle(1);
-	while (notReady)
-		readyCond.wait(lock);
-	WorkThread::idle(-1);
+    if (notReady) {
+        WorkThread::idle(1);
+        while (notReady)
+            readyCond.wait(lock);
+        WorkThread::idle(-1);
+    }
 }

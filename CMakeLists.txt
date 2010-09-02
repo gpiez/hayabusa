@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 if(COMMAND cmake_policy)
 	cmake_policy(SET CMP0003 NEW)
 endif(COMMAND cmake_policy)
-		  
+
 PROJECT (hayabusa)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -38,7 +38,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
 SET(hayabusa_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
-                   move.cpp testgame.cpp 
+                   move.cpp testgame.cpp stringlist.cpp
                    statwidget.cpp  nodeitem.cpp nodemodel.cpp nodedelegate.cpp)
 SET(hayabusa_MOC_H ${hayabusa_MOC_H} jobs.h console.h statwidget.h nodemodel.h nodedelegate.h)
 SET(hayabusa_RCCS hayabusa.qrc)
@@ -56,7 +56,7 @@ target_link_libraries(offsets ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
 
 set_source_files_properties(offsets.inc PROPERTIES generated true)
 add_custom_command(
-    OUTPUT offsets.inc 
+    OUTPUT offsets.inc
     COMMAND offsets > offsets.inc
     DEPENDS ${offsets_SRCS} offsets boardbase.h)
 

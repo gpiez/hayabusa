@@ -274,7 +274,6 @@ int main(int, char** argv) {
 			dx=-1;
 			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
 				p |= 1ULL << (x0+y0*nRows);
-			uint64_t dir0 = p;
 			if (x==0)
 				p |= 1ULL << (x+y*nRows);
 			uint64_t dir0x = p;
@@ -285,7 +284,6 @@ int main(int, char** argv) {
 			dy=-1;
 			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
 				p |= 1ULL << (x0+y0*nRows);
-			uint64_t dir2 = p;
 			if (y==0)
 				p |= 1ULL << (x+y*nRows);
 			uint64_t dir2x = p;
@@ -296,7 +294,6 @@ int main(int, char** argv) {
 			dx=-1; dy=-1;
 			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
 				p |= 1ULL << (x0+y0*nRows);
-			uint64_t dir1 = p;
 
 			p=0; dx=1; dy=-1;
 			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
@@ -304,7 +301,6 @@ int main(int, char** argv) {
 			dx=-1; dy=1;
 			for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
 				p |= 1ULL << (x0+y0*nRows);
-			uint64_t dir3 = p;
 
 			std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << dir0x << ", 0x" << std::setw(16) << dir2x << " }, ";
 			if (x == 7)

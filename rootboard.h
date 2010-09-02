@@ -32,6 +32,7 @@
 #include "statwidget.h"
 #include "nodeitem.h"
 #endif
+#include "stringlist.h"
 
 class WorkThread;
 class Console;
@@ -75,6 +76,16 @@ class RootBoard {
     unsigned fiftyMovesRoot;
     History history;        // FIXME probably needs to be thread local
     std::string info;
+    bool infinite;
+    int wtime;
+    int btime;
+    int winc;
+    int binc;
+    int movestogo;
+    int maxSearchDepth;
+    int maxSearchNodes;
+    int mate;
+    int movetime;
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply);
     inline void store(Key k, unsigned ply);
@@ -95,7 +106,7 @@ public:
 	RootBoard(Console*);
 	template<Colors C> const ColoredBoard<C>& currentBoard() const;
     const BoardBase& currentBoard() const;
-	void go(QStringList);
+	void go(const std::map<std::string, StringList>&);
 	const BoardBase& setup(std::string fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth, uint64_t endNode = ~0);
 	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply

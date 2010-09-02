@@ -48,11 +48,11 @@ signals:
     void result(std::string arg1);
 };
 
-template<Colors C, typename A, typename B>
+template<Colors C, typename A, typename B, typename T>
 class SearchJob: public Job {
     NodeType n;
     RootBoard& rb;
-    const ColoredBoard<(Colors)-C>& b;
+    const T& b;
     Move m;
     unsigned int depth;
     const A& alpha;
@@ -63,7 +63,7 @@ class SearchJob: public Job {
     NodeItem* node;
 #endif
 public:
-    SearchJob(NodeType n, RootBoard& rb, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent
+    SearchJob(NodeType n, RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent
 #ifdef QT_GUI_LIB
         , NodeItem* node
 #endif
@@ -92,6 +92,7 @@ class RootSearchJob: public signalJob {
 public:
     RootSearchJob(RootBoard& rb): rb(rb) {};
     void job() {
+        threadId = 0;
         connect(this, SIGNAL(result(std::string)), rb.console, SLOT(getResult(std::string)));
         Move m = rb.rootSearch<C>();
         emit(result(m.string()));

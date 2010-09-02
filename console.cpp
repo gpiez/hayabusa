@@ -28,6 +28,7 @@
 #include "testpositions.h"
 #include "transpositiontable.tcc"
 #include "rootboard.tcc"
+#include "stringlist.h"
 
 namespace Options {
 unsigned int splitDepth = 1000;
@@ -36,7 +37,7 @@ int hash = 0x1000000;
 bool quiet = false;
 }
 
-Console::Console(QCoreApplication* parent):
+Console::Console(QCoreApplication* parent, StringList args):
     QObject(parent),
     app(parent),
     cin(stdin, QIODevice::ReadOnly),
@@ -67,15 +68,13 @@ Console::Console(QCoreApplication* parent):
     connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
     connect(this, SIGNAL(signalSend(std::string)), this, SLOT(privateSend(std::string)));
 
-    QStringList args = QCoreApplication::arguments();
-    args.removeFirst();
-    QString argStr = args.join(" ");
-    QStringList cmdsList = argStr.split(":");
-    foreach(QString cmdStr, cmdsList) {
-        cmdStr = cmdStr.simplified();
-        QStringList cmds = cmdStr.split(" ");
-        if (cmds.isEmpty()) break;
-        if (dispatcher.contains(cmds[0]))
+    std::string argStr = args.join(" ");
+    StringList cmdsList = split(argStr, ":");
+    foreach(std::string cmdStr, cmdsList) {
+        cmdStr = simplified(cmdStr);
+        StringList cmds = split(cmdStr, " ");
+        if (cmds.empty()) break;
+        if (dispatcher.find(cmds[0]) != dispatcher.end())
             (this->*(dispatcher[cmds[0]]))(cmds);
         else
             tryMove(cmds);
@@ -94,10 +93,10 @@ void Console::getResult(std::string result) {
 
 void Console::dataArrived() {
     notifier->setEnabled(false);
-    QString temp = cin.readLine();
-    if (!temp.isEmpty()) {
-        QStringList cmds = temp.split(' ');
-        if (dispatcher.contains(cmds[0])) {
+    std::string temp = cin.readLine().toStdString();
+    if (!temp.empty()) {
+        StringList cmds = split(temp, " ");
+        if (dispatcher.find(cmds[0]) != dispatcher.end()) {
             (this->*(dispatcher[cmds[0]]))(cmds);
         } else {
             tryMove(cmds);
@@ -111,8 +110,8 @@ void Console::delayedEnable() {
     notifier->setEnabled(true);
 }
 
-void Console::tryMove(QStringList cmds) {
-	std::string mstr = cmds[0].toLower().toStdString();
+void Console::tryMove(StringList cmds) {
+	std::string mstr = toLower(cmds[0]);
 	if (mstr.length() < 4 || mstr.length() > 5) {
 		send("move '" + mstr + "' not understood");
 		return;
@@ -145,20 +144,20 @@ void Console::tryMove(QStringList cmds) {
 	}
 }
 
-void Console::perft(QStringList cmds) {
-    board->perft(cmds[1].toInt());
+void Console::perft(StringList cmds) {
+    board->perft(convert(cmds[1]));
 }
 
-void Console::divide(QStringList cmds) {
-    board->divide(cmds[1].toInt());
+void Console::divide(StringList cmds) {
+    board->divide(convert(cmds[1]));
 }
 
-void Console::uci(QStringList /*cmds*/) {
+void Console::uci(StringList /*cmds*/) {
     send("id name hayabusa 0.1");
     send("author Gunther Piez");
 }
 
-void Console::debug(QStringList cmds) {
+void Console::debug(StringList cmds) {
     if (cmds[1] == "on")
         debugMode = true;
     else if (cmds[1]=="off")
@@ -168,76 +167,81 @@ void Console::debug(QStringList cmds) {
 }
 
 // engine is always ready as soon as the command dispatcher is working.
-void Console::isready(QStringList /*cmds*/) {
+void Console::isready(StringList /*cmds*/) {
     cout << "readyok" << endl << flush;
 }
 
-void Console::setoption(QStringList cmds) {
-    const QHash<QString, QStringList> o = parse(cmds, QStringList() << "name" << "value");
-    QString name = o["name"].join(" ").toLower();
-    if (!name.isEmpty()) {
-        QString data = o["value"].join(" ").toLower();
+void Console::setoption(StringList cmds) {
+    std::map<std::string, StringList> o = parse(cmds, StringList() << "name" << "value");
+    std::string name =  toLower(o["name"].join(" "));
+    if (!name.empty()) {
+        std::string data = toLower(o["value"].join(" "));
         if (name == "splitdepth") {
-            Options::splitDepth = data.toInt();
+            Options::splitDepth = convert(data);
         } else if (name == "humanreadable") {
-            Options::humanreadable = data.toInt();
+            Options::humanreadable = convert(data);
         } else if (name == "hash") {
-            Options::hash = data.toInt();
+            Options::hash = convert(data);
             if (Options::hash) board->tt->setSize(Options::hash*0x100000ULL);
         } else if (name == "quiet") {
-            Options::quiet = data.toInt();
+            Options::quiet = convert(data);
         }
     }
 }
 
-void Console::reg(QStringList /*cmds*/) {
+void Console::reg(StringList /*cmds*/) {
 }
 
-void Console::ucinewgame(QStringList /*cmds*/) {
+void Console::ucinewgame(StringList /*cmds*/) {
     WorkThread::stopAll();
     board->ttClear();
 }
 
-void Console::position(QStringList cmds) {
+void Console::position(StringList cmds) {
     WorkThread::stopAll();
-    int m=cmds.indexOf("moves");
+    int m=std::find(cmds.begin(), cmds.end(), "moves") - cmds.begin();
     if (cmds[1] == "startpos")
         board->setup();
     else if (cmds[1] == "fen") {
-        QStringList fen = cmds.mid(2, m-2);
-        board->setup(fen.join(" ").toStdString());
+        StringList fen;
+        fen.resize(m-1);
+        std::copy(cmds.begin()+1, cmds.begin()+m, fen.begin());
+        board->setup(fen.join(" "));
     } else if (cmds[1] == "test") {
-        QString search = cmds[2];
+        std::string search = cmds[2];
         for (unsigned int i = 0; i < sizeof(testPositions)/sizeof(char*); ++i) {
-            QString pos(testPositions[i]);
-            if (pos.contains(search)) {
-                board->setup(pos.toStdString());
+            std::string pos(testPositions[i]);
+            if (pos.find(search)) {
+                board->setup(pos);
                 break;
             }
         }
     }
-    if (m>0) {
-        QStringList moves = cmds.mid(m+1);
-        foreach(QString move, cmds)
+    if (m>cmds.end()-cmds.begin()+1) {  //TODO FIXME
+        StringList moves;
+        moves.resize(cmds.end() - cmds.begin() - m - 1);
+        std::copy(cmds.begin()+m+1, cmds.end(), moves.begin());
+        foreach(std::string move, cmds)
             ; //TODO
     }
 }
 
-void Console::go(QStringList cmds) {
+void Console::go(StringList cmds) {
     WorkThread::stopAll();
-    QHash<QString, QStringList> subCmds = parse(cmds, QStringList() << "searchmoves"
+    std::map<std::string, StringList> subCmds = parse(cmds, StringList() << "searchmoves"
     << "ponder" << "wtime" << "btime" << "winc" << "binc" << "movestogo" << "depth"
     << "nodes" << "mate" << "movetime" << "infinite");
-    board->go(cmds);
+
+    board->go(subCmds);
 }
 
-void Console::stop(QStringList /*cmds*/) {
+void Console::stop(StringList /*cmds*/) {
 }
 
-void Console::ponderhit(QStringList /*cmds*/) {
+void Console::ponderhit(StringList /*cmds*/) {
 }
 
-void Console::quit(QStringList /*cmds*/) {
+void Console::quit(StringList /*cmds*/) {
     app->quit();
 }
 
@@ -248,14 +252,6 @@ std::string Console::getAnswer() {
         sleep(1);
     }
     return answer;
-}
-
-void Console::info(int depth, int seldepth, uint64_t time, uint64_t nodes,
-                   QString pv, RawScore score, Move currMove, int currMoveNumber,
-                   int hashfull, int nps, int tbhits, int cpuload, QString currline) {
-    emit signalInfo(depth, seldepth, time, nodes,
-                   pv, score, currMove, currMoveNumber,
-                   hashfull, nps, tbhits, cpuload, currline);
 }
 
 void Console::iterationDone(unsigned int depth, uint64_t nodes, std::string line, int bestScore) {
@@ -272,22 +268,28 @@ void Console::send(std::string str) {
     emit signalSend(str);
 }
 
-QHash<QString, QStringList> Console::parse(QStringList cmds, QStringList tokens) {
-    QMap<int, QString> tokenPositions;
-    foreach(QString token, tokens)
-        if (cmds.indexOf(token)>0)
-            tokenPositions[cmds.indexOf(token)] = token;
-    tokenPositions[9999] = "";
-
-    QHash<QString, QStringList> tokenValues;
-    for(int i=0; i<tokenPositions.keys().count()-1; ++i) {
-        tokenValues[tokenPositions.values().at(i)] =
-            cmds.mid(tokenPositions.keys().at(i)+1, tokenPositions.keys().at(i+1)-tokenPositions.keys().at(i)-1);
+std::map<std::string, StringList> Console::parse(const StringList& cmds, const StringList& tokens) {
+    typedef StringList::const_iterator I;
+    std::map<I, std::string> tokenPositions;
+    foreach(std::string token, tokens) {
+        I tp=std::find(cmds.begin(), cmds.end(), token);
+        if (tp != cmds.end())
+            tokenPositions[tp] = token;
+    }
+    tokenPositions[cmds.end()] = "";
+    std::map<std::string, StringList> tokenValues;
+    for(auto i=tokenPositions.begin(); (*i).first != cmds.end(); ++i) {
+        ASSERT(*((*i).first) == (*i).second);
+        auto j = i;
+        ++j;
+//        std::cout << "parse:" << (*i).second << ":" << *((*i).first+1) << std::endl;
+        tokenValues[(*i).second].resize((*j).first - (*i).first - 1);
+        std::copy ((*i).first+1, (*j).first, tokenValues[(*i).second].begin());
     }
     return tokenValues;
 }
 
-void Console::ordering(QStringList cmds) {
+void Console::ordering(StringList cmds) {
     static const unsigned nPos = sizeof(testPositions)/sizeof(char*);
     Options::quiet = true;
     if (cmds.size() > 1 && cmds[1] == "init") {

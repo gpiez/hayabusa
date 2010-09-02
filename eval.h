@@ -91,7 +91,10 @@ union Parameters {
         float rookHalfOpen;
         float rookAttackP;
         float rookAttackK;
-    };
+        float aspiration0;
+        float aspiration1;
+        float evalHardBudget;
+   };
     float data[];
 };
 
@@ -136,7 +139,10 @@ class Eval {
     int pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
     template<Colors C> int mobility( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1]) const;
+    
 public:
+    static Parameters parameters;
+    
     Eval();
     int eval(const BoardBase&) const;
     template<Colors C> Move evalMate(const BoardBase&) const;
@@ -189,6 +195,5 @@ void printSigmoid(T& p, QString str) {
     }
     xout << endl;
 }
-
 
 #endif /* EVAL_H_ */
