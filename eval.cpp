@@ -108,7 +108,7 @@ Eval::Eval() {
     parameters.aspiration0 = 40;
     parameters.aspiration1 = 5;
     parameters.evalHardBudget = 20;
-    
+
     sigmoid(n_p_ram, 0, 75, 5);             // bonus for each pawn ram, max is 75
     sigmoid(n_p, -25, 25, 12);
 
@@ -294,6 +294,10 @@ void Eval::initPS() {
         getPS(-King, sq ^ 070) = -getPS( King, sq);
     }
 
+    for (int p = -King; p <= (signed)King; ++p)
+    for (unsigned int sq = 0; sq<nSquares; ++sq) {
+        getPS(p, sq) /= 2;
+    }
 }
 
 void Eval::initZobrist() {
