@@ -33,6 +33,13 @@ public:
 StringList split(std::string str, std::string delims = std::string(" "));
 std::string simplified(std::string str);
 std::string toLower(std::string str);
-int convert(std::string str);
+template<typename T=int>
+T convert(std::string str) {
+    std::stringstream ss(str);
+    T x;
+    ss >> x;
+    return x;
+}
+
 
 #endif // STRINGLIST_H
