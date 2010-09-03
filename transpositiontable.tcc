@@ -186,8 +186,13 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 		size >>= 1;
 		nEntries >>= 1;
 	}
-	memset(table, 0, size);	// not strictly neccessary, but allocating pages
+	clear();	// not strictly neccessary, but allocating pages
 	mask = nEntries-1;
+}
+
+template<typename Entry, unsigned int assoc, typename Key>
+void Table<Entry, assoc, Key>::clear() {
+    memset(table, 0, size);
 }
 
 template<typename Entry, unsigned assoc, typename Key>
