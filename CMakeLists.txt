@@ -37,14 +37,14 @@ INCLUDE(${QT_USE_FILE})
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
-SET(hayabusa_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
-                   move.cpp testgame.cpp stringlist.cpp
-                   statwidget.cpp  nodeitem.cpp nodemodel.cpp nodedelegate.cpp)
+SET(common_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
+    move.cpp testgame.cpp stringlist.cpp statwidget.cpp  nodeitem.cpp nodemodel.cpp nodedelegate.cpp)
+
+SET(hayabusa_SRCS main.cpp)
 SET(hayabusa_MOC_H ${hayabusa_MOC_H} jobs.h console.h statwidget.h nodemodel.h nodedelegate.h)
 SET(hayabusa_RCCS hayabusa.qrc)
 
-SET(test_SRCS test.cpp ${hayabusa_SRCS})
-SET(hayabusa_SRCS main.cpp ${hayabusa_SRCS})
+SET(test_SRCS test.cpp)
 SET(test_MOC_H test.h ${hayabusa_MOC_H})
 
 SET(offsets_SRCS offsets.cpp)
@@ -67,12 +67,12 @@ QT4_WRAP_CPP( test_MOC_SRCS ${test_MOC_H} )
 QT4_WRAP_UI(hayabusa_UIS_H ${hayabusa_UIS})
 QT4_ADD_RESOURCES(hayabusa_RCC_SRCS ${hayabusa_RCCS})
 # QT4_AUTOMOC(${hayabusa_SRCS})
-ADD_EXECUTABLE(hayabusa ${hayabusa_SRCS} ${hayabusa_UIS_H} ${hayabusa_RCC_SRCS} ${hayabusa_MOC_SRCS})
+ADD_EXECUTABLE(hayabusa ${common_SRCS} ${hayabusa_SRCS} ${hayabusa_UIS_H} ${hayabusa_RCC_SRCS} ${hayabusa_MOC_SRCS})
 add_precompiled_header(hayabusa pch.h)
 
 TARGET_LINK_LIBRARIES (hayabusa ${QT_LIBRARIES})
 
-ADD_EXECUTABLE(test ${test_SRCS} ${test_MOC_SRCS} ${hayabusa_UIS_H} ${hayabusa_RCC_SRCS} )
+ADD_EXECUTABLE(test ${common_SRCS} ${test_SRCS} ${test_MOC_SRCS} ${hayabusa_UIS_H} ${hayabusa_RCC_SRCS} )
 set_source_files_properties(test.cpp PROPERTIES COMPILE_FLAGS "-DQT_TEST")
 TARGET_LINK_LIBRARIES (test ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
 
