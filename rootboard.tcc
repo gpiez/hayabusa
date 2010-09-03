@@ -48,7 +48,7 @@
 #endif
 
 template<Colors C>
-Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
+Move RootBoard::rootSearch(unsigned int endDepth) {
     using namespace std::chrono;
     system_clock::time_point start = system_clock::now();
 #ifdef QT_GUI_LIB
@@ -70,8 +70,8 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
         b.generateMoves(good);
         b.template generateCaptureMoves<true>(good, bad);
     }
-    
-    duration<int, std::milli> time( C==White ? wtime : btime );    
+
+    duration<int, std::milli> time( C==White ? wtime : btime );
     system_clock::time_point softBudget, hardBudget;
     if (movestogo > 0) {
         softBudget = start + time/(2*movestogo);
@@ -79,10 +79,10 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
     } else {
         softBudget = hardBudget = start + time;
     }
-    
+
     SharedScore<C> alpha0; alpha0.v = -infinity*C;
     nMoves = bad-good;
-    for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < endNode; depth++) {
+    for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes; depth++) {
 #ifdef QT_GUI_LIB
 		NodeData data;
 		data.move.data = 0;
@@ -99,6 +99,7 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
         if (Options::humanreadable) g.imbue(std::locale("de_DE"));
         else                        g.imbue(std::locale("C"));
 
+        system_clock::time_point now;
         currentMoveIndex = 1;
         SharedScore<        C>  alpha; alpha.v = -infinity*C;
         SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
@@ -109,18 +110,25 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
             beta2.v  = alpha0.v + Eval::parameters.aspiration1*C;
             if (!search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha2, ply+1 NODE)) {
             // Fail-Low at root, research with low bound = alpha and high bound = old low bound
-                        g.str("");
-                        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
-                          << std::setw(18) << getStats().node << " score " << alpha2.v << " " << tt->bestLine(*this) << " fail low";
-                        emit console->send(g.str());
+                now = system_clock::now();
+                g.str("");
+                g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
+                  << std::setw(18) << getStats().node << " score " << alpha2.v << " " << tt->bestLine(*this) << " fail low";
+                emit console->send(g.str());
+                if (!infinite && now > hardBudget) break;   //TODO check if trying other moves first is an better option
                 beta2.v = alpha2.v;
                 search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha, ply+1 NODE);
             } else if (alpha2 >= beta2.v) {
                 // Fail-High at root, research with high bound = beta and low bound = old high bound
-                        g.str("");
-                        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
-                          << std::setw(18) << getStats().node << " score " << alpha2.v << " " << tt->bestLine(*this) << " fail high";
-                        emit console->send(g.str());
+                now = system_clock::now();
+                g.str("");
+                g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
+                  << std::setw(18) << getStats().node << " score " << alpha2.v << " " << tt->bestLine(*this) << " fail high";
+                emit console->send(g.str());
+                if (!infinite) {
+                    if (now > hardBudget) break;
+                    if (now > softBudget && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
+                }
                 alpha.v = alpha2.v;
                 search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta, alpha, ply+1 NODE);
             } else {
@@ -130,16 +138,16 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
             search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta, alpha, ply+1 NODE);
         }
         bestMove = *good;
+        now = system_clock::now();
         g.str("");
-        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
+        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
           << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
         emit console->send(g.str());
 
         if (alpha >= infinity*C) break;
         if (!infinite) {
-            system_clock::time_point now = system_clock::now();
             if (now > hardBudget) break;
-            if (now > softBudget && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
+            if (now > softBudget && alpha > alpha0.v - C*Eval::parameters.evalHardBudget) break;
         }
         beta2.v = alpha.v + Eval::parameters.aspiration1*C;
 
@@ -168,15 +176,17 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
                     memmove(good+1, good, sizeof(Move) * (currentMove-good));
                     *good = bestMove;
                     if (alpha >= beta2.v) {
+                        now = system_clock::now();
                         g.str("");
-                        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
+                        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
                           << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this) << " research";
                         emit console->send(g.str());
                         search<(Colors)-C, trunk>(NodeFailHigh, b, bestMove, depth-1, beta, alpha, ply+1 NODE);
                     }
                     beta2.v = alpha.v + Eval::parameters.aspiration1*C;
+                    now = system_clock::now();
                     g.str("");
-                    g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
+                    g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
                       << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
                     emit console->send(g.str());
                 }
@@ -188,9 +198,11 @@ Move RootBoard::rootSearch(unsigned int endDepth, uint64_t endNode) {
                 if (now > softBudget && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
             }
         }
+        now = system_clock::now();
         g.str("");
-        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << getTime() << " nodes"
+        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
           << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
+//          std::cout << stats.node << std::endl;
         emit console->send(g.str());
         if (alpha >= infinity*C) break;
         if (alpha <= -infinity*C) break;
