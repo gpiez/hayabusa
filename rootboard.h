@@ -76,14 +76,12 @@ class RootBoard {
     unsigned fiftyMovesRoot;
     History history;        // FIXME probably needs to be thread local
     std::string info;
-    bool infinite;
     int wtime;
     int btime;
     int winc;
     int binc;
     int movestogo;
     int maxSearchDepth;
-    int maxSearchNodes;
     int mate;
     int movetime;
 
@@ -99,6 +97,9 @@ public:
 	Console* console;
 	Colors color;
 	Move bestMove;
+    bool infinite;
+    uint64_t maxSearchNodes;
+
     RawScore estimatedError[nPieces*2+1][nSquares];
 	double avgE[nPieces*2+1][nSquares];
 	double avgE2[nPieces*2+1][nSquares];
@@ -108,7 +109,7 @@ public:
     const BoardBase& currentBoard() const;
 	void go(const std::map<std::string, StringList>&);
 	const BoardBase& setup(std::string fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
-	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth, uint64_t endNode = ~0);
+	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
 	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply
 #ifdef QT_GUI_LIB
 	    , NodeItem*
@@ -121,7 +122,6 @@ public:
 	template<Colors C> uint64_t rootDivide(unsigned int depth);
 	template<Colors C, Phase P, typename ResultType> void perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth);
 	void divide(unsigned int depth) const;
-	uint64_t getTime() const;
 	Stats getStats() const;
     std::string getLine() const;
 	void ttClear();
