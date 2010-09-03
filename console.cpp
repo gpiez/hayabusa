@@ -198,31 +198,29 @@ void Console::ucinewgame(StringList /*cmds*/) {
 }
 
 void Console::position(StringList cmds) {
+    if (cmds.size() < 2) return;
+    auto pos = parse(cmds, StringList() << "startpos" << "fen" << "test" << "moves");
     WorkThread::stopAll();
-    int m=std::find(cmds.begin(), cmds.end(), "moves") - cmds.begin();
-    if (cmds[1] == "startpos")
+    if (pos.count("startpos"))
         board->setup();
-    else if (cmds[1] == "fen") {
-        StringList fen;
-        fen.resize(m-1);
-        std::copy(cmds.begin()+1, cmds.begin()+m, fen.begin());
-        board->setup(fen.join(" "));
-    } else if (cmds[1] == "test") {
-        std::string search = cmds[2];
+    else if (pos.count("fen")) {
+        board->setup(pos["fen"].join());
+    } else if (pos.count("test")) {
+        if (cmds.size() < 3) return;
+        std::string search = pos["test"].join();
         for (unsigned int i = 0; i < sizeof(testPositions)/sizeof(char*); ++i) {
             std::string pos(testPositions[i]);
-            if (pos.find(search)) {
+            if (pos.find(search) != pos.npos) {
                 board->setup(pos);
                 break;
             }
         }
     }
-    if (m>cmds.end()-cmds.begin()+1) {  //TODO FIXME
-        StringList moves;
-        moves.resize(cmds.end() - cmds.begin() - m - 1);
-        std::copy(cmds.begin()+m+1, cmds.end(), moves.begin());
-        foreach(std::string move, cmds)
-            ; //TODO
+
+    if (pos.count("moves")) {
+        foreach(std::string move, pos["moves"]) {
+                ; //TODO
+        }
     }
 }
 
@@ -290,31 +288,39 @@ std::map<std::string, StringList> Console::parse(const StringList& cmds, const S
 }
 
 void Console::ordering(StringList cmds) {
-    static const unsigned nPos = sizeof(testPositions)/sizeof(char*);
+    static const unsigned nPos = sizeof(testDepths)/sizeof(int);
     Options::quiet = true;
+    board->infinite = true;
     if (cmds.size() > 1 && cmds[1] == "init") {
         for (unsigned int i = 0; i<nPos; ++i) {
             stats.node=0;
+            board->maxSearchNodes = 1000000;
             board->setup(testPositions[i]);
+            board->ttClear();
             if (board->color == White)
-                board->rootSearch<White>(32, 1000000);
+                board->rootSearch<White>(40);
             else
-                board->rootSearch<Black>(32, 1000000);
-            std::cout << board->depth-1 << "," << std::endl;
+                board->rootSearch<Black>(40);
+            if (stats.node < 1000000)
+                std::cout << board->depth - 20 << "," << std::endl;
+            else
+                std::cout << board->depth - 21 << "," << std::endl;
         }
     } else {
         double sum=0.0;
         double tested=0.0;
         for (unsigned int i = 0; i<nPos; ++i) {
-            if (testDepths[i] == 51) continue;
+            if (testDepths[i] == 0) continue;
+            board->maxSearchNodes = ~0;
             tested++;
             stats.node=0;
             board->setup(testPositions[i]);
+            board->ttClear();
             if (board->color == White)
-                board->rootSearch<White>(testDepths[i]-20);
+                board->rootSearch<White>(testDepths[i]);
             else
-                board->rootSearch<Black>(testDepths[i]-20);
-            std::cout << std::setw(4) << i << "(" << testDepths[i]-20 << "):" << std::setw(10) << stats.node << std::endl;
+                board->rootSearch<Black>(testDepths[i]);
+            std::cout << std::setw(4) << i << "(" << std::setw(2) << testDepths[i]  << "):" << std::setw(10) << stats.node << std::endl;
             sum += log(stats.node);
         }
         std::cout << std::setw(20) << exp(sum/tested) << std::endl;
