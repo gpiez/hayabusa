@@ -213,12 +213,12 @@ void RootBoard::go(const std::map<std::string, StringList>& param )
     if (param.find("depth") != param.end())
         maxSearchDepth = convert((*param.find("depth")).second.front());
     else
-        maxSearchDepth = 0;
+        maxSearchDepth = maxDepth;
 
     if (param.find("nodes") != param.end())
-        maxSearchNodes = convert((*param.find("nodes")).second.front());
+        maxSearchNodes = convert<uint64_t>((*param.find("nodes")).second.front());
     else
-        maxSearchNodes = 0;
+        maxSearchNodes = ~0ULL;
 
     if (param.find("mate") != param.end())
         mate = convert((*param.find("mate")).second.front());
@@ -260,12 +260,6 @@ void update(Result<uint64_t>& r, uint64_t v) {
 	r.update(v);
 }
 
-uint64_t RootBoard::getTime() const {
-	QTime temp = startTime.time();
-	return temp.msecsTo(QTime::currentTime()) +
-	86400000*(startTime.daysTo(QDateTime::currentDateTime()));
-}
-
 Stats RootBoard::getStats() const {
 	Stats sum = {{0}};
 	foreach(WorkThread* th, WorkThread::getThreads()) {
@@ -277,7 +271,7 @@ Stats RootBoard::getStats() const {
 
 void RootBoard::ttClear()
 {
-	//TODO implement me
+	tt->clear();
 }
 
 std::string RootBoard::getLine() const {
