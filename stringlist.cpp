@@ -65,11 +65,3 @@ std::string simplified(std::string str) {
 std::string toLower(std::string str) {
     return str;
 }
-
-int convert(std::string str) {
-    std::stringstream ss(str);
-    int x;
-    ss >> x;
-    return x;
-}
-
