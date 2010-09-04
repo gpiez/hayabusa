@@ -59,16 +59,17 @@ class SearchJob: public Job {
     B& beta;
     unsigned ply;
     unsigned parent;
+    const RepetitionKeys& rep;
 #ifdef QT_GUI_LIB
     NodeItem* node;
 #endif
 public:
-    SearchJob(NodeType n, RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent
+    SearchJob(NodeType n, RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent, const RepetitionKeys& rep
 #ifdef QT_GUI_LIB
         , NodeItem* node
 #endif
         ):
-        n(n), rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), parent(parent)
+        n(n), rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), parent(parent), rep(rep)
 #ifdef QT_GUI_LIB
     , node(node)
 #endif
@@ -76,6 +77,7 @@ public:
         beta.setNotReady();
     };
     void job() {
+        rb.clone(b, rep, ply);
         rb.search<C, trunk>(n, b, m, depth, alpha, beta, ply
 #ifdef QT_GUI_LIB
                         , node

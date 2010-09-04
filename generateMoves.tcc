@@ -56,18 +56,15 @@ void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
 #ifdef __SSE4_1__
 		if (!_mm_testz_si128(d2, a13)) {
 #else
-        if (fold(d2 & (a02|a13))) {
+        if (fold(d2 & a13)) {
 #endif
 			__v2di from2 = _mm_set1_epi64x(1ULL<<bs->move.from());
 			__v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__
 			pin13 = _mm_cmpeq_epi64(pin13, zero);
 #else
-            pin02 = _mm_cmpeq_epi32(pin02, zero);
             pin13 = _mm_cmpeq_epi32(pin13, zero);
-            __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
             __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-            pin02 = pin02 & pin02s;
             pin13 = pin13 & pin13s;
 #endif
 			pin13 = ~pin13 & d2 & a13;
@@ -84,7 +81,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
 #ifdef __SSE4_1__
         if (!_mm_testz_si128(d2, a02)) {
 #else
-        if (fold(d2 & (a02|a13))) {
+        if (fold(d2 & a02)) {
 #endif
             __v2di from2 = _mm_set1_epi64x(1ULL<<rs->move.from());
             __v2di pin02 = from2 & dpins[CI].d02;

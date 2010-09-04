@@ -74,7 +74,6 @@ enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut,
 
 typedef uint64_t Key;
 typedef uint32_t PawnKey;
-typedef Key RepetitionKeys[100];
 
 static const unsigned int maxThreadId = 255;
 static const unsigned int endgameMaterial = 30;

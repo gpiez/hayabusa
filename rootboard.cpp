@@ -38,22 +38,26 @@ RootBoard::RootBoard(Console *c):
 	movesToDo(40),
 	iMove(0),
 	currentPly(0),
+    movestogo(0),
 	console(c),
 	color(White)
 {
 	tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
+    clearEE();
+    boards[0].wb.init();
+	#ifdef QT_GUI_LIB
+    statWidget = new StatWidget(*this);
+	statWidget->show();
+	#endif
+}
+
+void RootBoard::clearEE() {
     for (int p=-nPieces; p<=(int)nPieces; ++p)
         for (unsigned int sq=0; sq<nSquares; ++sq) {
             estimatedError[p+nPieces][sq] = initialError;
             avgE[p+nPieces][sq] = 0.0;
             avgN[p+nPieces][sq] = 0.001;
         }
-
-    boards[0].wb.init();
-	#ifdef QT_GUI_LIB
-    statWidget = new StatWidget(*this);
-	statWidget->show();
-	#endif
 }
 
 template<>
@@ -106,6 +110,7 @@ const BoardBase& RootBoard::setup(std::string fen) {
 
 	board.init();
 	board.fiftyMoves = fiftyTemp;
+    clearEE();
 
 	unsigned int p,x,y;
 	for ( p=0, x=0, y=7; p<(unsigned int)piecePlacement.length(); p++, x++ ) {
@@ -272,6 +277,7 @@ Stats RootBoard::getStats() const {
 void RootBoard::ttClear()
 {
 	tt->clear();
+    eval.ptClear();
 }
 
 std::string RootBoard::getLine() const {

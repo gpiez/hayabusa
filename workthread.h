@@ -29,7 +29,6 @@ class Job;
 class RootBoard;
 union Stats;
 
-extern __thread RepetitionKeys keys;
 extern __thread unsigned threadId;
 extern __thread bool isMain;
 extern __thread int lastPositionalEval;

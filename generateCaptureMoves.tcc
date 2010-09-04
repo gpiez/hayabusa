@@ -84,7 +84,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
 #ifdef __SSE4_1__
         if (!_mm_testz_si128(d2, a02)) {
 #else
-        if (fold(d2 & (a02|a13))) {
+        if (fold(d2 & a02)) {
 #endif
             __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
             __v2di pin02 = from2 & dpins[CI].d02;

@@ -54,6 +54,7 @@ WorkThread::~WorkThread()
 }
 
 void WorkThread::run() {
+    lastPositionalEval = 0;
     stats = &::stats;
     threadId = &::threadId;
     workThread = this;

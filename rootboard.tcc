@@ -23,6 +23,7 @@
 #include <pch.h>
 #endif
 
+#include <chrono>
 #include <unistd.h>
 
 #include "rootboard.h"
@@ -39,7 +40,7 @@
 #include "nodemodel.h"
 #include "transpositiontable.tcc"
 #include "history.tcc"
-#include "chrono"
+#include "repetition.tcc"
 
 #ifdef QT_GUI_LIB
 #define NODE ,node
@@ -283,7 +284,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 			if (node) node->bestEval = beta.v;
 			if (node) node->nodeType = NodePrecut;
 #endif
-			stats.leafcut++;    // so neither update beta nor return true
+			stats.leafcut++;
 			return false;
 		}
     }
@@ -300,7 +301,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
             if (node) node->bestEval = beta.v;
             if (node) node->nodeType = NodePrecut;
 #endif
-            stats.leafcut++;    // so neither update beta nor return true
+            stats.leafcut++;
             return false;
         }
     }
@@ -638,13 +639,13 @@ nosort:
 						} else {
                             if (depth == Options::splitDepth + dMaxCapture + dMaxThreat) {
                                 if (i > good && WorkThread::canQueued(threadId, current.isNotReady())) {
-                                    WorkThread::queueJob(threadId, new SearchJob<(Colors)-C, typename B::Base, A, ColoredBoard<C> >(nextNodeType, *this, b, *i, depth-1, beta.unshared(), current, ply+1, threadId NODE));
+                                    WorkThread::queueJob(threadId, new SearchJob<(Colors)-C, typename B::Base, A, ColoredBoard<C> >(nextNodeType, *this, b, *i, depth-1, beta.unshared(), current, ply+1, threadId, keys NODE));
                                 } else {
                                     search<(Colors)-C, P>(nextNodeType, b, *i, depth-1, beta.unshared(), current, ply+1 NODE);
                                 }
                             } else {
                                 if (i > good && WorkThread::canQueued(threadId, current.isNotReady())) {
-                                    WorkThread::queueJob(threadId, new SearchJob<(Colors)-C,B,A, ColoredBoard<C> >(nextNodeType, *this, b, *i, depth-1, beta, current, ply+1, threadId NODE));
+                                    WorkThread::queueJob(threadId, new SearchJob<(Colors)-C,B,A, ColoredBoard<C> >(nextNodeType, *this, b, *i, depth-1, beta, current, ply+1, threadId, keys NODE));
                                 } else {
                                     search<(Colors)-C, P>(nextNodeType, b, *i, depth-1, beta, current, ply+1 NODE);
                                 }
@@ -795,23 +796,5 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
     pt->store(pe, stored);
     update(result, n);
 }
-
-template<Colors C>
-inline bool RootBoard::find(const ColoredBoard<C>& b, Key k, unsigned ply) {
-    for (unsigned i = ply+fiftyMovesRoot; i+b.fiftyMoves >= ply+fiftyMovesRoot+4; i-=2) {
-        ASSERT(i<=100);
-        if (keys[i-4] == k) return true;
-    }
-    return false;
-}
-inline void RootBoard::store(Key k, unsigned ply) {
-    keys[ply+fiftyMovesRoot] = k;
-}
-template<Colors C>
-inline void RootBoard::clone(const ColoredBoard<C>& b, RepetitionKeys& other, unsigned ply) {
-    for (int i = ply+fiftyMovesRoot; i+b.fiftyMoves >= ply+fiftyMovesRoot; --i)
-        keys[i] = other[i];
-}
-
 
 #endif

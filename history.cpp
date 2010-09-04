@@ -57,7 +57,7 @@ History::History()
 void History::init() {
     for (unsigned d=0; d<maxDepth+4; ++d) {
         sum[d] = 1;
-        for (unsigned p=0; p<2*nPieces+1; ++p) if (p)
+        for (unsigned p=0; p<2*nPieces+1; ++p)
                 for (unsigned sq=0; sq<nSquares; ++sq)
                     v[d][p][sq] = 0;
     }

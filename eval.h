@@ -171,6 +171,7 @@ public:
         ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
         return zobristPieceSquare[piece+nPieces][square].pawnKey;
     }
+    void ptClear();
 };
 
 template<typename T>

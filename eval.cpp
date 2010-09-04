@@ -264,6 +264,9 @@ void Eval::initPS() {
  0,  4,  8, 12, 12,  8,  4,  0
 }};
 
+    for (unsigned int sq = 0; sq<nSquares; ++sq)
+        getPS( 0, sq) = CompoundScore{ 0, 0 };
+
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
         getPS( Pawn, sq) = Eval::pawn + CompoundScore{ pawn[Opening][sq ^ 0x38], pawn[Endgame][sq ^ 0x38] };
         getPS(-Pawn, sq ^ 070) = -getPS( Pawn, sq);
@@ -723,4 +726,8 @@ int Eval::eval(const BoardBase& b) const {
         e += attack<White>(b) - attack<Black>(b);
 
     return e;
+}
+
+void Eval::ptClear() {
+    pt->clear();
 }

@@ -33,6 +33,7 @@
 #include "nodeitem.h"
 #endif
 #include "stringlist.h"
+#include "repetition.h"
 
 class WorkThread;
 class Console;
@@ -85,9 +86,8 @@ class RootBoard {
     int mate;
     int movetime;
 
-    template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply);
+    template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
-    template<Colors C> inline void clone(const ColoredBoard<C>& b, RepetitionKeys& other, unsigned ply);
 
 public:
     Eval eval;
@@ -104,7 +104,9 @@ public:
 	double avgE[nPieces*2+1][nSquares];
 	double avgE2[nPieces*2+1][nSquares];
 	double avgN[nPieces*2+1][nSquares];
+
 	RootBoard(Console*);
+    void clearEE();
 	template<Colors C> const ColoredBoard<C>& currentBoard() const;
     const BoardBase& currentBoard() const;
 	void go(const std::map<std::string, StringList>&);
@@ -127,5 +129,6 @@ public:
 	void ttClear();
 	bool doMove(Move);
     std::string getInfo() const;
+    template<Colors C> inline void clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const;
 };
 #endif
