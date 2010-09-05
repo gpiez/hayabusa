@@ -204,11 +204,11 @@ void Console::position(StringList cmds) {
     if (pos.count("startpos"))
         board->setup();
     else if (pos.count("fen")) {
-        board->setup(pos["fen"].join());
+        board->setup(pos["fen"].join(" "));
     } else if (pos.count("test")) {
         if (cmds.size() < 3) return;
         std::string search = pos["test"].join();
-        for (unsigned int i = 0; i < sizeof(testPositions)/sizeof(char*); ++i) {
+        for (unsigned int i = 0; testPositions[i]; ++i) {
             std::string pos(testPositions[i]);
             if (pos.find(search) != pos.npos) {
                 board->setup(pos);
@@ -288,11 +288,10 @@ std::map<std::string, StringList> Console::parse(const StringList& cmds, const S
 }
 
 void Console::ordering(StringList cmds) {
-    static const unsigned nPos = sizeof(testDepths)/sizeof(int);
     Options::quiet = true;
     board->infinite = true;
     if (cmds.size() > 1 && cmds[1] == "init") {
-        for (unsigned int i = 0; i<nPos; ++i) {
+        for (unsigned int i = 0; testDepths[i]; ++i) {
             stats.node=0;
             board->maxSearchNodes = 1000000;
             board->setup(testPositions[i]);
@@ -309,7 +308,7 @@ void Console::ordering(StringList cmds) {
     } else {
         double sum=0.0;
         double tested=0.0;
-        for (unsigned int i = 0; i<nPos; ++i) {
+        for (unsigned int i = 0; testDepths[i]; ++i) {
             if (testDepths[i] == 0) continue;
             board->maxSearchNodes = ~0;
             tested++;

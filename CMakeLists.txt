@@ -37,7 +37,7 @@ INCLUDE(${QT_USE_FILE})
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
-SET(common_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp
+SET(common_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp testpositions.cpp
     move.cpp testgame.cpp stringlist.cpp statwidget.cpp  nodeitem.cpp nodemodel.cpp nodedelegate.cpp)
 
 SET(hayabusa_SRCS main.cpp)

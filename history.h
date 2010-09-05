@@ -12,9 +12,11 @@
 #include <pch.h>
 #endif
 
+#include "constants.h"
+
 class History {
-    uint16_t v[maxDepth+4][16][nSquares];
-    int sum[maxDepth+4];
+    uint8_t v[maxDepth+4][16][nSquares] ALIGN_XMM;
+    int sum[nColors][maxDepth+4];
     static const __v16qi uinctab[16];
     static const __v16qi sinctab[16];
 
