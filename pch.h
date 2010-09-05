@@ -55,6 +55,4 @@ extern "C" void __throw_bad_alloc();
 #include <QtGui>
 #endif
 
-#include "constants.h"
-
 #endif /* PCH_H_ */
