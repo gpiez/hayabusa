@@ -41,7 +41,7 @@ void printTemplate(int WR, int WB, int WQ, int WN, int WP,
 int main(int, char** argv) {
 	//std::cout << "pieceList = " << ld(sizeof(shortAttacks[0])) << '\n';
 
-    if (argv[1] && QString("templates") == argv[1]) {
+    if (argv[1] && std::string("templates") == argv[1]) {
         for (int WR = 0; WR <= 2; ++WR)
         for (int WB = 0; WB <= 2; ++WB)
         for (int WQ = 0; WQ <= 1; ++WQ)
@@ -53,7 +53,7 @@ int main(int, char** argv) {
         for (int BN = 0; BN <= 2; ++BN)
         for (int BP = 8; BP <= 8; ++BP)
         printTemplate(WR,WB,WQ,WN,WP,BR,BB,BQ,BN,BP);
-    } else if (argv[1] && QString("knightbits") == argv[1]) {
+    } else if (argv[1] && std::string("knightbits") == argv[1]) {
 		for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
 			 {
 				uint64_t bits=0;
@@ -68,7 +68,7 @@ int main(int, char** argv) {
 				else
 					std::cout << " ";
 			}
-    } else if (argv[1] && QString("psqr") == argv[1]) {
+    } else if (argv[1] && std::string("psqr") == argv[1]) {
         int xopen[8] = { 0, 0, 6, 8, 8, 6, 0, 0 };
         int xend[8] = { 0, 10, 11, 12, 12, 11, 10, 0};
         int yopen[8] = { 0, 0, 1, 2, 3, 5, 12, 4 };
@@ -93,7 +93,7 @@ int main(int, char** argv) {
             std::cout << std::endl;
         }
         std::cout << "}" << std::endl;
-    } else if (argv[1] && QString("psqb") == argv[1]) {
+    } else if (argv[1] && std::string("psqb") == argv[1]) {
         int xopen[8] = { 0, 4, 8, 7, 7, 8, 4, 0 };
         int xend[8] = { 0, 3, 6, 9, 9, 6, 3, 0};
         int yopen[8] = { 0, 4, 8, 8, 8, 8, 4, 0 };
@@ -119,7 +119,7 @@ int main(int, char** argv) {
             std::cout << std::endl;
         }
         std::cout << "}" << std::endl;
-    } else if (argv[1] && QString("psqn") == argv[1]) {
+    } else if (argv[1] && std::string("psqn") == argv[1]) {
         int xopen[8] = { 0, 8, 10, 12, 12, 10, 8, 0 };
         int xend[8] = { 0, 6, 10, 12, 12, 10, 6, 0};
         int yopen[8] = { 0, 8, 10, 12, 13, 12, 10, 0 };
@@ -145,7 +145,7 @@ int main(int, char** argv) {
             std::cout << std::endl;
         }
         std::cout << "}" << std::endl;
-    } else if (argv[1] && QString("psqq") == argv[1]) {
+    } else if (argv[1] && std::string("psqq") == argv[1]) {
         int xopen[8] = { 0, 2, 7, 7, 7, 7, 2, 0 };
         int xend[8] = { 0, 6, 8, 10, 10, 8, 6, 0};
         int yopen[8] = { 0, 3, 5, 7, 9, 10, 10, 4 };
@@ -171,7 +171,7 @@ int main(int, char** argv) {
             std::cout << std::endl;
         }
         std::cout << "}" << std::endl;
-    } else if (argv[1] && QString("psqp") == argv[1]) {
+    } else if (argv[1] && std::string("psqp") == argv[1]) {
         int xopen[8] = { 0, 12, 16, 20, 20, 16, 12, 0 };
         int xend[8] =  { 0, 25, 25, 25, 25, 25, 25, 0 };
         int yopen[8] = { 0, 0, 1, 3,  6, 10, 15, 0 };
@@ -197,7 +197,7 @@ int main(int, char** argv) {
             std::cout << std::endl;
         }
         std::cout << "}" << std::endl;
-    } else if (argv[1] && QString("psqk") == argv[1]) {
+    } else if (argv[1] && std::string("psqk") == argv[1]) {
         int xopen[8] = { 10, 10, 5, 0, 0, 5, 10, 10 };
         int xend[8] =  { 0, 4, 8, 12, 12, 8, 4, 0 };
         int yopen[8] = { 0, 0, -10, -20, -50, -100, -100, -100 };
@@ -223,7 +223,7 @@ int main(int, char** argv) {
             std::cout << std::endl;
         }
         std::cout << "}" << std::endl;
-	} else if (argv[1] && QString("pawnbits") == argv[1]) {
+	} else if (argv[1] && std::string("pawnbits") == argv[1]) {
 		for (int v=1; v>=-1; v-=2) {
 			std::cout << "{";
 			for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
@@ -240,7 +240,7 @@ int main(int, char** argv) {
 				}
 			std::cout << "}," << std::endl;
 		}
-	} else if (argv[1] && QString("doublebits") == argv[1]) {
+	} else if (argv[1] && std::string("doublebits") == argv[1]) {
 		std::cout << "{";
 		for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
 			 {
@@ -252,7 +252,7 @@ int main(int, char** argv) {
 					std::cout << " ";
 			}
 		std::cout << "}," << std::endl;
-	} else if (argv[1] && QString("doublereverse") == argv[1]) {
+	} else if (argv[1] && std::string("doublereverse") == argv[1]) {
 		std::cout << "{";
 		for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
 			 {
@@ -264,7 +264,7 @@ int main(int, char** argv) {
 					std::cout << " ";
 			}
 		std::cout << "}," << std::endl;
-	} else if (argv[1] && QString("masks") == argv[1]) {
+	} else if (argv[1] && std::string("masks") == argv[1]) {
 		for (int y = 0; y < (signed)nRows; ++y)
 		for (int x = 0; x < (signed)nFiles; ++x) {
 			uint64_t p=0;
@@ -312,7 +312,7 @@ int main(int, char** argv) {
 //			mask02b[x+y*nRows] = _mm_set_epi64x(dir2x, dir0x);
 //			mask13x[x+y*nRows] = _mm_set_epi64x(dir3, dir1);
 		}
-	} else if (argv[1] && QString("mobbits") == argv[1]) {
+	} else if (argv[1] && std::string("mobbits") == argv[1]) {
 		for (int d=0; d<4; ++d) {
 			const int u = (int[4]) { 1, 1, 0, -1 } [d];
 			const int v = (int[4]) { 0, 1, 1, 1 } [d];

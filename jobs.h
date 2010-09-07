@@ -40,14 +40,6 @@ struct Job {
     virtual void job() = 0;
 };
 
-// Base class for jobs which need to deliver signals, usually the root threads
-// started by the main thread.
-struct signalJob: public QObject, public Job {
-    Q_OBJECT
-signals:
-    void result(std::string arg1);
-};
-
 template<Colors C, typename A, typename B, typename T>
 class SearchJob: public Job {
     NodeType n;
@@ -88,16 +80,14 @@ public:
 };
 
 template<Colors C>
-class RootSearchJob: public signalJob {
+class RootSearchJob: public Job {
     RootBoard& rb;
 
 public:
     RootSearchJob(RootBoard& rb): rb(rb) {};
     void job() {
         threadId = 0;
-        connect(this, SIGNAL(result(std::string)), rb.console, SLOT(getResult(std::string)));
         Move m = rb.rootSearch<C>();
-        emit(result(m.string()));
     }
 };
 
@@ -119,7 +109,7 @@ public:
 };
 
 template<Colors C>
-class RootPerftJob: public signalJob {
+class RootPerftJob: public Job {
     RootBoard& rb;
     unsigned int depth;
 
@@ -127,17 +117,15 @@ public:
     RootPerftJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
     void job() {
         rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
-        connect(this, SIGNAL(result(std::string)), rb.console, SLOT(getResult(std::string)));
         uint64_t n=rb.rootPerft<C>(depth);
         std::ostringstream temp;
         temp << n;
-        emit(result(temp.str()));
         delete rb.pt;
     }
 };
 
 template<Colors C>
-class RootDivideJob: public signalJob {
+class RootDivideJob: public Job {
     RootBoard& rb;
     unsigned int depth;
 
@@ -145,11 +133,9 @@ public:
     RootDivideJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
     void job() {
         rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
-        connect(this, SIGNAL(result(std::string)), rb.console, SLOT(getResult(std::string)));
         uint64_t n=rb.rootDivide<C>(depth);
         std::ostringstream temp;
         temp << n;
-        emit(result(temp.str()));
         delete rb.pt;
     }
 };

@@ -25,13 +25,18 @@
 
 #include "move.h"
 #include "score.h"
+#include "stringlist.h"
 
 class WorkThread;
 class RootBoard;
-class StringList;
 
-class Console: public QObject {
+class Console
+#ifdef QT_GUI_LIB
+    : public QApplication {
     Q_OBJECT
+#else
+{
+#endif
     friend class TestRootBoard;
     void perft(StringList);
     void divide(StringList);
@@ -48,13 +53,16 @@ class Console: public QObject {
     void uci(StringList);
     void debug(StringList);
     void ordering(StringList);
+    void parse(std::string);
 
+#ifdef QT_GUI_LIB
 private slots:
     void privateSend(std::string);
+#endif
 
 private:
-    QCoreApplication* app;
     RootBoard* board;
+    StringList args;
     std::string answer;
     bool debugMode;
     std::map<std::string, std::string> option;
@@ -62,18 +70,15 @@ private:
     std::map<std::string, void (Console::*)(StringList)> dispatcher;
 
 public:
-    QTextStream cin;
-    QTextStream cout;
+#ifdef QT_GUI_LIB
     QSocketNotifier *notifier;
-
-    Console(QCoreApplication* parent, StringList args);
+#endif
+    Console(int& argc, char** argv);
     virtual ~Console();
-    void iterationDone(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
-    void info(int depth, int seldepth, uint64_t time, uint64_t nodes,
-                         std::string pv, RawScore score, Move currMove, int currMoveNumber,
-                         int hashfull, int nps, int tbhits, int cpuload, std::string currline);
+    int exec();
     void send(std::string);
 
+#ifdef QT_GUI_LIB
 public slots:
     void dataArrived();
     void delayedEnable();
@@ -82,10 +87,9 @@ public slots:
 
 signals:
     void signalSend(std::string);
-    void signalInfo(int depth, int seldepth, uint64_t time, uint64_t nodes,
-                         std::string pv, RawScore score, Move currMove, int currMoveNumber,
-                         int hashfull, int nps, int tbhits, int cpuload, std::string currline);
-    void signalIterationDone(unsigned int depth, uint64_t nodes, std::string line, int bestScore);
+#else
+    void poll();
+#endif
 };
 
 #endif /* CONSOLE_H_ */

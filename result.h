@@ -25,52 +25,51 @@
 
 template< typename T > class Result
 {
-	T value;
-	volatile unsigned int notReady;
-	QMutex valueMutex;
-	QWaitCondition readyCond;
-	QMutex readyMutex;
+    T value;
+    volatile unsigned int notReady;
+    std::mutex valueMutex;
+    std::condition_variable readyCond;
+    std::mutex readyMutex;
 
-	Result();
-	Result(const Result&);
-	
+    Result();
+    Result(const Result&);
+
 public:
-	explicit Result(T x):
-		notReady(0)
-	{
-		value = x;
-	}
-	operator T () {
-		readyMutex.lock();
-		while (notReady)
-			readyCond.wait(&readyMutex);
-		readyMutex.unlock();
-		return value;
-	}
+    explicit Result(T x):
+        notReady(0)
+    {
+        value = x;
+    }
+    operator T () {
+        std::unique_lock<std::mutex> lock(readyMutex);
+        while (notReady)
+            readyCond.wait(lock);
+        return value;
+    }
 
-	void update(Result<T>& data) {
-		T dataValue = data;
-		QMutexLocker locker(&valueMutex);
-		value += dataValue;
-	}
+    void update(Result<T>& data) {
+        T dataValue = data;
+        std::unique_lock<std::mutex> lock(valueMutex);
+        value += dataValue;
+    }
 
-	void update(T data) {
-		QMutexLocker locker(&valueMutex);
-		value += data;
-	}
+    void update(T data) {
+        std::unique_lock<std::mutex> lock(valueMutex);
+        value += data;
+    }
 
-	void setReady() {
-		readyMutex.lock();
-		--notReady;
-		readyCond.wakeOne();	// if the wakeup happens after the unlocking, this Result
-		readyMutex.unlock();	// may be destroyed after the signaling the condition
-	}							// but before .wakeOne() is completly done.
+    void setReady() {
+        readyMutex.lock();
+        --notReady;
+        readyCond.notify_one();    // if the wakeup happens after the unlocking, this Result
+        readyMutex.unlock();    // may be destroyed after the signaling the condition
+    }                           // but before .wakeOne() is completly done.
 
-	void setNotReady() {
-		readyMutex.lock();
-		++notReady;
-		readyMutex.unlock();
-	}
+    void setNotReady() {
+        readyMutex.lock();
+        ++notReady;
+        readyMutex.unlock();
+    }
 
 };
 

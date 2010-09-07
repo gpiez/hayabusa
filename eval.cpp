@@ -499,18 +499,17 @@ int look2up(__v2di x, __v16qi tab) {
 }
 
 void printBit(uint64_t bits) {
-    QTextStream cout(stdout);
     for (int y=8; y; ) {
         --y;
         for (int x=0; x<8; ++x) {
             if ((bits >> (x+y*8)) & 1)
-                cout << "X";
+                std::cout << "X";
             else
-                cout << ".";
+                std::cout << ".";
         }
-        cout << endl;
+        std::cout << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
 }
 
 template<unsigned int I>
@@ -520,26 +519,25 @@ uint64_t extract(const __v2di &) {
 }
 
 void printBit(__v2di bits) {
-    QTextStream cout(stdout);
     for (int y=8; y; ) {
         --y;
         for (int x=0; x<8; ++x) {
             if ((extract<0>(bits) >> (x+y*8)) & 1)
-                cout << "X";
+                std::cout << "X";
             else
-                cout << ".";
+                std::cout << ".";
         }
-        cout << " ";
+        std::cout << " ";
         for (int x=0; x<8; ++x) {
             if ((extract<1>(bits) >> (x+y*8)) & 1)
-                cout << "X";
+                std::cout << "X";
             else
-                cout << ".";
+                std::cout << ".";
         }
-        cout << endl;
+        std::cout << std::endl;
 
     }
-    cout << endl;
+    std::cout << std::endl;
 }
 
 static const int8_t mobValues[nPieces+1][32] = {

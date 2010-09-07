@@ -65,10 +65,6 @@ class RootBoard {
 	unsigned int timeBudget;
 	unsigned int movesToDo;
 	unsigned int iMove;				// current half move index of game
-	QDateTime startTime;
-
-//	template<Colors C> ColoredBoard<C>& currentBoard();
-//	unsigned int getAndDecAvailableThreads();
 
     int currentMoveIndex;
     int nMoves;

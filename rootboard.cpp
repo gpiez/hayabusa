@@ -160,7 +160,7 @@ const BoardBase& RootBoard::setup(std::string fen) {
 			y--;
 			break;
 		default:
-			qWarning() << "Unknown char " << piecePlacement[p] << " in FEN import";
+			std::cerr << "Unknown char " << piecePlacement[p] << " in FEN import";
 		}
 	}
 
@@ -267,9 +267,10 @@ void update(Result<uint64_t>& r, uint64_t v) {
 
 Stats RootBoard::getStats() const {
 	Stats sum = {{0}};
-	foreach(WorkThread* th, WorkThread::getThreads()) {
+    auto& threads = WorkThread::getThreads();
+    for (auto th = threads.begin(); th !=threads.end(); ++th) {
 		for (unsigned int i=0; i<sizeof(Stats)/sizeof(uint64_t); ++i)
-			sum.data[i] += th->getStats()->data[i];
+			sum.data[i] += (*th)->getStats()->data[i];
 	}
 	return sum;
 }

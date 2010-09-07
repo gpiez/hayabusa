@@ -58,7 +58,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
 #else
         if (fold(d2 & a13)) {
 #endif
-			__v2di from2 = _mm_set1_epi64x(1ULL<<bs->move.from());
+			__v2di from2 = doublebits[bs->move.from()];
 			__v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__
 			pin13 = _mm_cmpeq_epi64(pin13, zero);
@@ -83,7 +83,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
 #else
         if (fold(d2 & a02)) {
 #endif
-            __v2di from2 = _mm_set1_epi64x(1ULL<<rs->move.from());
+            __v2di from2 = doublebits[rs->move.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
 #ifdef __SSE4_1__
             pin02 = _mm_cmpeq_epi64(pin02, zero);
@@ -109,7 +109,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
 #else
         if (fold(d2 & (a02|a13))) {
 #endif
-            __v2di from2 = _mm_set1_epi64x(1ULL<<qs->move.from());
+            __v2di from2 = doublebits[qs->move.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
             __v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__
@@ -275,7 +275,7 @@ void ColoredBoard<C>::generateMoves(Move* &good) const {
     const __v2di zero = _mm_set1_epi64x(0);
     for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
 		__v2di a13 = bs->d13;
-		__v2di from2 = _mm_set1_epi64x(1ULL << bs->move.from());
+		__v2di from2 = doublebits[bs->move.from()];
 		__v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__
         pin13 = _mm_cmpeq_epi64(pin13, zero);
@@ -285,16 +285,18 @@ void ColoredBoard<C>::generateMoves(Move* &good) const {
         pin13 = pin13 & pin13s;
 #endif
 		pin13 = ~pin13 & a13;
-		for (uint64_t a=fold(pin13) & ~occupied1; a; a&=a-1) {
+		for (uint64_t a=fold(pin13) & ~occupied1; a; ) {
 			Move n;
-			n.data = bs->move.data + Move(0, bit(a), 0).data;
+            unsigned to = C==White ? bit(a):bitr(a);
+			n.data = bs->move.data + Move(0, to, 0).data;
 			*--good = n;
+            a &= ~(1ULL << to);
         }
     }
 
     for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
         __v2di a02 = rs->d02;
-        __v2di from2 = _mm_set1_epi64x(1ULL << rs->move.from());
+        __v2di from2 = doublebits[rs->move.from()];
         __v2di pin02 = from2 & dpins[CI].d02;
 #ifdef __SSE4_1__
         pin02 = _mm_cmpeq_epi64(pin02, zero);
@@ -304,10 +306,12 @@ void ColoredBoard<C>::generateMoves(Move* &good) const {
         pin02 = pin02 & pin02s;
 #endif
         pin02 = ~pin02 & a02;
-        for (uint64_t a=fold(pin02) & ~occupied1; a; a&=a-1) {
+        for (uint64_t a=fold(pin02) & ~occupied1; a; ) {
             Move n;
-            n.data = rs->move.data + Move(0, bit(a), 0).data;
+            unsigned to = C==White ? bit(a):bitr(a);
+            n.data = rs->move.data + Move(0, to, 0).data;
             *--good = n;
+            a &= ~(1ULL << to);
         }
     }
 
@@ -325,7 +329,7 @@ void ColoredBoard<C>::generateMoves(Move* &good) const {
     for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
         __v2di a02 = qs->d02;
         __v2di a13 = qs->d13;
-        __v2di from2 = _mm_set1_epi64x(1ULL << qs->move.from());
+        __v2di from2 = doublebits[qs->move.from()];
         __v2di pin02 = from2 & dpins[CI].d02;
         __v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__

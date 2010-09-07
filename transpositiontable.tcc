@@ -158,7 +158,7 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 {
 	freeMemory();
 
-	s = qMin(s, (size_t) sysconf(_SC_PAGESIZE) * (size_t) sysconf(_SC_PHYS_PAGES));
+	s = std::min(s, (size_t) sysconf(_SC_PAGESIZE) * (size_t) sysconf(_SC_PHYS_PAGES));
 
 	nEntries = s/sizeof(SubTable);
 
@@ -197,13 +197,13 @@ void Table<Entry, assoc, Key>::clear() {
 
 template<typename Entry, unsigned assoc, typename Key>
 template<Colors C>
-std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, QSet<Key>& visited, const RootBoard &rb) {
+std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, std::set<Key>& visited, const RootBoard &rb) {
 	std::string line = m.string();
 	__v8hi est = prev.estimatedEval(m, rb.eval);
 	const ColoredBoard<C> b(prev, m, est);
 	Key key = b.getZobrist();
-	if (visited.contains(key)) return line;
-	visited << key;
+	if (visited.count(key)) return line;
+	visited.insert(key);
 	SubTable* te = getSubTable(key);
 	TTEntry subentry;
 
@@ -239,7 +239,7 @@ std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C
 template<typename Entry, unsigned assoc, typename Key>
 std::string Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
 	if (!b.bestMove.data) return "";
-	QSet<Key> visited;
+	std::set<Key> visited;
 	if (b.color == White) {
 		return bestLineNext<Black>(b.currentBoard<White>(), b.bestMove, visited, b);
 	} else {

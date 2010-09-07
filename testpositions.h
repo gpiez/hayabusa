@@ -20,6 +20,6 @@
 #define TESTPOSITIONS_H_
 
 extern const char* testPositions[];
-extern const unsigned testDepths[];
+extern const int testDepths[];
 
 #endif /* TESTPOSITIONS_H_ */

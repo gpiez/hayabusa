@@ -46,7 +46,7 @@ public:
 private:
     SubTable* table;		// TODO remove indirection level
     uint64_t mask;
-    QReadWriteLock lock[nTTLocks];
+    std::mutex lock[nTTLocks];
     size_t size;
     size_t nEntries;
     bool usesHugePages;
@@ -57,7 +57,7 @@ public:
 
     void setSize(size_t s);
     Key nextKey(Key k, Move m);
-    SubTable* getSubTable( Key k, QReadWriteLock*& l) {
+    SubTable* getSubTable( Key k, std::mutex*& l) {
         l = lock + ((k>>4) & (nTTLocks-1));
         return &table[k & mask];
     }
@@ -79,7 +79,7 @@ public:
     }
     void freeMemory();
     std::string bestLine(const RootBoard& );
-    template<Colors C> std::string bestLineNext(const ColoredBoard<(Colors)-C>&, Move, QSet<Key>&, const RootBoard&);
+    template<Colors C> std::string bestLineNext(const ColoredBoard<(Colors)-C>&, Move, std::set<Key>&, const RootBoard&);
     void clear();
 };
 

@@ -45,13 +45,17 @@ extern "C" void __throw_bad_alloc();
 #include <sstream>
 #include <locale>
 #include <iomanip>
-#include <cstdint>
 #include <vector>
 #include <algorithm>
+#include <set>
+#include <map>
 
-#include <QtCore>
+#include <climits>
+#include <cstdint>
+#include <cstring>
 
 #ifdef QT_GUI_LIB
+#include <QtCore>
 #include <QtGui>
 #endif
 

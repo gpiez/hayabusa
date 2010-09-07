@@ -24,15 +24,9 @@
 int main(int argc, char *argv[]) {
 #ifdef QT_GUI_LIB
     Q_INIT_RESOURCE(hayabusa);
-    QApplication app(argc, argv);
-#else
-    QCoreApplication app(argc, argv);
-#endif
     qRegisterMetaType<std::string>("std::string");
-    StringList args;
-    args.resize(argc-1);
-    std::copy(argv+1, argv+argc, args.begin());
+#endif
+    Console console(argc, argv);
 
-    Console console(&app, args);
-    return app.exec();
+    return console.exec();
 }

@@ -37,12 +37,16 @@ int hash = 0x1000000;
 bool quiet = false;
 }
 
-Console::Console(QCoreApplication* parent, StringList args):
-    QObject(parent),
-    app(parent),
-    cin(stdin, QIODevice::ReadOnly),
-    cout(stdout, QIODevice::WriteOnly)
+Console::Console(int& argc, char** argv)
+#ifdef QT_GUI_LIB
+    :
+    QApplication(argc, argv)/*,
+    cin(stdin, QIODevice::ReadOnly)*/
+#endif
 {
+    args.resize(argc);
+    std::copy(argv+1, argv+argc, args.begin());
+
     BoardBase::initTables();
     WorkThread::init();
     board = new RootBoard(this);
@@ -64,26 +68,43 @@ Console::Console(QCoreApplication* parent, StringList args):
     dispatcher["divide"] = &Console::divide;
     dispatcher["ordering"] = &Console::ordering;
 
+#ifdef QT_GUI_LIB
     notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
     connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
     connect(this, SIGNAL(signalSend(std::string)), this, SLOT(privateSend(std::string)));
-
-    std::string argStr = args.join(" ");
-    StringList cmdsList = split(argStr, ":");
-    foreach(std::string cmdStr, cmdsList) {
-        cmdStr = simplified(cmdStr);
-        StringList cmds = split(cmdStr, " ");
-        if (cmds.empty()) break;
-        if (dispatcher.find(cmds[0]) != dispatcher.end())
-            (this->*(dispatcher[cmds[0]]))(cmds);
-        else
-            tryMove(cmds);
-
-    }
+#endif
 }
 
 Console::~Console()
 {
+}
+
+#ifdef QT_GUI_LIB
+int Console::exec() {
+    std::string argStr = args.join(" ");
+    StringList cmdsList = split(argStr, ":");
+    for(auto cmdStr = cmdsList.begin(); cmdStr != cmdsList.end(); ++cmdStr) {
+        parse(simplified(*cmdStr));
+    }
+    return QApplication::exec();
+}
+std::string Console::getAnswer() {
+    answer = "";
+    while(answer == "") {
+        processEvents();
+        sleep(1);
+    }
+    return answer;
+}
+
+void Console::privateSend(std::string str)
+{
+    if (!Options::quiet)
+        std::cout << str << std::endl;
+}
+
+void Console::send(std::string str) {
+    emit signalSend(str);
 }
 
 void Console::getResult(std::string result) {
@@ -93,21 +114,47 @@ void Console::getResult(std::string result) {
 
 void Console::dataArrived() {
     notifier->setEnabled(false);
-    std::string temp = cin.readLine().toStdString();
-    if (!temp.empty()) {
-        StringList cmds = split(temp, " ");
-        if (dispatcher.find(cmds[0]) != dispatcher.end()) {
-            (this->*(dispatcher[cmds[0]]))(cmds);
-        } else {
-            tryMove(cmds);
-        }
-
-    }
+    std::string temp;
+    std::cin >> temp;
+    parse(temp);
     QTimer::singleShot(50, this, SLOT(delayedEnable()));
 }
 
 void Console::delayedEnable() {
     notifier->setEnabled(true);
+}
+#else
+int Console::exec() {
+    std::string argStr = args.join(" ");
+    StringList cmdsList = split(argStr, ":");
+    for(auto cmdStr = cmdsList.begin(); cmdStr != cmdsList.end(); ++cmdStr) {
+        parse(simplified(*cmdStr));
+    }
+    poll();
+}
+
+void Console::send(std::string str) {
+    std::cout << str << std::endl;
+}
+
+void Console::poll() {
+    while(true) {
+        std::string str;
+        std::cin >> str;
+        parse(str);
+    }
+}
+#endif
+
+void Console::parse(std::string str) {
+    if (!str.empty()) {
+        StringList cmds = split(str, " ");
+        if (dispatcher.find(cmds[0]) != dispatcher.end()) {
+            (this->*(dispatcher[cmds[0]]))(cmds);
+        } else {
+            tryMove(cmds);
+        }
+    }
 }
 
 void Console::tryMove(StringList cmds) {
@@ -168,7 +215,7 @@ void Console::debug(StringList cmds) {
 
 // engine is always ready as soon as the command dispatcher is working.
 void Console::isready(StringList /*cmds*/) {
-    cout << "readyok" << endl << flush;
+    std::cout << "readyok" << std::endl << std::flush;
 }
 
 void Console::setoption(StringList cmds) {
@@ -218,9 +265,8 @@ void Console::position(StringList cmds) {
     }
 
     if (pos.count("moves")) {
-        foreach(std::string move, pos["moves"]) {
+        StringList moves = pos["moves"];
                 ; //TODO
-        }
     }
 }
 
@@ -240,39 +286,20 @@ void Console::ponderhit(StringList /*cmds*/) {
 }
 
 void Console::quit(StringList /*cmds*/) {
-    app->quit();
-}
-
-std::string Console::getAnswer() {
-    answer = "";
-    while(answer == "") {
-        app->processEvents();
-        sleep(1);
-    }
-    return answer;
-}
-
-void Console::iterationDone(unsigned int depth, uint64_t nodes, std::string line, int bestScore) {
-    emit signalIterationDone(depth, nodes, line, bestScore);
-}
-
-void Console::privateSend(std::string str)
-{
-    if (!Options::quiet)
-        std::cout << str << std::endl;
-}
-
-void Console::send(std::string str) {
-    emit signalSend(str);
+#ifdef QT_GUI_LIB
+    QApplication::quit();
+#else
+    exit(0);
+#endif
 }
 
 std::map<std::string, StringList> Console::parse(const StringList& cmds, const StringList& tokens) {
     typedef StringList::const_iterator I;
     std::map<I, std::string> tokenPositions;
-    foreach(std::string token, tokens) {
-        I tp=std::find(cmds.begin(), cmds.end(), token);
+    for(auto token = tokens.begin(); token != tokens.end(); ++token) {
+        I tp=std::find(cmds.begin(), cmds.end(), *token);
         if (tp != cmds.end())
-            tokenPositions[tp] = token;
+            tokenPositions[tp] = *token;
     }
     tokenPositions[cmds.end()] = "";
     std::map<std::string, StringList> tokenValues;
@@ -300,16 +327,17 @@ void Console::ordering(StringList cmds) {
                 board->rootSearch<White>(40);
             else
                 board->rootSearch<Black>(40);
+            if (!(i % 26)) std::cout << std::endl;
             if (stats.node < 1000000)
-                std::cout << board->depth - 20 << "," << std::endl;
+                std::cout << " 0,";
             else
-                std::cout << board->depth - 21 << "," << std::endl;
+                std::cout << std::setw(2) << board->depth - 21 << ",";
         }
     } else {
         double sum=0.0;
         double tested=0.0;
-        for (unsigned int i = 0; testDepths[i]; ++i) {
-            if (testDepths[i] == 0) continue;
+        for (int i = 0; testDepths[i]; ++i) {
+            if (testDepths[i] < 0) continue;
             board->maxSearchNodes = ~0;
             tested++;
             stats.node=0;

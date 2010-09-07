@@ -27,13 +27,19 @@
 
 #ifndef NDEBUG
 #define ASSERT(x) do { if (!(x)) { \
-				qDebug() << endl << "Assertion " << #x << " failed." << endl\
-				<<  __FILE__ << __PRETTY_FUNCTION__ << __LINE__ << endl; \
-				asm("int3"); \
+                qDebug() << endl << "Assertion " << #x << " failed." << endl\
+                <<  __FILE__ << __PRETTY_FUNCTION__ << __LINE__ << endl; \
+                asm("int3"); \
 } } while(0)
 #else
 #define ASSERT(x)
 #endif
+
+#undef foreach
+//#define foreach(variable, container)                                \
+//    for (auto _i_ = container.begin(); _i_ == container.begin();) \
+//    for (variable = *_i_; _i_ != container.end(); ++_i_)
+
 
 #define CACHE_LINE_SIZE 64
 #define ALIGN_XMM __attribute__((aligned(16)))
@@ -47,22 +53,22 @@ enum Pieces { NoPiece = 0, Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5
 enum Colors { Black = -1, White = 1 };
 
 enum Square {
-	a1 = 0, b1, c1, d1, e1, f1, g1, h1,
-	a2, b2, c2, d2, e2, f2, g2, h2,
-	a3, b3, c3, d3, e3, f3, g3, h3,
-	a4, b4, c4, d4, e4, f4, g4, h4,
-	a5, b5, c5, d5, e5, f5, g5, h5,
-	a6, b6, c6, d6, e6, f6, g6, h6,
-	a7, b7, c7, d7, e7, f7, g7, h7,
-	a8, b8, c8, d8, e8, f8, g8, h8
+    a1 = 0, b1, c1, d1, e1, f1, g1, h1,
+    a2, b2, c2, d2, e2, f2, g2, h2,
+    a3, b3, c3, d3, e3, f3, g3, h3,
+    a4, b4, c4, d4, e4, f4, g4, h4,
+    a5, b5, c5, d5, e5, f5, g5, h5,
+    a6, b6, c6, d6, e6, f6, g6, h6,
+    a7, b7, c7, d7, e7, f7, g7, h7,
+    a8, b8, c8, d8, e8, f8, g8, h8
 };
 
 #ifndef BITBOARD
 enum SpecialMoves: uint8_t {
-	nothingSpecial=0,
-	shortCastling, longCastling,
-	promoteQ, promoteR, promoteB, promoteN,
-	enableEP, EP
+    nothingSpecial=0,
+    shortCastling, longCastling,
+    promoteQ, promoteR, promoteB, promoteN,
+    enableEP, EP
 };
 #endif
 
@@ -91,9 +97,9 @@ static const unsigned int transpositionTableAssoc = 2;
 static const unsigned int pawnTableAssoc = 4;
 static const unsigned int nPieces = 6;
 static const unsigned int nColors = 2;
-static const unsigned int nTotalPieces = nPieces*nColors + 1;	// -King,... -Pawn, 0, Pawn,... King
+static const unsigned int nTotalPieces = nPieces*nColors + 1;   // -King,... -Pawn, 0, Pawn,... King
 
-static const unsigned int nDirs = 8;	//long range directions
+static const unsigned int nDirs = 8;    //long range directions
 static const unsigned int nDirKinds = 2;//kinds of long range direction, horizontal/vertical vs diagonal
 static const unsigned int nFiles = 8;
 static const unsigned int nRows = 8;
@@ -110,15 +116,15 @@ static const unsigned int nSquares = nFiles*nRows;
 static const unsigned int nRBits = 2;
 static const unsigned int nBBits = 2;
 static const unsigned int nQBits = 2;
-static const unsigned int nCheckKRBits = 1;	// horizontal king attacks from enemy pieces
-static const unsigned int nCheckKBBits = 1;	// diagonal king attacks from enemy pieces
+static const unsigned int nCheckKRBits = 1; // horizontal king attacks from enemy pieces
+static const unsigned int nCheckKBBits = 1; // diagonal king attacks from enemy pieces
 
 static const unsigned int nPRBits = 1;
 static const unsigned int nPLBits = 1;
 static const unsigned int nKBits = 1;
 static const unsigned int nNBits = 3;
-static const unsigned int nKNAttackBits = 1;	// king attacks from enemy knight
-static const unsigned int nKPAttackBits = 1;	// king attacks from enemy pawn
+static const unsigned int nKNAttackBits = 1;    // king attacks from enemy knight
+static const unsigned int nKPAttackBits = 1;    // king attacks from enemy pawn
 #endif
 
 /*
@@ -131,31 +137,31 @@ static const int yOffsets[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
 static const int materialTab[nPieces+1] = { 0, 5, 3, 9, 3, 0, 0 };
 #ifndef BITBOARD
 static const int xShortOffsets[nPieces+1][nDirs] = {
-	{},
-	{},	//rook
-	{},	//bishop
-	{},	//queen
-	{ 2, 1, -1, -2, -2, -1, 1, 2 },	//knight
-	{ 1, -1 },						//pawn
-	{ 1, 1, 0, -1, -1, -1, 0, 1 }	//king
+    {},
+    {}, //rook
+    {}, //bishop
+    {}, //queen
+    { 2, 1, -1, -2, -2, -1, 1, 2 }, //knight
+    { 1, -1 },                      //pawn
+    { 1, 1, 0, -1, -1, -1, 0, 1 }   //king
 };
 
 static const int yShortOffsets[nColors][nPieces+1][nDirs] = {{
-	{},
-	{},	//rook
-	{},	//bishop
-	{},	//queen
-	{ 1, 2, 2, 1, -1, -2, -2, -1 },	//knight
-	{ 1, 1 },						//pawn white
-	{ 0, 1, 1, 1, 0, -1, -1, -1 }	//king
+    {},
+    {}, //rook
+    {}, //bishop
+    {}, //queen
+    { 1, 2, 2, 1, -1, -2, -2, -1 }, //knight
+    { 1, 1 },                       //pawn white
+    { 0, 1, 1, 1, 0, -1, -1, -1 }   //king
 },{
-	{},
-	{},	//rook
-	{},	//bishop
-	{},	//queen
-	{ 1, 2, 2, 1, -1, -2, -2, -1 },	//knight
-	{ -1, -1 },						//pawn black
-	{ 0, 1, 1, 1, 0, -1, -1, -1 }	//king
+    {},
+    {}, //rook
+    {}, //bishop
+    {}, //queen
+    { 1, 2, 2, 1, -1, -2, -2, -1 }, //knight
+    { -1, -1 },                     //pawn black
+    { 0, 1, 1, 1, 0, -1, -1, -1 }   //king
 }};
 
 static const __v16qi zeroToFifteen = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };

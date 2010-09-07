@@ -191,14 +191,13 @@ void sigmoid(T& p, double start, double end, double dcenter, double width) {
 }
 
 template<typename T>
-void printSigmoid(T& p, QString str) {
+void printSigmoid(T& p, std::string str) {
     size_t n = sizeof(T)/sizeof(p[0])-1;
-    QTextStream xout(stderr);
-    xout << qSetFieldWidth(16) << str;
+    std::cout << std::setw(16) << str;
     for (unsigned int i = 0; i <= n; ++i) {
-        /*xout << qSetFieldWidth(4) << p[i]*/;
+        std::cout << std::setw(4) << p[i];
     }
-    xout << endl;
+    std::cout << std::endl;
 }
 
 #endif /* EVAL_H_ */
