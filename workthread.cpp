@@ -216,7 +216,7 @@ void WorkThread::stopAll() {
         delete (*j).second;
     jobs.clear();
     for (auto th = threads.begin(); th !=threads.end(); ++th)
-    	(*th)->doStop = true;
+        (*th)->doStop = true;
     runningMutex.unlock();
     for (auto th = threads.begin(); th !=threads.end(); ++th)
         (*th)->stop();
@@ -258,7 +258,6 @@ void WorkThread::init() {
     nWorkThreads = 1<<logWorkThreads;
     for (unsigned int i=0; i<nWorkThreads; ++i) {
         WorkThread* th = new WorkThread();
-        std::cout << (void*)th << std::endl;
         new std::thread(&WorkThread::run, th);
         threads.push_back(th);
     }
@@ -268,8 +267,8 @@ void WorkThread::init() {
 WorkThread* WorkThread::findFree() {
 #ifdef MYDEBUG
     std::unique_lock<std::mutex> lock(runningMutex);
-    foreach(WorkThread* th, WorkThread::threads)
-        if (!th->isStopped)
+    for(auto th = threads.begin(); th != threads.end(); ++th)
+        if (!(*th)->isStopped)
             ASSERT(!"still running jobs");
 #endif
     return threads.front();

@@ -32,9 +32,6 @@
 #ifndef __SSSE3__
 #define __SSSE3__
 #endif
-// #ifndef __SSE4_1__
-// #define __SSE4_1__
-// #endif
 
 extern "C" void __throw_bad_alloc();
 #include <x86intrin.h>

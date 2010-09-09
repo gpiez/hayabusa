@@ -24,7 +24,7 @@
  * Generate moves which place a piece at dst, used for check evasion generation
  */
 template<Colors C>
-void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
+void ColoredBoard<C>::generateTargetMove(Move* &good, Move* &bad, uint64_t tobit ) const {
     //special case where movin a pawn blocks a check
     //move is only legal if it is not pinned
     for (uint64_t p = getPieces<C,Pawn>() & shift<-C*8>(tobit) & pins[CI] & rank<7>(); p; p &= p-1) {
@@ -38,7 +38,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
         *bad++ = Move(bit(p), bit(p) + C*8, Pawn);
 
     for (uint64_t p = getPieces<C,Pawn>() & shift<-C*16>(tobit) & pins[CI] & rank<2>() & ~shift<-C*8>(occupied1); p; p &= p-1)
-        *bad++=  Move(bit(p), bit(p) + C*16, Pawn);
+        *bad++ = Move(bit(p), bit(p) + C*16, Pawn);
 
     for ( uint64_t p = getAttacks<C,Knight>() & tobit; p; p &= p-1 ) {
         unsigned to = bit(p);
@@ -137,7 +137,6 @@ void ColoredBoard<C>::generateTargetMove(Move* &bad, uint64_t tobit ) const {
 template<Colors C>
 void ColoredBoard<C>::generateCheckEvasions(Move* &good, Move* &bad) const {
     uint64_t king = getPieces<C,King>();
-//    ASSERT(king & getAttacks<-C,All>());
     ASSERT(inCheck<C>());
     /*
      * Determine directions of checking, set bits in "check" accordingly
@@ -185,7 +184,7 @@ void ColoredBoard<C>::generateCheckEvasions(Move* &good, Move* &bad) const {
                 generateTargetCapture<true>(good, bad, p, Bishop);
 
             if (uint64_t p = datt[EI].d[bit(check)] & kingIncoming[CI].d[bit(check)] & ~occupied1)
-                generateTargetMove(bad, p);
+                generateTargetMove(good, bad, p);
         } else {
             // No other pieces left, we are attacked by one pawn.
             ASSERT(check == 32);
@@ -249,7 +248,7 @@ void ColoredBoard<C>::generateCheckEvasions(Move* &good, Move* &bad) const {
 }
 
 template<Colors C>
-void ColoredBoard<C>::generateMoves(Move* &good) const {
+void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
     unsigned int from, to;
     from = bit(getPieces<C, King>());
     for (uint64_t p = kingAttacks[0][from] & ~occupied1 & ~getAttacks<-C,All>(); p; p &= p-1)
@@ -273,59 +272,6 @@ void ColoredBoard<C>::generateMoves(Move* &good) const {
      * generated earlier in buildAttacks()
      */
     const __v2di zero = _mm_set1_epi64x(0);
-    for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
-		__v2di a13 = bs->d13;
-		__v2di from2 = doublebits[bs->move.from()];
-		__v2di pin13 = from2 & dpins[CI].d13;
-#ifdef __SSE4_1__
-        pin13 = _mm_cmpeq_epi64(pin13, zero);
-#else
-        pin13 = _mm_cmpeq_epi32(pin13, zero);
-        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-        pin13 = pin13 & pin13s;
-#endif
-		pin13 = ~pin13 & a13;
-		for (uint64_t a=fold(pin13) & ~occupied1; a; ) {
-			Move n;
-            unsigned to = C==White ? bit(a):bitr(a);
-			n.data = bs->move.data + Move(0, to, 0).data;
-			*--good = n;
-            a &= ~(1ULL << to);
-        }
-    }
-
-    for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
-        __v2di a02 = rs->d02;
-        __v2di from2 = doublebits[rs->move.from()];
-        __v2di pin02 = from2 & dpins[CI].d02;
-#ifdef __SSE4_1__
-        pin02 = _mm_cmpeq_epi64(pin02, zero);
-#else
-        pin02 = _mm_cmpeq_epi32(pin02, zero);
-        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-        pin02 = pin02 & pin02s;
-#endif
-        pin02 = ~pin02 & a02;
-        for (uint64_t a=fold(pin02) & ~occupied1; a; ) {
-            Move n;
-            unsigned to = C==White ? bit(a):bitr(a);
-            n.data = rs->move.data + Move(0, to, 0).data;
-            *--good = n;
-            a &= ~(1ULL << to);
-        }
-    }
-
-    //Knight moves. If a knight is pinned, it can't move at all.
-    for (uint64_t p = getPieces<C, Knight>() & pins[CI]; p; ) {
-        from = C==White ? bitr(p):bit(p);
-        for (uint64_t q = knightAttacks[from] & ~occupied1; q; ) {
-            unsigned to = C==White ? bit(q):bitr(q);
-            *--good = Move(from, to, Knight);
-            q &= ~(1ULL << to);
-        }
-        p &= ~(1ULL << from);
-    }
-
     for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
         __v2di a02 = qs->d02;
         __v2di a13 = qs->d13;
@@ -345,12 +291,85 @@ void ColoredBoard<C>::generateMoves(Move* &good) const {
 #endif
         pin02 = ~pin02 & a02;
         pin13 = ~pin13 & a13;
-        for (uint64_t a=fold(pin02|pin13) & ~occupied1; a; ) {
+        for (uint64_t a=fold(pin02|pin13) & ~occupied1; a; a &= a-1 ) {
             Move n;
-            unsigned to = C==White ? bit(a):bitr(a);
+            unsigned to = bit(a);
             n.data = qs->move.data + Move(0, to, 0).data;
-            *--good = n;
-            a &= ~(1ULL << to);
+            if (
+                   a & -a & ( getAttacks<-C,Pawn>()
+                                   | getAttacks<-C,Knight>()
+                                   |getAttacks<-C,Bishop>()
+                                   | getAttacks<-C,Rook>()
+                            )
+/*                   || a & -a & getAttacks<-C,All>() &
+                                 ~( getAttacks<C,Rook>()
+                                  | getAttacks<C,Bishop>()
+                                  | getAttacks<C,King>()
+                                  | getAttacks<C,Knight>()
+                                  | getAttacks<C,Pawn>()
+                                  )*/
+               ) *bad++ = n;
+            else *--good = n;
+        }
+    }
+
+    for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
+        __v2di a02 = rs->d02;
+        __v2di from2 = doublebits[rs->move.from()];
+        __v2di pin02 = from2 & dpins[CI].d02;
+#ifdef __SSE4_1__
+        pin02 = _mm_cmpeq_epi64(pin02, zero);
+#else
+        pin02 = _mm_cmpeq_epi32(pin02, zero);
+        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
+        pin02 = pin02 & pin02s;
+#endif
+        pin02 = ~pin02 & a02;
+        for (uint64_t a=fold(pin02) & ~occupied1; a; a &= a-1 ) {
+            Move n;
+            unsigned to = bit(a);
+            n.data = rs->move.data + Move(0, to, 0).data;
+            if (               a & -a & ( getAttacks<-C,Pawn>()
+                                    | getAttacks<-C,Knight>()
+                                    | getAttacks<-C,Bishop>()
+                                    )
+            ) *bad++ = n;
+            else *--good = n;
+        }
+    }
+
+    for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
+		__v2di a13 = bs->d13;
+		__v2di from2 = doublebits[bs->move.from()];
+		__v2di pin13 = from2 & dpins[CI].d13;
+#ifdef __SSE4_1__
+        pin13 = _mm_cmpeq_epi64(pin13, zero);
+#else
+        pin13 = _mm_cmpeq_epi32(pin13, zero);
+        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
+        pin13 = pin13 & pin13s;
+#endif
+		pin13 = ~pin13 & a13;
+		for (uint64_t a=fold(pin13) & ~occupied1; a; a &= a-1 ) {
+			Move n;
+            unsigned to = bit(a);
+			n.data = bs->move.data + Move(0, to, 0).data;
+            if (               a & -a & ( getAttacks<-C,Pawn>()
+                                    )
+            ) *bad++ = n;
+			else *--good = n;
+        }
+    }
+
+    //Knight moves. If a knight is pinned, it can't move at all.
+    for (uint64_t p = getPieces<C, Knight>() & pins[CI]; p; p &= p-1) {
+        from = bit(p);
+        for (uint64_t q = knightAttacks[from] & ~occupied1; q; q &= q-1) {
+            unsigned to = bit(q);
+/*            if ( q & -q & getAttacks<-C,Pawn>() )
+                *bad++ = Move(from, to, Knight);
+            else*/
+                *--good = Move(from, to, Knight);
         }
     }
     /*

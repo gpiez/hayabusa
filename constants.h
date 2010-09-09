@@ -27,8 +27,8 @@
 
 #ifndef NDEBUG
 #define ASSERT(x) do { if (!(x)) { \
-                qDebug() << endl << "Assertion " << #x << " failed." << endl\
-                <<  __FILE__ << __PRETTY_FUNCTION__ << __LINE__ << endl; \
+                std::cerr << std::endl << "Assertion" << #x << "failed." << std::endl\
+                <<  __FILE__ << __PRETTY_FUNCTION__ << __LINE__ << std::endl; \
                 asm("int3"); \
 } } while(0)
 #else
@@ -36,10 +36,6 @@
 #endif
 
 #undef foreach
-//#define foreach(variable, container)                                \
-//    for (auto _i_ = container.begin(); _i_ == container.begin();) \
-//    for (variable = *_i_; _i_ != container.end(); ++_i_)
-
 
 #define CACHE_LINE_SIZE 64
 #define ALIGN_XMM __attribute__((aligned(16)))
@@ -81,6 +77,7 @@ enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut,
 typedef uint64_t Key;
 typedef uint32_t PawnKey;
 
+static const int maxRows = 1000;
 static const unsigned int maxThreadId = 255;
 static const unsigned int endgameMaterial = 30;
 static const int maxHistory = 256;

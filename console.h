@@ -55,10 +55,12 @@ class Console
     void ordering(StringList);
     void parse(std::string);
 
+private
 #ifdef QT_GUI_LIB
-private slots:
-    void privateSend(std::string);
+        slots
 #endif
+             :
+    void privateSend(std::string);
 
 private:
     RootBoard* board;
@@ -77,6 +79,7 @@ public:
     virtual ~Console();
     int exec();
     void send(std::string);
+    void info(int, uint64_t, uint64_t, QString, QString);
 
 #ifdef QT_GUI_LIB
 public slots:
@@ -87,6 +90,7 @@ public slots:
 
 signals:
     void signalSend(std::string);
+    void signalInfo(int, uint64_t, uint64_t, QString, QString);
 #else
     void poll();
 #endif

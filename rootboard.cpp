@@ -51,6 +51,30 @@ RootBoard::RootBoard(Console *c):
 	#endif
 }
 
+std::string RootBoard::status(std::chrono::system_clock::time_point now, int score)
+{
+    std::stringstream g;
+    std::chrono::milliseconds t = std::chrono::duration_cast<std::chrono::milliseconds>(now-start);
+#ifdef QT_GUI_LIB
+    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
+    console->info(depth, t.count(), getStats().node, codec->toUnicode(Score<White>::str(score).c_str()), QString::fromStdString(tt->bestLine(*this)));
+#endif
+    if (Options::humanreadable) {
+        g.imbue(std::locale("de_DE"));
+        g   << "d" << std::setfill('0') << std::setw(2) << depth << "; "
+            << std::setfill(' ') << std::fixed << std::setprecision(3) << std::showpoint << std::setw(7) << t.count()/1000.0 << " s; "
+            << std::setw(13) << getStats().node << " n; "
+            << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t.count()*1000.0+1) << " Mnps; "
+            << Score<White>::str(score) << " " << tt->bestLine(*this);
+    } else {
+        g   << "info depth " << depth << " time " << (now-start).count()
+            << " nodes " << getStats().node << " pv " << tt->bestLine(*this)
+            << " nps " << (1000*getStats().node)/(t.count()+1)
+            << " score cp " << score;
+    }
+    return g.str();
+}
+
 void RootBoard::clearEE() {
     for (int p=-nPieces; p<=(int)nPieces; ++p)
         for (unsigned int sq=0; sq<nSquares; ++sq) {
@@ -298,9 +322,9 @@ bool RootBoard::doMove(Move m) {
 	Move* good = list+goodMoves;
 	Move* bad = good;
 	if (color == White)
-		currentBoard<White>().generateMoves(good);
+		currentBoard<White>().generateMoves(good, bad);
 	else
-		currentBoard<Black>().generateMoves(good);
+		currentBoard<Black>().generateMoves(good, bad);
 
 	for (Move* i=good; i<bad; ++i) {
 		if (i->fromto() == m.fromto()) {

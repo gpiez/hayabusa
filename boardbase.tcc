@@ -20,7 +20,6 @@
 #define BOARDBASE_TCC_
 
 #include "boardbase.h"
-#include "boardbase.tcc"
 #include "rootboard.h"
 
 #ifdef BITBOARD
@@ -70,19 +69,17 @@ void BoardBase::buildAttacks() {
     getAttacks<C, All>() = a;
 
     MoveTemplateB* bs = bsingle[CI];
-//    Move* pmove = moves[CI];
     __v2di dir13 = _mm_set1_epi64x(0);
     p = getPieces<C, Bishop>();
     while(p) {
         uint64_t sq = bit(p);
-        p &= p-1;													// lat  #op
+        p &= p-1;
         __v2di a13 = build13Attack(sq);
         bs->move = Move(sq, 0, Bishop);
-//        psingle->d02 = zero;
         bs->d13 = a13;
         bs++;
-        dir13 |= a13;                                        // 1    1
-    }															    // 18   22
+        dir13 |= a13;
+    }
     bs->move = Move(0,0,0);
     a = fold(dir13);
     getAttacks<C, Bishop>() = a;

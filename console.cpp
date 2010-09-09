@@ -97,14 +97,12 @@ std::string Console::getAnswer() {
     return answer;
 }
 
-void Console::privateSend(std::string str)
-{
-    if (!Options::quiet)
-        std::cout << str << std::endl;
-}
-
 void Console::send(std::string str) {
     emit signalSend(str);
+}
+
+void Console::info(int d, uint64_t t, uint64_t n, QString e, QString l) {
+    emit signalInfo(d, t, n, e, l);
 }
 
 void Console::getResult(std::string result) {
@@ -115,7 +113,7 @@ void Console::getResult(std::string result) {
 void Console::dataArrived() {
     notifier->setEnabled(false);
     std::string temp;
-    std::cin >> temp;
+    std::getline(std::cin, temp);
     parse(temp);
     QTimer::singleShot(50, this, SLOT(delayedEnable()));
 }
@@ -134,17 +132,24 @@ int Console::exec() {
 }
 
 void Console::send(std::string str) {
-    std::cout << str << std::endl;
+    privateSend(str);
 }
 
 void Console::poll() {
     while(true) {
         std::string str;
-        std::cin >> str;
+        std::getline(std::cin, str);
+        std::cerr << str << std::endl;
         parse(str);
     }
 }
 #endif
+
+void Console::privateSend(std::string str)
+{
+    if (!Options::quiet)
+        std::cout << str << std::endl;
+}
 
 void Console::parse(std::string str) {
     if (!str.empty()) {
@@ -159,6 +164,7 @@ void Console::parse(std::string str) {
 
 void Console::tryMove(StringList cmds) {
 	std::string mstr = toLower(cmds[0]);
+    std::cerr << "tryMove " << mstr << std::endl;
 	if (mstr.length() < 4 || mstr.length() > 5) {
 		send("move '" + mstr + "' not understood");
 		return;
@@ -254,7 +260,7 @@ void Console::position(StringList cmds) {
         board->setup(pos["fen"].join(" "));
     } else if (pos.count("test")) {
         if (cmds.size() < 3) return;
-        std::string search = pos["test"].join();
+        std::string search = pos["test"].join(" ");
         for (unsigned int i = 0; testPositions[i]; ++i) {
             std::string pos(testPositions[i]);
             if (pos.find(search) != pos.npos) {

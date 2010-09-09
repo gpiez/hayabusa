@@ -218,7 +218,7 @@ std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C
     if (b. template inCheck<C>())
         b.generateCheckEvasions(good, bad);
     else {
-        b.generateMoves(good);
+        b.generateMoves(good, bad);
         b.template generateCaptureMoves<true>(good, bad);
     }
 	if (ttMove.data)

@@ -49,6 +49,7 @@ static void splitImage( QImage* piecesSet, QImage piecesImage )
 
 
 StatWidget::StatWidget(const RootBoard& rb):
+    iRow(0),
     rb(rb)
 {
     setupUi(this);
@@ -104,7 +105,8 @@ StatWidget::StatWidget(const RootBoard& rb):
     QTimer* t = new QTimer(this);
     connect(t, SIGNAL(timeout()), this, SLOT(update()));
     qRegisterMetaType<uint64_t>("uint64_t");
-    connect(rb.console, SIGNAL(signalSend(std::string)), this, SLOT(updateLine(std::string)));
+    connect(rb.console, SIGNAL(signalInfo(int, uint64_t, uint64_t, QString, QString)),
+            this,       SLOT  (updateInfo(int, uint64_t, uint64_t, QString, QString)));
     t->setInterval(1000);
     t->start();
 }
@@ -113,10 +115,29 @@ StatWidget::~StatWidget()
 {
 }
 
-void StatWidget::updateLine(std::string line)
+void StatWidget::updateInfo(int depth, uint64_t time, uint64_t nodes, QString eval, QString line)
 {
-//        bestLine->moveCursor(QTextCursor::Start);
-        bestLine->appendPlainText(QString::fromStdString(line));
+    QTableWidgetItem* depthItem = new QTableWidgetItem(QString::number(depth));
+    QTableWidgetItem* timeItem = new QTableWidgetItem(QLocale().toString(time/1000.0, 'f', 3));
+    QTableWidgetItem* nodesItem = new QTableWidgetItem(QLocale().toString((qulonglong)nodes));
+    QTableWidgetItem* evalItem = new QTableWidgetItem(eval.trimmed());
+    QTableWidgetItem* lineItem = new QTableWidgetItem(line);
+
+    if (++iRow > maxRows) {
+        bestLine->removeRow(0);
+        --iRow;
+    }
+    bestLine->setRowCount(iRow);
+    bestLine->setItem(iRow-1, 0, depthItem);
+    bestLine->setItem(iRow-1, 1, timeItem);
+    bestLine->setItem(iRow-1, 2, nodesItem);
+    bestLine->setItem(iRow-1, 3, evalItem);
+    bestLine->setItem(iRow-1, 4, lineItem);
+    bestLine->resizeColumnToContents(1);
+    bestLine->resizeColumnToContents(2);
+    bestLine->resizeColumnToContents(3);
+    bestLine->setSelectionMode(QAbstractItemView::NoSelection);
+    bestLine->setCurrentCell(iRow-1, 0);
 }
 /* Store the last 10 stats for a sliding average */
 template<typename T>

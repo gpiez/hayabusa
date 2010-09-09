@@ -41,6 +41,7 @@
 #include "transpositiontable.tcc"
 #include "history.tcc"
 #include "repetition.tcc"
+#include "nodeitem.h"
 
 #ifdef QT_GUI_LIB
 #define NODE ,node
@@ -51,7 +52,7 @@
 template<Colors C>
 Move RootBoard::rootSearch(unsigned int endDepth) {
     using namespace std::chrono;
-    system_clock::time_point start = system_clock::now();
+    start = system_clock::now();
 #ifdef QT_GUI_LIB
 	while (!statWidget->tree);
 	statWidget->emptyTree();
@@ -68,11 +69,11 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     if (b. template inCheck<C>())
         b.generateCheckEvasions(good, bad);
     else {
-        b.generateMoves(good);
+        b.generateMoves(good, bad);
         b.template generateCaptureMoves<true>(good, bad);
     }
 
-    duration<int, std::milli> time( C==White ? wtime : btime );
+    milliseconds time( C==White ? wtime : btime );
     system_clock::time_point softBudget, hardBudget;
     if (movestogo > 0) {
         softBudget = start + time/(2*movestogo);
@@ -96,9 +97,6 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             NodeItem::m.unlock();
         }
 #endif
-        std::stringstream g;
-        if (Options::humanreadable) g.imbue(std::locale("de_DE"));
-        else                        g.imbue(std::locale("C"));
 
         system_clock::time_point now;
         currentMoveIndex = 1;
@@ -110,22 +108,16 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             alpha2.v = alpha0.v - Eval::parameters.aspiration0*C;
             beta2.v  = alpha0.v + Eval::parameters.aspiration1*C;
             if (!search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha2, ply+1 NODE)) {
-            // Fail-Low at root, research with low bound = alpha and high bound = old low bound
+                // Fail-Low at first root, research with low bound = alpha and high bound = old low bound
                 now = system_clock::now();
-                g.str("");
-                g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
-                  << std::setw(18) << getStats().node << " score " << alpha2.v << " " << tt->bestLine(*this) << " fail low";
-                console->send(g.str());
+                console->send(status(now, alpha2.v) + " upperbound");
                 if (!infinite && now > hardBudget) break;   //TODO check if trying other moves first is an better option
                 beta2.v = alpha2.v;
                 search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha, ply+1 NODE);
             } else if (alpha2 >= beta2.v) {
-                // Fail-High at root, research with high bound = beta and low bound = old high bound
+                // Fail-High at first root, research with high bound = beta and low bound = old high bound
                 now = system_clock::now();
-                g.str("");
-                g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
-                  << std::setw(18) << getStats().node << " score " << alpha2.v << " " << tt->bestLine(*this) << " fail high";
-                console->send(g.str());
+                console->send(status(now, alpha2.v) + " lowerbound");
                 if (!infinite) {
                     if (now > hardBudget) break;
                     if (now > softBudget && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
@@ -140,10 +132,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         }
         bestMove = *good;
         now = system_clock::now();
-        g.str("");
-        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
-          << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
-        console->send(g.str());
+        console->send(status(now, alpha.v));
 
         if (alpha >= infinity*C) break;
         if (!infinite) {
@@ -159,14 +148,13 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         		SharedScore<(Colors)-C> null;
         		SharedScore<C> nalpha(alpha);
         		null.v = alpha.v + C;
-//                nalpha(alpha);
                 if (depth > nullReduction+1 + dMaxThreat + dMaxCapture)
                     search<C, trunk>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2 NODE);
                 else
                     search<C, leaf>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2 NODE);
                 pruneNull = alpha >= null.v;
-                null.v = alpha.v + C;
-                if (depth > 2*(nullReduction) + dMaxCapture + dMaxThreat) {
+                if (pruneNull && depth > 2*(nullReduction) + dMaxCapture + dMaxThreat) {
+                    null.v = alpha.v + C;
                     search<(Colors)-C, trunk>(NodeFailHigh, b, *currentMove, depth-2*(nullReduction), null, nalpha, ply+1 NODE);
                     pruneNull = alpha >= nalpha.v;
                 }
@@ -178,18 +166,12 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                     *good = bestMove;
                     if (alpha >= beta2.v) {
                         now = system_clock::now();
-                        g.str("");
-                        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
-                          << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this) << " research";
-                        console->send(g.str());
+                        console->send(status(now, alpha.v) + " lowerbound");
                         search<(Colors)-C, trunk>(NodeFailHigh, b, bestMove, depth-1, beta, alpha, ply+1 NODE);
                     }
                     beta2.v = alpha.v + Eval::parameters.aspiration1*C;
                     now = system_clock::now();
-                    g.str("");
-                    g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
-                      << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
-                    console->send(g.str());
+                    console->send(status(now, alpha.v));
                 }
             }
             if (alpha >= infinity*C) break;
@@ -200,11 +182,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             }
         }
         now = system_clock::now();
-        g.str("");
-        g << "depth" << std::setw(3) << depth << " time" << std::showpoint << std::setw(13) << (now-start).count() << " nodes"
-          << std::setw(18) << getStats().node << " score " << alpha.v << " " << tt->bestLine(*this);
-//          std::cout << stats.node << std::endl;
-        console->send(g.str());
+        console->send(status(now, alpha.v) + " done");
         if (alpha >= infinity*C) break;
         if (alpha <= -infinity*C) break;
         alpha0.v = alpha.v;
@@ -268,9 +246,9 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 
     if (P==leaf) {
     	if (CI != (int)prev.CI)
-    		threatened = ((fold(prev.doublebits[m.to()] & prev.kingIncoming[CI].d02) && m.piece() & Rook)
-    				 || (fold(prev.doublebits[m.to()] & prev.kingIncoming[CI].d13) && m.piece() & Bishop)
-    				 || (BoardBase::knightAttacks[m.to()] & prev.template getPieces<-C,King>() && m.piece() == Knight));
+    		threatened = (fold(BoardBase::doublebits[m.to()] & prev.kingIncoming[CI].d02) && m.piece() & Rook)
+                      || (fold(BoardBase::doublebits[m.to()] & prev.kingIncoming[CI].d13) && m.piece() & Bishop)
+                      || (BoardBase::knightAttacks[m.to()] & prev.template getPieces<-C,King>() && m.piece() == Knight);
     	if (!threatened) {
     		threatened = prev.template generateMateMoves<true>();
     	}
@@ -461,7 +439,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 }
                 goto nosort;
             } else {
-                b.template generateMoves(good);
+                b.template generateMoves(good, bad);
                 b.template generateCaptureMoves<true>(good, bad);
                 if (bad == good) {
 #ifdef QT_GUI_LIB
@@ -702,7 +680,7 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
     const ColoredBoard<C>& b = currentBoard<C>();
     Move* good = moveList+192;
     Move* bad=good;
-    b.generateMoves(good);
+    b.generateMoves(good, bad);
 
     if (depth <= 1)
         return bad-good;
@@ -721,7 +699,7 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
     const ColoredBoard<C>& b = currentBoard<C>();
     Move* good = moveList+192;
     Move* bad=good;
-    b.generateMoves(good);
+    b.generateMoves(good, bad);
 
     uint64_t sum=0;
     for (Move* i = good; i<bad; ++i) {
@@ -771,7 +749,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
     Move list[256];
     Move* good = list + 192;
     Move* bad = good;
-    b.generateMoves(good);
+    b.generateMoves(good, bad);
     if (depth == 1) {
         update(result, bad-good);
         return;

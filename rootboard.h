@@ -47,6 +47,7 @@ template<class T> class Result;
 #ifdef QT_GUI_LIB
 class RootBoard: QObject {
 	Q_OBJECT
+    friend class TestRootBoard;
     StatWidget* statWidget;
 signals:
 	void createModel();
@@ -54,7 +55,6 @@ private:
 #else
 class RootBoard {
 #endif
-	friend class TestRootBoard;
 	struct {
 		ColoredBoard<White> wb;
 		ColoredBoard<Black> bb;
@@ -73,6 +73,7 @@ class RootBoard {
     unsigned fiftyMovesRoot;
     History history;        // FIXME probably needs to be thread local
     std::string info;
+    std::chrono::system_clock::time_point start;
     int wtime;
     int btime;
     int winc;
@@ -84,6 +85,7 @@ class RootBoard {
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
+    std::string status(std::chrono::system_clock::time_point, int);
 
 public:
     Eval eval;

@@ -48,13 +48,13 @@ public:
     template<bool> void generateCaptureMoves(Move* &list, Move* &bad) const;
     void generateCheckEvasions(Move* &list, Move* &bad) const;
     template<bool AbortOnFirst> bool generateMateMoves( Move** good = NULL) const;
-    void generateMoves(Move* &good) const;
+    void generateMoves(Move*& good, Move*& bad) const;
     template<typename T>
     void doMove(T* next, Move m) const;
     void doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t cep) const;
     Key getZobrist() const;
 private:
-    void generateTargetMove(Move* &good, uint64_t tobit) const;
+    void generateTargetMove(Move* &good, Move* &bad, uint64_t tobit) const;
     uint64_t perft(unsigned int depth) const;
     void divide(unsigned int depth) const;
 

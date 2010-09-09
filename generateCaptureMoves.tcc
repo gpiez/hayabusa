@@ -47,7 +47,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
 #else
         if (fold(d2 & a13)) {
 #endif
-            __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
+            __v2di from2 = doublebits[m.from()];
             __v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__
             pin13 = _mm_cmpeq_epi64(pin13, zero);
@@ -60,16 +60,16 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
             for (uint64_t a=fold(pin13); a; a&=a-1) {
             	Move n;
             	n.data = m.data + Move(0, bit(a), 0, cap).data;
-            	if ( val[cap] < val[Bishop]
+            	if ( cap==Pawn
             	     &&  (
             	           a & -a & getAttacks<-C,Pawn>()
-                		   || a & -a & getAttacks<-C,All>() &
+/*                		   || a & -a & getAttacks<-C,All>() &
                 		                 ~( getAttacks<C,Rook>()
                 		                  | getAttacks<C,Queen>()
                 		                  | getAttacks<C,King>()
                 		                  | getAttacks<C,Knight>()
                 		                  | getAttacks<C,Pawn>()
-                		                  )
+                		                  )*/
             	         )
                    ) *bad++ = n;
             	else *--good = n;
@@ -86,7 +86,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
 #else
         if (fold(d2 & a02)) {
 #endif
-            __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
+            __v2di from2 = doublebits[m.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
 #ifdef __SSE4_1__
             pin02 = _mm_cmpeq_epi64(pin02, zero);
@@ -99,19 +99,19 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
             for (uint64_t a=fold(pin02); a; a&=a-1) {
                 Move n;
                 n.data = m.data + Move(0, bit(a), 0, cap).data;
-                if ( val[cap] < val[Rook]
+                if ( val[cap] < val[Rook]  //TODO use 2 separate loops for good and bad
                      &&  (
                            a & -a & ( getAttacks<-C,Pawn>()
                                     | getAttacks<-C,Knight>()
                                     | getAttacks<-C,Bishop>()
                                     )
-                           || a & -a & getAttacks<-C,All>() &
+/*                           || a & -a & getAttacks<-C,All>() &
                                          ~( getAttacks<C,Bishop>()
                                           | getAttacks<C,Queen>()
                                           | getAttacks<C,King>()
                                           | getAttacks<C,Knight>()
                                           | getAttacks<C,Pawn>()
-                                          )
+                                          )*/
                          )
                    ) *bad++ = n;
                 else *--good = n;
@@ -129,7 +129,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
 #else
         if (fold(d2 & (a02|a13))) {
 #endif
-            __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
+            __v2di from2 = doublebits[m.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
             __v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__
@@ -151,9 +151,9 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
                 if ( val[cap] < val[Queen]
                      &&  (
                            a & -a & ( getAttacks<-C,Pawn>()
-                                           | getAttacks<-C,Knight>()
-                                           |getAttacks<-C,Bishop>()
-                                           | getAttacks<-C,Rook>()
+                                    | getAttacks<-C,Knight>()
+                                    | getAttacks<-C,Bishop>()
+                                    | getAttacks<-C,Rook>()
                                     )
                            || a & -a & getAttacks<-C,All>() &
                                          ~( getAttacks<C,Rook>()
@@ -172,7 +172,9 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
     for ( uint64_t p = getAttacks<C,Knight>() & d; p; p &= p-1 ) {
         unsigned to = bit(p);
         for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1)
-            if (cap == Pawn && (p & -p & getAttacks<-C,Pawn>()
+            if (cap==Pawn && (p & -p & getAttacks<-C,Pawn>()
+                // there are no x-ray defenses for capturing knights, so capturing
+                // a defended pawn is very likely bad
                              || p & -p & getAttacks<-C,All>()& ~( getAttacks<C,Rook>()
                                                                 | getAttacks<C,Bishop>()
                                                                 | getAttacks<C,Queen>()
@@ -252,8 +254,8 @@ void ColoredBoard<C>::generateCaptureMoves( Move* &good, Move* &bad) const {
     }
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wreturn-type"
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wreturn-type"
 template<Colors C>
 template<bool AbortOnFirst>
 bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
@@ -317,7 +319,7 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
         if (rmate) {
             for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
                 __v2di a02 = rs->d02;
-                __v2di from2 = _mm_set1_epi64x(1ULL << rs->move.from());
+                __v2di from2 = doublebits[rs->move.from()];
                 __v2di pin02 = from2 & dpins[CI].d02;
                 __v2di xray02 = a02 & datt[EI].d02;
     #ifdef __SSE4_1__
@@ -335,14 +337,24 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                 for (uint64_t a=fold(pin02) & rmate; a; a&=a-1) {
                     if (AbortOnFirst) return true;
                     Move n;
-                    n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a ^ (a & (a-1)))).data;
+                    n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
                     *--*good = n;
                 }
             }
         }
     }
 
-    if (uint64_t checkingMoves = getAttacks<C,Queen>() & ~occupied[CI] & (kingIncoming[EI].d[0] | kingIncoming[EI].d[1] | kingIncoming[EI].d[2] | kingIncoming[EI].d[3])) {
+    // promotion moves, always assuming queen promotions are counted as queen moves.
+    // pawn promotions may only move if not pinned at all.
+    uint64_t pMoves = getPieces<C,Pawn>() & pins[CI];
+    pMoves  = ( (shift<C*8  >(pMoves)                & ~occupied[EI])
+              | (shift<C*8+1>(pMoves) & ~file<'a'>() &  occupied[EI])
+              | (shift<C*8-1>(pMoves) & ~file<'h'>() &  occupied[EI])
+              )
+            & rank<8>();
+    if (uint64_t checkingMoves  = (getAttacks<C,Queen>() | pMoves)
+                                & ~occupied[CI]
+                                & (kingIncoming[EI].d[0] | kingIncoming[EI].d[1] | kingIncoming[EI].d[2] | kingIncoming[EI].d[3])) {
         uint64_t attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
         uint64_t qescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
         qescape = ror(qescape, k-9);
@@ -374,7 +386,7 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
             qmate2 |= king >> 2 & ~file<'h'>() & ~file<'g'>();
         if ((qescape & 0x50500) == 0)
             qmate2 |= king >> 16;
-        qmate2 &= checkingMoves & fold(kingIncoming[EI].d02) & ~getAttacks<-C,All>();
+        qmate2 &= checkingMoves & (kingIncoming[EI].d[0] | kingIncoming[EI].d[1]) & ~getAttacks<-C,All>();
         qmate |= qmate2;
 
         if ((qescape & 0x70007) == 0)
@@ -448,11 +460,11 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
             qmate |= p & ~d3 & ~d7;
         }
 
-        if (qmate) {
+        if (qmate & getAttacks<C,Queen>()) {
             for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
                 __v2di a02 = qs->d02;
                 __v2di a13 = qs->d13;
-                __v2di from2 = _mm_set1_epi64x(1ULL << qs->move.from());
+                __v2di from2 = doublebits[qs->move.from()];
                 __v2di pin02 = from2 & dpins[CI].d02;
                 __v2di pin13 = from2 & dpins[CI].d13;
                 __v2di xray02 = a02 & datt[EI].d02;
@@ -481,8 +493,25 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                 for (uint64_t a=fold(pin02|pin13) & qmate; a; a&=a-1) {
                     if (AbortOnFirst) return true;
                     Move n;
-                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceFromBit(a ^ (a & (a-1)))).data;
+                    ASSERT(a ^ (a & (a-1)) == a & -a);
+                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
                     *--*good = n;
+                }
+            }
+        }
+        for (uint64_t p = qmate & pMoves; p; p &= p-1) {
+            if (AbortOnFirst) return true;
+            unsigned to = bit(p);
+            if (p & -p & ~occupied1) {
+                ASSERT((getPieces<C,Pawn>() & shift<-C*8>(p & -p) & pins[CI]));
+                *--*good = Move(to-C*8, to, Queen, 0, true);
+            } else {
+                ASSERT(p & -p & occupied[EI]);
+                if (getPieces<C,Pawn>() & shift<-C*8-1>(p & -p) & ~file<'h'>() & pins[CI]) {
+                    *--*good = Move(to-C*8-1, to, Queen, getPieceFromBit(p & -p), true);
+                }
+                if (getPieces<C,Pawn>() & shift<-C*8+1>(p & -p) & ~file<'a'>() & pins[CI]) {
+                    *--*good = Move(to-C*8+1, to, Queen, getPieceFromBit(p & -p), true);
                 }
             }
         }
@@ -546,7 +575,7 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
             if (bmate) {
                 for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
                     __v2di a13 = bs->d13;
-                    __v2di from2 = _mm_set1_epi64x(1ULL << bs->move.from());
+                    __v2di from2 = doublebits[bs->move.from()];
                     __v2di pin13 = from2 & dpins[CI].d13;
                     __v2di xray13 = a13 & datt[EI].d13;     //TODO capture mate moves are wrongly recognized as moves on a x-ray protected square
         #ifdef __SSE4_1__
@@ -564,7 +593,7 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                     for (uint64_t a=fold(pin13) & bmate; a; a&=a-1) {
                         if (AbortOnFirst) return true;
                         Move n;
-                        n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a ^ (a & (a-1)))).data;
+                        n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
                         *--*good = n;
                     }
                 }
@@ -609,6 +638,6 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
     }
     if (AbortOnFirst) return false;
 }
-#pragma GCC diagnostic pop
+//#pragma GCC diagnostic pop
 
 #endif /* GENERATECAPTUREMOVES_TCC_ */

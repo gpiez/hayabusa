@@ -58,6 +58,27 @@ template<Colors C> struct ScoreBase
         if (*this < b)
             v = b;
     }
+    static std::string str(int v) {
+        if (v == 0)
+            return " = 0";
+
+        std::stringstream s;
+        int sign = v/abs(v);
+        if (abs(v) < 50)
+            s << (sign > 0 ? " ⩲":" ⩱");
+        else if (abs(v) < 200)
+            s << (sign > 0 ? " ±":" ∓");
+        else if (abs(v) < 10000)
+            s << (sign > 0 ? "+-":"-+");
+        else {
+            s << (sign > 0 ? "+M":"-M");
+            s << abs(v)-10000;
+            return s.str();
+        }
+
+        s << std::fixed << std::setw(5) << std::setprecision(2) << abs(v)/100.0;
+        return s.str();
+    }
 };
 
 template<Colors C> struct Score: ScoreBase<C>
@@ -90,7 +111,7 @@ template<Colors C> struct Score: ScoreBase<C>
 
     using ScoreBase<C>::max;
 
-    bool max(const int b, const Move n)         {
+    bool max(const int b, const Move n) {
         if (*this < b) {
             v = b;
             m = n;
