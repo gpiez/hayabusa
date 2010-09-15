@@ -35,6 +35,10 @@ unsigned int splitDepth = 1000;
 int humanreadable = 0;
 int hash = 0x1000000;
 bool quiet = false;
+bool preCutIfNotThreatened = false;
+unsigned veinDepth = 20;
+unsigned leafDepth = 8;
+bool reduction = false;
 }
 
 Console::Console(int& argc, char** argv)
@@ -225,7 +229,7 @@ void Console::isready(StringList /*cmds*/) {
 }
 
 void Console::setoption(StringList cmds) {
-    std::map<std::string, StringList> o = parse(cmds, StringList() << "name" << "value");
+    std::map<std::string, StringList> o = cmds.parse(StringList() << "name" << "value");
     std::string name =  toLower(o["name"].join(" "));
     if (!name.empty()) {
         std::string data = toLower(o["value"].join(" "));
@@ -238,6 +242,8 @@ void Console::setoption(StringList cmds) {
             if (Options::hash) board->tt->setSize(Options::hash*0x100000ULL);
         } else if (name == "quiet") {
             Options::quiet = convert(data);
+        } else if (name == "reduction") {
+            Options::reduction = true;
         }
     }
 }
@@ -252,7 +258,7 @@ void Console::ucinewgame(StringList /*cmds*/) {
 
 void Console::position(StringList cmds) {
     if (cmds.size() < 2) return;
-    auto pos = parse(cmds, StringList() << "startpos" << "fen" << "test" << "moves");
+    auto pos = cmds.parse(StringList() << "startpos" << "fen" << "test" << "moves");
     WorkThread::stopAll();
     if (pos.count("startpos"))
         board->setup();
@@ -278,7 +284,7 @@ void Console::position(StringList cmds) {
 
 void Console::go(StringList cmds) {
     WorkThread::stopAll();
-    std::map<std::string, StringList> subCmds = parse(cmds, StringList() << "searchmoves"
+    std::map<std::string, StringList> subCmds = cmds.parse(StringList() << "searchmoves"
     << "ponder" << "wtime" << "btime" << "winc" << "binc" << "movestogo" << "depth"
     << "nodes" << "mate" << "movetime" << "infinite");
 
@@ -297,27 +303,6 @@ void Console::quit(StringList /*cmds*/) {
 #else
     exit(0);
 #endif
-}
-
-std::map<std::string, StringList> Console::parse(const StringList& cmds, const StringList& tokens) {
-    typedef StringList::const_iterator I;
-    std::map<I, std::string> tokenPositions;
-    for(auto token = tokens.begin(); token != tokens.end(); ++token) {
-        I tp=std::find(cmds.begin(), cmds.end(), *token);
-        if (tp != cmds.end())
-            tokenPositions[tp] = *token;
-    }
-    tokenPositions[cmds.end()] = "";
-    std::map<std::string, StringList> tokenValues;
-    for(auto i=tokenPositions.begin(); (*i).first != cmds.end(); ++i) {
-        ASSERT(*((*i).first) == (*i).second);
-        auto j = i;
-        ++j;
-//        std::cout << "parse:" << (*i).second << ":" << *((*i).first+1) << std::endl;
-        tokenValues[(*i).second].resize((*j).first - (*i).first - 1);
-        std::copy ((*i).first+1, (*j).first, tokenValues[(*i).second].begin());
-    }
-    return tokenValues;
 }
 
 void Console::ordering(StringList cmds) {

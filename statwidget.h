@@ -35,8 +35,8 @@ class StatWidget: public QWidget, private Ui::Statsui
 {
 	Q_OBJECT
 
-	const RootBoard& rb;
     int iRow;
+	const RootBoard& rb;
     QImage wPieces[6], bPieces[6];
 	QColor pal[256];
 	QLabel* minipm[2][7];

@@ -28,6 +28,7 @@ class StringList: public std::vector<std::string> {
 public:
     std::string join(const char* = "");
     StringList& operator << (const char*);
+    std::map<std::string, StringList> parse(const StringList&) const;
 };
 
 StringList split(std::string str, std::string delims = std::string(" "));

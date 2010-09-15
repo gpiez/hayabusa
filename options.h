@@ -22,4 +22,8 @@ namespace Options {
     extern int humanreadable;
     extern int hash;
     extern bool quiet;
+    extern bool preCutIfNotThreatened;
+    extern unsigned veinDepth;
+    extern unsigned leafDepth;
+    extern bool reduction;
 }

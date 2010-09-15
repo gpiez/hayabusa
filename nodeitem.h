@@ -17,7 +17,7 @@
 #include "move.h"
 
 #define MIN_NODES 0
-#define MAX_NODES 1000000
+#define MAX_NODES 60000000
 
 struct NodeData {
 	uint64_t key;
@@ -29,6 +29,7 @@ struct NodeData {
 	char searchType;
 	char depth;
 	char moveColor, nodeColor;
+    char flags;
     int8_t ply;
 };
 

@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
+#include "constants.h"
 #include "stringlist.h"
 
 std::string StringList::join(const char* str) {
@@ -64,4 +64,25 @@ std::string simplified(std::string str) {
 
 std::string toLower(std::string str) {
     return str;
+}
+
+std::map<std::string, StringList> StringList::parse(const StringList& tokens) const {
+    typedef StringList::const_iterator I;
+    std::map<I, std::string> tokenPositions;
+    for(auto token = tokens.begin(); token != tokens.end(); ++token) {
+        I tp=std::find(begin(), end(), *token);
+        if (tp != end())
+            tokenPositions[tp] = *token;
+    }
+    tokenPositions[end()] = "";
+    std::map<std::string, StringList> tokenValues;
+    for(auto i=tokenPositions.begin(); (*i).first != end(); ++i) {
+        ASSERT(*((*i).first) == (*i).second);
+        auto j = i;
+        ++j;
+//        std::cout << "parse:" << (*i).second << ":" << *((*i).first+1) << std::endl;
+        tokenValues[(*i).second].resize((*j).first - (*i).first - 1);
+        std::copy ((*i).first+1, (*j).first, tokenValues[(*i).second].begin());
+    }
+    return tokenValues;
 }

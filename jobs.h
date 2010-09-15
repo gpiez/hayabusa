@@ -70,7 +70,7 @@ public:
     };
     void job() {
         rb.clone(b, rep, ply);
-        rb.search<C, trunk>(n, b, m, depth, alpha, beta, ply
+        rb.search<C, trunk>(n, b, m, depth, alpha, beta, ply, false
 #ifdef QT_GUI_LIB
                         , node
 #endif
@@ -87,7 +87,7 @@ public:
     RootSearchJob(RootBoard& rb): rb(rb) {};
     void job() {
         threadId = 0;
-        Move m = rb.rootSearch<C>();
+        /*Move m =*/ rb.rootSearch<C>();
     }
 };
 

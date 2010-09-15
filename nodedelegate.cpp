@@ -27,9 +27,15 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
 
 	str2+=QString( " ply: %1 " ).arg( item->ply );
 	switch(item->nodeType) {
-	case NodePrecut:
-		str2 += "Precut";
-		break;
+    case NodePrecut1:
+        str2 += "Precut1";
+        break;
+    case NodePrecut2:
+        str2 += "Precut2";
+        break;
+    case NodePrecut3:
+        str2 += "Precut3";
+        break;
 	case NodeTT:
 		str2 += "TT";
 		break;
@@ -63,6 +69,11 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
 		str2 += "<Vein>";
 		break;
 	}
+	if (item->flags & Threatened)
+        str2 += QString(" TD ");
+    if (item->flags & Threatening)
+        str2 += QString(" TG ");
+
 	str2 += QString( " size: %2" ).arg(item->nodes);
 /*
 	if ( index.parent().isValid() )

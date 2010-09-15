@@ -68,18 +68,17 @@ private:
     std::string answer;
     bool debugMode;
     std::map<std::string, std::string> option;
-    std::map<std::string, StringList> parse(const StringList&, const StringList&);
     std::map<std::string, void (Console::*)(StringList)> dispatcher;
 
 public:
 #ifdef QT_GUI_LIB
     QSocketNotifier *notifier;
+    void info(int, uint64_t, uint64_t, QString, QString);
 #endif
     Console(int& argc, char** argv);
     virtual ~Console();
     int exec();
     void send(std::string);
-    void info(int, uint64_t, uint64_t, QString, QString);
 
 #ifdef QT_GUI_LIB
 public slots:
