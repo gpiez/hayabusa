@@ -24,7 +24,7 @@
  * Generate moves which place a piece at dst, used for check evasion generation
  */
 template<Colors C>
-void ColoredBoard<C>::generateTargetMove(Move* &good, Move* &bad, uint64_t tobit ) const {
+void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t tobit ) const {
     //special case where movin a pawn blocks a check
     //move is only legal if it is not pinned
     for (uint64_t p = getPieces<C,Pawn>() & shift<-C*8>(tobit) & pins[CI] & rank<7>(); p; p &= p-1) {

@@ -54,8 +54,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     using namespace std::chrono;
     start = system_clock::now();
 #ifdef QT_GUI_LIB
-	while (!statWidget->tree);
-	statWidget->emptyTree();
+    while (!statWidget->tree);
+    statWidget->emptyTree();
 #endif
     isMain = true;
     const ColoredBoard<C>& b = currentBoard<C>();
@@ -86,9 +86,9 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     nMoves = bad-good;
     for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes; depth++) {
 #ifdef QT_GUI_LIB
-		NodeData data;
-		data.move.data = 0;
-		data.ply = depth;
+        NodeData data;
+        data.move.data = 0;
+        data.ply = depth;
         NodeItem* node=0;
         if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
             NodeItem::m.lock();
@@ -107,13 +107,13 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         if (alpha0.v != -infinity*C) {
             alpha2.v = alpha0.v - Eval::parameters.aspiration0*C;
             beta2.v  = alpha0.v + Eval::parameters.aspiration1*C;
-            if (!search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha2, ply+1 NODE)) {
+            if (!search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha2, ply+1, false NODE)) {
                 // Fail-Low at first root, research with low bound = alpha and high bound = old low bound
                 now = system_clock::now();
                 console->send(status(now, alpha2.v) + " upperbound");
                 if (!infinite && now > hardBudget) break;   //TODO check if trying other moves first is an better option
                 beta2.v = alpha2.v;
-                search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha, ply+1 NODE);
+                search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha, ply+1, false NODE);
             } else if (alpha2 >= beta2.v) {
                 // Fail-High at first root, research with high bound = beta and low bound = old high bound
                 now = system_clock::now();
@@ -123,12 +123,12 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                     if (now > softBudget && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
                 }
                 alpha.v = alpha2.v;
-                search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta, alpha, ply+1 NODE);
+                search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta, alpha, ply+1, false NODE);
             } else {
                 alpha.v = alpha2.v;
             }
         } else {
-            search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta, alpha, ply+1 NODE);
+            search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta, alpha, ply+1, false NODE);
         }
         bestMove = *good;
         now = system_clock::now();
@@ -142,32 +142,32 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         beta2.v = alpha.v + Eval::parameters.aspiration1*C;
 
         for (Move* currentMove = good+1; currentMove < bad; currentMove++) {
-        	currentMoveIndex++;
-        	bool pruneNull = false;
-        	if (alpha.v != -infinity*C && depth > dMaxCapture+dMaxThreat+2) {
-        		SharedScore<(Colors)-C> null;
-        		SharedScore<C> nalpha(alpha);
-        		null.v = alpha.v + C;
+            currentMoveIndex++;
+            bool pruneNull = false;
+            if (alpha.v != -infinity*C && depth > dMaxCapture+dMaxThreat+2) {
+                SharedScore<(Colors)-C> null;
+                SharedScore<C> nalpha(alpha);
+                null.v = alpha.v + C;
                 if (depth > nullReduction+1 + dMaxThreat + dMaxCapture)
-                    search<C, trunk>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2 NODE);
+                    search<C, trunk>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
                 else
-                    search<C, leaf>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2 NODE);
+                    search<C, leaf>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
                 pruneNull = alpha >= null.v;
                 if (pruneNull && depth > 2*(nullReduction) + dMaxCapture + dMaxThreat) {
                     null.v = alpha.v + C;
-                    search<(Colors)-C, trunk>(NodeFailHigh, b, *currentMove, depth-2*(nullReduction), null, nalpha, ply+1 NODE);
+                    search<(Colors)-C, trunk>(NodeFailHigh, b, *currentMove, depth-2*(nullReduction), null, nalpha, ply+1, false NODE);
                     pruneNull = alpha >= nalpha.v;
                 }
             }
-        	if (!pruneNull) {
-                if (search<(Colors)-C, trunk>(NodeFailHigh, b, *currentMove, depth-1, beta2, alpha, ply+1 NODE)) {
+            if (!pruneNull) {
+                if (search<(Colors)-C, trunk>(NodeFailHigh, b, *currentMove, depth-1, beta2, alpha, ply+1, false NODE)) {
                     bestMove = *currentMove;
                     memmove(good+1, good, sizeof(Move) * (currentMove-good));
                     *good = bestMove;
                     if (alpha >= beta2.v) {
                         now = system_clock::now();
                         console->send(status(now, alpha.v) + " lowerbound");
-                        search<(Colors)-C, trunk>(NodeFailHigh, b, bestMove, depth-1, beta, alpha, ply+1 NODE);
+                        search<(Colors)-C, trunk>(NodeFailHigh, b, bestMove, depth-1, beta, alpha, ply+1, false NODE);
                     }
                     beta2.v = alpha.v + Eval::parameters.aspiration1*C;
                     now = system_clock::now();
@@ -200,7 +200,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
 template<Colors C, Phase P, typename A, typename B, typename T>
-bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, const unsigned depth, const A& alpha, B& beta, const unsigned ply
+bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, const unsigned depth, const A& alpha, B& beta, const unsigned ply, bool threatened
                                                                                                                                                 #ifdef QT_GUI_LIB
                                                                                                                                                 , NodeItem* parent
                                                                                                                                                 #endif
@@ -210,8 +210,8 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
     KeyScore estimate;
     estimate.vector = prev.estimatedEval(m, eval);
 #ifdef QT_GUI_LIB
-	uint64_t startnode = stats.node;
-	NodeItem* node = 0;
+    uint64_t startnode = stats.node;
+    NodeItem* node = 0;
     if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
         NodeItem::m.lock();
         NodeData data = {};
@@ -224,11 +224,12 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
         data.depth = depth;
         data.moveColor = prev.CI == 0 ? White:Black;
         data.nodeColor = C;
+        data.flags = 0;
         node = new NodeItem(data, parent);
         NodeItem::nNodes++;
         NodeItem::m.unlock();
     }
-//	if (node && node->id == 67636) asm("int3");
+//  if (node && node->id == 67636) asm("int3");
 #endif
 /*
     prefetching is not very effective for core2, probably because each access
@@ -242,74 +243,69 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 
     RawScore& eE = prev.CI == 0 ? estimatedError[nPieces + (m.piece()&7)][m.to()] : estimatedError[nPieces - (m.piece()&7)][m.to()];
 
-    bool threatened = false;
-
-    if (P==leaf) {
-    	if (CI != (int)prev.CI)
-    		threatened = (fold(BoardBase::doublebits[m.to()] & prev.kingIncoming[CI].d02) && m.piece() & Rook)
-                      || (fold(BoardBase::doublebits[m.to()] & prev.kingIncoming[CI].d13) && m.piece() & Bishop)
-                      || (BoardBase::knightAttacks[m.to()] & prev.template getPieces<-C,King>() && m.piece() == Knight);
-    	if (!threatened) {
-    		threatened = prev.template generateMateMoves<true>();
-    	}
-    }
-
-    if (P==vein /*|| (P==leaf && !threatened)*/) {
-		ScoreBase<C> current(alpha);
-		current.max(estimate.score.calc(prev, eval)+lastPositionalEval-C*eE);
-		if (current >= beta.v) {
-#ifdef QT_GUI_LIB
-			if (node) node->bestEval = beta.v;
-			if (node) node->nodeType = NodePrecut;
-#endif
-			stats.leafcut++;
-			return false;
-		}
-    }
-
-    const ColoredBoard<C> b(prev, m, estimate.vector);
-    if (!threatened) {
-        threatened = ((ColoredBoard<(Colors)-C>*)&b) -> template generateMateMoves<true>();
-    }
-    if (P==leaf && !threatened) {
+    if (P==vein) {
         ScoreBase<C> current(alpha);
         current.max(estimate.score.calc(prev, eval)+lastPositionalEval-C*eE);
         if (current >= beta.v) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = beta.v;
-            if (node) node->nodeType = NodePrecut;
+            if (node) node->nodeType = NodePrecut1;
 #endif
             stats.leafcut++;
             return false;
         }
     }
 
+    const ColoredBoard<C> b(prev, m, estimate.vector);
+    threatened |= b.template inCheck<C>();
+    if (!threatened) {
+        threatened = ((ColoredBoard<(Colors)-C>*)&b) -> template generateMateMoves<true>();
+        if (!threatened) {
+            threatened = ((ColoredBoard<(Colors)-C>*)&b) -> template generateSkewers(0);
+            if (P==leaf && !threatened) {
+                ScoreBase<C> current(alpha);
+                current.max(estimate.score.calc(prev, eval)+lastPositionalEval-C*eE);
+                if (current >= beta.v) {
+#ifdef QT_GUI_LIB
+                    if (node) node->bestEval = beta.v;
+                    if (node) node->nodeType = NodePrecut2;
+#endif
+                    stats.leafcut++;
+                    return false;
+                }
+            }
+        }
+    }
+#ifdef QT_GUI_LIB
+    if (node && threatened) node->flags |= Threatened;
+#endif
+
     ASSERT(ply+fiftyMovesRoot >= b.fiftyMoves);
     Key z;
     if (P != vein) {
-    	z = b.getZobrist();
-    	store(z, ply);
+        z = b.getZobrist();
+        store(z, ply);
     }
 
-	if (isMain) {
-	    if ((int)prev.CI == (int)b.CI) {
-	        line[ply].data = 0;
-	        line[ply-1] = m;
-	    } else
+    if (isMain) {
+        if ((int)prev.CI == (int)b.CI) {
+            line[ply].data = 0;
+            line[ply-1] = m;
+        } else
             line[ply] = m;
 
-		currentPly = ply;
-	}
+        currentPly = ply;
+    }
 
     ASSERT(b.keyScore.score.calc(prev, eval) == estimate.score.calc(prev, eval));
     ASSERT(P == vein || z == b.getZobrist());
     if ((int)prev.CI == (int)b.CI) {
         if (b.template inCheck<(Colors)-C>()) {
 #ifdef QT_GUI_LIB
-			if (node) node->bestEval = beta.v;
-        	if (node) node->nodeType = NodeIllegal;
+            if (node) node->bestEval = beta.v;
+            if (node) node->nodeType = NodeIllegal;
 #endif
-        	return false;
+            return false;
         }
     } else {
         ASSERT(!b.template inCheck<(Colors)-C>());
@@ -323,13 +319,13 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 //    bool betaNode = false;
     bool alphaNode = false;
     if (P != vein) {
-    	if (find(b, z, ply)) {
+        if (find(b, z, ply)) {
 #ifdef QT_GUI_LIB
-			if (node) node->bestEval = 0;
-    		if (node) node->nodeType = NodeRepetition;
+            if (node) node->bestEval = 0;
+            if (node) node->nodeType = NodeRepetition;
 #endif
-    		return beta.max(0, m);
-    	}
+            return beta.max(0, m);
+        }
         st = tt->getSubTable(z);
         if (tt->retrieve(st, z, subentry)) {
             stats.tthit++;
@@ -348,8 +344,8 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 }
                 if (current >= beta.v) {
 #ifdef QT_GUI_LIB
-        			if (node) node->bestEval = beta.v;
-                	if (node) node->nodeType = NodeTT;
+                    if (node) node->bestEval = beta.v;
+                    if (node) node->nodeType = NodeTT;
 #endif
                     return false;
                 }
@@ -387,7 +383,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
             if (current >= beta.v) {
                 stats.leafcut++;
 #ifdef QT_GUI_LIB
-                if (node) node->nodeType = NodePrecut;
+                if (node) node->nodeType = NodePrecut3;
 #endif
                 break;
             }
@@ -398,7 +394,8 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
             bad = j;
         }
 
-        bool threatening = false;
+//        bool threatening = false;
+        Move *nonMate;
         if (b.template inCheck<C>()) {
             b.generateCheckEvasions(good, bad);
             if (bad == good) {
@@ -409,6 +406,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 current.v = -infinity*C;
                 break;
             }
+            nonMate = good;
             if (P==vein || (P==leaf && !threatened)) {
                 Move* j;
                 for (Move* i = j = good; i<bad; ++i)
@@ -417,18 +415,21 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 bad = j;
                 goto nosort;
             } else {
-                threatening = b.template generateMateMoves<true>();
+/*                threatening = b.template generateMateMoves<true>();
+                if (!threatening) threatening = b.template generateSkewers(0);*/
             }
-        } else {
+
+        } else {    // not in check
             if (P==vein || (P==leaf && !threatened)) {
                 b.template generateCaptureMoves<false>(good, bad);
+                nonMate = good;
                 if ( P == leaf ) {
-                    Move *nonmate = good;
+                    b.template generateSkewers(&good);
                     b.template generateMateMoves<false>(&good);
-                    if (good < nonmate)
-                        threatening = true;
-                        for (Move* removing = good; removing<nonmate; ++removing) {
-                            for (Move* removed = nonmate; removed<bad; ++removed) {
+                    if (good < nonMate) {
+//                        threatening = true;
+                        for (Move* removing = good; removing<nonMate; ++removing) {
+                            for (Move* removed = nonMate; removed<bad; ++removed) {
                                 if (removing->data == removed->data) {
                                     memmove(removed, removed+1, sizeof(Move) * (bad-removed-1));
                                     --bad;
@@ -436,6 +437,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                                 }
                             }
                         }
+                    }
                 }
                 goto nosort;
             } else {
@@ -449,6 +451,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                     current.v = 0;
                     break;
                 }
+                nonMate = good;
                 // FIXME not thread safe
 /*                if ( P == leaf && alpha < 0 && ply>2 && b.fiftyMoves>2) {
                     if (line[ply].from() == line[ply-2].to() && line[ply].to() == line[ply-2].from()) {
@@ -457,12 +460,12 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                         threatening = true;
                     }
                 }*/
-                Move *nonmate = good;
+                b.template generateSkewers(&good);
                 b.template generateMateMoves<false>(&good);
-                if (good < nonmate) {
-                    threatening = true;
-                    for (Move* removing = good; removing<nonmate; ++removing) {
-                        for (Move* removed = nonmate; ; ++removed) {
+                if (good < nonMate) {
+//                     threatening = true;
+                    for (Move* removing = good; removing<nonMate; ++removing) {
+                        for (Move* removed = nonMate; ; ++removed) {
                             ASSERT(removed<bad);
                             if (removing->data == removed->data) {
                                 memmove(removed, removed+1, sizeof(Move) * (bad-removed-1));
@@ -475,7 +478,6 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 }
             }
         }
-
         for (afterGoodCap = good; /*afterGoodCap<good+1 &&*/ afterGoodCap<bad; ++afterGoodCap)
             if (afterGoodCap->capture() == 0) break;
 
@@ -484,6 +486,9 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
         }
 
 nosort:
+#ifdef QT_GUI_LIB
+//         if (node && threatening) node->flags |= Threatening;
+#endif
         // move best move from tt / history to front
         if (ttMove.data && ttMove.fromto() != good[0].fromto()) {
             Move first = good[0];
@@ -498,134 +503,135 @@ nosort:
             }
         }
 
-	    if (!alphaNode)
-		for (unsigned int d = (depth+1)%2 + 1 + dMaxCapture + dMaxThreat; d < depth; d+=2) {
-//		if (depth > 2 + dMaxCapture + dMaxThreat && depth > ttDepth+2) {
-//		    unsigned d = depth-2;
-			if (d<=ttDepth) continue;
-			for (Move* i = good; i<bad; ++i) {
-	            NodeType nextNodeType;
-	            if (nodeType == NodeFailHigh)
-	                nextNodeType = NodeFailLow;
-	            else if (nodeType == NodeFailLow)
-	                nextNodeType = NodeFailHigh;
-	            else if (i == good)
-	                nextNodeType = NodePV;
-	            else
-	                nextNodeType = NodeFailHigh;
-//				if (!i->data) continue;
-				ASSERT(d>0);
-				if (d <= 1 + dMaxCapture + dMaxThreat ? search<(Colors)-C, leaf, B, A>(nextNodeType, b, *i, d - 1, beta, current, ply+1 NODE) :
-	//                d == depth-4 ? search<(Colors)-C, tree, B, A>(nextNodeType, b, *i, d-1, B(C*infinity), current) :
-								   search<(Colors)-C, tree, B, A>(nextNodeType, b, *i, d-1, beta, current, ply+1 NODE)) {
-					ASSERT(current.m.data == i->data);
-					Move first = good[0];
-					good[0] = current.m;
-					for (Move* j = good+1; j<i; ++j) {
-						Move second = *j;
-						*j = first;
-						first = second;
-					}
-					*i = first;
-				}
-				if (current >= beta.v) {
-					if (d+2 >= depth) {
-						/*betaNode = true;*/
+        if (!alphaNode)
+        for (unsigned int d = (depth+1)%2 + 1 + dMaxCapture + dMaxThreat; d < depth; d+=2) {
+//      if (depth > 2 + dMaxCapture + dMaxThreat && depth > ttDepth+2) {
+//          unsigned d = depth-2;
+            if (d<=ttDepth) continue;
+            for (Move* i = good; i<bad; ++i) {
+                NodeType nextNodeType;
+                if (nodeType == NodeFailHigh)
+                    nextNodeType = NodeFailLow;
+                else if (nodeType == NodeFailLow)
+                    nextNodeType = NodeFailHigh;
+                else if (i == good)
+                    nextNodeType = NodePV;
+                else
+                    nextNodeType = NodeFailHigh;
+//              if (!i->data) continue;
+                ASSERT(d>0);
+                if (d <= 1 + dMaxCapture + dMaxThreat ? search<(Colors)-C, leaf, B, A>(nextNodeType, b, *i, d - 1, beta, current, ply+1, false NODE) :
+    //                d == depth-4 ? search<(Colors)-C, tree, B, A>(nextNodeType, b, *i, d-1, B(C*infinity), current) :
+                                   search<(Colors)-C, tree, B, A>(nextNodeType, b, *i, d-1, beta, current, ply+1, false NODE)) {
+                    ASSERT(current.m.data == i->data);
+                    Move first = good[0];
+                    good[0] = current.m;
+                    for (Move* j = good+1; j<i; ++j) {
+                        Move second = *j;
+                        *j = first;
+                        first = second;
                     }
-					break;
-				}
-			}
-			if (current >= infinity*C) break;
-			current.v = alpha.v;
-		}
+                    *i = first;
+                }
+                if (current >= beta.v) {
+                    if (d+2 >= depth) {
+                        /*betaNode = true;*/
+                    }
+                    break;
+                }
+            }
+            if (current >= infinity*C) break;
+            current.v = alpha.v;
+        }
 
-		for (Move* i = good; i<bad && current < beta.v; ++i) {
-		    NodeType nextNodeType;
-		    if (nodeType == NodeFailHigh)
-		        nextNodeType = NodeFailLow;
-		    else if (nodeType == NodeFailLow)
+        for (Move* i = good; i<bad && current < beta.v; ++i) {
+            NodeType nextNodeType;
+            if (nodeType == NodeFailHigh)
+                nextNodeType = NodeFailLow;
+            else if (nodeType == NodeFailLow)
                 nextNodeType = NodeFailHigh;
-		    else if (i == good)
-		        nextNodeType = NodePV;
-		    else
-		        nextNodeType = NodeFailHigh;
-		    //			if (!i->data) continue;
-			// Stay in leaf search if it already is or change to it if the next depth would be 0
-			if ((P == leaf && !threatening && !threatened) || P == vein || depth <= dMaxCapture + 1)
-				search<(Colors)-C, vein>(nextNodeType, b, *i, 0, beta.unshared(), current, ply+1 NODE);
-			else {
-	//            if (WorkThread::doStop) return false;
-				if (depth <= dMaxCapture + dMaxThreat + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/) {
-	/*
-					if (mm.data)
-						search<(Colors)-C, tree>(b, *i, 1, beta.unshared(), current);
-					else
-	*/
-						search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-1, beta.unshared(), current, ply+1 NODE);
-				}
-				else { // possible null search in tree or trunk
-                    int reduction = 0 &&
-                           depth > 4 + dMaxCapture + dMaxThreat
-                        && i > afterGoodCap+3
+            else if (i == good)
+                nextNodeType = NodePV;
+            else
+                nextNodeType = NodeFailHigh;
+            //          if (!i->data) continue;
+            // Stay in leaf search if it already is or change to it if the next depth would be 0
+            if ((P == leaf && i >= nonMate && !threatened) || P == vein || depth <= dMaxCapture + 1)
+                search<(Colors)-C, vein>(nextNodeType, b, *i, 0, beta.unshared(), current, ply+1, false NODE);
+            else {
+    //            if (WorkThread::doStop) return false;
+                if (depth <= dMaxCapture + dMaxThreat + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/) {
+    /*
+                    if (mm.data)
+                        search<(Colors)-C, tree>(b, *i, 1, beta.unshared(), current);
+                    else
+    */
+                        search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-1, beta.unshared(), current, ply+1, i < nonMate NODE);
+                }
+                else { // possible null search in tree or trunk
+                    int reduction = Options::reduction
+                        && depth > 2 + dMaxCapture + dMaxThreat
+//                        && i > afterGoodCap+3
                         && !i->isSpecial()
                         && !threatened
-                        && !threatening
+                        && i > nonMate
                         && !((fold(b.doublebits[i->to()] & b.kingIncoming[EI].d02) && i->piece() & Rook)
                            || (fold(b.doublebits[i->to()] & b.kingIncoming[EI].d13) && i->piece() & Bishop)
                            || (BoardBase::knightAttacks[i->to()] & b.template getPieces<-C,King>() && i->piece() == Knight));
                     if (i->isSpecial() && (bool[nPieces+1]){false, true, true, false, true, false, false}[i->piece() & 7]) {
                         reduction = 2+depth/2;
                     }
-					bool pruneNull = false;
-					if (depth > 2 + dMaxCapture + dMaxThreat && current.v != -infinity*C && (i != good || alphaNode)) {
-						B null;
-						null.v = current.v + C;
+                    bool pruneNull = false;
+                    if (depth > 2 + dMaxCapture + dMaxThreat + reduction && current.v != -infinity*C && (i != good || alphaNode)) {
+                        B null;
+                        null.v = current.v + C;
                         if (depth >= nullReduction + Options::splitDepth + dMaxCapture + dMaxThreat)
-                            search<C, P>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current, null, ply+2 NODE);
-						else if (depth > nullReduction+1+reduction + dMaxCapture + dMaxThreat)
-							search<C, tree>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current, null, ply+2 NODE);
-						else
-							search<C, leaf>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current, null, ply+2 NODE);
-						pruneNull = current >= null.v;
-						if (pruneNull) {
+                            search<C, P>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current, null, ply+2, false NODE);
+                        else if (depth > nullReduction+1+reduction + dMaxCapture + dMaxThreat)
+                            search<C, tree>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current, null, ply+2, false NODE);
+                        else
+                            search<C, leaf>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current, null, ply+2, i < nonMate NODE);
+                        pruneNull = current >= null.v;
+                        if (pruneNull) {
                             typename A::Base nalpha(current);
                             null.v = current.v + C;
                             if (depth > 2*(nullReduction+reduction) + dMaxCapture + dMaxThreat) {
-                                search<(Colors)-C, tree>(nextNodeType, b, *i, depth-2*(nullReduction+reduction), null, nalpha, ply+1 NODE);
+                                search<(Colors)-C, tree>(nextNodeType, b, *i, depth-2*(nullReduction+reduction), null, nalpha, ply+1, false NODE);
                                 pruneNull = current >= nalpha.v;
                             }
 
 //                            else
                                 //search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-2*nullReduction, beta, nalpha, ply+1, node);
 
-						}
-					}
-					if (!pruneNull) {
-						if (P == tree || alpha.isNotShared || depth < Options::splitDepth + dMaxCapture + dMaxThreat) {
-							bool research = true;
-							if (reduction) {
-//								reduction += (__bsrq(depth) + __bsrq(i-good))/4;
-								typename A::Base nalpha(current);
-								research = search<(Colors)-C, tree>(nextNodeType, b, *i, depth-reduction-1, beta, nalpha, ply+1 NODE);
-							}
-							if (research) {
-                                search<(Colors)-C, tree>(nextNodeType, b, *i, depth-1, beta, current, ply+1 NODE);
-	                        }
-						// Multi threaded search: After the first move try to find a free thread, otherwise do a normal
-						// search but stay in trunk. To avoid multithreading search at cut off nodes
-						// where it would be useless.
-						} else {
+                        }
+                    }
+                    if (!pruneNull) {
+                        if (P == tree || alpha.isNotShared || depth < Options::splitDepth + dMaxCapture + dMaxThreat) {
+                            bool research = true;
+                            if (reduction) {
+//                              reduction += (__bsrq(depth) + __bsrq(i-good))/4;
+                                typename A::Base nalpha(current);
+                                search<(Colors)-C, tree>(nextNodeType, b, *i, depth-reduction-1, beta, nalpha, ply+1, false NODE);
+                                research = current < nalpha.v;
+                            }
+                            if (research) {
+                                search<(Colors)-C, tree>(nextNodeType, b, *i, depth-1, beta, current, ply+1, false NODE);
+                            }
+                        // Multi threaded search: After the first move try to find a free thread, otherwise do a normal
+                        // search but stay in trunk. To avoid multithreading search at cut off nodes
+                        // where it would be useless.
+                        } else {
                             if (depth == Options::splitDepth + dMaxCapture + dMaxThreat) {
                                 if (i > good && WorkThread::canQueued(threadId, current.isNotReady())) {
                                     WorkThread::queueJob(threadId, new SearchJob<(Colors)-C, typename B::Base, A, ColoredBoard<C> >(nextNodeType, *this, b, *i, depth-1, beta.unshared(), current, ply+1, threadId, keys NODE));
                                 } else {
-                                    search<(Colors)-C, P>(nextNodeType, b, *i, depth-1, beta.unshared(), current, ply+1 NODE);
+                                    search<(Colors)-C, P>(nextNodeType, b, *i, depth-1, beta.unshared(), current, ply+1, false NODE);
                                 }
                             } else {
                                 if (i > good && WorkThread::canQueued(threadId, current.isNotReady())) {
                                     WorkThread::queueJob(threadId, new SearchJob<(Colors)-C,B,A, ColoredBoard<C> >(nextNodeType, *this, b, *i, depth-1, beta, current, ply+1, threadId, keys NODE));
                                 } else {
-                                    search<(Colors)-C, P>(nextNodeType, b, *i, depth-1, beta, current, ply+1 NODE);
+                                    search<(Colors)-C, P>(nextNodeType, b, *i, depth-1, beta, current, ply+1, false NODE);
                                 }
                             }
                             // alpha is shared here, it may have increased
@@ -633,20 +639,20 @@ nosort:
                                 current.v = alpha.v;
 
                         }
-					}
-				}
-			}
+                    }
+                }
+            }
 
-		}
+        }
 
-		// if there are queued jobs started from _this_ node, do them first
-		if (P == trunk) {
-			Job* job;
-			while((job = WorkThread::getJob(threadId))) job->job();
-	//        while(current.isNotReady() && (job = WorkThread::getChildJob(zd))) job->job();
-		}
+        // if there are queued jobs started from _this_ node, do them first
+        if (P == trunk) {
+            Job* job;
+            while((job = WorkThread::getJob(threadId))) job->job();
+    //        while(current.isNotReady() && (job = WorkThread::getChildJob(zd))) job->job();
+        }
 
-		current.join();
+        current.join();
 
     } while (false);
 
@@ -665,10 +671,10 @@ nosort:
         tt->store(st, stored);
     }
 #ifdef QT_GUI_LIB
-	if (node) {
-		node->bestEval = current.v;
-		node->nodes = stats.node - startnode;
-	}
+    if (node) {
+        node->bestEval = current.v;
+        node->nodes = stats.node - startnode;
+    }
 #endif
     return beta.max(current.v, m);
 }
@@ -743,9 +749,9 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
     PerftEntry subentry;
 
     if (pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
-		update(result, subentry.value);
-		return;
-	}
+        update(result, subentry.value);
+        return;
+    }
     Move list[256];
     Move* good = list + 192;
     Move* bad = good;

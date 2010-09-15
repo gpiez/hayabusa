@@ -48,6 +48,8 @@ public:
     template<bool> void generateCaptureMoves(Move* &list, Move* &bad) const;
     void generateCheckEvasions(Move* &list, Move* &bad) const;
     template<bool AbortOnFirst> bool generateMateMoves( Move** good = NULL) const;
+    bool generateSkewers( Move** good) const;
+    bool generateForks( Move** good) const;
     void generateMoves(Move*& good, Move*& bad) const;
     template<typename T>
     void doMove(T* next, Move m) const;

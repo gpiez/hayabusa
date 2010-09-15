@@ -27,7 +27,7 @@
 
 #ifndef NDEBUG
 #define ASSERT(x) do { if (!(x)) { \
-                std::cerr << std::endl << "Assertion" << #x << "failed." << std::endl\
+                std::cerr << std::endl << "Assertion " << #x << " failed." << std::endl\
                 <<  __FILE__ << __PRETTY_FUNCTION__ << __LINE__ << std::endl; \
                 asm("int3"); \
 } } while(0)
@@ -72,7 +72,9 @@ enum Phase { root, trunk, tree, mate, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
 
-enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut, NodeNull, NodeFutile, NodeMate, NodePresearch, NodeIllegal, NodeRepetition };
+enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile, NodeMate, NodePresearch, NodeIllegal, NodeRepetition };
+
+enum NodeFlag { Threatened = 1, Threatening = 2 };
 
 typedef uint64_t Key;
 typedef uint32_t PawnKey;

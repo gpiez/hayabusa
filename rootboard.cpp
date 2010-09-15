@@ -53,21 +53,22 @@ RootBoard::RootBoard(Console *c):
 
 std::string RootBoard::status(std::chrono::system_clock::time_point now, int score)
 {
+    unsigned d = depth - dMaxCapture - dMaxThreat;
     std::stringstream g;
     std::chrono::milliseconds t = std::chrono::duration_cast<std::chrono::milliseconds>(now-start);
 #ifdef QT_GUI_LIB
     QTextCodec *codec = QTextCodec::codecForName("UTF-8");
-    console->info(depth, t.count(), getStats().node, codec->toUnicode(Score<White>::str(score).c_str()), QString::fromStdString(tt->bestLine(*this)));
+    console->info(d, t.count(), getStats().node, codec->toUnicode(Score<White>::str(score).c_str()), QString::fromStdString(tt->bestLine(*this)));
 #endif
     if (Options::humanreadable) {
         g.imbue(std::locale("de_DE"));
-        g   << "d" << std::setfill('0') << std::setw(2) << depth << "; "
+        g   << "d" << std::setfill('0') << std::setw(2) << d << "; "
             << std::setfill(' ') << std::fixed << std::setprecision(3) << std::showpoint << std::setw(7) << t.count()/1000.0 << " s; "
             << std::setw(13) << getStats().node << " n; "
             << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t.count()*1000.0+1) << " Mnps; "
             << Score<White>::str(score) << " " << tt->bestLine(*this);
     } else {
-        g   << "info depth " << depth << " time " << (now-start).count()
+        g   << "info depth " << d << " time " << (now-start).count()
             << " nodes " << getStats().node << " pv " << tt->bestLine(*this)
             << " nps " << (1000*getStats().node)/(t.count()+1)
             << " score cp " << score;
@@ -101,21 +102,17 @@ const BoardBase& RootBoard::currentBoard() const {
         return currentBoard<Black>();
 }
 
-const BoardBase& RootBoard::setup(std::string fen) {
-    int info0 = fen.find(';')+1;
-    info0 = std::min(info0, (int)fen.find("bm"));
-    info0 = std::min(info0, (int)fen.find("id"));
-
-    if (info0>1) {
-        info = fen.substr(info0);
-        fen = fen.substr(0, info0);
-    }
-
+const BoardBase& RootBoard::setup(const std::string& str) {
+    static const StringList tokens = StringList() << "fen" << "bm" << "am" << "id";
+    auto tl = split("fen " + str, "; ").parse(tokens);
+    if (tl.find("fen") == tl.end()) return currentBoard();
+    info = tl["id"].join(" ");
 	std::string piecePlacement, activeColor, castling, enPassant;
 	int fiftyTemp = 0;
     iMove = 0;
-	std::istringstream str(fen);
-	str >> piecePlacement >> activeColor >> castling >> enPassant >> fiftyTemp >> iMove;
+//    std::cout << tl["fen"].join(" ") << std::endl;
+	std::istringstream ss(tl["fen"].join(" "));
+	ss >> piecePlacement >> activeColor >> castling >> enPassant >> fiftyTemp >> iMove;
 
 	switch ( activeColor[0] ) {
 	case 'b':
@@ -214,8 +211,19 @@ const BoardBase& RootBoard::setup(std::string fen) {
 		std::cerr << "error importing e. p. move " << enPassant << std::endl;
 
 	board.buildAttacks();
+    if (tl.find("bm") != tl.end()) {
+        Move m = findMove(tl["bm"].front());
+        if (m.data) {
+            std::cerr << "Move " << tl["bm"].front() << " not recognized" << std::endl;
+        }
+        bm = m;
+    }
 	history.init();
 	return board;
+}
+
+Move RootBoard::findMove(const std::string& ) const {
+    return Move(0,0,0);
 }
 
 void RootBoard::go(const std::map<std::string, StringList>& param )

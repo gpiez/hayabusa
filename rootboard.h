@@ -82,6 +82,7 @@ class RootBoard {
     int maxSearchDepth;
     int mate;
     int movetime;
+    Move bm;
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
@@ -108,9 +109,9 @@ public:
 	template<Colors C> const ColoredBoard<C>& currentBoard() const;
     const BoardBase& currentBoard() const;
 	void go(const std::map<std::string, StringList>&);
-	const BoardBase& setup(std::string fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
+	const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
 	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
-	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply
+	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, bool threatened
 #ifdef QT_GUI_LIB
 	    , NodeItem*
 #endif
@@ -128,5 +129,6 @@ public:
 	bool doMove(Move);
     std::string getInfo() const;
     template<Colors C> inline void clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const;
+    Move findMove(const std::string&) const;
 };
 #endif
