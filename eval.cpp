@@ -87,11 +87,11 @@ static inline uint64_t popcount2( uint64_t x )
 #define popcount2(x) __builtin_popcountll(x)
 #endif
 
-int CompoundScore::calc(const BoardBase& b, const Eval& ) const
+/*int CompoundScore::calc(const BoardBase& b, const Eval& ) const
 {
     return b.material >= endgameMaterial ? opening : endgame;
 }
-
+*/
 Eval::Eval() {
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
 //    pt->setSize(0x100000000);
@@ -706,18 +706,18 @@ int Eval::eval(const BoardBase& b) const {
     for (int p=Rook; p<=King; ++p) {
     	for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
     		unsigned sq=bit(x);
-    		value += getPS( p, sq).calc(b, *this);
+    		value += getPS( p, sq).calc(b.material);
     	}
     	for (uint64_t x=b.getPieces<Black>(p); x; x&=x-1) {
     		unsigned sq=bit(x);
-    		value += getPS(-p, sq).calc(b, *this);
+    		value += getPS(-p, sq).calc(b.material);
     	}
     }
-    int value2 = b.keyScore.score.calc(b, *this);
+    int value2 = b.keyScore.score.calc(b.material);
     if (value != value2) asm("int3");
 #endif
     pawns(b);
-    int e = b.keyScore.score.calc(b, *this) + pawns(b)
+    int e = b.keyScore.score.calc(b.material) + pawns(b)
            + mobility<White>(b)
            - mobility<Black>(b);
     if (b.material >= endgameMaterial)
@@ -728,4 +728,46 @@ int Eval::eval(const BoardBase& b) const {
 
 void Eval::ptClear() {
     pt->clear();
+}
+
+bool Eval::draw(const BoardBase& b, int& upperbound, int& lowerbound) const {
+    if (b.getPieces<White, Pawn>() | b.getPieces<Black, Pawn>()) {
+        if (b.material) return false;
+        if (popcount(b.getPieces<White, Pawn>() | b.getPieces<Black, Pawn>()) != 1) return false;
+        uint64_t p = b.getPieces<White, Pawn>() | b.getPieces<Black, Pawn>();
+        uint64_t win,lose;
+        int value;
+        if (b.getPieces<White, Pawn>()) {
+            win = b.getPieces<White,King>();
+            lose = b.getPieces<Black,King>();
+            value = infinity;
+        } else {
+            win = __builtin_bswap64(b.getPieces<Black,King>());
+            lose =__builtin_bswap64(b.getPieces<White,King>());
+            p = __builtin_bswap64(p);
+            value = -infinity;
+        }
+        int kwin = bit(win);
+        int klose = bit(lose);
+        int pwin = bit(p);
+        if ((pwin & 070) > (klose & 070) + 010) {
+            lowerbound = upperbound = value;
+            return true;
+        }
+
+    }
+    switch (b.material) {
+    case 0:
+    case 3:
+        upperbound = lowerbound = 0;
+        return true;
+    case 6:
+        if (b.getPieces<White,Bishop>() | b.getPieces<White,Knight>()
+            && b.getPieces<Black,Bishop>() | b.getPieces<Black,Knight>()) {
+            upperbound = lowerbound = 0;
+            return true;
+        }
+    default:
+        return false;
+    }
 }

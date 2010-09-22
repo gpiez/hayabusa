@@ -60,7 +60,11 @@ struct CompoundScore {
         opening /= x;
         endgame /= x;
     }
-    int calc(const BoardBase& b, const Eval&) const;
+    int calc(unsigned material) const {
+//        return material >= endgameMaterial ? opening : endgame;
+        int compound = *(int*)this;
+        return material >= endgameMaterial ? (int16_t)compound : compound >> 16;
+    }
     void operator = (int x) {
         opening = x;
         endgame = x;
@@ -136,7 +140,6 @@ class Eval {
     static void initTables();
     unsigned int attackHash( unsigned int  pos );
     int squareControl();
-
     template<Colors C> int mobility(const BoardBase&) const;
     template<Colors C> int attack(const BoardBase&) const;
     int pieces(const BoardBase&) const;
@@ -171,6 +174,7 @@ public:
         ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
         return zobristPieceSquare[piece+nPieces][square].pawnKey;
     }
+    bool draw(const BoardBase& b, int& upperbound, int& lowerbound) const;
     void ptClear();
 };
 
