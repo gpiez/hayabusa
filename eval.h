@@ -174,7 +174,8 @@ public:
         ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
         return zobristPieceSquare[piece+nPieces][square].pawnKey;
     }
-    bool draw(const BoardBase& b, int& upperbound, int& lowerbound) const;
+    template<Colors C>
+    void draw(const BoardBase& b, int& upperbound, int& lowerbound) const;
     void ptClear();
 };
 
