@@ -1,4 +1,4 @@
-*/
+/*
  * nodeitem.cpp
  *
  *  Created on: 09.04.2009

@@ -2326,6 +2326,14 @@ const char* testPositions[] = {
 "3r2k1/qp1r1pp1/p1nb3p/P2p1Q2/3P4/2R2NP1/1P1B1P1P/4R2K b - - am Nxd4; id \"SwissTest4_63 - Vergifteter Bauer\";",
 "3r2k1/pR2b1pp/2n5/5b2/8/q7/P1PBQPPP/4R1K1 b - - am Bf8; id \"SwissTest4_64 - Grundreihe\";",
 "r2q1rk/pp2ppb/3pn1pQ/3R4/2P3B/4BR/PP4PP/6K w - - bm Qxg6; id Larsen - Petrosian, Santa Barbara 1966",
+"/k/3p/p2P1p/P2P1P///K/ w - -;bm Kb1; id fine70",
+"8/1p5k/1P1p4/3p4/3Pp2p/2K1P2p/7P/8 w - - 0 1; id hash-02;bm Kb2;c0 Kb2! forces draw;",
+"k1N5/2p5/8/1P6/8/8/7K/8 w - - 0 1; id hash-03;bm Nb6+;",
+"1K6/8/2p4p/5p2/1P3P1k/4pP1p/4P2P/8 w - - 0 1; id hash-04;bm Ka8;c0 Study W.Bolanowski, 1.Ka8! wins;",
+"8/5p2/7k/6p1/5P1P/8/8/7K w - -;id hash-05;c0 Corresponding squares to the rescue! JAFM",
+"8/8/2p/k1p1K/p1P/P/8/8 w - -;bm Kf5;id hash-06;c0 F. Sackmann, matt in 25 Zuegen",
+"8/1k/p/p2p2K/P2P/8/8/8 w - -;bm Kf5;id hash-07;c0 J. Awerbach, Kf6 only draws",
+"6k/3p/3p/3P/4P1p/6P/8/K w - -;bm Kb1;id hash-08;c0 J. Awerbach",
 0
 };
 
