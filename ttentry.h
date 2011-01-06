@@ -96,7 +96,9 @@ struct PawnEntry {
 struct PerftEntry {
     union {
     Bitfield<0, 6, uint8_t> depth;
-    Bitfield<6, 58, Key> upperKey;
+    Bitfield<6, 56, Key> upperKey;
+    Bitfield<62, 1, uint64_t> loBound;
+    Bitfield<63, 1, uint64_t> hiBound;
     uint64_t data;
     };
     enum { upperShift = 6 };
