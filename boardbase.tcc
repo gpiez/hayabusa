@@ -22,10 +22,8 @@
 #include "boardbase.h"
 #include "rootboard.h"
 
-#ifdef BITBOARD
-
 inline __v2di BoardBase::build13Attack(const unsigned sq) const {
-	const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
+    const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
 
     __v2di maskedDirs = _mm_set1_epi64x(occupied1) & mask13x[sq];
     __v2di reverse = _mm_shuffle_epi8(maskedDirs, swap16);
@@ -40,7 +38,7 @@ inline __v2di BoardBase::build13Attack(const unsigned sq) const {
 inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
 
-    __v2di maskedDir02 = (_mm_set1_epi64x(occupied1)|b02) & mask02b[sq];
+    __v2di maskedDir02 = (_mm_set1_epi64x(occupied1)|b02) & mask02[sq].b;
     uint64_t d0 = _mm_cvtsi128_si64x(maskedDir02);
     uint64_t d2 = _mm_cvtsi128_si64x(_mm_unpackhi_epi64(maskedDir02,maskedDir02));
     d0 <<= 63-sq;
@@ -48,7 +46,7 @@ inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     uint64_t lo = rol(6, sq + __bsrq(d0));
     uint64_t hi = rol(6, sq + __bsrq(d2));
     maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
-    maskedDir02 &= mask02x[sq];
+    maskedDir02 &= mask02[sq].x;
     return maskedDir02;
 //    return _mm_set1_epi64x(att0Tab[attLen0[sq]][sq], att2Tab[attLen2[sq]][sq]);
 }
@@ -160,166 +158,4 @@ void BoardBase::buildPins() {
          & _mm_cvtsi128_si64(pins2);
 }
 
-#else
-
-namespace as {
-extern "C" {
-    void setPieceW(BoardBase*, int, int);
-    void setPieceB(BoardBase*, int, int);
-    void clrPieceAndCopyW(const BoardBase*, BoardBase*, int, int);
-    void clrPieceAndCopyB(const BoardBase*, BoardBase*, int, int);
-    void clrPieceW(BoardBase*, BoardBase*, int, int);
-    void clrPieceB(BoardBase*, BoardBase*, int, int);
-    void chgPieceW(BoardBase*, int, int, int);
-    void chgPieceB(BoardBase*, int, int, int);
-}
-}
-
-template<Colors C>
-void BoardBase::setPiece(uint8_t piece, uint8_t pos, const Eval& e) {
-    ASSERT(piece <= King && piece > 0);
-    ASSERT(pos < 64);
-    ASSERT(pieces[pos] == 0);
-    pieceList[C<0].add(piece, pos);
-//    PawnKey temp = keyScore.pawnKey;
-    keyScore.vector += e.getKSVector(C*piece, pos);
-//    keyScore.pawnKey = temp ^ rb.getPawnKey(C*piece, pos);
-    if (C==White)
-        as::setPieceW(this, C*piece, pos);
-    else
-        as::setPieceB(this, C*piece, pos);
-    for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > attLen[0][i]);
-    }
-    pieces[pos] = C*piece;
-}
-
-template<Colors C>
-void BoardBase::copyBoardClrPiece(const BoardBase* prev, uint8_t piece, uint8_t pos, const Eval& e) {
-    ASSERT(piece <= King && piece > 0);
-    ASSERT(pos < 64);
-    prev->copyPieces(this);
-    ASSERT(pieces[pos] == C*piece);
-    pieceList[C<0].sub(piece, pos);
-    keyScore.vector = prev->keyScore.vector - e.getKSVector(C*piece, pos);
-//    keyScore.pawnKey = prev->keyScore.pawnKey ^ rb.getPawnKey(C*piece, pos);
-    if (C==White)
-        as::clrPieceAndCopyW(prev, this, C*piece, pos);
-    else
-        as::clrPieceAndCopyB(prev, this, C*piece, pos);
-    for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > attLen[0][i]);
-    }
-    pieces[pos] = 0;
-}
-
-template<Colors C>
-void BoardBase::clrPiece(uint8_t piece, uint8_t pos, const Eval& e) {
-    ASSERT(piece <= King && piece > 0);
-    ASSERT(pos < 64);
-    ASSERT(pieces[pos] == C*piece);
-    pieceList[C<0].sub(piece, pos);
-//    PawnKey temp = keyScore.pawnKey;
-    keyScore.vector -= e.getKSVector(C*piece, pos);
-//    keyScore.pawnKey = temp ^ rb.getPawnKey(C*piece, pos);
-    if (C==White)
-        as::clrPieceW(this, this, C*piece, pos);
-    else
-        as::clrPieceB(this, this, C*piece, pos);
-    for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > attLen[0][i]);
-    }
-    pieces[pos] = 0;
-}
-
-template<Colors C>
-void BoardBase::chgPiece(uint8_t oldpiece, uint8_t piece, uint8_t pos, const Eval& e) {
-    ASSERT(piece <= King && piece > 0);
-    ASSERT(oldpiece < King && oldpiece > 0);
-    ASSERT(pos < 64);
-    ASSERT(pieces[pos] == -C*oldpiece);
-    pieceList[C>0].sub(oldpiece, pos);
-    pieceList[C<0].add(piece, pos);
-//    PawnKey temp = keyScore.pawnKey;
-    keyScore.vector += e.getKSVector(C*piece, pos) - e.getKSVector(-C*oldpiece, pos);
-//    keyScore.pawnKey = temp ^ rb.getPawnKey(C*piece, pos) ^ rb.getPawnKey(-C*oldpiece, pos);
-    if (C==White) {
-        as::chgPieceW(this, -C*oldpiece, C*piece, pos);
-    } else {
-        as::chgPieceB(this, -C*oldpiece, C*piece, pos);
-    }
-    for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > attLen[0][i]);
-    }
-    pieces[pos] = C*piece;
-}
-
-template<Colors C>
-void BoardBase::setPieceEst(uint8_t piece, uint8_t pos) {
-    ASSERT(piece <= King && piece > 0);
-    ASSERT(pos < 64);
-    ASSERT(pieces[pos] == 0);
-    pieceList[C<0].add(piece, pos);
-    if (C==White)
-        as::setPieceW(this, C*piece, pos);
-    else
-        as::setPieceB(this, C*piece, pos);
-    for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > attLen[0][i]);
-    }
-    pieces[pos] = C*piece;
-}
-
-template<Colors C>
-void BoardBase::copyBoardClrPieceEst(const BoardBase* prev, uint8_t piece, uint8_t pos) {
-    ASSERT(piece <= King && piece > 0);
-    ASSERT(pos < 64);
-    prev->copyPieces(this);
-    ASSERT(pieces[pos] == C*piece);
-    pieceList[C<0].sub(piece, pos);
-    if (C==White)
-        as::clrPieceAndCopyW(prev, this, C*piece, pos);
-    else
-        as::clrPieceAndCopyB(prev, this, C*piece, pos);
-    for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > attLen[0][i]);
-    }
-    pieces[pos] = 0;
-}
-
-template<Colors C>
-void BoardBase::clrPieceEst(uint8_t piece, uint8_t pos) {
-    ASSERT(piece <= King && piece > 0);
-    ASSERT(pos < 64);
-    ASSERT(pieces[pos] == C*piece);
-    pieceList[C<0].sub(piece, pos);
-    if (C==White)
-        as::clrPieceW(this, this, C*piece, pos);
-    else
-        as::clrPieceB(this, this, C*piece, pos);
-    for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > attLen[0][i]);
-    }
-    pieces[pos] = 0;
-}
-
-template<Colors C>
-void BoardBase::chgPieceEst(uint8_t oldpiece, uint8_t piece, uint8_t pos) {
-    ASSERT(piece <= King && piece > 0);
-    ASSERT(oldpiece < King && oldpiece > 0);
-    ASSERT(pos < 64);
-    ASSERT(pieces[pos] == -C*oldpiece);
-    pieceList[C>0].sub(oldpiece, pos);
-    pieceList[C<0].add(piece, pos);
-    if (C==White) {
-        as::chgPieceW(this, -C*oldpiece, C*piece, pos);
-    } else {
-        as::chgPieceB(this, -C*oldpiece, C*piece, pos);
-    }
-    for (unsigned int i = 0; i < 256; ++i) {
-        ASSERT(64 > attLen[0][i]);
-    }
-    pieces[pos] = C*piece;
-}
-#endif
 #endif
