@@ -51,23 +51,23 @@ struct BoardBase {
     uint64_t occupied[nColors];
     uint64_t occupied1;
     uint64_t fill;
-    uint64_t pins[nColors];						// +16
-    uint64_t attacks[nPieces+1][nColors];		// +32
+    uint64_t pins[nColors];                        // +16
+    uint64_t attacks[nPieces+1][nColors];        // +32
     uint64_t pieces[nPieces+1][nColors];        // +144
     union {
-    	struct {
+        struct {
         __v2di d02;
         __v2di d13;
-    	};
-    	uint64_t d[4];
-    } dpins[nColors],							//+256
-      datt[nColors],			 				//+288 sum of all directed attacks, for each of the 4 main directions
-      kingIncoming[nColors];					//+320
+        };
+        uint64_t d[4];
+    } dpins[nColors],                            //+256
+      datt[nColors],                             //+288 sum of all directed attacks, for each of the 4 main directions
+      kingIncoming[nColors];                    //+320
 
     struct MoveTemplateB {
-    	Move move;
-    	__v2di d13;
-    } bsingle[nColors][2+8+1];				    //704
+        Move move;
+        __v2di d13;
+    } bsingle[nColors][2+8+1];                    //704
 
     struct MoveTemplateR {
         Move move;
@@ -81,8 +81,11 @@ struct BoardBase {
 
     unsigned material;
 
-    static const __v2di mask02x[nSquares]; // 1 KByte  file : row, excluding square
-    static const __v2di mask02b[nSquares]; // 1 KByte  file : row, excluding square
+    struct XB {
+        __v2di x;
+        __v2di b;
+    };
+    static const XB mask02[nSquares];
     static const __v2di mask13x[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
     static const __v2di doublebits[nSquares]; // 1 KByte    1<<sq  : 1<<sq
     static const __v2di doublereverse[nSquares]; // 1 KByte    1<<sq  : 1<<sq
