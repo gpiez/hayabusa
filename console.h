@@ -57,7 +57,7 @@ class Console
 
 private
 #ifdef QT_GUI_LIB
-        slots
+    slots
 #endif
              :
     void privateSend(std::string);
