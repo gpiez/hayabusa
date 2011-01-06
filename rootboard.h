@@ -45,26 +45,37 @@ template<class T> class Result;
  * threads. Contains information about the time budget.
  */
 #ifdef QT_GUI_LIB
+
 class RootBoard: QObject {
-	Q_OBJECT
-    friend class TestRootBoard;
+    Q_OBJECT
+    
+private:    
     StatWidget* statWidget;
 signals:
-	void createModel();
+    void createModel();
 private:
+
 #else
+
 class RootBoard {
+
 #endif
-	struct {
-		ColoredBoard<White> wb;
-		ColoredBoard<Black> bb;
-	} boards[nMaxGameLength];
+
+    friend class TestRootBoard;
+
+public:
+    struct WBBoard {
+        ColoredBoard<White> wb;
+        ColoredBoard<Black> bb;
+    };
+private:
+    WBBoard boards[nMaxGameLength];
 
     static unsigned dMaxCapture;
     static unsigned dMaxThreat;
-	unsigned int timeBudget;
-	unsigned int movesToDo;
-	unsigned int iMove;				// current half move index of game
+    unsigned int timeBudget;
+    unsigned int movesToDo;
+    unsigned int iMove;                // current half move index of game
 
     int currentMoveIndex;
     int nMoves;
@@ -90,43 +101,43 @@ class RootBoard {
 
 public:
     Eval eval;
-	unsigned int depth;
-	TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt;
-	TranspositionTable<PerftEntry, 1, Key>* pt;
-	Console* console;
-	Colors color;
-	Move bestMove;
+    unsigned int depth;
+    TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt;
+    TranspositionTable<PerftEntry, 1, Key>* pt;
+    Console* console;
+    Colors color;
+    Move bestMove;
     bool infinite;
     uint64_t maxSearchNodes;
 
     RawScore estimatedError[nPieces*2+1][nSquares];
-	double avgE[nPieces*2+1][nSquares];
-	double avgE2[nPieces*2+1][nSquares];
-	double avgN[nPieces*2+1][nSquares];
+    double avgE[nPieces*2+1][nSquares];
+    double avgE2[nPieces*2+1][nSquares];
+    double avgN[nPieces*2+1][nSquares];
 
-	RootBoard(Console*);
+    RootBoard(Console*);
     void clearEE();
-	template<Colors C> const ColoredBoard<C>& currentBoard() const;
+    template<Colors C> const ColoredBoard<C>& currentBoard() const;
     const BoardBase& currentBoard() const;
-	void go(const std::map<std::string, StringList>&);
-	const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
-	template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
-	template<Colors C, Phase P, typename A, typename B, typename T>	bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, bool threatened
+    void go(const std::map<std::string, StringList>&);
+    const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
+    template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
+    template<Colors C, Phase P, typename A, typename B, typename T>    bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, bool threatened
 #ifdef QT_GUI_LIB
-	    , NodeItem*
+        , NodeItem*
 #endif
-	    );
-	void perft(unsigned int depth);
-	void divide(unsigned int depth);
-	template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
-	template<Colors C> uint64_t rootPerft(unsigned int depth);
-	template<Colors C> uint64_t rootDivide(unsigned int depth);
-	template<Colors C, Phase P, typename ResultType> void perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth);
-	void divide(unsigned int depth) const;
-	Stats getStats() const;
+        );
+    void perft(unsigned int depth);
+    void divide(unsigned int depth);
+    template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
+    template<Colors C> uint64_t rootPerft(unsigned int depth);
+    template<Colors C> uint64_t rootDivide(unsigned int depth);
+    template<Colors C, Phase P, typename ResultType> void perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth);
+    void divide(unsigned int depth) const;
+    Stats getStats() const;
     std::string getLine() const;
-	void ttClear();
-	bool doMove(Move);
+    void ttClear();
+    bool doMove(Move);
     std::string getInfo() const;
     template<Colors C> inline void clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const;
     Move findMove(const std::string&) const;
