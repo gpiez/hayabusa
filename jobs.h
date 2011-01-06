@@ -120,6 +120,7 @@ public:
         uint64_t n=rb.rootPerft<C>(depth);
         std::ostringstream temp;
         temp << n;
+        rb.console->send(temp.str());
         delete rb.pt;
     }
 };
@@ -136,6 +137,7 @@ public:
         uint64_t n=rb.rootDivide<C>(depth);
         std::ostringstream temp;
         temp << n;
+        rb.console->send(temp.str());
         delete rb.pt;
     }
 };
