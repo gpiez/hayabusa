@@ -21,18 +21,6 @@
 
 #define BITBOARD
 
-// to make kdevelop happy, which doesn't parse gcc command line arguments right
-
-#ifndef __GXX_EXPERIMENTAL_CXX0X__
-#define __GXX_EXPERIMENTAL_CXX0X__
-#endif
-#ifndef __SSE3__
-#define __SSE3__
-#endif
-#ifndef __SSSE3__
-#define __SSSE3__
-#endif
-
 extern "C" void __throw_bad_alloc();
 #include <x86intrin.h>
 #include <mutex>
