@@ -92,8 +92,8 @@ template<Colors C> struct Score: ScoreBase<C>
 
     Score() {};
     explicit Score (int a) {
-    	v = a;
-    	m.data = 0;
+        v = a;
+        m.data = 0;
     }
     explicit Score (const Score& a):
         ScoreBase<C>(a) {
@@ -101,7 +101,7 @@ template<Colors C> struct Score: ScoreBase<C>
     };
 
     Score<C>& unshared() {
-    	return *this;
+        return *this;
     }
 
     void join() const {};
@@ -138,7 +138,7 @@ template<Colors C> struct SharedScore: public Score<C>
 
 public:
     SharedScore():
-    	notReady(0) {}
+        notReady(0) {}
     ~SharedScore() {
         ASSERT(!notReady);
     }
@@ -162,7 +162,7 @@ public:
     }
 
     Score<C>& unshared() {
-    	return *(Score<C>*)this;
+        return *(Score<C>*)this;
     }
 
     void join();
