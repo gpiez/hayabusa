@@ -41,7 +41,7 @@ class WorkThread/*: public QThread*/ {
     static unsigned logWorkThreads;
     static unsigned nWorkThreads;
 
-    std::condition_variable starting;		//locked by shared runningMutex
+    std::condition_variable starting;        //locked by shared runningMutex
 
     std::mutex stoppedMutex;
     std::condition_variable stopped;
