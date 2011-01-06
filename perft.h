@@ -28,37 +28,37 @@
 template<Colors C, unsigned int Depth>
 struct Perft
 {
-	static uint64_t perft(const ColoredBoard<(Colors)-C>* prev, const Move m) {
-		const ColoredBoard<C> b(prev, m);
-		Move list[256];
+    static uint64_t perft(const ColoredBoard<(Colors)-C>* prev, const Move m) {
+        const ColoredBoard<C> b(prev, m);
+        Move list[256];
 
-	//	prev->doMove(&b, m);
+    //    prev->doMove(&b, m);
 
-		Move* end = b.generateMoves(list);
+        Move* end = b.generateMoves(list);
 
-		uint64_t n=0;
-		for (Move* i = list; i<end; ++i) {
-			n += Perft<(Colors)-C, Depth-1>::perft(&b, *i);
-		}
-		return n;
-	}
-	static uint64_t perft(const ColoredBoard<(Colors)-C>* prev, const Move m, unsigned int depth) {
-		if (depth == Depth)
-			return perft(prev, m);
-		else
-			return Perft<C, Depth-1>::perft(prev, m, depth);
-	}
+        uint64_t n=0;
+        for (Move* i = list; i<end; ++i) {
+            n += Perft<(Colors)-C, Depth-1>::perft(&b, *i);
+        }
+        return n;
+    }
+    static uint64_t perft(const ColoredBoard<(Colors)-C>* prev, const Move m, unsigned int depth) {
+        if (depth == Depth)
+            return perft(prev, m);
+        else
+            return Perft<C, Depth-1>::perft(prev, m, depth);
+    }
 };
 
 template<Colors C>
 struct Perft<C,1>
 {
-	static uint64_t perft(const ColoredBoard<(Colors)-C>* prev, const Move m, unsigned int=0) {
-		const ColoredBoard<C> b(prev, m);
-		Move list[256];
-		Move* end = b.generateMoves(list);
-		return end-list;
-	}
+    static uint64_t perft(const ColoredBoard<(Colors)-C>* prev, const Move m, unsigned int=0) {
+        const ColoredBoard<C> b(prev, m);
+        Move list[256];
+        Move* end = b.generateMoves(list);
+        return end-list;
+    }
 };
 
 #endif // PERFT_H
