@@ -30,10 +30,10 @@ struct Move {
 
     Move() = default;
     Move(unsigned int from, unsigned int to, unsigned int piece, unsigned int capture=0, bool special=false) {
-    	ASSERT(from < 64);
-    	ASSERT(to < 64);
-    	ASSERT(capture < King);
-    	ASSERT(piece <= King);
+        ASSERT(from < 64);
+        ASSERT(to < 64);
+        ASSERT(capture < King);
+        ASSERT(piece <= King);
         data = from + (to << 8) + (capture << 16) + (piece << 24) + (special << 31);
     }
     unsigned int from() const {
