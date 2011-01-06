@@ -44,7 +44,7 @@ class Table {
 public:
     typedef Sub<Entry, assoc> SubTable;
 private:
-    SubTable* table;		// TODO remove indirection level
+    SubTable* table;        // TODO remove indirection level
     uint64_t mask;
     std::mutex lock[nTTLocks];
     size_t size;
