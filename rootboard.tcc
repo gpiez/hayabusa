@@ -47,6 +47,7 @@
 #include "history.tcc"
 #include "repetition.tcc"
 #include "nodeitem.h"
+#include "eval.tcc"
 
 #ifdef QT_GUI_LIB
 #define NODE ,node
@@ -74,7 +75,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     if (b. template inCheck<C>())
         b.generateCheckEvasions(good, bad);
     else {
-        b.generateMoves(good, bad);
+        b.generateNonCap(good, bad);
         b.template generateCaptureMoves<true>(good, bad);
     }
 
@@ -149,7 +150,10 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         for (Move* currentMove = good+1; currentMove < bad; currentMove++) {
             currentMoveIndex++;
             bool pruneNull = false;
-            if (alpha.v != -infinity*C && depth > dMaxCapture+dMaxThreat+2) {
+            if (alpha.v != -infinity*C
+                && depth > dMaxCapture+dMaxThreat+2
+                && bad-good > maxMovesNull)
+            {
                 SharedScore<(Colors)-C> null;
                 SharedScore<C> nalpha(alpha);
                 null.v = alpha.v + C;
@@ -264,12 +268,11 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
     const ColoredBoard<C> b(prev, m, estimate.vector);
     if (m.capture()) {
         int upperbound, lowerbound;
-        if (eval.draw(b, upperbound, lowerbound)) {
-            current.max(lowerbound);
-            beta.max(upperbound);
-            if (current > beta.v)
-                return false;
-        }
+        eval.draw<C>(b, upperbound, lowerbound);
+        current.max(lowerbound);
+        beta.max(upperbound);
+        if (current > beta.v)
+            return false;
     }
     threatened |= b.template inCheck<C>();
     if (!threatened) {
@@ -452,7 +455,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 }
                 goto nosort;
             } else {
-                b.template generateMoves(good, bad);
+                b.template generateNonCap(good, bad);
                 afterGoodCap = good;
                 b.template generateCaptureMoves<true>(good, bad);
                 if (bad == good) {
@@ -591,7 +594,11 @@ nosort:
                     reduction = 2+depth/2;
                 }
                 bool pruneNull = false;
-                if (depth > 2 + dMaxCapture + dMaxThreat + reduction && current.v != -infinity*C && (i != good || alphaNode)) {
+                if (depth > 2 + dMaxCapture + dMaxThreat + reduction
+                    && current.v != -infinity*C
+                    && (i != good || alphaNode)
+                    && bad-good > maxMovesNull)
+                {
                     B null;
                     null.v = current.v + C;
                     if (depth >= nullReduction + Options::splitDepth + dMaxCapture + dMaxThreat)
@@ -693,7 +700,12 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
     const ColoredBoard<C>& b = currentBoard<C>();
     Move* good = moveList+192;
     Move* bad=good;
-    b.generateMoves(good, bad);
+    if (b.template inCheck<C>())
+        b.generateCheckEvasions(good, bad);
+    else {
+        b.template generateCaptureMoves<true>(good, bad);
+        b.generateNonCap(good, bad);
+    }
 
     if (depth <= 1)
         return bad-good;
@@ -712,7 +724,12 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
     const ColoredBoard<C>& b = currentBoard<C>();
     Move* good = moveList+192;
     Move* bad=good;
-    b.generateMoves(good, bad);
+    if (b.template inCheck<C>())
+        b.generateCheckEvasions(good, bad);
+    else {
+        b.template generateCaptureMoves<true>(good, bad);
+        b.generateNonCap(good, bad);
+    }
 
     uint64_t sum=0;
     for (Move* i = good; i<bad; ++i) {
@@ -762,7 +779,12 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
     Move list[256];
     Move* good = list + 192;
     Move* bad = good;
-    b.generateMoves(good, bad);
+    if (b.template inCheck<C>())
+        b.generateCheckEvasions(good, bad);
+    else {
+        b.template generateCaptureMoves<true>(good, bad);
+        b.generateNonCap(good, bad);
+    }
     if (depth == 1) {
         update(result, bad-good);
         return;
