@@ -43,14 +43,14 @@ public:
     ColoredBoard() = default;
     template<typename T> ColoredBoard(const T& prev, Move m, __v8hi est);
     inline __v8hi estimatedEval(const Move m, const Eval& rb) const;
-    template<bool> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned int cap) const;
+    template<bool> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned cap) const;
     static void initTables();
     template<bool> void generateCaptureMoves(Move* &list, Move* &bad) const;
     void generateCheckEvasions(Move* &list, Move* &bad) const;
     template<bool AbortOnFirst> bool generateMateMoves( Move** good = NULL) const;
     bool generateSkewers( Move** good) const;
     bool generateForks( Move** good) const;
-    void generateMoves(Move*& good, Move*& bad) const;
+    void generateNonCap(Move*& good, Move*& bad) const;
     template<typename T>
     void doMove(T* next, Move m) const;
     void doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t cep) const;
@@ -62,7 +62,7 @@ private:
 
     template<int R>
     uint64_t rank() const {
-    	return ::rank<C,R>();
+        return ::rank<C,R>();
     }
 };
 #endif /* COLOREDBOARD_H_ */
