@@ -115,14 +115,22 @@ void Console::getResult(std::string result) {
 }
 
 void Console::dataArrived() {
+#ifdef __WIN32__    
     notifier->setEnabled(false);
+#endif    
     std::string temp;
     std::getline(std::cin, temp);
+    if (temp[temp.length()-1] == 13) {
+        temp.erase(temp.length()-1);
+    }
     parse(temp);
-    QTimer::singleShot(50, this, SLOT(delayedEnable()));
+#ifdef __WIN32__
+    notifier->setEnabled(true);
+#endif    
+//    QTimer::singleShot(50, this, SLOT(delayedEnable()));
 }
 
-void Console::delayedEnable() {
+void Console::delayedEnable() { //TODO remove if not needed under windows
     notifier->setEnabled(true);
 }
 #else
@@ -213,6 +221,7 @@ void Console::divide(StringList cmds) {
 void Console::uci(StringList /*cmds*/) {
     send("id name hayabusa 0.1");
     send("author Gunther Piez");
+    send("uciok");
 }
 
 void Console::debug(StringList cmds) {
@@ -279,7 +288,7 @@ void Console::position(StringList cmds) {
 
     if (pos.count("moves")) {
         StringList moves = pos["moves"];
-                ; //TODO
+                ; //TODO impement me
     }
 }
 
