@@ -43,7 +43,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
     for ( uint64_t p = getAttacks<C,Knight>() & tobit; p; p &= p-1 ) {
         unsigned to = bit(p);
         for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1)
-        	*bad++ = Move(bit(f), to, Knight);
+            *bad++ = Move(bit(f), to, Knight);
     }
 
     /* Check for attacks from sliding pieces. Bishop/Rook/Queen attacks are
@@ -52,25 +52,25 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
     const __v2di zero = _mm_set1_epi64x(0);
     const __v2di d2 = _mm_set1_epi64x(tobit);
     for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
-		__v2di a13 = bs->d13;
+        __v2di a13 = bs->d13;
 #ifdef __SSE4_1__
-		if (!_mm_testz_si128(d2, a13)) {
+        if (!_mm_testz_si128(d2, a13)) {
 #else
         if (fold(d2 & a13)) {
 #endif
-			__v2di from2 = doublebits[bs->move.from()];
-			__v2di pin13 = from2 & dpins[CI].d13;
+            __v2di from2 = doublebits[bs->move.from()];
+            __v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__
-			pin13 = _mm_cmpeq_epi64(pin13, zero);
+            pin13 = _mm_cmpeq_epi64(pin13, zero);
 #else
             pin13 = _mm_cmpeq_epi32(pin13, zero);
             __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
             pin13 = pin13 & pin13s;
 #endif
-			pin13 = ~pin13 & d2 & a13;
-			for (uint64_t a=fold(pin13); a; a&=a-1) {
-				Move n;
-            	n.data = bs->move.data + Move(0, bit(a), 0).data;
+            pin13 = ~pin13 & d2 & a13;
+            for (uint64_t a=fold(pin13); a; a&=a-1) {
+                Move n;
+                n.data = bs->move.data + Move(0, bit(a), 0).data;
                 *bad++ = n;
             }
         }
@@ -123,9 +123,9 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
             pin02 = pin02 & pin02s;
             pin13 = pin13 & pin13s;
 #endif
-            pin02 = ~pin02 & d2 & a02;
-            pin13 = ~pin13 & d2 & a13;
-            for (uint64_t a=fold(pin02|pin13); a; a&=a-1) {
+            pin02 = ~pin02 & a02;
+            pin13 = ~pin13 & a13;
+            for (uint64_t a=fold((pin02|pin13) & d2); a; a&=a-1) {
                 Move n;
                 n.data = qs->move.data + Move(0, bit(a), 0).data;
                 *bad++ = n;
@@ -248,7 +248,7 @@ void ColoredBoard<C>::generateCheckEvasions(Move* &good, Move* &bad) const {
 }
 
 template<Colors C>
-void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
+void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
     unsigned int from, to;
     from = bit(getPieces<C, King>());
     for (uint64_t p = kingAttacks[0][from] & ~occupied1 & ~getAttacks<-C,All>(); p; p &= p-1)
@@ -260,6 +260,7 @@ void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
         to = from + C*dirOffsets[2];
         *--good = Move(from, to, Pawn);
     }
+    // pawn double steps
     for (uint64_t p = getPieces<C,Pawn>() & rank<2>() & shift<-C*8>(~occupied1) & shift<-C*16>(~occupied1) & getPins<C,2>(); p; p &= p-1) {
         from = bit(p);
         to = from + 2*C*dirOffsets[2];
@@ -295,12 +296,11 @@ void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
             Move n;
             unsigned to = bit(a);
             n.data = qs->move.data + Move(0, to, 0).data;
-            if (
-                   a & -a & ( getAttacks<-C,Pawn>()
-                                   | getAttacks<-C,Knight>()
-                                   |getAttacks<-C,Bishop>()
-                                   | getAttacks<-C,Rook>()
-                            )
+            if ( a & -a & ( getAttacks<-C,Pawn>()
+                          | getAttacks<-C,Knight>()
+                          | getAttacks<-C,Bishop>()
+                          | getAttacks<-C,Rook>()
+                          )
 /*                   || a & -a & getAttacks<-C,All>() &
                                  ~( getAttacks<C,Rook>()
                                   | getAttacks<C,Bishop>()
@@ -329,19 +329,19 @@ void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
             Move n;
             unsigned to = bit(a);
             n.data = rs->move.data + Move(0, to, 0).data;
-            if (               a & -a & ( getAttacks<-C,Pawn>()
-                                    | getAttacks<-C,Knight>()
-                                    | getAttacks<-C,Bishop>()
-                                    )
-            ) *bad++ = n;
+            if ( a & -a & ( getAttacks<-C,Pawn>()
+                          | getAttacks<-C,Knight>()
+                          | getAttacks<-C,Bishop>()
+                          )
+               ) *bad++ = n;
             else *--good = n;
         }
     }
 
     for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
-		__v2di a13 = bs->d13;
-		__v2di from2 = doublebits[bs->move.from()];
-		__v2di pin13 = from2 & dpins[CI].d13;
+        __v2di a13 = bs->d13;
+        __v2di from2 = doublebits[bs->move.from()];
+        __v2di pin13 = from2 & dpins[CI].d13;
 #ifdef __SSE4_1__
         pin13 = _mm_cmpeq_epi64(pin13, zero);
 #else
@@ -349,15 +349,13 @@ void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
         __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
         pin13 = pin13 & pin13s;
 #endif
-		pin13 = ~pin13 & a13;
-		for (uint64_t a=fold(pin13) & ~occupied1; a; a &= a-1 ) {
-			Move n;
+        pin13 = ~pin13 & a13;
+        for (uint64_t a=fold(pin13) & ~occupied1; a; a &= a-1 ) {
+            Move n;
             unsigned to = bit(a);
-			n.data = bs->move.data + Move(0, to, 0).data;
-            if (               a & -a & ( getAttacks<-C,Pawn>()
-                                    )
-            ) *bad++ = n;
-			else *--good = n;
+            n.data = bs->move.data + Move(0, to, 0).data;
+            if ( a & -a & ( getAttacks<-C,Pawn>() ) ) *bad++ = n;
+            else *--good = n;
         }
     }
 
@@ -391,17 +389,17 @@ void ColoredBoard<C>::generateMoves(Move* &good, Move* &bad) const {
      * since it must have been moved before and so our king would have been in check while the enemy was on move.
      * Additionally check if we have reached the 5th rank, else we might capture our own pawn,
      * if we made two moves in a row and the last move was a double step of our own pawn
-	 * Handle special case, where king, capturing pawn, captured pawn and horizontal
-	 * attacking piece are on one line. Although neither pawn is pinned, the capture
-	 * is illegal, since both pieces are removed and the king will be in check
+     * Handle special case, where king, capturing pawn, captured pawn and horizontal
+     * attacking piece are on one line. Although neither pawn is pinned, the capture
+     * is illegal, since both pieces are removed and the king will be in check
      */
     if (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & rank<5>() & cep.enPassant<<1 & getPins<C,2+C>())
-    	if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
-    		*--good = Move(bit(p), bit(p) + C*8-1, Pawn, Pawn, true);
+        if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
+            *--good = Move(bit(p), bit(p) + C*8-1, Pawn, Pawn, true);
 
     if (uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & rank<5>() & cep.enPassant>>1 & getPins<C,2-C>())
-    	if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
-    		*--good = Move(bit(p), bit(p) + C*8+1, Pawn, Pawn, true);
+        if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
+            *--good = Move(bit(p), bit(p) + C*8+1, Pawn, Pawn, true);
 }
 
 #endif /* GENERATEMOVES_TCC_ */
