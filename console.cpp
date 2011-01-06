@@ -153,6 +153,7 @@ void Console::privateSend(std::string str)
 {
     if (!Options::quiet)
         std::cout << str << std::endl;
+    answer = str;
 }
 
 void Console::parse(std::string str) {
@@ -167,38 +168,38 @@ void Console::parse(std::string str) {
 }
 
 void Console::tryMove(StringList cmds) {
-	std::string mstr = toLower(cmds[0]);
+    std::string mstr = toLower(cmds[0]);
     std::cerr << "tryMove " << mstr << std::endl;
-	if (mstr.length() < 4 || mstr.length() > 5) {
-		send("move '" + mstr + "' not understood");
-		return;
-	}
-	int piece;
-	if (mstr.length() == 5) {
-		switch (mstr[5]) {
-		case 'q':
-			piece = Queen;
-			break;
-		case 'r':
-			piece = Rook;
-			break;
-		case 'b':
-			piece = Bishop;
-			break;
-		case 'n':
-		case 'k':
-			piece = Knight;
-			break;
-		default:
-			send("move '" + mstr + "' not understood");
-			return;
-		}
-	} else
-		piece = 0;
-	Move m(mstr[0] -'a' + (mstr[1]-'1')*8, mstr[2]-'a' + (mstr[3]-'1')*8, piece);
-	if (board->doMove(m)) {
-		send("move '" + mstr + "' illegal");
-	}
+    if (mstr.length() < 4 || mstr.length() > 5) {
+        send("move '" + mstr + "' not understood");
+        return;
+    }
+    int piece;
+    if (mstr.length() == 5) {
+        switch (mstr[5]) {
+        case 'q':
+            piece = Queen;
+            break;
+        case 'r':
+            piece = Rook;
+            break;
+        case 'b':
+            piece = Bishop;
+            break;
+        case 'n':
+        case 'k':
+            piece = Knight;
+            break;
+        default:
+            send("move '" + mstr + "' not understood");
+            return;
+        }
+    } else
+        piece = 0;
+    Move m(mstr[0] -'a' + (mstr[1]-'1')*8, mstr[2]-'a' + (mstr[3]-'1')*8, piece);
+    if (board->doMove(m)) {
+        send("move '" + mstr + "' illegal");
+    }
 }
 
 void Console::perft(StringList cmds) {
