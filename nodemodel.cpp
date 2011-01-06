@@ -24,8 +24,8 @@
 #include "nodemodel.h"
 
 NodeModel::NodeModel( QObject* parent ):
-		QAbstractItemModel( parent ),
-		rootItem(NULL)
+        QAbstractItemModel( parent ),
+        rootItem(NULL)
 {
     init();
 }
@@ -38,80 +38,80 @@ void NodeModel::init() {
 
 NodeModel::~NodeModel()
 {
-	delete rootItem;
+    delete rootItem;
 }
 
 QModelIndex NodeModel::index( int row, int column, const QModelIndex& parent ) const
 {
-	NodeItem* parentItem;
+    NodeItem* parentItem;
 
-	if ( !parent.isValid() )
-		parentItem = rootItem;
-	else
-		parentItem = static_cast<NodeItem*>( parent.internalPointer() );
+    if ( !parent.isValid() )
+        parentItem = rootItem;
+    else
+        parentItem = static_cast<NodeItem*>( parent.internalPointer() );
 
-	const NodeItem* childItem = parentItem->child( row );
-	if ( childItem )
-		return createIndex( row, column, (void*)childItem );
-	else
-		return QModelIndex();
+    const NodeItem* childItem = parentItem->child( row );
+    if ( childItem )
+        return createIndex( row, column, (void*)childItem );
+    else
+        return QModelIndex();
 }
 
 QModelIndex NodeModel::parent( const QModelIndex &index ) const
 {
-	if ( !index.isValid() )
-		return QModelIndex();
+    if ( !index.isValid() )
+        return QModelIndex();
 
-	const NodeItem* childItem = static_cast<NodeItem*>( index.internalPointer() );
-	NodeItem* parentItem = childItem->getParent();
+    const NodeItem* childItem = static_cast<NodeItem*>( index.internalPointer() );
+    NodeItem* parentItem = childItem->getParent();
 
-	if ( parentItem == rootItem )
-		return QModelIndex();
+    if ( parentItem == rootItem )
+        return QModelIndex();
 
-	return createIndex( parentItem->row(), 0, ( void* )parentItem );
+    return createIndex( parentItem->row(), 0, ( void* )parentItem );
 }
 
 
 int NodeModel::rowCount( const QModelIndex &parent ) const
 {
-	const NodeItem *parentItem;
+    const NodeItem *parentItem;
 
-	if ( !parent.isValid() )
-		parentItem = rootItem;
-	else
-		parentItem = static_cast<NodeItem*>( parent.internalPointer() );
+    if ( !parent.isValid() )
+        parentItem = rootItem;
+    else
+        parentItem = static_cast<NodeItem*>( parent.internalPointer() );
 
-	return parentItem->childCount();
+    return parentItem->childCount();
 }
 
 int NodeModel::columnCount( const QModelIndex &/*parent*/ ) const
 {
-	return 1;
+    return 1;
 }
 
 Qt::ItemFlags NodeModel::flags( const QModelIndex &index ) const
 {
-	if ( !index.isValid() )
-		return Qt::ItemIsEnabled;
+    if ( !index.isValid() )
+        return Qt::ItemIsEnabled;
 
-	return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+    return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }
 
 QVariant NodeModel::data(const QModelIndex& index, int role) const
 {
-	if (role == Qt::ToolTipRole) {
-		return static_cast<NodeItem*>(index.internalPointer())->id;
-	}
-	return QVariant();
+    if (role == Qt::ToolTipRole) {
+        return static_cast<NodeItem*>(index.internalPointer())->id;
+    }
+    return QVariant();
 }
 
 QVariant NodeModel::headerData( int /*section*/, Qt::Orientation /*orientation*/, int /*role*/ ) const
 {
-	return QVariant();
+    return QVariant();
 }
 
 void NodeModel::newData(NodeItem* node) {
-	QModelIndex i = createIndex( node->row(), 0, ( void* )node );
-	emit(dataChanged( i, i));
+    QModelIndex i = createIndex( node->row(), 0, ( void* )node );
+    emit(dataChanged( i, i));
 }
 #endif
