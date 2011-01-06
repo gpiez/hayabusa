@@ -63,22 +63,22 @@ StatWidget::StatWidget(const RootBoard& rb):
 
     int pp = 0;
     for (int i=0; i<50; i++) {
-    	pal[pp++] = QColor(i,i,255-i);
+        pal[pp++] = QColor(i,i,255-i);
     }
     for (int i=0; i<50; i++) {
-    	pal[pp++] = QColor(50, 50+2*i, 205-2*i);
+        pal[pp++] = QColor(50, 50+2*i, 205-2*i);
     }
     for (int i=0; i<28; i++) {
-    	pal[pp++] = QColor(50+(i*50)/28,150-(i*50)/28,105-(i*5)/55);
+        pal[pp++] = QColor(50+(i*50)/28,150-(i*50)/28,105-(i*5)/55);
     }
     for (int i=0; i<28; i++) {
-    	pal[pp++] = QColor(100+(i*50)/28,100+(i*50)/28,100-i*2);
+        pal[pp++] = QColor(100+(i*50)/28,100+(i*50)/28,100-i*2);
     }
     for (int i=0; i<50; i++) {
-    	pal[pp++] = QColor(150+i, 150+i, 44-(i*44)/50);
+        pal[pp++] = QColor(150+i, 150+i, 44-(i*44)/50);
     }
     for (int i=0; i<50; i++) {
-    	pal[pp++] = QColor(150+i, 150-2*i, i);
+        pal[pp++] = QColor(150+i, 150-2*i, i);
     }
     ASSERT(pp==256);
 
@@ -99,8 +99,8 @@ StatWidget::StatWidget(const RootBoard& rb):
     tree = new NodeModel(this);
     treeView->setModel( tree );
 
-	NodeDelegate* delegate = new NodeDelegate;
-	treeView->setItemDelegate( delegate );
+    NodeDelegate* delegate = new NodeDelegate;
+    treeView->setItemDelegate( delegate );
 
     QTimer* t = new QTimer(this);
     connect(t, SIGNAL(timeout()), this, SLOT(update()));
@@ -152,7 +152,7 @@ QString number(T n) {
 
 void StatWidget::update()
 {
-	treeView->doItemsLayout();
+    treeView->doItemsLayout();
     updateBoard();
     Ui_Statsui::depth->setText("Depth: " + QString::number(rb.depth));
     setWindowTitle(QString::fromStdString(rb.getInfo()).left(20) + QString::fromStdString(rb.getLine()));
@@ -240,7 +240,7 @@ void StatWidget::updateBoard()
 }
 
 void StatWidget::emptyTree() {
-	tree->init();
+    tree->init();
 }
 
 #endif // QT_GUI_LIB
