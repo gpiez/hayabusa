@@ -79,6 +79,7 @@ enum NodeFlag { Threatened = 1, Threatening = 2 };
 typedef uint64_t Key;
 typedef uint32_t PawnKey;
 
+static const unsigned int maxMovesNull = 8;     // So a lone king with 8 possible moves will always inhibit null moves
 static const int maxRows = 1000;
 static const unsigned int maxThreadId = 255;
 static const unsigned int endgameMaterial = 30;
