@@ -26,28 +26,28 @@ class Console;
 #include <Qt/QtTest>
 
 class TestRootBoard: public QObject {
-	Q_OBJECT
-	RootBoard *b;
-	Console *c;
-	
+    Q_OBJECT
+    RootBoard *b;
+    Console *c;
+
 private slots:
-	void initTestCase();
-	void setPiece();
-	void pieceList();
-	void generateCaptures();
-	void perft();
+    void initTestCase();
+    void setPiece();
+    void pieceList();
+    void generateCaptures();
+    void perft();
 };
 
 class TestBoardBase: public QObject {
-	Q_OBJECT
-	RootBoard *b;
-	Console *c;
+    Q_OBJECT
+    RootBoard *b;
+    Console *c;
 
 private slots:
 /*	void setPiece();
-	void pieceList();
-	void generateCaptures();
-	void initTestCase();*/
+    void pieceList();
+    void generateCaptures();
+    void initTestCase();*/
 };
 
 #endif /* TEST_H_ */
