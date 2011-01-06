@@ -7,11 +7,11 @@ endif(COMMAND cmake_policy)
 PROJECT (hayabusa)
 
 if (NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
-enable_language(ASM-FASM)
+#enable_language(ASM-FASM)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -pipe")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=core2 -fno-exceptions -Wuninitialized")
@@ -23,7 +23,7 @@ FIND_PACKAGE(PrecompiledHeaders)
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
-set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
+#set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
 SET(common_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp testpositions.cpp
     move.cpp testgame.cpp stringlist.cpp)
 
@@ -45,15 +45,15 @@ SET(hayabusa_RCCS hayabusa.qrc)
 SET(test_SRCS test.cpp)
 SET(test_MOC_H test.h ${hayabusa_MOC_H})
 
-SET(offsets_SRCS offsets.cpp)
-set_source_files_properties(offsets.cpp PROPERTIES COMPILE_FLAGS "-Wno-invalid-offsetof")
-add_executable(offsets ${offsets_SRCS})
+#SET(offsets_SRCS offsets.cpp)
+#set_source_files_properties(offsets.cpp PROPERTIES COMPILE_FLAGS "-Wno-invalid-offsetof")
+#add_executable(offsets ${offsets_SRCS})
 
-set_source_files_properties(offsets.inc PROPERTIES generated true)
-add_custom_command(
-    OUTPUT offsets.inc
-    COMMAND offsets > offsets.inc
-    DEPENDS ${offsets_SRCS} offsets boardbase.h)
+#set_source_files_properties(offsets.inc PROPERTIES generated true)
+#add_custom_command(
+#    OUTPUT offsets.inc
+#    COMMAND offsets > offsets.inc
+#    DEPENDS ${offsets_SRCS} offsets boardbase.h)
 
 INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -69,15 +69,19 @@ IF (USE_QTGUI)
     set_source_files_properties(test.cpp PROPERTIES COMPILE_FLAGS "-DQT_TEST")
     TARGET_LINK_LIBRARIES (hayabusa ${QT_LIBRARIES})
     TARGET_LINK_LIBRARIES (test ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
-    target_link_libraries(offsets ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
+#    target_link_libraries(offsets ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
 ELSE(USE_QTGUI)
     FIND_PACKAGE(Threads REQUIRED)
     ADD_EXECUTABLE(hayabusa ${common_SRCS} ${hayabusa_SRCS})
     TARGET_LINK_LIBRARIES (hayabusa ${CMAKE_THREAD_LIBS_INIT})
 ENDIF(USE_QTGUI)
 
-add_precompiled_header(hayabusa pch.h)
-
+if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
+  add_precompiled_header(hayabusa pch.h)
+endif()
+if(${CMAKE_SYSTEM_NAME} STREQUAL Windows)
+  add_definitions(-D_GLIBCXX_HAS_GTHREADS)
+endif()
 find_library(HUGE_PAGES hugetlbfs)
 
 if(HUGE_PAGES)
@@ -86,6 +90,9 @@ if(HUGE_PAGES)
     if (HUGE_MEM)
         ADD_DEFINITIONS(-DHAVE_HUGE_PAGES)
         TARGET_LINK_LIBRARIES(hayabusa hugetlbfs dl)
+        IF (USE_QTGUI)
+            TARGET_LINK_LIBRARIES(test hugetlbfs dl)
+        ENDIF(USE_QTGUI)    
         find_path(HUGETLBFS_LD_PATH ld.hugetlbfs PATH_SUFFIXES share/libhugetlbfs)
         if(HUGE_BDT)
             SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -B ${HUGETLBFS_LD_PATH} -Wl,-hugetlbfs-align")
