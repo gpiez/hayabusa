@@ -33,26 +33,26 @@ class NodeModel;
 
 class StatWidget: public QWidget, private Ui::Statsui
 {
-	Q_OBJECT
+    Q_OBJECT
 
     int iRow;
-	const RootBoard& rb;
+    const RootBoard& rb;
     QImage wPieces[6], bPieces[6];
-	QColor pal[256];
-	QLabel* minipm[2][7];
+    QColor pal[256];
+    QLabel* minipm[2][7];
 private slots:
-	void update();
+    void update();
     void updateBoard();
-	void updateInfo(int, uint64_t, uint64_t, QString, QString);
+    void updateInfo(int, uint64_t, uint64_t, QString, QString);
 
 public:
-	NodeModel* volatile tree;
-	void setMoveTree();
-	StatWidget(const RootBoard&);
-	virtual ~StatWidget();
+    NodeModel* volatile tree;
+    void setMoveTree();
+    StatWidget(const RootBoard&);
+    virtual ~StatWidget();
 
 public slots:
-	void emptyTree();
+    void emptyTree();
 };
 #endif // QT_GUI_LIB
 #endif // STATWIDGET_H
