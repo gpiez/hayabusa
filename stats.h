@@ -28,26 +28,26 @@
 // This is thread local defined in workthread.cpp, because thread local storage
 // speeds up the program by a large factor.
 union Stats {
-	struct {
-	uint64_t	node;
-	uint64_t	internalNode;
-	uint64_t	eval;
-	uint64_t	ttuse;
-	uint64_t	ttfree;
-	uint64_t	tthit;
-	uint64_t	ttalpha;
-	uint64_t	ttbeta;
-	uint64_t	ttoverwrite;
-	uint64_t	ttinsufficient;
-	uint64_t	ttstore;
-	uint64_t	leafcut;
-	uint64_t	pthit;
-	uint64_t	ptmiss;
-	uint64_t	ptuse;
+    struct {
+    uint64_t    node;
+    uint64_t    internalNode;
+    uint64_t    eval;
+    uint64_t    ttuse;
+    uint64_t    ttfree;
+    uint64_t    tthit;
+    uint64_t    ttalpha;
+    uint64_t    ttbeta;
+    uint64_t    ttoverwrite;
+    uint64_t    ttinsufficient;
+    uint64_t    ttstore;
+    uint64_t    leafcut;
+    uint64_t    pthit;
+    uint64_t    ptmiss;
+    uint64_t    ptuse;
     uint64_t    ptcollision;
     uint64_t    jobs;
-	};
-	uint64_t data[];
+    };
+    uint64_t data[];
 };
 
 extern __thread Stats stats;
