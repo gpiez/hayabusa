@@ -151,6 +151,9 @@ void Console::poll() {
     while(true) {
         std::string str;
         std::getline(std::cin, str);
+        if (temp[temp.length()-1] == 13) {
+            temp.erase(temp.length()-1);
+        }
         std::cerr << str << std::endl;
         parse(str);
     }
@@ -302,6 +305,9 @@ void Console::go(StringList cmds) {
 }
 
 void Console::stop(StringList /*cmds*/) {
+    board->stop(true);
+    WorkThread::stopAll();
+    board->stop(false);
 }
 
 void Console::ponderhit(StringList /*cmds*/) {

@@ -51,11 +51,11 @@ RootBoard::RootBoard(Console *c):
     #endif
 }
 
-std::string RootBoard::status(std::chrono::system_clock::time_point now, int score)
+std::string RootBoard::status(system_clock::time_point now, int score)
 {
     unsigned d = depth - dMaxCapture - dMaxThreat;
     std::stringstream g;
-    std::chrono::milliseconds t = std::chrono::duration_cast<std::chrono::milliseconds>(now-start);
+    milliseconds t = duration_cast<milliseconds>(now-start);
 #ifdef QT_GUI_LIB
     QTextCodec *codec = QTextCodec::codecForName("UTF-8");
     console->info(d, t.count(), getStats().node, codec->toUnicode(Score<White>::str(score).c_str()), QString::fromStdString(tt->bestLine(*this)));
@@ -273,6 +273,10 @@ void RootBoard::go(const std::map<std::string, StringList>& param )
     else
         job = new RootSearchJob<Black>(*this);
     WorkThread::findFree()->queueJob(0U, job);
+}
+
+void RootBoard::stop(bool flag) {
+    stopSearch = flag;
 }
 
 void RootBoard::perft(unsigned int depth) {

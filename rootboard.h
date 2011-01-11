@@ -23,6 +23,7 @@
 #include <pch.h>
 #endif
 
+#include <chrono>
 #include "eval.h"
 #include "coloredboard.h"
 #include "result.h"
@@ -35,6 +36,7 @@
 #include "stringlist.h"
 #include "repetition.h"
 
+using namespace std::chrono;
 class WorkThread;
 class Console;
 template<class T, unsigned int U, class U> class TranspositionTable;
@@ -84,7 +86,7 @@ private:
     unsigned fiftyMovesRoot;
     History history;        // FIXME probably needs to be thread local
     std::string info;
-    std::chrono::system_clock::time_point start;
+    system_clock::time_point start;
     int wtime;
     int btime;
     int winc;
@@ -94,10 +96,12 @@ private:
     int mate;
     int movetime;
     Move bm;
+    volatile bool stopSearch;
+    system_clock::time_point hardBudget;
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
-    std::string status(std::chrono::system_clock::time_point, int);
+    std::string status(system_clock::time_point, int);
 
 public:
     Eval eval;
@@ -120,6 +124,7 @@ public:
     template<Colors C> const ColoredBoard<C>& currentBoard() const;
     const BoardBase& currentBoard() const;
     void go(const std::map<std::string, StringList>&);
+    void stop(bool);
     const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
     template<Colors C, Phase P, typename A, typename B, typename T>    bool search(NodeType, const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, bool threatened

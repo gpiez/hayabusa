@@ -28,7 +28,6 @@
 #include <pch.h>
 #endif
 
-#include <chrono>
 #include <unistd.h>
 
 #include "rootboard.h"
@@ -57,7 +56,6 @@
 
 template<Colors C>
 Move RootBoard::rootSearch(unsigned int endDepth) {
-    using namespace std::chrono;
     start = system_clock::now();
 #ifdef QT_GUI_LIB
     while (!statWidget->tree);
@@ -80,7 +78,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     }
 
     milliseconds time( C==White ? wtime : btime );
-    system_clock::time_point softBudget, hardBudget;
+    system_clock::time_point softBudget;
     if (movestogo > 0) {
         softBudget = start + time/(2*movestogo);
         hardBudget = start + (2*time)/(movestogo+1);
@@ -90,7 +88,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 
     SharedScore<C> alpha0; alpha0.v = -infinity*C;
     nMoves = bad-good;
-    for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes; depth++) {
+    for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes && !stopSearch; depth++) {
 #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
@@ -147,7 +145,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         }
         beta2.v = alpha.v + Eval::parameters.aspiration1*C;
 
-        for (Move* currentMove = good+1; currentMove < bad; currentMove++) {
+        for (Move* currentMove = good+1; currentMove < bad && !stopSearch; currentMove++) {
             currentMoveIndex++;
             bool pruneNull = false;
             if (alpha.v != -infinity*C
@@ -186,7 +184,6 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             if (alpha >= infinity*C) break;
             if (!infinite) {
                 system_clock::time_point now = system_clock::now();
-                if (now > hardBudget) break;
                 if (now > softBudget && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
             }
         }
@@ -196,6 +193,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         if (alpha <= -infinity*C) break;
         alpha0.v = alpha.v;
     }
+    stopSearch = false;
     return bestMove;
 }
 /*
@@ -249,6 +247,15 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
     alone increase the speed by ~2%.
 */
     if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
+
+    if (P != vein) {
+        system_clock::time_point now = system_clock::now();
+        if (now > hardBudget) {
+            stopSearch = true;
+        }
+        if (stopSearch)
+            return false;
+    }
 
     RawScore& eE = prev.CI == 0 ? estimatedError[nPieces + (m.piece()&7)][m.to()] : estimatedError[nPieces - (m.piece()&7)][m.to()];
 
