@@ -34,10 +34,10 @@ unsigned RootBoard::dMaxCapture = 12;
 unsigned RootBoard::dMaxThreat = 8;
 
 RootBoard::RootBoard(Console *c):
-    timeBudget(300000),
-    movesToDo(40),
     iMove(0),
     currentPly(0),
+    wtime(300000),
+    btime(300000),
     movestogo(0),
     console(c),
     color(White)

@@ -75,8 +75,6 @@ private:
 
     static unsigned dMaxCapture;
     static unsigned dMaxThreat;
-    unsigned int timeBudget;
-    unsigned int movesToDo;
     unsigned int iMove;                // current half move index of game
 
     int currentMoveIndex;

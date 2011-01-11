@@ -78,13 +78,13 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     }
 
     milliseconds time( C==White ? wtime : btime );
+    milliseconds inc( C==White ? winc : binc );
     system_clock::time_point softBudget;
-    if (movestogo > 0) {
-        softBudget = start + time/(2*movestogo);
-        hardBudget = start + (2*time)/(movestogo+1);
-    } else {
-        softBudget = hardBudget = start + time;
-    }
+    if (movestogo == 0)
+        movestogo = 40;
+    
+    softBudget = start + time/(2*movestogo) + inc/2;
+    hardBudget = start + (2*time + 2*(movestogo-1)*inc )/(movestogo+1);
 
     SharedScore<C> alpha0; alpha0.v = -infinity*C;
     nMoves = bad-good;
@@ -194,6 +194,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         alpha0.v = alpha.v;
     }
     stopSearch = false;
+    console->send("bestmove "+bestMove.string());
     return bestMove;
 }
 /*
