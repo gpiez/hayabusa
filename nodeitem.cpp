@@ -18,7 +18,9 @@ int NodeItem::nNodes = 0;
 NodeItem::NodeItem( const NodeData& nodeData_ ):
         NodeData( nodeData_ ),
         parent( 0 )
-{}
+{
+    nNodes = 0; //TODO increase/decrease counter in ctor/dtor
+}
 
 NodeItem::NodeItem( const NodeData& nodeData_, NodeItem* parent_ ):
         NodeData( nodeData_ ),
