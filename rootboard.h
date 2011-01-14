@@ -120,6 +120,7 @@ public:
     RootBoard(Console*);
     void clearEE();
     template<Colors C> const ColoredBoard<C>& currentBoard() const;
+    template<Colors C> ColoredBoard<(Colors)-C>& nextBoard();
     const BoardBase& currentBoard() const;
     void go(const std::map<std::string, StringList>&);
     void stop(bool);
@@ -141,6 +142,7 @@ public:
     std::string getLine() const;
     void ttClear();
     bool doMove(Move);
+    template<Colors C> bool doMove(Move);
     std::string getInfo() const;
     template<Colors C> inline void clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const;
     Move findMove(const std::string&) const;
