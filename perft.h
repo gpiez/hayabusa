@@ -32,8 +32,6 @@ struct Perft
         const ColoredBoard<C> b(prev, m);
         Move list[256];
 
-    //    prev->doMove(&b, m);
-
         Move* end = b.generateMoves(list);
 
         uint64_t n=0;
