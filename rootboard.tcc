@@ -47,6 +47,7 @@
 #include "repetition.tcc"
 #include "nodeitem.h"
 #include "eval.tcc"
+#include "movelist.h"
 
 #ifdef QT_GUI_LIB
 #define NODE ,node
@@ -67,15 +68,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     fiftyMovesRoot = b.fiftyMoves;
     store(b.getZobrist(), ply);
     stats.node++;
-    Move moveList[maxMoves];
-    Move* good = moveList+goodMoves;
-    Move* bad=good;
-    if (b. template inCheck<C>())
-        b.generateCheckEvasions(good, bad);
-    else {
-        b.generateNonCap(good, bad);
-        b.template generateCaptureMoves<true>(good, bad);
-    }
+    MoveList ml(b);
 
     milliseconds time( C==White ? wtime : btime );
     milliseconds inc( C==White ? winc : binc );
@@ -87,8 +80,9 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     hardBudget = start + (2*time + 2*(movestogo-1)*inc )/(movestogo+1);
 
     SharedScore<C> alpha0; alpha0.v = -infinity*C;
-    nMoves = bad-good;
+    nMoves = ml.count();
     for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes && !stopSearch; depth++) {
+        ml.begin();
 #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
@@ -111,13 +105,13 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         if (alpha0.v != -infinity*C) {
             alpha2.v = alpha0.v - Eval::parameters.aspiration0*C;
             beta2.v  = alpha0.v + Eval::parameters.aspiration1*C;
-            if (!search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha2, ply+1, false NODE)) {
+            if (!search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta2, alpha2, ply+1, false NODE)) {
                 // Fail-Low at first root, research with low bound = alpha and high bound = old low bound
                 now = system_clock::now();
                 console->send(status(now, alpha2.v) + " upperbound");
                 if (!infinite && now > hardBudget) break;   //TODO check if trying other moves first is an better option
                 beta2.v = alpha2.v;
-                search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta2, alpha, ply+1, false NODE);
+                search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta2, alpha, ply+1, false NODE);
             } else if (alpha2 >= beta2.v) {
                 // Fail-High at first root, research with high bound = beta and low bound = old high bound
                 now = system_clock::now();
@@ -127,14 +121,14 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                     if (now > softBudget && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
                 }
                 alpha.v = alpha2.v;
-                search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta, alpha, ply+1, false NODE);
+                search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta, alpha, ply+1, false NODE);
             } else {
                 alpha.v = alpha2.v;
             }
         } else {
-            search<(Colors)-C, trunk>(NodePV, b, *good, depth-1, beta, alpha, ply+1, false NODE);
+            search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta, alpha, ply+1, false NODE);
         }
-        bestMove = *good;
+        bestMove = *ml;
         now = system_clock::now();
         console->send(status(now, alpha.v));
 
@@ -145,32 +139,31 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         }
         beta2.v = alpha.v + Eval::parameters.aspiration1*C;
 
-        for (Move* currentMove = good+1; currentMove < bad && !stopSearch; currentMove++) {
+        for (++ml; ml.isValid(); ++ml) {
             currentMoveIndex++;
             bool pruneNull = false;
             if (alpha.v != -infinity*C
                 && depth > dMaxCapture+dMaxThreat+2
-                && bad-good > maxMovesNull)
+                && ml.count() > maxMovesNull)
             {
                 SharedScore<(Colors)-C> null;
                 SharedScore<C> nalpha(alpha);
                 null.v = alpha.v + C;
                 if (depth > nullReduction+1 + dMaxThreat + dMaxCapture)
-                    search<C, trunk>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
+                    search<C, trunk>(NodeFailHigh, b, *ml, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
                 else
-                    search<C, leaf>(NodeFailHigh, b, *currentMove, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
+                    search<C, leaf>(NodeFailHigh, b, *ml, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
                 pruneNull = alpha >= null.v;
                 if (pruneNull && depth > 2*(nullReduction) + dMaxCapture + dMaxThreat) {
                     null.v = alpha.v + C;
-                    search<(Colors)-C, trunk>(NodeFailHigh, b, *currentMove, depth-2*(nullReduction), null, nalpha, ply+1, false NODE);
+                    search<(Colors)-C, trunk>(NodeFailHigh, b, *ml, depth-2*(nullReduction), null, nalpha, ply+1, false NODE);
                     pruneNull = alpha >= nalpha.v;
                 }
             }
             if (!pruneNull) {
-                if (search<(Colors)-C, trunk>(NodeFailHigh, b, *currentMove, depth-1, beta2, alpha, ply+1, false NODE)) {
-                    bestMove = *currentMove;
-                    memmove(good+1, good, sizeof(Move) * (currentMove-good));
-                    *good = bestMove;
+                if (search<(Colors)-C, trunk>(NodeFailHigh, b, *ml, depth-1, beta2, alpha, ply+1, false NODE)) {
+                    bestMove = *ml;
+                    ml.currentToFront();
                     if (alpha >= beta2.v) {
                         now = system_clock::now();
                         console->send(status(now, alpha.v) + " lowerbound");
@@ -249,7 +242,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 */
     if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
 
-    if (P != vein) {
+    if (P != vein && !infinite) {
         system_clock::time_point now = system_clock::now();
         if (now > hardBudget) {
             stopSearch = true;
