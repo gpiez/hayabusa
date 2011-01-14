@@ -46,7 +46,7 @@ QModelIndex NodeModel::index( int row, int column, const QModelIndex& parent ) c
     NodeItem* parentItem;
 
     if ( !parent.isValid() )
-        parentItem = rootItem;
+        parentItem = rootItem;//TODO sanity checks for rootItem == 0
     else
         parentItem = static_cast<NodeItem*>( parent.internalPointer() );
 
