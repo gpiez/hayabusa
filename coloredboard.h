@@ -43,7 +43,6 @@ public:
     ColoredBoard() = default;
     template<typename T> ColoredBoard(const T& prev, Move m, __v8hi est);
     inline __v8hi estimatedEval(const Move m, const Eval& rb) const;
-    template<bool> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned cap) const;
     static void initTables();
     template<bool> void generateCaptureMoves(Move* &list, Move* &bad) const;
     void generateCheckEvasions(Move* &list, Move* &bad) const;
@@ -51,12 +50,12 @@ public:
     bool generateSkewers( Move** good) const;
     bool generateForks( Move** good) const;
     void generateNonCap(Move*& good, Move*& bad) const;
-    template<typename T>
-    void doMove(T* next, Move m) const;
+    void doMove(BoardBase* next, Move m) const;
     void doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t cep) const;
     Key getZobrist() const;
 private:
     void generateTargetMove(Move* &good, Move* &bad, uint64_t tobit) const;
+    template<bool> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned cap) const;
     uint64_t perft(unsigned int depth) const;
     void divide(unsigned int depth) const;
 
