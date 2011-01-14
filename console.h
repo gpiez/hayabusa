@@ -40,7 +40,7 @@ class Console
     friend class TestRootBoard;
     void perft(StringList);
     void divide(StringList);
-    void tryMove(StringList);
+    void tryMove(std::string);
     void quit(StringList);
     void ponderhit(StringList);
     void stop(StringList);
