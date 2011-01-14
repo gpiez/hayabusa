@@ -23,20 +23,25 @@
 #include "boardbase.tcc"
 #include "rootboard.h"
 
-/* Execute move m from position prev, both of the previous (opposite) color
- * to construct a board with C to move
+/*
+ * Construct a board with color C to move
+ * with executing move m from a given position prev
  */
 template<Colors C>
 template<typename T>
 ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
     prev.doMove(this, m);
+    if (prev.CI == (unsigned)CI)
+        fiftyMoves = 0;
     keyScore.vector = est;
     buildAttacks();
 }
-
+/*
+ * Execute a move and put result in next
+ */
 template<Colors C>
-template<typename T>
-void ColoredBoard<C>::doMove(T* next, Move m) const {
+//template<typename T>
+void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
     uint64_t from = 1ULL << m.from();
     uint64_t to = 1ULL << m.to();
 
@@ -92,10 +97,7 @@ void ColoredBoard<C>::doMove(T* next, Move m) const {
         }
     } else {
         // standard move, e. p. is handled by captureOffset
-        if (next->CI == (unsigned)CI)
-            next->fiftyMoves = 0;
-        else
-            next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
+        next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
         next->cep.enPassant = m.piece()==Pawn ? to & shift<C*16>(from) & rank<4>() & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1) : 0;
         next->occupied[CI] = occupied[CI] ^ (from + to);
         next->occupied[EI] = occupied[EI] ^ (m.capture() ? to:0);
