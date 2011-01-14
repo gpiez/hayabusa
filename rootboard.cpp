@@ -25,6 +25,7 @@
 #include "jobs.h"
 #include "transpositiontable.h"
 #include "transpositiontable.tcc"
+#include "movelist.h"
 #include "history.cpp"
 #ifdef QT_GUI_LIB
 #include "statwidget.h"
@@ -93,6 +94,16 @@ const ColoredBoard<White>& RootBoard::currentBoard<White>() const {
 template<>
 const ColoredBoard<Black>& RootBoard::currentBoard<Black>() const {
     return boards[iMove].bb;
+}
+
+template<>
+ColoredBoard<Black>& RootBoard::nextBoard<White>() {
+    return boards[iMove].bb;
+}
+
+template<>
+ColoredBoard<White>& RootBoard::nextBoard<Black>() {
+    return boards[iMove+1].wb;
 }
 
 const BoardBase& RootBoard::currentBoard() const {
@@ -327,29 +338,26 @@ std::string RootBoard::getLine() const {
     return temp;
 }
 
+bool RootBoard::doMove(Move m) {
+    if (color == White)
+        return doMove<White>(m);
+    else
+        return doMove<Black>(m);
+}
 // returns true on error
+template<Colors C>
 bool RootBoard::doMove(Move m) {
     WorkThread::stopAll();
-    Move list[maxMoves];
-    Move* good = list+goodMoves;
-    Move* bad = good;
-    if (color == White)
-        currentBoard<White>().generateNonCap(good, bad);
-    else
-        currentBoard<Black>().generateNonCap(good, bad);
+    MoveList ml(currentBoard<C>());
 
-    for (Move* i=good; i<bad; ++i) {
-        if (i->fromto() == m.fromto()) {
-            if (m.piece() == 0 || m.piece() == i->piece()) {
-                if (color == White) {
-                    color = Black;
-                    ColoredBoard<Black>* next = &boards[iMove].bb;
-                    currentBoard<White>().doMove(next, m);
-                } else {
-                    color = White;
-                    ColoredBoard<White>* next = &boards[++iMove].wb;
-                    currentBoard<Black>().doMove(next, m);
-                }
+    for (ml.begin(); ml.isValid(); ++ml) {
+        if ((*ml).fromto() == m.fromto()) {
+            if (m.piece() == 0 || m.piece() == (*ml).piece()) {
+                const ColoredBoard<C>& cb = currentBoard<C>();
+                ColoredBoard<(Colors)-C>* next = &nextBoard<C>();
+                cb.doMove(next, m);
+                if (C == Black) iMove++;
+                color = (Colors)-C;
                 return false;
             }
         }
