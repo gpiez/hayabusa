@@ -173,13 +173,13 @@ void Console::parse(std::string str) {
         if (dispatcher.find(cmds[0]) != dispatcher.end()) {
             (this->*(dispatcher[cmds[0]]))(cmds);
         } else {
-            tryMove(cmds);
+            tryMove(cmds[0]);
         }
     }
 }
 
-void Console::tryMove(StringList cmds) {
-    std::string mstr = toLower(cmds[0]);
+void Console::tryMove(std::string cmds) {
+    std::string mstr = toLower(cmds);
     std::cerr << "tryMove " << mstr << std::endl;
     if (mstr.length() < 4 || mstr.length() > 5) {
         send("move '" + mstr + "' not understood");
@@ -291,7 +291,9 @@ void Console::position(StringList cmds) {
 
     if (pos.count("moves")) {
         StringList moves = pos["moves"];
-                ; //TODO impement me
+        for (auto imove = moves.begin(); imove != moves.end(); ++imove) {
+            tryMove(*imove);
+        }
     }
 }
 
