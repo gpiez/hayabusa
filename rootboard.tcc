@@ -230,7 +230,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
         NodeItem::nNodes++;
         NodeItem::m.unlock();
     }
-//  if (node && node->id == 67636) asm("int3");
+//     if (NodeItem::nNodes == 589577) asm("int3");
 #endif
 /*
     prefetching is not very effective for core2, probably because each access
@@ -245,7 +245,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
     if (P != vein && !infinite) {
         system_clock::time_point now = system_clock::now();
         if (now > hardBudget) {
-            stopSearch = true;
+	    stopSearch = true;
         }
         if (stopSearch)
             return false;

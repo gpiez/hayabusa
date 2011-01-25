@@ -44,7 +44,8 @@ template<Colors C>
 void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
     uint64_t from = 1ULL << m.from();
     uint64_t to = 1ULL << m.to();
-
+    ASSERT(m.piece());
+    
     __m128i xmm1 = _mm_load_si128((__m128i*)pieces+1);
     __m128i xmm2 = _mm_load_si128((__m128i*)pieces+2);
     __m128i xmm3 = _mm_load_si128((__m128i*)pieces+3);
@@ -81,28 +82,31 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
             ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>()));
         } else if (piece == Pawn) {
             // en passant
-            next->occupied[CI] = occupied[CI] ^ (from + to);
-            next->occupied[EI] = occupied[EI] ^ shift<-C*8>(to);
-            next->getPieces<C,Pawn>() ^= from + to;
-            next->getPieces<-C,Pawn>() ^= shift<-C*8>(to);
+            next->occupied[CI] = occupied[CI] - from + to;
+            next->occupied[EI] = occupied[EI] - shift<-C*8>(to);
+            next->getPieces<C,Pawn>() += to - from;
+            next->getPieces<-C,Pawn>() -= shift<-C*8>(to);
             next->material = material - materialTab[Pawn];
         } else {
             // promotion
-            next->occupied[CI] = occupied[CI] ^ (from + to);
-            next->occupied[EI] = occupied[EI] ^ (m.capture()? to:0);
-            next->getPieces<C,Pawn>() ^= from;
-            next->getPieces<C>(piece) ^= to;
-            next->getPieces<-C>(m.capture()) ^= to;
+            next->occupied[CI] = occupied[CI] - from + to;
+            next->occupied[EI] = occupied[EI] - (m.capture()? to:0);
+            next->getPieces<C,Pawn>() -= from;
+            next->getPieces<C>(piece) += to;
+            next->getPieces<-C>(m.capture()) -= to;
             next->material = material - materialTab[m.capture()] + materialTab[piece] - materialTab[Pawn];
         }
     } else {
         // standard move, e. p. is handled by captureOffset
         next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
         next->cep.enPassant = m.piece()==Pawn ? to & shift<C*16>(from) & rank<4>() & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1) : 0;
-        next->occupied[CI] = occupied[CI] ^ (from + to);
-        next->occupied[EI] = occupied[EI] ^ (m.capture() ? to:0);
-        next->getPieces<C>(m.piece()) ^= from + to;
-        next->getPieces<-C>(m.capture()) ^= to;
+	ASSERT(occupied[CI] & from);
+	ASSERT(~occupied[CI] & to);
+	ASSERT(from != to);
+        next->occupied[CI] = occupied[CI] - from + to;
+        next->occupied[EI] = occupied[EI] - (m.capture() ? to:0);
+        next->getPieces<C>(m.piece()) += to - from;
+        next->getPieces<-C>(m.capture()) -= to;
         next->material = material - materialTab[m.capture()];
     }
     next->occupied1 = next->occupied[CI] | next->occupied[EI];
@@ -110,6 +114,7 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
 
 template<Colors C>
 __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
+    ASSERT(m.piece());
     if (m.isSpecial()) {
         unsigned piece = m.piece() & 7;
         if (piece == King) {

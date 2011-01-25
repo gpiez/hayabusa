@@ -355,7 +355,10 @@ bool RootBoard::doMove(Move m) {
             if (m.piece() == 0 || m.piece() == (*ml).piece()) {
                 const ColoredBoard<C>& cb = currentBoard<C>();
                 ColoredBoard<(Colors)-C>* next = &nextBoard<C>();
-                cb.doMove(next, m);
+                cb.doMove(next, *ml);
+                next->keyScore.vector = cb.estimatedEval(*ml, eval);
+                next->buildAttacks();
+
                 if (C == Black) iMove++;
                 color = (Colors)-C;
                 return false;
