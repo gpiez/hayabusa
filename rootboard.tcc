@@ -187,7 +187,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         alpha0.v = alpha.v;
     }
     stopSearch = false;
-    console->send("bestmove "+bestMove.string());
+    console->send("bestmove "+bestMove.algebraic());
     return bestMove;
 }
 /*
@@ -247,9 +247,9 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
         if (now > hardBudget) {
 	    stopSearch = true;
         }
-        if (stopSearch)
-            return false;
     }
+    if (stopSearch)
+	return false;
 
     RawScore& eE = prev.CI == 0 ? estimatedError[nPieces + (m.piece()&7)][m.to()] : estimatedError[nPieces - (m.piece()&7)][m.to()];
 
