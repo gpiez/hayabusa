@@ -21,16 +21,16 @@
 
 std::string Move::string() const
 {
-	std::string temp;
-	if (!data) {
-	    return "null";
-	}
-    temp += (const char*[]){"","R","B","Q","N","","K"}[piece() & 7];
-	temp += (from() & 7) + 'a';
-	temp += (from() >> 3) + '1';
-	temp += capture() ? 'x' : '-';
-	temp += (to() & 7) + 'a';
-	temp += (to() >> 3) + '1';
+    std::string temp;
+    if (!data) {
+        return "null";
+    }
+    temp += (const char*[]) {"","R","B","Q","N","","K"}[piece() & 7];
+    temp += (from() & 7) + 'a';
+    temp += (from() >> 3) + '1';
+    temp += capture() ? 'x' : '-';
+    temp += (to() & 7) + 'a';
+    temp += (to() >> 3) + '1';
     if (isSpecial()) {
         if ((piece() & 7) < Pawn) {
             temp += " RBQN"[piece() & 7];
@@ -42,5 +42,24 @@ std::string Move::string() const
                 return "0-0-0";
         }
     }
-	return temp;
+    return temp;
 }
+
+std::string Move::algebraic() const
+{
+    std::string temp;
+    if (!data) {
+        return "null";
+    }
+    temp += (from() & 7) + 'a';
+    temp += (from() >> 3) + '1';
+    temp += (to() & 7) + 'a';
+    temp += (to() >> 3) + '1';
+    if (isSpecial()) {
+        if ((piece() & 7) < Pawn) {
+            temp += " RBQN"[piece() & 7];
+        }
+    }
+    return temp;
+}
+

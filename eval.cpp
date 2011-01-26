@@ -385,7 +385,7 @@ PawnEntry::Shield evalShield(const BoardBase &b) {
     ret.kside = kshield;
     return ret;
 }
-
+//TODO asess blocked pawns and their consequences on an attack
 int Eval::pawns(const BoardBase& b) const {
     PawnKey k=b.keyScore.pawnKey;
     Sub<PawnEntry, 4>* st = pt->getSubTable(k);

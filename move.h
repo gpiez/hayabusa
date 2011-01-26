@@ -55,5 +55,6 @@ struct Move {
         return data<0;
     }
     std::string string() const;
+    std::string algebraic() const;
 };
 #endif /* MOVE_H_ */
