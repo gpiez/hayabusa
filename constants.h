@@ -167,7 +167,7 @@ static const int yShortOffsets[nColors][nPieces+1][nDirs] = {{
 static const __v16qi zeroToFifteen = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
 #endif
 
-static inline uint64_t popcount(uint64_t x) {
+static inline int popcount(uint64_t x) {
 #ifdef __SSE4_2__
     return _popcnt64(x);
 #else

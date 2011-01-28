@@ -2334,6 +2334,7 @@ const char* testPositions[] = {
 "8/8/2p/k1p1K/p1P/P/8/8 w - -;bm Kf5;id hash-06;c0 F. Sackmann, matt in 25 Zuegen",
 "8/1k/p/p2p2K/P2P/8/8/8 w - -;bm Kf5;id hash-07;c0 J. Awerbach, Kf6 only draws",
 "6k/3p/3p/3P/4P1p/6P/8/K w - -;bm Kb1;id hash-08;c0 J. Awerbach",
+"2rr3k/5p1P/p3q3/1p1bb1p1/1Q2n1P1/P3P3/1PP1B3/1K1R3R w - - 0 27; id passer1", 
 0
 };
 

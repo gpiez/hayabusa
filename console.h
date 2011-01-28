@@ -54,7 +54,7 @@ class Console
     void debug(StringList);
     void ordering(StringList);
     void parse(std::string);
-
+    void eval(StringList);
 private
 #ifdef QT_GUI_LIB
     slots

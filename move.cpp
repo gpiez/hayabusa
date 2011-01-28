@@ -37,9 +37,9 @@ std::string Move::string() const
             temp = temp.substr(1);
         } else {
             if ((to() & 7) == 6)
-                return "0-0";
+                return "O-O";
             else
-                return "0-0-0";
+                return "O-O-O";
         }
     }
     return temp;

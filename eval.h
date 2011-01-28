@@ -140,16 +140,18 @@ class Eval {
     static void initTables();
     unsigned int attackHash( unsigned int  pos );
     int squareControl();
-    template<Colors C> int mobility(const BoardBase&) const;
-    template<Colors C> int attack(const BoardBase&) const;
+    template<Colors C> int mobility(const BoardBase&, unsigned& attackingPieces, unsigned& defendingPieces) const;
+    template<Colors C> int attack(const BoardBase&, unsigned attackingPieces, unsigned defendingPieces) const;
     int pieces(const BoardBase&) const;
     int pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
-    template<Colors C> int mobility( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1]) const;
+    template<Colors C> int mobility( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1], unsigned& attackingPieces, unsigned& defendingPieces) const;
 
 public:
     static Parameters parameters;
-
+#ifdef MYDEBUG
+    bool debug;
+#endif
     Eval();
     int eval(const BoardBase&) const;
     template<Colors C> Move evalMate(const BoardBase&) const;

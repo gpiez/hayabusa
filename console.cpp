@@ -71,6 +71,7 @@ Console::Console(int& argc, char** argv)
     dispatcher["perft"] = &Console::perft;
     dispatcher["divide"] = &Console::divide;
     dispatcher["ordering"] = &Console::ordering;
+    dispatcher["eval"] = &Console::eval;
 
 #ifdef QT_GUI_LIB
     notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
@@ -182,7 +183,7 @@ void Console::tryMove(std::string cmds) {
     std::string mstr = toLower(cmds);
     std::cerr << "tryMove " << mstr << std::endl;
     if (mstr.length() < 4 || mstr.length() > 5) {
-        send("move '" + mstr + "' not understood");
+        send("command '" + mstr + "' not understood");
         return;
     }
     int piece;
@@ -361,4 +362,13 @@ void Console::ordering(StringList cmds) {
         }
         std::cout << std::setw(20) << exp(sum/tested) << std::endl;
     }
+}
+
+void Console::eval(StringList)
+{
+#ifdef MYDEBUG
+    board->eval.debug = true;
+    board->eval.eval(board->currentBoard());
+    board->eval.debug = false;
+#endif    
 }

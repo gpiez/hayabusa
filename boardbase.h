@@ -23,7 +23,6 @@
 #include <pch.h>
 #endif
 
-#include "length.h"
 #include "transpositiontable.h"
 #include "score.h"
 #include "eval.h"
@@ -93,6 +92,10 @@ struct BoardBase {
     static uint64_t kingAttacks[16][nSquares];
     static uint64_t epTab[nPieces+1][nSquares];
 
+    template<int C>
+    uint64_t getOcc() const {
+        return occupied[C==Black];
+    }
     template<int C, Pieces P>
     uint64_t getPieces() const {
         static_assert(P>0 && P<=King, "Wrong Piece");
