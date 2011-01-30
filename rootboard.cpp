@@ -57,10 +57,6 @@ std::string RootBoard::status(system_clock::time_point now, int score)
     unsigned d = depth - dMaxCapture - dMaxThreat;
     std::stringstream g;
     milliseconds t = duration_cast<milliseconds>(now-start);
-#ifdef QT_GUI_LIB
-    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
-    console->info(d, t.count(), getStats().node, codec->toUnicode(Score<White>::str(score).c_str()), QString::fromStdString(tt->bestLine(*this)));
-#endif
     if (Options::humanreadable) {
         g.imbue(std::locale("de_DE"));
         g   << "d" << std::setfill('0') << std::setw(2) << d << "; "
@@ -72,7 +68,7 @@ std::string RootBoard::status(system_clock::time_point now, int score)
         g   << "info depth " << d << " time " << (now-start).count()
             << " nodes " << getStats().node << " pv " << tt->bestLine(*this)
             << " nps " << (1000*getStats().node)/(t.count()+1)
-            << " score cp " << score;
+            << " score cp " << score*color;
     }
     return g.str();
 }

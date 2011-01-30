@@ -30,15 +30,18 @@
 #include "rootboard.tcc"
 #include "stringlist.h"
 
+using boost::asio::ip::tcp;
+
 namespace Options {
-unsigned int splitDepth = 1000;
-int humanreadable = 0;
-int hash = 0x1000000;
-bool quiet = false;
-bool preCutIfNotThreatened = false;
-unsigned veinDepth = 20;
-unsigned leafDepth = 8;
-bool reduction = false;
+    unsigned int        splitDepth = 1000;
+    int                 humanreadable = 0;
+    int                 hash = 0x1000000;
+    bool                quiet = false;
+    bool                preCutIfNotThreatened = false;
+    unsigned            veinDepth = 20;
+    unsigned            leafDepth = 8;
+    bool                reduction = false;
+    bool                server = false;
 }
 
 Console::Console(int& argc, char** argv)
@@ -74,8 +77,6 @@ Console::Console(int& argc, char** argv)
     dispatcher["eval"] = &Console::eval;
 
 #ifdef QT_GUI_LIB
-    notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
-    connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
     connect(this, SIGNAL(signalSend(std::string)), this, SLOT(privateSend(std::string)));
 #endif
 }
@@ -90,6 +91,10 @@ int Console::exec() {
     StringList cmdsList = split(argStr, ":");
     for(auto cmdStr = cmdsList.begin(); cmdStr != cmdsList.end(); ++cmdStr) {
         parse(simplified(*cmdStr));
+    }
+    if (!Options::server) {
+        notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
+        connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
     }
     return QApplication::exec();
 }
@@ -106,10 +111,6 @@ void Console::send(std::string str) {
     emit signalSend(str);
 }
 
-void Console::info(int d, uint64_t t, uint64_t n, QString e, QString l) {
-    emit signalInfo(d, t, n, e, l);
-}
-
 void Console::getResult(std::string result) {
     answer = result;
     std::cout << result << std::endl;
@@ -120,8 +121,16 @@ void Console::dataArrived() {
     notifier->setEnabled(false);
 #endif    
     std::string temp;
-    std::getline(std::cin, temp);
-    if (temp[temp.length()-1] == 13) {
+    if (Options::server) {
+        char buffer[1400];
+        qint64 lineLength = socket->readLine(buffer, sizeof(buffer));
+        temp.append(buffer, lineLength);
+//        for (int i=0; i<lineLength; ++i) std::cout << (int)buffer[i] << std::endl;
+//        std::cout << temp << std::endl;
+    } else
+        std::getline(std::cin, temp);
+    
+    while (temp[temp.length()-1] == 13 || temp[temp.length()-1] == 10) {
         temp.erase(temp.length()-1);
     }
     parse(temp);
@@ -133,6 +142,13 @@ void Console::dataArrived() {
 
 void Console::delayedEnable() { //TODO remove if not needed under windows
     notifier->setEnabled(true);
+}
+
+void Console::newConnection()
+{
+    socket = server->nextPendingConnection();
+    connect(socket, SIGNAL(disconnected()), socket, SLOT(deleteLater()));
+    connect(socket, SIGNAL(readyRead()), this, SLOT(dataArrived()));    
 }
 #else
 int Console::exec() {
@@ -151,7 +167,12 @@ void Console::send(std::string str) {
 void Console::poll() {
     while(true) {
         std::string str;
-        std::getline(std::cin, str);
+        if (Options::server) {
+            if (!acc->is_open())
+                acc->accept(*stream.rdbuf());
+            stream >> str;
+        } else
+            std::getline(std::cin, str);
         if (temp[temp.length()-1] == 13) {
             temp.erase(temp.length()-1);
         }
@@ -165,6 +186,16 @@ void Console::privateSend(std::string str)
 {
     if (!Options::quiet)
         std::cout << str << std::endl;
+    if (Options::server) {
+#ifdef QT_GUI_LIB
+//        socket->write("blah\n");
+        socket->write(str.c_str());
+        socket->write("\n");
+        socket->flush();
+#else
+        stream << str << std::endl;
+#endif
+    }
     answer = str;
 }
 
@@ -239,7 +270,7 @@ void Console::debug(StringList cmds) {
 
 // engine is always ready as soon as the command dispatcher is working.
 void Console::isready(StringList /*cmds*/) {
-    std::cout << "readyok" << std::endl << std::flush;
+    send("readyok");
 }
 
 void Console::setoption(StringList cmds) {
@@ -258,6 +289,15 @@ void Console::setoption(StringList cmds) {
             Options::quiet = convert(data);
         } else if (name == "reduction") {
             Options::reduction = true;
+        } else if (name == "server") {
+            Options::server = true;
+#ifdef QT_GUI_LIB
+            server = new QTcpServer();
+            server->listen(QHostAddress::Any, 7788);
+            connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
+#else
+            acc = new tcp::acceptor(service, tcp::endpoint(tcp::v4(), 7788));
+#endif
         }
     }
 }

@@ -26,4 +26,5 @@ namespace Options {
     extern unsigned veinDepth;
     extern unsigned leafDepth;
     extern bool reduction;
+    extern bool server;
 }

@@ -67,7 +67,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     const unsigned ply=0;
     fiftyMovesRoot = b.fiftyMoves;
     store(b.getZobrist(), ply);
-    stats.node++;
+    stats.node = 1;
     MoveList ml(b);
 
     milliseconds time( C==White ? wtime : btime );

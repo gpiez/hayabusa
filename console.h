@@ -23,6 +23,12 @@
 #include <pch.h>
 #endif
 
+#ifdef QT_GUI_LIB
+#include <QtNetwork/QTcpServer>
+#include <QtNetwork/QTcpSocket>
+#endif
+
+#include <boost/asio/ip/tcp.hpp>
 #include "move.h"
 #include "score.h"
 #include "stringlist.h"
@@ -64,6 +70,9 @@ private
 
 private:
     RootBoard* board;
+    boost::asio::ip::tcp::acceptor* acc;
+    boost::asio::ip::tcp::iostream stream;
+    boost::asio::io_service service;
     StringList args;
     std::string answer;
     bool debugMode;
@@ -73,7 +82,8 @@ private:
 public:
 #ifdef QT_GUI_LIB
     QSocketNotifier *notifier;
-    void info(int, uint64_t, uint64_t, QString, QString);
+    QTcpServer* server;
+    QTcpSocket* socket;
 #endif
     Console(int& argc, char** argv);
     virtual ~Console();
@@ -86,10 +96,10 @@ public slots:
     void delayedEnable();
     void getResult(std::string);
     std::string getAnswer();
+    void newConnection();
 
 signals:
     void signalSend(std::string);
-    void signalInfo(int, uint64_t, uint64_t, QString, QString);
 #else
     void poll();
 #endif
