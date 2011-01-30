@@ -22,11 +22,13 @@
 
 #include <pch.h>
 #include "nodemodel.h"
+#include "nodeitem.h"
 
 NodeModel::NodeModel( QObject* parent ):
         QAbstractItemModel( parent ),
         rootItem(NULL)
 {
+    std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     init();
 }
 
@@ -38,11 +40,13 @@ void NodeModel::init() {
 
 NodeModel::~NodeModel()
 {
+    std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     delete rootItem;
 }
 
 QModelIndex NodeModel::index( int row, int column, const QModelIndex& parent ) const
 {
+    std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     NodeItem* parentItem;
 
     if ( !parent.isValid() )
@@ -59,13 +63,14 @@ QModelIndex NodeModel::index( int row, int column, const QModelIndex& parent ) c
 
 QModelIndex NodeModel::parent( const QModelIndex &index ) const
 {
+    std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     if ( !index.isValid() )
         return QModelIndex();
 
     const NodeItem* childItem = static_cast<NodeItem*>( index.internalPointer() );
     NodeItem* parentItem = childItem->getParent();
 
-    if ( parentItem == rootItem )
+    if ( !parentItem || parentItem == rootItem )
         return QModelIndex();
 
     return createIndex( parentItem->row(), 0, ( void* )parentItem );
@@ -74,6 +79,7 @@ QModelIndex NodeModel::parent( const QModelIndex &index ) const
 
 int NodeModel::rowCount( const QModelIndex &parent ) const
 {
+    std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     const NodeItem *parentItem;
 
     if ( !parent.isValid() )
@@ -99,6 +105,7 @@ Qt::ItemFlags NodeModel::flags( const QModelIndex &index ) const
 
 QVariant NodeModel::data(const QModelIndex& index, int role) const
 {
+    std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     if (role == Qt::ToolTipRole) {
         return static_cast<NodeItem*>(index.internalPointer())->id;
     }
@@ -111,6 +118,7 @@ QVariant NodeModel::headerData( int /*section*/, Qt::Orientation /*orientation*/
 }
 
 void NodeModel::newData(NodeItem* node) {
+    std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     QModelIndex i = createIndex( node->row(), 0, ( void* )node );
     emit(dataChanged( i, i));
 }

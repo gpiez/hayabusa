@@ -83,6 +83,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     nMoves = ml.count();
     for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes && !stopSearch; depth++) {
         ml.begin();
+        bestMove = *ml;
 #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
@@ -128,7 +129,6 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         } else {
             search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta, alpha, ply+1, false NODE);
         }
-        bestMove = *ml;
         now = system_clock::now();
         console->send(status(now, alpha.v));
 
@@ -357,7 +357,13 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 }
                 if (subentry.hiBound) {
                     stats.ttbeta++;
-                    beta.max(ttScore.v, m);
+                    if (beta.max(ttScore.v, m)) {
+#ifdef QT_GUI_LIB
+                        if (node) node->bestEval = beta.v;
+                        if (node) node->nodeType = NodeTT;
+#endif
+                        return true;
+                    }
                 }
                 if (current >= beta.v) {
 #ifdef QT_GUI_LIB

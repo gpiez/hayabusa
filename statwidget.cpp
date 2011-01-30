@@ -152,7 +152,9 @@ QString number(T n) {
 
 void StatWidget::update()
 {
+    NodeItem::m.lock();
     treeView->doItemsLayout();
+    NodeItem::m.unlock();
     updateBoard();
     Ui_Statsui::depth->setText("Depth: " + QString::number(rb.depth));
     setWindowTitle(QString::fromStdString(rb.getInfo()).left(20) + QString::fromStdString(rb.getLine()));

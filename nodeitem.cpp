@@ -48,6 +48,7 @@ void NodeItem::appendChild( NodeItem* item )
 
 const NodeItem *NodeItem::child( int row )
 {
+    std::lock_guard<std::recursive_mutex> lock(m);
     return children.value( row );
 }
 

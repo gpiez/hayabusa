@@ -219,7 +219,7 @@ void Console::tryMove(std::string cmds) {
     }
     int piece;
     if (mstr.length() == 5) {
-        switch (mstr[5]) {
+        switch (mstr[4]) {
         case 'q':
             piece = Queen;
             break;
