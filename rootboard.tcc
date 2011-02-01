@@ -58,6 +58,7 @@
 template<Colors C>
 Move RootBoard::rootSearch(unsigned int endDepth) {
     start = system_clock::now();
+    lastStatus = start + milliseconds(1000);
 #ifdef QT_GUI_LIB
     while (!statWidget->tree);
     statWidget->emptyTree();
@@ -65,7 +66,6 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     isMain = true;
     const ColoredBoard<C>& b = currentBoard<C>();
     const unsigned ply=0;
-    fiftyMovesRoot = b.fiftyMoves;
     store(b.getZobrist(), ply);
     stats.node = 1;
     MoveList ml(b);
@@ -76,14 +76,16 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     if (movestogo == 0)
         movestogo = 40;
     
-    softBudget = start + time/(2*movestogo) + inc/2;
-    hardBudget = start + (2*time + 2*(movestogo-1)*inc )/(movestogo+1);
+    softBudget = start + (time + inc*movestogo)/(2*movestogo);
+    hardBudget = start + std::min(time/2, (2*time + 2*inc*movestogo)/(movestogo+1));
 
     SharedScore<C> alpha0; alpha0.v = -infinity*C;
     nMoves = ml.count();
     for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes && !stopSearch; depth++) {
         ml.begin();
         bestMove = *ml;
+       console->send("info currmove " + (*ml).algebraic()
+                   + " currmovenumber 1");
 #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
@@ -139,8 +141,13 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         }
         beta2.v = alpha.v + Eval::parameters.aspiration1*C;
 
-        for (++ml; ml.isValid(); ++ml) {
+        for (++ml; ml.isValid() && !stopSearch; ++ml) {
             currentMoveIndex++;
+            std::stringstream g;
+            g   << "info"
+               << " currmove " << (*ml).algebraic()
+               << " currmovenumber " << currentMoveIndex;
+            console->send(g.str());
             bool pruneNull = false;
             if (alpha.v != -infinity*C
                 && depth > dMaxCapture+dMaxThreat+2
@@ -182,6 +189,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         }
         now = system_clock::now();
         console->send(status(now, alpha.v) + " done");
+
         if (alpha >= infinity*C) break;
         if (alpha <= -infinity*C) break;
         alpha0.v = alpha.v;
@@ -242,10 +250,20 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 */
     if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
 
-    if (P != vein && !infinite) {
+    if (P != vein && (stats.node & 0xff) == 0) {
         system_clock::time_point now = system_clock::now();
-        if (now > hardBudget) {
+        if (!infinite && now > hardBudget) {
 	    stopSearch = true;
+        }
+        if (now > lastStatus) {
+            lastStatus = now + milliseconds(1000);
+            std::stringstream g;
+            uint64_t ntemp = getStats().node;
+            g   << "info"
+                << " nodes " << ntemp
+                << " nps " << (1000*ntemp)/(duration_cast<milliseconds>(now-start).count()+1)
+            ;
+            console->send(g.str());
         }
     }
     if (stopSearch)
@@ -298,7 +316,6 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
     if (node && threatened) node->flags |= Threatened;
 #endif
 
-    ASSERT(ply+fiftyMovesRoot >= b.fiftyMoves);
     Key z;
     if (P != vein) {
         z = b.getZobrist();
@@ -336,7 +353,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 //    bool betaNode = false;
     bool alphaNode = false;
     if (P != vein) {
-        if (find(b, z, ply)) {
+        if (find(b, z, ply) || b.fiftyMoves >= 100) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = 0;
             if (node) node->nodeType = NodeRepetition;

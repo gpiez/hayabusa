@@ -30,8 +30,6 @@
 #include "rootboard.tcc"
 #include "stringlist.h"
 
-using boost::asio::ip::tcp;
-
 namespace Options {
     unsigned int        splitDepth = 1000;
     int                 humanreadable = 0;
@@ -41,14 +39,20 @@ namespace Options {
     unsigned            veinDepth = 20;
     unsigned            leafDepth = 8;
     bool                reduction = false;
+#ifdef QT_NETWORK_LIB    
     bool                server = false;
+#endif    
 }
 
 Console::Console(int& argc, char** argv)
-#ifdef QT_GUI_LIB
+#if defined(QT_GUI_LIB)
     :
-    QApplication(argc, argv)/*,
-    cin(stdin, QIODevice::ReadOnly)*/
+    QApplication(argc, argv)
+#else
+#if defined(QT_NETWORK_LIB)
+    :
+    QCoreApplication(argc, argv)
+#endif    
 #endif
 {
     args.resize(argc);
@@ -76,7 +80,7 @@ Console::Console(int& argc, char** argv)
     dispatcher["ordering"] = &Console::ordering;
     dispatcher["eval"] = &Console::eval;
 
-#ifdef QT_GUI_LIB
+#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
     connect(this, SIGNAL(signalSend(std::string)), this, SLOT(privateSend(std::string)));
 #endif
 }
@@ -85,19 +89,37 @@ Console::~Console()
 {
 }
 
-#ifdef QT_GUI_LIB
 int Console::exec() {
     std::string argStr = args.join(" ");
     StringList cmdsList = split(argStr, ":");
     for(auto cmdStr = cmdsList.begin(); cmdStr != cmdsList.end(); ++cmdStr) {
         parse(simplified(*cmdStr));
     }
+#if defined(QT_NETWORK_LIB)
     if (!Options::server) {
         notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
         connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
     }
+#endif
+#if defined(QT_GUI_LIB)
     return QApplication::exec();
+#else
+#if defined(QT_NETWORK_LIB)
+    return QCoreApplication::exec();
+#else
+    while(true) {
+        std::string str;
+        std::getline(std::cin, str);
+        if (str[str.length()-1] == 13 || str[str.length()-1] == 10) {
+            str.erase(str.length()-1);
+        }
+        parse(str);
+    }
+#endif
+#endif    
 }
+
+#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
 std::string Console::getAnswer() {
     answer = "";
     while(answer == "") {
@@ -151,34 +173,8 @@ void Console::newConnection()
     connect(socket, SIGNAL(readyRead()), this, SLOT(dataArrived()));    
 }
 #else
-int Console::exec() {
-    std::string argStr = args.join(" ");
-    StringList cmdsList = split(argStr, ":");
-    for(auto cmdStr = cmdsList.begin(); cmdStr != cmdsList.end(); ++cmdStr) {
-        parse(simplified(*cmdStr));
-    }
-    poll();
-}
-
 void Console::send(std::string str) {
     privateSend(str);
-}
-
-void Console::poll() {
-    while(true) {
-        std::string str;
-        if (Options::server) {
-            if (!acc->is_open())
-                acc->accept(*stream.rdbuf());
-            stream >> str;
-        } else
-            std::getline(std::cin, str);
-        if (temp[temp.length()-1] == 13) {
-            temp.erase(temp.length()-1);
-        }
-        std::cerr << str << std::endl;
-        parse(str);
-    }
 }
 #endif
 
@@ -186,16 +182,13 @@ void Console::privateSend(std::string str)
 {
     if (!Options::quiet)
         std::cout << str << std::endl;
+#if defined(QT_NETWORK_LIB)
     if (Options::server) {
-#ifdef QT_GUI_LIB
-//        socket->write("blah\n");
         socket->write(str.c_str());
         socket->write("\n");
         socket->flush();
-#else
-        stream << str << std::endl;
-#endif
     }
+#endif
     answer = str;
 }
 
@@ -218,7 +211,9 @@ void Console::tryMove(std::string cmds) {
         return;
     }
     int piece;
+    bool special;
     if (mstr.length() == 5) {
+        special = true;
         switch (mstr[4]) {
         case 'q':
             piece = Queen;
@@ -237,9 +232,11 @@ void Console::tryMove(std::string cmds) {
             send("move '" + mstr + "' not understood");
             return;
         }
-    } else
+    } else {
         piece = 0;
-    Move m(mstr[0] -'a' + (mstr[1]-'1')*8, mstr[2]-'a' + (mstr[3]-'1')*8, piece);
+        special = false;
+    }
+    Move m(mstr[0] -'a' + (mstr[1]-'1')*8, mstr[2]-'a' + (mstr[3]-'1')*8, piece, 0, special);
     if (board->doMove(m)) {
         send("move '" + mstr + "' illegal");
     }
@@ -289,14 +286,12 @@ void Console::setoption(StringList cmds) {
             Options::quiet = convert(data);
         } else if (name == "reduction") {
             Options::reduction = true;
+#ifdef QT_NETWORK_LIB
         } else if (name == "server") {
             Options::server = true;
-#ifdef QT_GUI_LIB
             server = new QTcpServer();
             server->listen(QHostAddress::Any, 7788);
             connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
-#else
-            acc = new tcp::acceptor(service, tcp::endpoint(tcp::v4(), 7788));
 #endif
         }
     }

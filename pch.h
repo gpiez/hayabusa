@@ -43,5 +43,9 @@ extern "C" void __throw_bad_alloc();
 #include <QtCore>
 #include <QtGui>
 #endif
+#ifdef QT_NETWORK_LIB
+#include <QtCore>
+#include <QtNetwork>
+#endif
 
 #endif /* PCH_H_ */

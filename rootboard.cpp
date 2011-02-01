@@ -65,11 +65,16 @@ std::string RootBoard::status(system_clock::time_point now, int score)
             << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t.count()*1000.0+1) << " Mnps; "
             << Score<White>::str(score) << " " << tt->bestLine(*this);
     } else {
-        g   << "info depth " << d << " time " << (now-start).count()
-            << " nodes " << getStats().node << " pv " << tt->bestLine(*this)
+        g   << "info depth " << d << " time " << duration_cast<milliseconds>(now-start).count()
+            << " nodes " << getStats().node 
+            << " pv " << tt->bestLine(*this)
+            << " score cp " << score*color
             << " nps " << (1000*getStats().node)/(t.count()+1)
-            << " score cp " << score*color;
+            ;
     }
+#ifdef QT_GUI_LIB
+    emit(signalInfo(d, (uint64_t)(now-start).count(), getStats().node, QString::fromStdString(Score<White>::str(score)), QString::fromStdString(tt->bestLine(*this))));
+#endif
     return g.str();
 }
 
@@ -226,6 +231,7 @@ const BoardBase& RootBoard::setup(const std::string& str) {
         bm = m;
     }
     history.init();
+    rootPly = 0;
     return board;
 }
 
@@ -350,6 +356,7 @@ bool RootBoard::doMove(Move m) {
         if ((*ml).fromto() == m.fromto()) {
             if (m.piece() == 0 || m.piece() == (*ml).piece()) {
                 const ColoredBoard<C>& cb = currentBoard<C>();
+                store(cb.getZobrist(), 0);
                 ColoredBoard<(Colors)-C>* next = &nextBoard<C>();
                 cb.doMove(next, *ml);
                 next->keyScore.vector = cb.estimatedEval(*ml, eval);
@@ -357,6 +364,7 @@ bool RootBoard::doMove(Move m) {
 
                 if (C == Black) iMove++;
                 color = (Colors)-C;
+                rootPly++;
                 return false;
             }
         }

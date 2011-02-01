@@ -26,5 +26,7 @@ namespace Options {
     extern unsigned veinDepth;
     extern unsigned leafDepth;
     extern bool reduction;
+#ifdef QT_NETWORK_LIB    
     extern bool server;
+#endif    
 }

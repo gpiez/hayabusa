@@ -23,7 +23,9 @@
 #include <pch.h>
 #endif
 
-typedef Key RepetitionKeys[100];
+#include "constants.h"
+
+typedef Key RepetitionKeys[100+nMaxGameLength];
 
 extern __thread RepetitionKeys keys;
 

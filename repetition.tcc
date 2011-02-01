@@ -17,21 +17,22 @@
 
 */
 #include "repetition.h"
+#include "rootboard.h"
 
 template<Colors C>
 inline bool RootBoard::find(const ColoredBoard<C>& b, Key k, unsigned ply) const {
-    for (unsigned i = ply+fiftyMovesRoot; i+b.fiftyMoves >= ply+fiftyMovesRoot+4; i-=2) {
-        ASSERT(i<=100);
+    for (unsigned i = ply+rootPly; i+b.fiftyMoves >= ply+rootPly+4; i-=2) {
+        ASSERT(i<=nMaxGameLength);
         if (keys[i-4] == k) return true;
     }
     return false;
 }
 inline void RootBoard::store(Key k, unsigned ply) {
-    keys[ply+fiftyMovesRoot] = k;
+    keys[ply+rootPly] = k;
 }
 template<Colors C>
 inline void RootBoard::clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const {
-    for (int i = ply+fiftyMovesRoot; i+b.fiftyMoves >= ply+fiftyMovesRoot; --i)
+    for (int i = ply+rootPly; i+b.fiftyMoves >= ply+rootPly; --i)
         keys[i] = other[i];
 }
 

@@ -48,13 +48,14 @@ template<class T> class Result;
  */
 #ifdef QT_GUI_LIB
 
-class RootBoard: QObject {
+class RootBoard: public QObject {
     Q_OBJECT
     
 private:    
     StatWidget* statWidget;
 signals:
     void createModel();
+    void signalInfo(int, uint64_t, uint64_t, QString, QString);
 private:
 
 #else
@@ -80,11 +81,12 @@ private:
     int currentMoveIndex;
     int nMoves;
     Move line[nMaxGameLength];
+    unsigned rootPly;
     unsigned currentPly;
-    unsigned fiftyMovesRoot;
     History history;        // FIXME probably needs to be thread local
     std::string info;
     system_clock::time_point start;
+    system_clock::time_point lastStatus;
     int wtime;
     int btime;
     int winc;

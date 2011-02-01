@@ -22,7 +22,7 @@
 #include "stringlist.h"
 
 int main(int argc, char *argv[]) {
-#ifdef QT_GUI_LIB
+#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
     Q_INIT_RESOURCE(hayabusa);
     qRegisterMetaType<std::string>("std::string");
 #endif

@@ -105,7 +105,7 @@ StatWidget::StatWidget(const RootBoard& rb):
     QTimer* t = new QTimer(this);
     connect(t, SIGNAL(timeout()), this, SLOT(update()));
     qRegisterMetaType<uint64_t>("uint64_t");
-    connect(rb.console, SIGNAL(signalInfo(int, uint64_t, uint64_t, QString, QString)),
+    connect(&rb, SIGNAL(signalInfo(int, uint64_t, uint64_t, QString, QString)),
             this,       SLOT  (updateInfo(int, uint64_t, uint64_t, QString, QString)));
     t->setInterval(1000);
     t->start();

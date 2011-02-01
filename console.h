@@ -23,12 +23,11 @@
 #include <pch.h>
 #endif
 
-#ifdef QT_GUI_LIB
+#ifdef QT_NETWORK_LIB
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #endif
 
-#include <boost/asio/ip/tcp.hpp>
 #include "move.h"
 #include "score.h"
 #include "stringlist.h"
@@ -37,11 +36,16 @@ class WorkThread;
 class RootBoard;
 
 class Console
-#ifdef QT_GUI_LIB
+#if defined(QT_GUI_LIB)
     : public QApplication {
     Q_OBJECT
 #else
+#if defined(QT_NETWORK_LIB)
+    : public QCoreApplication {
+    Q_OBJECT
+#else    
 {
+#endif
 #endif
     friend class TestRootBoard;
     void perft(StringList);
@@ -62,7 +66,7 @@ class Console
     void parse(std::string);
     void eval(StringList);
 private
-#ifdef QT_GUI_LIB
+#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
     slots
 #endif
              :
@@ -70,9 +74,6 @@ private
 
 private:
     RootBoard* board;
-    boost::asio::ip::tcp::acceptor* acc;
-    boost::asio::ip::tcp::iostream stream;
-    boost::asio::io_service service;
     StringList args;
     std::string answer;
     bool debugMode;
@@ -80,7 +81,7 @@ private:
     std::map<std::string, void (Console::*)(StringList)> dispatcher;
 
 public:
-#ifdef QT_GUI_LIB
+#ifdef QT_NETWORK_LIB
     QSocketNotifier *notifier;
     QTcpServer* server;
     QTcpSocket* socket;
@@ -90,7 +91,7 @@ public:
     int exec();
     void send(std::string);
 
-#ifdef QT_GUI_LIB
+#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
 public slots:
     void dataArrived();
     void delayedEnable();
@@ -100,9 +101,7 @@ public slots:
 
 signals:
     void signalSend(std::string);
-#else
-    void poll();
-#endif
+#endif    
 };
 
 #endif /* CONSOLE_H_ */
