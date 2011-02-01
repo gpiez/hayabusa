@@ -113,6 +113,7 @@ class Eval {
 
     static CompoundScore pawn, knight, bishop, rook, queen;
     static CompoundScore bishopPair;
+    static CompoundScore trappedRook;
     static CompoundScore knightAlone;
     static CompoundScore bishopAlone;
     static CompoundScore n_p_ram[9], n_p[17];
@@ -142,7 +143,7 @@ class Eval {
     int squareControl();
     template<Colors C> int mobility(const BoardBase&, unsigned& attackingPieces, unsigned& defendingPieces) const;
     template<Colors C> int attack(const BoardBase&, unsigned attackingPieces, unsigned defendingPieces) const;
-    int pieces(const BoardBase&) const;
+    template<Colors C> int pieces(const BoardBase&) const;
     int pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
     template<Colors C> int mobility( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1], unsigned& attackingPieces, unsigned& defendingPieces) const;

@@ -144,7 +144,8 @@ void Console::dataArrived() {
 #endif    
     std::string temp;
     if (Options::server) {
-        char buffer[1400];
+        if (!socket->canReadLine()) return;
+        char buffer[nMaxGameLength*10+100];
         qint64 lineLength = socket->readLine(buffer, sizeof(buffer));
         temp.append(buffer, lineLength);
 //        for (int i=0; i<lineLength; ++i) std::cout << (int)buffer[i] << std::endl;
@@ -156,6 +157,8 @@ void Console::dataArrived() {
         temp.erase(temp.length()-1);
     }
     parse(temp);
+    if (socket->canReadLine())
+        dataArrived();
 #ifdef __WIN32__
     notifier->setEnabled(true);
 #endif    

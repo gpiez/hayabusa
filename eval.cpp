@@ -49,6 +49,7 @@ int squareControl[nSquares];
 
 CompoundScore Eval::pawn, Eval::knight, Eval::bishop, Eval::rook, Eval::queen;
 CompoundScore Eval::bishopPair;
+CompoundScore Eval::trappedRook;
 CompoundScore Eval::knightAlone;
 CompoundScore Eval::bishopAlone;
 CompoundScore Eval::n_p_ram[9], Eval::n_p[17];
@@ -72,6 +73,13 @@ static inline int popcount15( uint64_t x )
     return  x>>60;
 }
 
+static inline int popcount3( uint64_t x )
+{
+    x -=  x>>1 & 0x5555555555555555LL;
+    x *= 0x5555555555555555LL;
+    return  x>>62;
+}
+
 // special popcount, assuming each 2-bit block has max one bit set, for counting light/dark squares.
 static inline int popcount2( uint64_t x )
 {
@@ -84,6 +92,7 @@ static inline int popcount2( uint64_t x )
 
 #else
 #define popcount15(x) __builtin_popcountll(x)
+#define popcount3(x) __builtin_popcountll(x)
 #define popcount2(x) __builtin_popcountll(x)
 #endif
 
@@ -95,7 +104,7 @@ static inline int popcount2( uint64_t x )
 Eval::Eval() {
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
 //    pt->setSize(0x100000000);
-    pawn = 80;
+    pawn = 60;      // +20 psq = 80
     knight = 275;   // +25 psq = 300
     bishop = 284;   // +16 psq = 300
     rook = 430;     // +20 psq = 450
@@ -104,7 +113,7 @@ Eval::Eval() {
     bishopPair = 50;
     knightAlone = -125;
     bishopAlone = -100;
-
+    trappedRook = -40;
     parameters.aspiration0 = 40;
     parameters.aspiration1 = 5;
     parameters.evalHardBudget = 20;
@@ -344,17 +353,15 @@ void Eval::initTables() {
         }*/
 }
 
-int Eval::pieces(const BoardBase&) const {
-//     if (pl.ge  unts() == 0x01000100000000)     //only one knight left
-//         value += knightAlone;
-//     if (pl.getCounts() == 0x01000000010000)     //only one bishop left
-//         value += knightAlone;
-//     if (pl[Bishop] > 1)
-//         value += bishopPair;
-//
-//     value += b_p[pl[Pawn]];
+template<Colors C>
+int Eval::pieces(const BoardBase& b) const {
     int value = 0;
-
+    if (popcount3(b.getPieces<C, Bishop>()) >= 2) {
+        value += bishopPair.opening;
+    }
+    if  (   (b.getPieces<C, Rook>() & (h1|g1|h2|g2) && b.getPieces<C, King>() & (g1|f1) && b.getPieces<C, Pawn>() & (h2|h3) && b.getPieces<C, Pawn>() & (g2|g3))
+        ||  (b.getPieces<C, Rook>() & (a1|b1|a2|b2) && b.getPieces<C, King>() & (b1|c1) && b.getPieces<C, Pawn>() & (a2|a3) && b.getPieces<C, Pawn>() & (b2|b3)))
+            value += trappedRook.opening;
     return value;
 }
 
@@ -792,16 +799,18 @@ int Eval::eval(const BoardBase& b) const {
         a = attack<White>(b, wap, bdp) - attack<Black>(b, bap, wdp);
     } else
         a = 0;
+    int pi = pieces<White>(b) - pieces<Black>(b);
 #ifdef MYDEBUG    
     if (debug) {
         std::cout << "material:       " << e << std::endl;
         std::cout << "mobility:       " << m << std::endl;
         std::cout << "pawns:          " << p << std::endl;
         std::cout << "attack:         " << a << std::endl;
+        std::cout << "pieces:         " << pi << std::endl;
     }
 #endif
     
-    return e + m + p + a;
+    return e + m + p + a + pi;
 }
 
 void Eval::ptClear() {
