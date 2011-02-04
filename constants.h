@@ -31,9 +31,14 @@
                 <<  __FILE__ << __PRETTY_FUNCTION__ << __LINE__ << std::endl; \
                 asm("int3"); \
 } } while(0)
+#define TRACE_DEBUG 1
 #else
 #define ASSERT(x)
+#define TRACE_DEBUG 0
 #endif
+
+#define print_debug(mask, fmt, ...) \
+            do { if(TRACE_DEBUG) if (mask & Options::debug) fprintf(stderr, fmt, __VA_ARGS__); } while (0)
 
 #undef foreach
 
@@ -59,15 +64,6 @@ enum Square {
     a8, b8, c8, d8, e8, f8, g8, h8
 };
 
-#ifndef BITBOARD
-enum SpecialMoves: uint8_t {
-    nothingSpecial=0,
-    shortCastling, longCastling,
-    promoteQ, promoteR, promoteB, promoteN,
-    enableEP, EP
-};
-#endif
-
 enum Phase { root, trunk, tree, mate, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
@@ -79,6 +75,9 @@ enum NodeFlag { Threatened = 1, Threatening = 2 };
 typedef uint64_t Key;
 typedef uint32_t PawnKey;
 
+// tcp server incurs some lag
+static const std::chrono::milliseconds operatorTime = std::chrono::milliseconds(200);
+static const std::chrono::milliseconds minimumTime = std::chrono::milliseconds(100);
 static const unsigned int maxMovesNull = 8;     // So a lone king with 8 possible moves will always inhibit null moves
 static const int maxRows = 1000;
 static const unsigned int maxThreadId = 255;
@@ -104,29 +103,6 @@ static const unsigned int nDirKinds = 2;//kinds of long range direction, horizon
 static const unsigned int nFiles = 8;
 static const unsigned int nRows = 8;
 static const unsigned int nSquares = nFiles*nRows;
-
-#ifndef BITBOARD
-/*
- * Number of bits reserved for the attackedBy counters.
- * The standard structure can handle:
- * Up to 3 bishop of the same color attacking the same square
- * Up to 3 queens attacking the same square
- * up to 3 rooks attacking the same square
- */
-static const unsigned int nRBits = 2;
-static const unsigned int nBBits = 2;
-static const unsigned int nQBits = 2;
-static const unsigned int nCheckKRBits = 1; // horizontal king attacks from enemy pieces
-static const unsigned int nCheckKBBits = 1; // diagonal king attacks from enemy pieces
-
-static const unsigned int nPRBits = 1;
-static const unsigned int nPLBits = 1;
-static const unsigned int nKBits = 1;
-static const unsigned int nNBits = 3;
-static const unsigned int nKNAttackBits = 1;    // king attacks from enemy knight
-static const unsigned int nKPAttackBits = 1;    // king attacks from enemy pawn
-#endif
-
 /*
  * The eight possible directions of movement for a
  * king in a [8][8] array
@@ -135,38 +111,6 @@ static const int dirOffsets[8] = { 1, 9, 8, 7, -1, -9, -8, -7 };
 static const int xOffsets[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 static const int yOffsets[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
 static const int materialTab[nPieces+1] = { 0, 5, 3, 9, 3, 0, 0 };
-#ifndef BITBOARD
-static const int xShortOffsets[nPieces+1][nDirs] = {
-    {},
-    {}, //rook
-    {}, //bishop
-    {}, //queen
-    { 2, 1, -1, -2, -2, -1, 1, 2 }, //knight
-    { 1, -1 },                      //pawn
-    { 1, 1, 0, -1, -1, -1, 0, 1 }   //king
-};
-
-static const int yShortOffsets[nColors][nPieces+1][nDirs] = {{
-    {},
-    {}, //rook
-    {}, //bishop
-    {}, //queen
-    { 1, 2, 2, 1, -1, -2, -2, -1 }, //knight
-    { 1, 1 },                       //pawn white
-    { 0, 1, 1, 1, 0, -1, -1, -1 }   //king
-},{
-    {},
-    {}, //rook
-    {}, //bishop
-    {}, //queen
-    { 1, 2, 2, 1, -1, -2, -2, -1 }, //knight
-    { -1, -1 },                     //pawn black
-    { 0, 1, 1, 1, 0, -1, -1, -1 }   //king
-}};
-
-static const __v16qi zeroToFifteen = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
-#endif
-
 static inline int popcount(uint64_t x) {
 #ifdef __SSE4_2__
     return _popcnt64(x);

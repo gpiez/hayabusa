@@ -39,6 +39,7 @@ namespace Options {
     unsigned            veinDepth = 20;
     unsigned            leafDepth = 8;
     bool                reduction = false;
+    unsigned            debug = 0;
 #ifdef QT_NETWORK_LIB    
     bool                server = false;
 #endif    
@@ -183,15 +184,16 @@ void Console::send(std::string str) {
 
 void Console::privateSend(std::string str)
 {
-    if (!Options::quiet)
-        std::cout << str << std::endl;
 #if defined(QT_NETWORK_LIB)
     if (Options::server) {
         socket->write(str.c_str());
         socket->write("\n");
         socket->flush();
-    }
+    } else
 #endif
+    {
+        std::cout << str << std::endl;
+    }
     answer = str;
 }
 
@@ -208,7 +210,6 @@ void Console::parse(std::string str) {
 
 void Console::tryMove(std::string cmds) {
     std::string mstr = toLower(cmds);
-    std::cerr << "tryMove " << mstr << std::endl;
     if (mstr.length() < 4 || mstr.length() > 5) {
         send("command '" + mstr + "' not understood");
         return;

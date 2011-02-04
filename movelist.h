@@ -66,7 +66,7 @@ public:
         return last-first;
     }
 
-    unsigned begin() {
+    void begin() {
         current = first;
     }
     

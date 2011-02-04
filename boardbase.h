@@ -146,6 +146,11 @@ struct BoardBase {
 
     inline __v2di build02Attack(const unsigned sq) const;
     inline __v2di build13Attack(const unsigned sq) const;
+    inline __v2di build02Attack(const __v2di) const;
+    inline __v2di build13Attack(const __v2di) const;
+    inline uint64_t build02Attack(const uint64_t) const;
+    inline uint64_t build13Attack(const uint64_t) const;
+    inline uint64_t buildNAttack(uint64_t n) const;
     template<Colors C> inline void buildAttacks();
     template<Colors C> inline void buildPins();
     void buildAttacks();

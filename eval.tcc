@@ -41,7 +41,7 @@ void Eval::draw(const BoardBase& b, int& upperbound, int& lowerbound) const {
         if (b.getPieces<C, Pawn>()) {
             win = b.getPieces<C,King>();
             lose = b.getPieces<-C,King>();
-            int kwin = bit(win);
+            //int kwin = bit(win);
             int klose = bit(lose);
             int pwin = bit(p);
             if ((pwin & 070) > (klose & 070) + 010) {

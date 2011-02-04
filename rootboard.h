@@ -87,6 +87,7 @@ private:
     std::string info;
     system_clock::time_point start;
     system_clock::time_point lastStatus;
+    system_clock::time_point lastStatus2;
     int wtime;
     int btime;
     int winc;

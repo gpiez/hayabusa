@@ -146,12 +146,15 @@ class Eval {
     template<Colors C> int pieces(const BoardBase&) const;
     int pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
-    template<Colors C> int mobility( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1], unsigned& attackingPieces, unsigned& defendingPieces) const;
+//    template<Colors C> int mobility(const BoardBase &b, unsigned& attackingPieces, unsigned& defendingPieces) const;
 
 public:
     static Parameters parameters;
 #ifdef MYDEBUG
     bool debug;
+    mutable uint64_t bmob1, bmob2, bmob3, bmobn;
+    mutable uint64_t rmob1, rmob2, rmob3, rmobn;
+    mutable uint64_t qmob1, qmob2, qmob3, qmobn;
 #endif
     Eval();
     int eval(const BoardBase&) const;

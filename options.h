@@ -16,7 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
+#ifndef OPTIONS_H_
+#define OPTIONS_H_
 namespace Options {
     extern unsigned int splitDepth;
     extern int humanreadable;
@@ -26,7 +27,11 @@ namespace Options {
     extern unsigned veinDepth;
     extern unsigned leafDepth;
     extern bool reduction;
+    extern unsigned debug;
 #ifdef QT_NETWORK_LIB    
     extern bool server;
 #endif    
 }
+
+enum DebugFlags { debugSearch = 1, debugEval = 2 };
+#endif

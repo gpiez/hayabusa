@@ -20,6 +20,7 @@
 
 #include "eval.h"
 #include "boardbase.h"
+#include "options.h"
 #include "transpositiontable.tcc"
 //#include <cstdio>
 
@@ -104,7 +105,7 @@ static inline int popcount2( uint64_t x )
 Eval::Eval() {
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
 //    pt->setSize(0x100000000);
-    pawn = 60;      // +20 psq = 80
+    pawn = 80;      // +20 psq = 80
     knight = 275;   // +25 psq = 300
     bishop = 284;   // +16 psq = 300
     rook = 430;     // +20 psq = 450
@@ -135,7 +136,7 @@ Eval::Eval() {
 //    static RawScore bishopGoodD;
 //    static RawScore bishopKnightD;
 //    static RawScore bishopRookD;
-#ifndef NDEBUG
+/*#ifndef NDEBUG
     printSigmoid(n_p_ram, "n_p_ram");             // bonus for each pawn ram, max is 75
     printSigmoid(n_p, "n_p");
 
@@ -147,13 +148,13 @@ Eval::Eval() {
     printSigmoid(r_p, "r_p");
     printSigmoid(q_p, "r_p");
 
-#endif
+#endif*/
 }
 
 void Eval::initPS() {
     // highest rank (eight) comes first, for convenience.
     // while initializing it is flipped top-down.
-    RawScore rook[2][nSquares] = {{
+/*    RawScore rook[2][nSquares] = {{
  4,  4, 10, 12, 12, 10,  4,  4,
 12, 12, 18, 20, 20, 18, 12, 12,
  5,  5, 11, 13, 13, 11,  5,  5,
@@ -254,14 +255,14 @@ void Eval::initPS() {
 }};
 
     RawScore king[2][nSquares] = {{
--90, -90, -95, -100, -100, -95, -90, -90,
--90, -90, -95, -100, -100, -95, -90, -90,
--90, -90, -95, -100, -100, -95, -90, -90,
+-90, -90, -95, -95, -95, -95, -90, -90,
+-90, -90, -95, -95, -95, -95, -90, -90,
+-90, -90, -95, -95, -95, -95, -90, -90,
 -40, -40, -45, -50, -50, -45, -40, -40,
--10, -10, -15, -20, -20, -15, -10, -10,
- 0,  0, -5, -10, -10, -5,  0,  0,
-10, 10,  5,  0,  0,  5, 10, 10,
-10, 10,  5,  0,  0,  5, 10, 10
+-40, -40, -40, -40, -40, -40, -40, -40, 
+-40, -40, -40, -40, -40, -40, -40, -40, 
+ 10,  10,   5, -20, -20,   5,  10,  10,
+ 10,  10,   5,   0,   0,   5,  10,  10
 },{
  0,  4,  8, 12, 12,  8,  4,  0,
  9, 13, 17, 21, 21, 17, 13,  9,
@@ -271,38 +272,38 @@ void Eval::initPS() {
 10, 14, 18, 22, 22, 18, 14, 10,
  5,  9, 13, 17, 17, 13,  9,  5,
  0,  4,  8, 12, 12,  8,  4,  0
-}};
+}};*/
 
     for (unsigned int sq = 0; sq<nSquares; ++sq)
         getPS( 0, sq) = CompoundScore{ 0, 0 };
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Pawn, sq) = Eval::pawn + CompoundScore{ pawn[Opening][sq ^ 0x38], pawn[Endgame][sq ^ 0x38] };
+        getPS( Pawn, sq) = Eval::pawn;/* + CompoundScore{ pawn[Opening][sq ^ 0x38], pawn[Endgame][sq ^ 0x38] };*/
         getPS(-Pawn, sq ^ 070) = -getPS( Pawn, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Rook, sq)  = Eval::rook + CompoundScore{ rook[Opening][sq ^ 0x38], rook[Endgame][sq ^ 0x38] };
+        getPS( Rook, sq)  = Eval::rook;/* + CompoundScore{ rook[Opening][sq ^ 0x38], rook[Endgame][sq ^ 0x38] };*/
         getPS(-Rook, sq ^ 070) = -getPS( Rook, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Bishop, sq) = Eval::bishop + CompoundScore{ bishop[Opening][sq ^ 0x38], bishop[Endgame][sq ^ 0x38] };
+        getPS( Bishop, sq) = Eval::bishop;/* + CompoundScore{ bishop[Opening][sq ^ 0x38], bishop[Endgame][sq ^ 0x38] };*/
         getPS(-Bishop, sq ^ 070) = -getPS( Bishop, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Knight, sq) = Eval::knight + CompoundScore{ knight[Opening][sq ^ 0x38], knight[Endgame][sq ^ 0x38] };
+        getPS( Knight, sq) = Eval::knight;/* + CompoundScore{ knight[Opening][sq ^ 0x38], knight[Endgame][sq ^ 0x38] };*/
         getPS(-Knight, sq ^ 070) = -getPS( Knight, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Queen, sq) = Eval::queen + CompoundScore{ queen[Opening][sq ^ 0x38], queen[Endgame][sq ^ 0x38] };
+        getPS( Queen, sq) = Eval::queen;/*+ CompoundScore{ queen[Opening][sq ^ 0x38], queen[Endgame][sq ^ 0x38] };*/
         getPS(-Queen, sq ^ 070) = -getPS( Queen, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( King, sq) = CompoundScore{ king[Opening][sq ^ 0x38], king[Endgame][sq ^ 0x38] };
+        getPS( King, sq) = 0;/*CompoundScore{ king[Opening][sq ^ 0x38], king[Endgame][sq ^ 0x38] };*/
         getPS(-King, sq ^ 070) = -getPS( King, sq);
     }
 }
@@ -373,12 +374,16 @@ PawnEntry::Shield evalShield(const BoardBase &b) {
     uint64_t qside = file<'a'>() | file<'b'>() | file<'c'>();
 
     unsigned kshield = 4*popcount(kside & rank<C,2>() & p)
-                       + 3*popcount(kside & rank<C,3>() & p)
-                       + 2*popcount(kside & rank<C,4>() & p);
+                       + 2*popcount(kside & rank<C,3>() & p)
+                       + 1*popcount(kside & rank<C,4>() & p)
+                       + 2*!!(kside & file<'h'>())
+                       + 2*!!(kside & file<'g'>());
 
     unsigned qshield = 4*popcount(qside & rank<C,2>() & p)
-                       + 3*popcount(qside & rank<C,3>() & p)
-                       + 2*popcount(qside & rank<C,4>() & p);
+                       + 2*popcount(qside & rank<C,3>() & p)
+                       + 1*popcount(qside & rank<C,4>() & p)
+                       + 2*!!(qside & file<'a'>())
+                       + 2*!!(qside & file<'b'>());
 
     PawnEntry::Shield ret;
 //    ret.weakLight = 0;
@@ -498,8 +503,8 @@ int Eval::pawns(const BoardBase& b) const {
 // double popcount of two quadwords
 __v2di pop2count(__v2di x) {
 
-    static const __v16qi mask4 = {0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf};
-    static const __v16qi count4 = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
+    const __v16qi mask4 = {0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf};
+    const __v16qi count4 = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
 
     asm(
         "movdqa        %0, %%xmm1    \n"
@@ -522,6 +527,46 @@ __v2di pop2count(__v2di x) {
             );
     return x;
 }
+
+// double popcount of two quadwords
+/*void pop4count(__v2di x01, __v2di x23, int& p0, int& p1, int& p2, int& p3) {
+
+    const __v16qi mask4 = {0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf};
+    const __v16qi count4 = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
+
+    __v8hi t01 = x01;
+    __v8hi t23 = x23;
+    t01 = _mm_srli_epi16(t01, 4);
+    x01 = (__v16qi)x01 & mask4;
+    t01 = (__v16qi)t01 & mask4;
+    __v16qi c0 = count4;
+    __v16qi c1 = count4;
+    c0 = _mm_shuffle_epi8( x01, c0);
+    c1 = _mm_shuffle_epi8( t01, c1);
+    c1 += c0;
+    c0 ^= c0;
+    c0 = _mm_sad_epu8(c1, c0);*/
+/*    asm(
+        "movdqa        %0, %%xmm1    \n"
+
+        "psrlw        $4, %%xmm1    \n"
+        "pand        %1, %0    \n"    // xmm0 := lower nibbles
+        "pand        %1, %%xmm1    \n"    // xmm1 := higher nibbles
+        "movdqa        %2, %%xmm2    \n"
+        "movdqa        %2, %%xmm3    \n"    // get popcount
+        "pshufb        %0, %%xmm2    \n"    // for all nibbles
+        "pshufb        %%xmm1, %%xmm3    \n"    // using PSHUFB
+
+        "paddb        %%xmm2, %%xmm3    \n"    // popcount for all bytes
+        "pxor        %0, %0    \n"
+        "psadbw        %%xmm3, %0    \n"    // sum popcounts
+
+    : "=x" (x)
+                : "x" (mask4), "x" (count4), "0" (x)
+                : "%xmm1", "%xmm2", "%xmm3"
+            );
+    return x;*/
+//}
 
 int look2up(__v2di x, __v16qi tab) {
     __v8hi y = _mm_shuffle_epi8(tab, x);
@@ -574,137 +619,135 @@ static const int8_t mobValues[nPieces+1][32] = {
     // unoccupied and not attacked by a less valuable piece
     // 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27
     {  0 },                                                                // nothing
-    {  0,  3,  6,  9, 12, 14, 16, 18, 20, 22, 23, 24, 25, 25, 25 }, //rook
-    {  0,  3,  5,  7,  9, 10, 11, 12, 13, 14, 15, 16, 16, 16 }, //bishop
-    {  0,  3,  5,  7,  9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20 },
+    {  0,  2,  4,  5,  5,  5,  6,  6,  6,  7,  7,  7,  8,  8,  8 }, //rook
+    {  0,  5,  9, 12, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20 }, //bishop
+    {  0,  2,  3,  4,  4,  5,  5,  6,  6,  6,  7,  7,  7,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8 },
     {  0,  6, 11, 15, 18, 20, 22, 24, 25 },
     {  0 },
     {  0 }
 };
 
 template<Colors C>
-inline int Eval::mobility( const BoardBase &b, const uint64_t (&restrictions)[nColors][nPieces+1], unsigned& attackingPieces, unsigned& defendingPieces) const {
+inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsigned& defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int score = 0;
     uint64_t oppking = b.getAttacks<-C,King>();
     uint64_t ownking = b.getAttacks< C,King>();
-//    std::cout << "k" << CI << std::hex << ownking << std::endl;
+    uint64_t noBlockedPawns = ~(b.getPieces<C,Pawn>() & shift<C*-8>(b.getPieces<-C,Pawn>()));
+    uint64_t restrictions = ~b.getAttacks<-C,Pawn>();
+    __v2di zero = _mm_set1_epi64x(0);
+    
     for (const BoardBase::MoveTemplateB* bs = b.bsingle[CI]; bs->move.data; ++bs) {
-        Move m = bs->move;
-        __v2di a13 = bs->d13;
-#ifdef USE_PINS_IN_MOBILITY
-        __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
-        __v2di pin13 = from2 & pins[CI].dir13;
-#ifdef __SSE4_1__
-        pin13 = _mm_cmpeq_epi64(pin13, zero);
-#else
-        pin13 = _mm_cmpeq_epi32(pin13, zero);
-        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-        pin13 = pin13 & pin13s;
-#endif
-        pin13 = ~pin13 & a13;
-        uint64_t mob = fold(pin13);
-#else
-        uint64_t mob = fold(a13);
-#endif
-        if (mob & oppking) attackingPieces++;
-        if (mob & ownking) defendingPieces++;
-        mob = popcount15(mob & ~restrictions[CI][Bishop]);
-        ASSERT(mob <= 13);
-
-        score += mobValues[Bishop][mob];
+        const __v2di v2queen = _mm_set1_epi64x(b.getPieces<C,Queen>());
+        // restriced mobility in one move, including own defended pieces
+        uint64_t rmob1 = fold(bs->d13) & restrictions;
+        // generator for two move squares, mask blocked pawns
+        uint64_t rmob2 = rmob1 & noBlockedPawns;
+        // remove own pieces
+        rmob1 &= ~b.getOcc<C>();
+        // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move        
+        rmob2 |= b.build13Attack(rmob1) & restrictions & ~b.getOcc<C>();
+        // generator for three move squares, mask blocked pawns
+        uint64_t rmob3 = rmob2 & noBlockedPawns;
+        // restriced mobility in three moves
+        rmob3 |= b.build13Attack(rmob2) & restrictions & ~b.getOcc<C>();
+        rmob3 &= ~(rmob1 | rmob2);
+        /*
+         * If the queen is on an attack line of the bishop, include the attack
+         * line of the queen in the attack line of the bishop. This leads to
+         * increased one move mobility and the bishop gets counted in an possible
+         * king attack
+         */
+        rmob1 |= fold( ~ _mm_cmpeq_epi64(bs->d13 & v2queen, zero) & b.qsingle[CI][0].d13);
+        rmob2 &= ~rmob1;
+        
+        if (rmob1 & oppking) attackingPieces+=4;
+        if (rmob2 & oppking) attackingPieces+=2;
+        if (rmob3 & oppking) attackingPieces++;
+        if (rmob1 & ownking) defendingPieces++;
+        score += popcount(rmob1)*4 + popcount(rmob2)*2 + popcount(rmob3);
 #ifdef MYDEBUG
-        if (debug) {
-            std::cout << "b mobility" << CI << "    :" << mob << std::endl;
-            std::cout << "b mobility" << CI << "    :" << (int)mobValues[Bishop][mob] << std::endl;
-        }
+        print_debug(debugEval, "b mobility%n: %n, %n, %n\n", CI, popcount(rmob1), popcount(rmob2), popcount(rmob3));
+        if (Options::debug & debugEval) { printBit(rmob1); printBit(rmob2); printBit(rmob3); }
 #endif
     }
-
-    for (const BoardBase::MoveTemplateR* rs = b.rsingle[CI]; rs->move.data; ++rs) {
-        Move m = rs->move;
-        __v2di a02 = rs->d02;
-#ifdef USE_PINS_IN_MOBILITY
-        __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
-        __v2di pin02 = from2 & pins[CI].dir02;
-#ifdef __SSE4_1__
-        pin02 = _mm_cmpeq_epi64(pin02, zero);
-#else
-        pin02 = _mm_cmpeq_epi32(pin02, zero);
-        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-        pin02 = pin02 & pin02s;
-#endif
-        pin02 = ~pin02 & a02;
-        uint64_t mob = fold(pin02);
-#else
-        uint64_t mob = fold(a02);
-#endif
-        if (mob & oppking) attackingPieces++;
-        if (mob & ownking) defendingPieces++;
-        mob = popcount15(mob & ~restrictions[CI][Rook]);
-        ASSERT(mob <= 14);
-
-        score += mobValues[Rook][mob];
-#ifdef MYDEBUG
-        if (debug) {
-            std::cout << "r mobility" << CI << "    :" << mob << std::endl;
-            std::cout << "r mobility" << CI << "    :" << (int)mobValues[Rook][mob] << std::endl;
-        }
-#endif
-    }
-
-    for (const BoardBase::MoveTemplateQ* qs = b.qsingle[CI]; qs->move.data; ++qs) {
-        Move m = qs->move;
-        __v2di a02 = qs->d02;
-        __v2di a13 = qs->d13;
-#ifdef USE_PINS_IN_MOBILITY
-        __v2di from2 = _mm_set1_epi64x(1ULL<<m.from());
-        __v2di pin02 = from2 & pins[CI].dir02;
-        __v2di pin13 = from2 & pins[CI].dir13;
-#ifdef __SSE4_1__
-        pin02 = _mm_cmpeq_epi64(pin02, zero);
-        pin13 = _mm_cmpeq_epi64(pin13, zero);
-#else
-        pin02 = _mm_cmpeq_epi32(pin02, zero);
-        pin13 = _mm_cmpeq_epi32(pin13, zero);
-        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-        pin02 = pin02 & pin02s;
-        pin13 = pin13 & pin13s;
-#endif
-        pin02 = ~pin02 & a02;
-        pin13 = ~pin13 & a13;
-        uint64_t mob = fold(pin02|pin13);
-#else
-        uint64_t mob = fold(a02|a13);
-#endif
-        if (mob & oppking) attackingPieces+=2;
-        mob = popcount(mob & ~restrictions[CI][Queen]);
-        ASSERT(mob <= 27 );
-
-        score += mobValues[Queen][mob];
-#ifdef MYDEBUG
-        if (debug) {
-            std::cout << "q mobility" << CI << "    :" << mob << std::endl;
-            std::cout << "q mobility" << CI << "    :" << (int)mobValues[Queen][mob] << std::endl;
-        }
-#endif
-    }
-
     for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
         uint64_t sq = bit(p);
-        uint64_t mob = popcount15(b.knightAttacks[sq] & ~restrictions[CI][Knight]);
-        ASSERT(mob <= 8);
-        if (b.knightAttacks[sq] & oppking) attackingPieces++;
-        if (b.knightAttacks[sq] & ownking) defendingPieces++;
-        score += mobValues[Knight][mob];
+        uint64_t rmob1 = b.knightAttacks[sq] & restrictions;
+        uint64_t rmob2 = rmob1 & noBlockedPawns;
+        rmob1 &= ~b.getOcc<C>();
+        rmob2 |= b.buildNAttack(rmob1) & restrictions & ~b.getOcc<C>();
+        uint64_t rmob3 = rmob2 & noBlockedPawns;
+        rmob3 |= b.buildNAttack(rmob2) & restrictions & ~b.getOcc<C>();
+        rmob2 &= ~rmob1;
+        rmob3 &= ~(rmob1 | rmob2);
+        
+#ifdef MYDEBUG        
+        bmob1 += popcount(rmob1);
+        bmob2 += popcount(rmob2);
+        bmob3 += popcount(rmob3);
+        bmobn ++;
+#endif        
+        if (rmob1 & oppking) attackingPieces+=4;
+        if (rmob2 & oppking) attackingPieces+=2;
+        if (rmob3 & oppking) attackingPieces++;
+        if (rmob1 & ownking) defendingPieces++;
+        score += popcount(rmob1)*4 + popcount(rmob2)*2 + popcount(rmob3);
 #ifdef MYDEBUG
         if (debug) {
-            std::cout << "n mobility" << CI << "    :" << mob << std::endl;
-            std::cout << "n mobility" << CI << "    :" << (int)mobValues[Knight][mob] << std::endl;
+//            std::cout << "n mobility" << CI << "    :" << mob << std::endl;
         }
 #endif
     }
+
+    restrictions &= ~(b.getAttacks<-C,Bishop>() | b.getAttacks<-C,Knight>());
+    for (const BoardBase::MoveTemplateR* rs = b.rsingle[CI]; rs->move.data; ++rs) {
+        // restriced mobility in one move, including own defended pieces
+        uint64_t rmob1 = fold(rs->d02) & restrictions;
+        // generator for two move squares, mask blocked pawns
+        uint64_t rmob2 = rmob1 & noBlockedPawns;
+        // remove own pieces
+        rmob1 &= ~b.getOcc<C>();
+        // restriced mobility in two moves, including own defended pieces        
+        rmob2 |= b.build13Attack(rmob1) & restrictions;
+        // generator for three move squares, mask blocked pawns
+        uint64_t rmob3 = rmob2 & noBlockedPawns;
+        // remove own pieces
+        rmob2 &= ~b.getOcc<C>();
+        rmob2 &= ~rmob1;
+        // restriced mobility in two moves
+        rmob3 |= b.build13Attack(rmob2) & restrictions;
+        // remove own pieces
+        rmob3 &= ~b.getOcc<C>();
+        rmob3 &= ~rmob1;
+        rmob3 &= ~rmob2;
+        
+/*        __v2di connectedr = a02 & _mm_set1_epi64x(b.getPieces<C,Rook>());
+        connectedr = _mm_cmpeq_epi64(connectedr, _mm_set1_epi64x(0));
+        __v2di connectedq = a02 & _mm_set1_epi64x(b.getPieces<C,Queen>());
+        connectedq = _mm_cmpeq_epi64(connectedq, _mm_set1_epi64x(0));
+        a02 |= ~connectedr & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02);
+        a02 |= ~connectedq & b.qsingle[CI][0].d02;*/
+        
+        if (rmob1 & oppking) attackingPieces+=4;
+        if (rmob2 & oppking) attackingPieces+=2;
+        if (rmob3 & oppking) attackingPieces++;
+        if (rmob1 & ownking) defendingPieces++;
+        score += popcount(rmob1)*4 + popcount(rmob2)*2 + popcount(rmob3);
+#ifdef MYDEBUG
+//        if (debug) std::cout << "r mobility" << CI << "    :" << mob << std::endl;
+        if (debug) { printBit(rmob1); printBit(rmob2); printBit(rmob3); }
+#endif
+    }
+
+    restrictions &= ~(b.getAttacks<-C,Rook>());
+    uint64_t mob = b.getAttacks<C,Queen>();
+    if (mob & oppking) attackingPieces+=6;
+    score += popcount(mob & restrictions);
+#ifdef MYDEBUG
+    if (debug) std::cout << "q mobility" << CI << "    :" << mob << std::endl;
+        //if (debug) { printBit(rmob1); printBit(rmob2); printBit(rmob3); }
+#endif
 
     return score;
 }
@@ -721,18 +764,10 @@ inline void Eval::mobilityRestrictions(const BoardBase &b, uint64_t (&restrictio
     restrictions[CI][Queen] = r |= b.getAttacks<-C,Rook>();
 }
 
-template<Colors C>
-inline int Eval::mobility(const BoardBase& b, unsigned& attackingPieces, unsigned& defendingPieces) const {
-    uint64_t restrictions[nColors][nPieces+1];
-
-    mobilityRestrictions<C>(b, restrictions);
-    return mobility<C>(b, restrictions, attackingPieces, defendingPieces);
-}
-
-static const int kattPieces[] = { 0, 1, 2, 4, 7, 10, 10, 10, 10 };
-static const int kdefPawn[] = { 20,20,20,19,18,17,16,15,14,13,12,11,10,10,10,10,10,10,10,10,10,10};
-                            //   0           4           8          12 
-static const int kdefPieces[] = { 30,28,24,20,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};
+static const int kattPieces[] = { 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 12, 12, 13, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
+static const int kdefPawn[] = { 20,20,19,18,17,16,16,15,15,14,14,13,13,12,11,10,10,10,10,10,10,10,10,10,10,10,10,10,10};
+                            //   0           4           8          12          16 = perfect shield 
+static const int kdefPieces[] = { 10, 9, 8, 7, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
 
 template<Colors C>
 int Eval::attack(const BoardBase& b, unsigned attackingPieces, unsigned defendingPieces) const {
@@ -756,7 +791,9 @@ int Eval::attack(const BoardBase& b, unsigned attackingPieces, unsigned defendin
     if (side == KSide) def = pawnEntry.shield[EI].kside;
     else if (side == QSide) def = pawnEntry.shield[EI].qside;
 
-    int att=kattPieces[attackingPieces] * (kdefPawn[def] + kdefPieces[defendingPieces])/4;
+    if (b.getAttacks<-C,King>() & (b.getAttacks<C,Pawn>() | b.getAttacks<C,King>()))
+        attackingPieces++;
+    int att=kattPieces[attackingPieces] * (kdefPawn[def] + kdefPieces[defendingPieces]);
     
 #ifdef MYDEBUG
     if (debug) {

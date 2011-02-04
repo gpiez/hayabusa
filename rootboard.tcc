@@ -59,10 +59,14 @@ template<Colors C>
 Move RootBoard::rootSearch(unsigned int endDepth) {
     start = system_clock::now();
     lastStatus = start + milliseconds(1000);
+    lastStatus2 = start;
 #ifdef QT_GUI_LIB
     while (!statWidget->tree);
     statWidget->emptyTree();
 #endif
+#ifdef MYDEBUG        
+    eval.bmob1 = eval.bmob2 = eval.bmob3 = eval.bmobn = 0;
+#endif        
     isMain = true;
     const ColoredBoard<C>& b = currentBoard<C>();
     const unsigned ply=0;
@@ -75,6 +79,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     system_clock::time_point softBudget;
     if (movestogo == 0)
         movestogo = 40;
+    time -= operatorTime;
+    time = std::max(minimumTime, time);
     
     softBudget = start + (time + inc*movestogo)/(2*movestogo);
     hardBudget = start + std::min(time/2, (2*time + 2*inc*movestogo)/(movestogo+1));
@@ -84,8 +90,11 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes && !stopSearch; depth++) {
         ml.begin();
         bestMove = *ml;
-       console->send("info currmove " + (*ml).algebraic()
-                   + " currmovenumber 1");
+        system_clock::time_point now = system_clock::now();
+        if (now >= lastStatus2) {
+            lastStatus2 = now + milliseconds(1000);
+            console->send("info currmove " + bestMove.algebraic() + " currmovenumber 1");
+        }
 #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
@@ -99,7 +108,6 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         }
 #endif
 
-        system_clock::time_point now;
         currentMoveIndex = 1;
         SharedScore<        C>  alpha; alpha.v = -infinity*C;
         SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
@@ -143,11 +151,12 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 
         for (++ml; ml.isValid() && !stopSearch; ++ml) {
             currentMoveIndex++;
-            std::stringstream g;
-            g   << "info"
-               << " currmove " << (*ml).algebraic()
-               << " currmovenumber " << currentMoveIndex;
-            console->send(g.str());
+            if (now > lastStatus2) {
+                std::stringstream g;
+                lastStatus2 = now + milliseconds(1000);
+                g << "info currmove " << (*ml).algebraic() << " currmovenumber " << currentMoveIndex;
+                console->send(g.str());
+            }
             bool pruneNull = false;
             if (alpha.v != -infinity*C
                 && depth > dMaxCapture+dMaxThreat+2
@@ -263,6 +272,13 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 << " nodes " << ntemp
                 << " nps " << (1000*ntemp)/(duration_cast<milliseconds>(now-start).count()+1)
             ;
+#ifdef MYDEBUG
+            g << std::endl;
+            g << "info string ";
+            g << " bmob1 " << eval.bmob1 / (eval.bmobn+0.1);
+            g << " bmob2 " << eval.bmob2 / (eval.bmobn+0.1);
+            g << " bmob3 " << eval.bmob3 / (eval.bmobn+0.1);
+#endif            
             console->send(g.str());
         }
     }

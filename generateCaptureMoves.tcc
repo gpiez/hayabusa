@@ -362,7 +362,6 @@ bool ColoredBoard<C>::generateForks( Move** const good ) const {
     return false;
 }
 
-#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreturn-type"
 template<Colors C>
 template<bool AbortOnFirst>
@@ -757,6 +756,6 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
     }
     if (AbortOnFirst) return false;
 }
-#pragma GCC diagnostic pop
+#pragma GCC diagnostic warning "-Wreturn-type"
 
 #endif /* GENERATECAPTUREMOVES_TCC_ */

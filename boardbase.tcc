@@ -34,6 +34,43 @@ inline __v2di BoardBase::build13Attack(const unsigned sq) const {
     maskedDirs &= mask13x[sq];
     return maskedDirs;
 }
+void printBit(uint64_t);
+inline uint64_t BoardBase::build13Attack(uint64_t flood1) const {
+    
+    uint64_t flood3 = flood1, flood5 = flood1, flood7 = flood1;
+    
+    const uint64_t e01 = ~occupied1 & ~file<'a'>();
+    const uint64_t e03 = ~occupied1 & ~file<'h'>();
+    // uint64_t e05 = ~occupied1 & ~file<'h'>();
+    // uint64_t e07 = ~occupied1 & ~file<'a'>();
+    const uint64_t e11 = e01 & e01 << 9;
+    const uint64_t e13 = e03 & e03 << 7;
+    const uint64_t e15 = e03 & e03 >> 9;
+    const uint64_t e17 = e01 & e01 >> 7;
+    
+    const uint64_t e21 = e11 & e11 << 18;
+    const uint64_t e23 = e13 & e13 << 14;
+    const uint64_t e25 = e15 & e15 >> 18;
+    const uint64_t e27 = e17 & e17 >> 14;
+    
+    flood1 |= flood1 << 9 & e01;
+    flood3 |= flood3 << 7 & e03;
+    flood5 |= flood5 >> 9 & e03;
+    flood7 |= flood7 >> 7 & e01;
+    
+    flood1 |= flood1 << 18 & e11;
+    flood3 |= flood3 << 14 & e13;
+    flood5 |= flood5 >> 18 & e15;
+    flood7 |= flood7 >> 14 & e17;
+    
+    flood1 |= flood1 << 36 & e21;
+    flood3 |= flood3 << 28 & e23;
+    flood5 |= flood5 >> 36 & e25;
+    flood7 |= flood7 >> 28 & e27;
+    
+    return ((flood1 << 9 | flood7 >> 7 ) & ~file<'a'>())
+         | ((flood3 << 7 | flood5 >> 9 ) & ~file<'h'>());
+}
 
 inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
@@ -49,6 +86,51 @@ inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     maskedDir02 &= mask02[sq].x;
     return maskedDir02;
 //    return _mm_set1_epi64x(att0Tab[attLen0[sq]][sq], att2Tab[attLen2[sq]][sq]);
+}
+
+inline uint64_t BoardBase::build02Attack(uint64_t flood0) const {
+    
+    uint64_t flood2 = flood0, flood4 = flood0, flood6 = flood0;
+    
+    const uint64_t e00 =  ~occupied1 & ~file<'a'>();
+    const uint64_t e02 =  ~occupied1;
+    const uint64_t e04 =  ~occupied1 & ~file<'h'>();
+    
+    const uint64_t e10 = e00 & e00 << 1;
+    const uint64_t e12 = e02 & e02 << 8;
+    const uint64_t e14 = e04 & e04 >> 1;
+    const uint64_t e16 = e02 & e02 >> 8;
+    
+    const uint64_t e20 = e10 & e10 << 2;
+    const uint64_t e22 = e12 & e12 << 16;
+    const uint64_t e24 = e14 & e14 >> 16;
+    const uint64_t e26 = e16 & e16 >> 2;
+    
+    flood0 |= flood0 << 1 & e00;
+    flood2 |= flood2 << 8 & e02;
+    flood4 |= flood4 >> 1 & e04;
+    flood6 |= flood6 >> 8 & e02;
+    
+    flood0 |= flood0 <<  2 & e10;
+    flood2 |= flood2 << 16 & e12;
+    flood4 |= flood4 >>  2 & e14;
+    flood6 |= flood6 >> 16 & e16;
+    
+    flood0 |= flood0 <<  4 & e20;
+    flood2 |= flood2 << 32 & e22;
+    flood4 |= flood4 >>  4 & e24;
+    flood6 |= flood6 >> 32 & e26;
+    
+    return (flood0 << 1 & ~file<'a'>()) | (flood4 >> 1 & ~file<'h'>())
+        | flood2 << 8 | flood6 >> 8;
+}
+
+inline uint64_t BoardBase::buildNAttack(uint64_t n) const {
+    uint64_t n1 = (n<<1 & ~file<'a'>())
+                | (n>>1 & ~file<'h'>());
+    uint64_t n2 = (n<<2 & ~(file<'a'>() | file<'b'>())) 
+                | (n>>2 & ~(file<'g'>() | file<'h'>()));
+    return n1<<16 | n1>>16 | n2<<8 | n2>>8;
 }
 
 template<Colors C>
@@ -70,7 +152,7 @@ void BoardBase::buildAttacks() {
     __v2di dir13 = _mm_set1_epi64x(0);
     p = getPieces<C, Bishop>();
     while(p) {
-        uint64_t sq = bit(p);
+        unsigned sq = bit(p);
         p &= p-1;
         __v2di a13 = build13Attack(sq);
         bs->move = Move(sq, 0, Bishop);
@@ -87,7 +169,7 @@ void BoardBase::buildAttacks() {
     __v2di dir02 = _mm_set1_epi64x(0);
     p = getPieces<C, Rook>();
     while(p) {
-        uint64_t sq = bit(p);
+        unsigned sq = bit(p);
         p &= p-1;
         __v2di a02 = build02Attack(sq);
         rs->move = Move(sq, 0, Rook);
@@ -104,7 +186,7 @@ void BoardBase::buildAttacks() {
     p = getPieces<C, Queen>();
     a = 0;
     while(p) {
-        uint64_t sq = bit(p);
+        unsigned sq = bit(p);
         p &= p-1;
         __v2di a13 = build13Attack(sq);
         __v2di a02 = build02Attack(sq);
@@ -140,7 +222,7 @@ void BoardBase::buildPins() {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
 
     uint64_t p = getPieces<C, King>();
-    uint64_t sq = bit(p);
+    unsigned sq = bit(p);
     getAttacks<C, All>() |= getAttacks<C, King>() = kingAttacks[0][sq];
 
     __v2di maskedDir13 = build13Attack(sq);
@@ -157,5 +239,4 @@ void BoardBase::buildPins() {
     pins[CI] = _mm_cvtsi128_si64(_mm_unpackhi_epi64(pins2, pins2))
          & _mm_cvtsi128_si64(pins2);
 }
-
 #endif
