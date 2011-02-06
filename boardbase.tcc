@@ -103,8 +103,8 @@ inline uint64_t BoardBase::build02Attack(uint64_t flood0) const {
     
     const uint64_t e20 = e10 & e10 << 2;
     const uint64_t e22 = e12 & e12 << 16;
-    const uint64_t e24 = e14 & e14 >> 16;
-    const uint64_t e26 = e16 & e16 >> 2;
+    const uint64_t e24 = e14 & e14 >> 2;
+    const uint64_t e26 = e16 & e16 >> 16;
     
     flood0 |= flood0 << 1 & e00;
     flood2 |= flood2 << 8 & e02;
