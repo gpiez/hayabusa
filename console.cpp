@@ -261,12 +261,10 @@ void Console::uci(StringList /*cmds*/) {
 }
 
 void Console::debug(StringList cmds) {
-    if (cmds[1] == "on")
-        debugMode = true;
-    else if (cmds[1]=="off")
-        debugMode = false;
-    else
-        send("info string usage: debug on|off");
+    auto pos = cmds.parse(StringList() << "eval" << "mobility" << "search");
+    if (pos.count("eval")) Options::debug |= debugEval;
+    if (pos.count("mobility")) Options::debug |= debugMobility;
+    if (pos.count("search")) Options::debug |= debugSearch;
 }
 
 // engine is always ready as soon as the command dispatcher is working.

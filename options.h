@@ -33,5 +33,5 @@ namespace Options {
 #endif    
 }
 
-enum DebugFlags { debugSearch = 1, debugEval = 2 };
+enum DebugFlags { debugSearch = 1, debugEval = 2, debugMobility };
 #endif

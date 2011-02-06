@@ -126,6 +126,8 @@ class Eval {
     static int pawnIsolated;
     static int pawnHalfIsolated;
     static int pawnPasser[8];
+    static int pawnEdge;
+    static int pawnCenter;
 
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
 
@@ -206,7 +208,7 @@ void printSigmoid(T& p, std::string str) {
     size_t n = sizeof(T)/sizeof(p[0])-1;
     std::cout << std::setw(16) << str;
     for (unsigned int i = 0; i <= n; ++i) {
-        std::cout << std::setw(3) << p[i].opening << "/" << std::setw(3) << p[i].endgame;
+        std::cout << std::setw(3) << p[i];
     }
     std::cout << std::endl;
 }

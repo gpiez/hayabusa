@@ -176,7 +176,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                     pruneNull = alpha >= nalpha.v;
                 }
             }
-            if (!pruneNull) {
+            if (!pruneNull && !stopSearch) {
                 if (search<(Colors)-C, trunk>(NodeFailHigh, b, *ml, depth-1, beta2, alpha, ply+1, false NODE)) {
                     bestMove = *ml;
                     ml.currentToFront();
@@ -599,6 +599,9 @@ nosort:
 //            nonMate+=2;
 //             extSingle = true;
 //         }
+/*
+ * The inner move loop
+ */        
         for (Move* i = good; i<bad && current < beta.v; ++i) {
             if (extSingle) {
                 if (alpha.v == current.v)
@@ -710,7 +713,7 @@ nosort:
 
     } while (false);
 
-    if (P != vein) {
+    if (P != vein && !stopSearch) {
         TTEntry stored;
         stored.zero();
         stored.depth |= depth;
@@ -730,7 +733,10 @@ nosort:
         node->nodes = stats.node - startnode;
     }
 #endif
-    return beta.max(current.v, m);
+    if (stopSearch)
+        return false;
+    else
+        return beta.max(current.v, m);
 }
 
 template<Colors C>
