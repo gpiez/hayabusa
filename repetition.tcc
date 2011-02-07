@@ -19,9 +19,15 @@
 #include "repetition.h"
 #include "rootboard.h"
 
+/*
+ * search for an position repetition
+ * reverse search only the last b.fiftyMoves, skipping the first because it
+ * can't be a repetition. fiftyMoves may be given in a fen position, but the
+ * moves leading to the start position may not, so we need the second condition
+ */
 template<Colors C>
 inline bool RootBoard::find(const ColoredBoard<C>& b, Key k, unsigned ply) const {
-    for (unsigned i = ply+rootPly; i+b.fiftyMoves >= ply+rootPly+4; i-=2) {
+    for (unsigned i = ply+rootPly; i+b.fiftyMoves >= ply+rootPly+4 && i>=4; i-=2) {
         ASSERT(i<=nMaxGameLength);
         if (keys[i-4] == k) return true;
     }
