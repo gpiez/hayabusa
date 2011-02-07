@@ -68,11 +68,11 @@ template<Colors C> struct ScoreBase
             s << (sign > 0 ? " ⩲":" ⩱");
         else if (abs(v) < 200)
             s << (sign > 0 ? " ±":" ∓");
-        else if (abs(v) < 10000)
+        else if (abs(v) < infinity)
             s << (sign > 0 ? "+-":"-+");
         else {
             s << (sign > 0 ? "+M":"-M");
-            s << abs(v)-10000;
+            s << abs(v)-infinity;
             return s.str();
         }
 
