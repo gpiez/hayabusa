@@ -131,9 +131,9 @@ template<Colors C> struct SharedScore: public Score<C>
     enum { isNotShared = false };
 
     volatile unsigned int notReady;
-    std::recursive_mutex valueMutex;
-    std::condition_variable readyCond;
-    std::mutex readyMutex;
+    RecursiveMutex valueMutex;
+    Condition readyCond;
+    Mutex readyMutex;
 //    SharedScore<C>* depending;
 
 public:
@@ -172,7 +172,7 @@ public:
     }
 
     bool max(const int b)         {
-        std::lock_guard<std::recursive_mutex> lock(valueMutex);
+        LockGuard<RecursiveMutex> lock(valueMutex);
         if (*this < b) {
             v = b;
             return true;
@@ -180,7 +180,7 @@ public:
         return false;
     }
     bool max(const int b, const Move n)         {
-        std::lock_guard<std::recursive_mutex> lock(valueMutex);
+        LockGuard<RecursiveMutex> lock(valueMutex);
         if (*this < b) {
             v = b;
             m = n;
@@ -190,14 +190,14 @@ public:
     }
 
     void setReady() {
-        std::lock_guard<std::mutex> lock(readyMutex);
+        LockGuard<Mutex> lock(readyMutex);
         --notReady;
 //        ASSERT(notReady <= 6);
         readyCond.notify_one();
     }
 
     void setNotReady() {
-        std::lock_guard<std::mutex> lock(readyMutex);
+        LockGuard<Mutex> lock(readyMutex);
         ++notReady;
 //        ASSERT(notReady <= 6);    //queued jobs + running
     }

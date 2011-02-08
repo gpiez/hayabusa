@@ -24,7 +24,6 @@
 #endif
 
 #include "coloredboard.h"
-
 class Job;
 class RootBoard;
 union Stats;
@@ -33,18 +32,18 @@ extern __thread unsigned threadId;
 extern __thread bool isMain;
 extern __thread int lastPositionalEval;
 
-class WorkThread/*: public QThread*/ {
+class WorkThread {
     static std::multimap<unsigned, Job*> jobs;
     static std::vector<WorkThread*> threads;
-    static std::mutex runningMutex;
+    
+    static Mutex runningMutex;
+    Condition starting;        //locked by shared runningMutex
+    Mutex stoppedMutex;
+    Condition stopped;
     static volatile unsigned int waiting;
     static unsigned logWorkThreads;
     static unsigned nWorkThreads;
 
-    std::condition_variable starting;        //locked by shared runningMutex
-
-    std::mutex stoppedMutex;
-    std::condition_variable stopped;
     volatile bool isStopped;
 
     volatile bool keepRunning;

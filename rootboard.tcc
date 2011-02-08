@@ -288,6 +288,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
     RawScore& eE = prev.CI == 0 ? estimatedError[nPieces + (m.piece()&7)][m.to()] : estimatedError[nPieces - (m.piece()&7)][m.to()];
 
     A current(alpha);    // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
+
     if (P==vein) {
         current.max(estimate.score.calc(prev.material)+lastPositionalEval-C*eE);
         if (current >= beta.v) {
@@ -299,7 +300,6 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
             return false;
         }
     }
-
     const ColoredBoard<C> b(prev, m, estimate.vector);
     if (m.capture()) {
         int upperbound, lowerbound;
@@ -328,6 +328,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
             }
         }
     }
+
 #ifdef QT_GUI_LIB
     if (node && threatened) node->flags |= Threatened;
 #endif
@@ -468,7 +469,13 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 for (Move* i = j = good; i<bad; ++i)
                     if (i->capture())
                         *j++ = *i;
-                bad = j;
+/* TODO
+ * Normally we don't want to search checks in q search,
+ * but if a check is given and no capture response is possible
+ * and a piece hangs, this may be an unstable position
+ */
+//                if (!qsearch_checks_with_no_recap || good != j)
+//                    bad = j;
                 goto nosort;
             }
 

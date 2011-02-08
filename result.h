@@ -27,9 +27,9 @@ template< typename T > class Result
 {
     T value;
     volatile unsigned int notReady;
-    std::mutex valueMutex;
-    std::condition_variable readyCond;
-    std::mutex readyMutex;
+    Mutex valueMutex;
+    Condition readyCond;
+    Mutex readyMutex;
 
     Result();
     Result(const Result&);
@@ -41,7 +41,7 @@ public:
         value = x;
     }
     operator T () {
-        std::unique_lock<std::mutex> lock(readyMutex);
+        UniqueLock<Mutex> lock(readyMutex);
         while (notReady)
             readyCond.wait(lock);
         return value;
@@ -49,12 +49,12 @@ public:
 
     void update(Result<T>& data) {
         T dataValue = data;
-        std::unique_lock<std::mutex> lock(valueMutex);
+        UniqueLock<Mutex> lock(valueMutex);
         value += dataValue;
     }
 
     void update(T data) {
-        std::unique_lock<std::mutex> lock(valueMutex);
+        UniqueLock<Mutex> lock(valueMutex);
         value += data;
     }
 

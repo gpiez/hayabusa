@@ -521,8 +521,8 @@ int Eval::pawns(const BoardBase& b) const {
         // rook pawns are always adjacent to a "open" file
         uint64_t wOpenFiles = ~(wAbove | wpawn | wBelow);
         uint64_t bOpenFiles = ~(bAbove | bpawn | bBelow);
-        pawnEntry.openFiles[0] = ~wOpenFiles;
-        pawnEntry.openFiles[1] = ~bOpenFiles;
+        pawnEntry.openFiles[0] = wOpenFiles;
+        pawnEntry.openFiles[1] = bOpenFiles;
         uint64_t wRightIsolani = wpawn & (wOpenFiles<<1 | 0x101010101010101LL);
         uint64_t bRightIsolani = bpawn & (bOpenFiles<<1 | 0x101010101010101LL);
         uint64_t wLeftIsolani = wpawn & (wOpenFiles>>1 | 0x8080808080808080LL);
@@ -742,7 +742,7 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         if (rmob0 & ~rmob1 & oppking) attackingPieces+=2;
         if (rmob2 & oppking) attackingPieces+=2;
         if (rmob3 & oppking) attackingPieces++;
-        if (rmob1 & ownking) defendingPieces++;
+        if (rmob0 & ownking) defendingPieces++;
         
 /*        sumup(rmob1, weightB1, w0, w1, w2, w3);
         sumup(rmob2, weightB2, w0, w1, w2, w3);
@@ -776,7 +776,7 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         if (b.knightAttacks[sq] & ~rmob1 & oppking) attackingPieces+=2; //defended squares
         if (rmob2 & oppking) attackingPieces+=2;
         if (rmob3 & oppking) attackingPieces++;
-        if (rmob1 & ownking) defendingPieces++;
+        if (b.knightAttacks[sq] & ownking) defendingPieces++;
         score += mobN1[popcount(rmob1)] + mobN2[popcount(rmob2)] + mobN3[popcount(rmob3)];
 
         print_debug(debugMobility, "n mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2), popcount(rmob3));
@@ -810,7 +810,7 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         if (rmob0 & ~rmob1 & oppking) attackingPieces+=2; //defended squares
         if (rmob2 & oppking) attackingPieces+=2;
         if (rmob3 & oppking) attackingPieces++;
-        if (rmob1 & ownking) defendingPieces++;
+        if (rmob0 & ownking) defendingPieces++;
         score += mobR1[popcount(rmob1)] + mobR2[popcount(rmob2)] + mobR3[popcount(rmob3)];
 
         print_debug(debugMobility, "r mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2), popcount(rmob3));
@@ -843,9 +843,9 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         rmob2 &= ~rmob1;
         rmob3 &= ~(rmob1 | rmob2);
 
-        if (rmob1 & oppking) attackingPieces+=6;        //undefended squares
-        if (b.getAttacks<C,Queen>() & ~rmob1 & oppking) attackingPieces+=4; //defended squares
-        if (rmob2 & oppking) attackingPieces+=3;
+        if (rmob1 & oppking) attackingPieces+=4;        //undefended squares
+        if (b.getAttacks<C,Queen>() & ~rmob1 & oppking) attackingPieces+=2; //defended squares
+        if (rmob2 & oppking) attackingPieces+=2;
         if (rmob3 & oppking) attackingPieces++;
         score += mobQ1[popcount(rmob1)] + mobQ2[popcount(rmob2)] + mobQ3[popcount(rmob3)];
         
@@ -870,14 +870,17 @@ inline void Eval::mobilityRestrictions(const BoardBase &b, uint64_t (&restrictio
 static const int kattPieces[]={ 10,10,10,10,10,10,10,11,11,11,11,12,12,13,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30 };
 static const int kdefPawn[] = { 20,20,19,18,17,16,16,15,15,14,14,13,13,12,11,10,10,10,10,10,10,10,10,10,10,10,10,10,10};
                             //   0           4           8          12          16 = perfect shield 
-static const int kdefPieces[] = { 10, 9, 8, 7, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
+static const int kdefPieces[] = { 10, 8, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
 
 template<Colors C>
 int Eval::attack(const BoardBase& b, unsigned attackingPieces, unsigned defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     uint64_t king = b.getPieces<-C,King>();
+    unsigned kpos = bit(king);
     Sides side;
-    if (king & (rank<C,8>() | rank<C,7>()) & (file<'a'>() | file<'b'>() | file<'c'>())) {
+    if (1<<(kpos & 7) & pawnEntry.openFiles[EI])
+        side = Middle;
+    else if (king & (rank<C,8>() | rank<C,7>()) & (file<'a'>() | file<'b'>() | file<'c'>())) {
         side = QSide;
     } else if (king & (rank<C,8>() | rank<C,7>()) & (file<'f'>() | file<'g'>() | file<'h'>())) {
         side = KSide;
@@ -895,7 +898,7 @@ int Eval::attack(const BoardBase& b, unsigned attackingPieces, unsigned defendin
     else if (side == QSide) def = pawnEntry.shield[EI].qside;
 
     if (b.getAttacks<-C,King>() & (b.getAttacks<C,Pawn>() | b.getAttacks<C,King>()))
-        attackingPieces++;
+        attackingPieces+=4;
     int att=kattPieces[attackingPieces] * (kdefPawn[def] + kdefPieces[defendingPieces]);
     
     print_debug(debugEval, "pa defense%d: %3d\n", EI, def);

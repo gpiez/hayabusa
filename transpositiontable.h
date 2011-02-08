@@ -46,7 +46,7 @@ public:
 private:
     SubTable* table;        // TODO remove indirection level
     uint64_t mask;
-    std::mutex lock[nTTLocks];
+    Mutex lock[nTTLocks];
     size_t size;
     size_t nEntries;
     bool usesHugePages;
@@ -57,7 +57,7 @@ public:
 
     void setSize(size_t s);
     Key nextKey(Key k, Move m);
-    SubTable* getSubTable( Key k, std::mutex*& l) {
+    SubTable* getSubTable( Key k, Mutex*& l) {
         l = lock + ((k>>4) & (nTTLocks-1));
         return &table[k & mask];
     }

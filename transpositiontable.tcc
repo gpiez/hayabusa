@@ -179,8 +179,10 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 {
     freeMemory();
 
+#ifndef __WIN32__
     s = std::min(s, (size_t) sysconf(_SC_PAGESIZE) * (size_t) sysconf(_SC_PHYS_PAGES));
-
+#endif
+    
     nEntries = s/sizeof(SubTable);
 
     nEntries |= nEntries >> 1;

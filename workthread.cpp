@@ -25,7 +25,7 @@
 #include "jobs.h"
 
 std::multimap<unsigned,Job*>    WorkThread::jobs;
-std::mutex                      WorkThread::runningMutex;
+Mutex                           WorkThread::runningMutex;
 unsigned int                    WorkThread::running = 0;
 volatile unsigned int           WorkThread::waiting = 0;
 unsigned int                    WorkThread::nThreads = 0;
@@ -40,6 +40,12 @@ __thread bool isMain = false;
 __thread int lastPositionalEval = 0;
 __thread RepetitionKeys keys;
 __thread WorkThread* workThread;
+
+#ifdef __WIN32__
+namespace boost {
+    void tss_cleanup_implemented(void) {}
+}
+#endif
 
 WorkThread::WorkThread():
     isStopped(true),
@@ -59,7 +65,7 @@ void WorkThread::run() {
     threadId = &::threadId;
     workThread = this;
 
-    std::unique_lock<std::mutex> lock(runningMutex);
+    UniqueLock <Mutex> lock(runningMutex);
 #ifdef __linux__
     std::stringstream name;
     name << "WorkThread " << std::find(threads.begin(), threads.end(), this) - threads.begin();
@@ -157,7 +163,7 @@ unsigned WorkThread::findFreeChild(unsigned parent) {
 // Queue a job from a parent. This allows the parent later to start only its
 // own jobs.
 void WorkThread::queueJob(unsigned parent, Job *j) {
-    std::unique_lock<std::mutex> lock(runningMutex);
+    UniqueLock<Mutex> lock(runningMutex);
     if (running < nThreads)
         for (auto th = threads.begin(); th !=threads.end(); ++th) {
             if ((*th)->isStopped) {
@@ -181,7 +187,7 @@ void WorkThread::idle(int n) {
 //  jobs in child nodes, otherwise a unrelated node may be started and not
 //  finished, while join() continues, which increases the number of running and
 //  executed threads beyond the number of cores
-    std::unique_lock<std::mutex> lock(runningMutex);
+    UniqueLock<Mutex> lock(runningMutex);
     running -= n;
     waiting += n;
     workThread->isWaiting = true;
@@ -203,7 +209,7 @@ void WorkThread::idle(int n) {
 }
 
 void WorkThread::stop() {
-    std::unique_lock<std::mutex> lock(stoppedMutex);
+    UniqueLock<Mutex> lock(stoppedMutex);
     while (!isStopped) {
         doStop = true;
         stopped.wait(lock);    //waits until the end of the run loop is reached.
@@ -223,7 +229,7 @@ void WorkThread::stopAll() {
 }
 
 Job* WorkThread::getJob(unsigned parent) {
-    std::unique_lock<std::mutex> lock(runningMutex);
+    UniqueLock<Mutex> lock(runningMutex);
     return findJob(parent);
 }
 
@@ -239,7 +245,7 @@ Job* WorkThread::findJob(unsigned parent) {
 }
 
 bool WorkThread::canQueued(unsigned parent, int ) {
-    std::unique_lock<std::mutex> lock(runningMutex);
+    UniqueLock<Mutex> lock(runningMutex);
     return jobs.count(parent) < nThreads;
 }
 
@@ -250,7 +256,11 @@ void WorkThread::printJobs() {
 }
 
 void WorkThread::init() {
+#ifdef __WIN32__
+    nThreads = 4;
+#else    
     nThreads = sysconf(_SC_NPROCESSORS_ONLN);
+#endif    
     if (nThreads == 0) nThreads = 1;
     for (logWorkThreads = 0; 1U<<logWorkThreads < nThreads; ++logWorkThreads)
         ;
@@ -258,7 +268,7 @@ void WorkThread::init() {
     nWorkThreads = 1<<logWorkThreads;
     for (unsigned int i=0; i<nWorkThreads; ++i) {
         WorkThread* th = new WorkThread();
-        new std::thread(&WorkThread::run, th);
+        new Thread(&WorkThread::run, th);
         threads.push_back(th);
     }
 }
