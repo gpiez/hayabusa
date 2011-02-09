@@ -34,6 +34,40 @@
 unsigned RootBoard::dMaxCapture = 12;
 unsigned RootBoard::dMaxThreat = 8;
 
+void RootBoard::stopTimer(milliseconds hardlimit) {
+#ifdef __WIN32__    
+    UniqueLock<TimedMutex> lock(stopTimerMutex, boost::posix_time::millisec(hardlimit.count()));
+#else    
+    UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
+#endif    
+    stopSearch = true;
+}
+
+void RootBoard::infoTimer(milliseconds repeat) {
+    while(!infoTimerMutex.try_lock()) {
+#ifdef __WIN32__    
+        UniqueLock<TimedMutex> lock(infoTimerMutex, boost::posix_time::millisec(repeat.count()));
+#else        
+        UniqueLock<TimedMutex> lock(infoTimerMutex, repeat);
+#endif    
+        uint64_t ntemp = getStats().node;
+        std::stringstream g;
+        g   << "info"
+            << " nodes " << ntemp
+            << " nps " << (1000*ntemp)/(duration_cast<milliseconds>(system_clock::now()-start).count()+1)
+        ;
+#ifdef MYDEBUG
+        g << std::endl;
+        g << "info string ";
+        g << " bmob1 " << eval.bmob1 / (eval.bmobn+0.1);
+        g << " bmob2 " << eval.bmob2 / (eval.bmobn+0.1);
+        g << " bmob3 " << eval.bmob3 / (eval.bmobn+0.1);
+#endif            
+        console->send(g.str());
+    }
+    infoTimerMutex.unlock();
+}
+
 RootBoard::RootBoard(Console *c):
     iMove(0),
     currentPly(0),
@@ -42,9 +76,9 @@ RootBoard::RootBoard(Console *c):
     winc(5000),
     binc(5000),
     movestogo(0),
+    stopSearch(false),
     console(c),
-    color(White),
-    stopSearch(false)
+    color(White)
 {
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
     clearEE();

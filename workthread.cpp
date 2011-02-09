@@ -173,7 +173,7 @@ void WorkThread::queueJob(unsigned parent, Job *j) {
                 (*th)->isStopped = false;
                 ++running;
 //    std::cerr << "qstrt:" << (void*)j << " parent:" << parent << " id:" << th->getThreadId() << " count:" << jobs.size() << std::endl;
-                (*th)->starting.notify_one();
+                (*th)->starting.notify_one(); //FIXME move outside lock
                 return;
             }
         }
@@ -202,7 +202,7 @@ void WorkThread::idle(int n) {
                     (*th)->isStopped = false;
                     ++running;
 //    std::cerr << "istrt:" << (void*)th->job << " parent:" << parent << " id:" << th->getThreadId() << " count:" << jobs.size() << std::endl;
-                    (*th)->starting.notify_one();
+                    (*th)->starting.notify_one(); //FIXME move outside lock
                     break;
                 }
             }
@@ -276,7 +276,7 @@ void WorkThread::init() {
 
 WorkThread* WorkThread::findFree() {
 #ifdef MYDEBUG
-    std::unique_lock<std::mutex> lock(runningMutex);
+    UniqueLock<Mutex> lock(runningMutex);
     for(auto th = threads.begin(); th != threads.end(); ++th)
         if (!(*th)->isStopped)
             ASSERT(!"still running jobs");

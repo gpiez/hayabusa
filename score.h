@@ -190,8 +190,10 @@ public:
     }
 
     void setReady() {
-        LockGuard<Mutex> lock(readyMutex);
-        --notReady;
+        {
+            LockGuard<Mutex> lock(readyMutex);
+            --notReady;
+        }
 //        ASSERT(notReady <= 6);
         readyCond.notify_one();
     }

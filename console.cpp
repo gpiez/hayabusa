@@ -116,6 +116,7 @@ int Console::exec() {
         }
         parse(str);
     }
+    return 0;
 #endif
 #endif    
 }

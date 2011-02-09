@@ -37,6 +37,7 @@
 #include "repetition.h"
 
 using namespace std::chrono;
+
 class WorkThread;
 class Console;
 template<class T, unsigned int U, class U> class TranspositionTable;
@@ -86,7 +87,6 @@ private:
     History history;        // FIXME probably needs to be thread local
     std::string info;
     system_clock::time_point start;
-    system_clock::time_point lastStatus;
     system_clock::time_point lastStatus2;
     int wtime;
     int btime;
@@ -98,7 +98,8 @@ private:
     int movetime;
     Move bm;
     volatile bool stopSearch;
-    system_clock::time_point hardBudget;
+    TimedMutex stopTimerMutex;
+    TimedMutex infoTimerMutex;
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
@@ -149,5 +150,7 @@ public:
     std::string getInfo() const;
     template<Colors C> inline void clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const;
     Move findMove(const std::string&) const;
+    void stopTimer(milliseconds hardlimit);
+    void infoTimer(milliseconds repeat);
 };
 #endif
