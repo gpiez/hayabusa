@@ -60,13 +60,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
 #endif
             __v2di from2 = doublebits[bs->move.from()];
             __v2di pin13 = from2 & dpins[CI].d13;
-#ifdef __SSE4_1__
-            pin13 = _mm_cmpeq_epi64(pin13, zero);
-#else
-            pin13 = _mm_cmpeq_epi32(pin13, zero);
-            __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-            pin13 = pin13 & pin13s;
-#endif
+            pin13 = pcmpeqq(pin13, zero);
             pin13 = ~pin13 & d2 & a13;
             for (uint64_t a=fold(pin13); a; a&=a-1) {
                 Move n;
@@ -85,13 +79,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
 #endif
             __v2di from2 = doublebits[rs->move.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
-#ifdef __SSE4_1__
-            pin02 = _mm_cmpeq_epi64(pin02, zero);
-#else
-            pin02 = _mm_cmpeq_epi32(pin02, zero);
-            __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-            pin02 = pin02 & pin02s;
-#endif
+            pin02 = pcmpeqq(pin02, zero);
             pin02 = ~pin02 & d2 & a02;
             for (uint64_t a=fold(pin02); a; a&=a-1) {
                 Move n;
@@ -112,17 +100,8 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
             __v2di from2 = doublebits[qs->move.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
             __v2di pin13 = from2 & dpins[CI].d13;
-#ifdef __SSE4_1__
-            pin02 = _mm_cmpeq_epi64(pin02, zero);
-            pin13 = _mm_cmpeq_epi64(pin13, zero);
-#else
-            pin02 = _mm_cmpeq_epi32(pin02, zero);
-            pin13 = _mm_cmpeq_epi32(pin13, zero);
-            __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-            __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-            pin02 = pin02 & pin02s;
-            pin13 = pin13 & pin13s;
-#endif
+            pin02 = pcmpeqq(pin02, zero);
+            pin13 = pcmpeqq(pin13, zero);
             pin02 = ~pin02 & a02;
             pin13 = ~pin13 & a13;
             for (uint64_t a=fold((pin02|pin13) & d2); a; a&=a-1) {
@@ -148,15 +127,9 @@ void ColoredBoard<C>::generateCheckEvasions(Move* &good, Move* &bad) const {
     __v2di zero = _mm_set1_epi64x(0);
     __v2di check02 = datt[EI].d02 & king2;
     __v2di check13 = datt[EI].d13 & king2;
-#ifdef __SSE4_1__
-    check02 = _mm_cmpeq_epi64(check02, zero);
-    check13 = _mm_cmpeq_epi64(check13, zero);
-#else
-    check02 = _mm_cmpeq_epi32(check02, zero);
-    check13 = _mm_cmpeq_epi32(check13, zero);
-    check02 = check02 & _mm_shuffle_epi32(check02, 0b10110001);
-    check13 = check13 & _mm_shuffle_epi32(check13, 0b10110001);
-#endif
+
+    check02 = pcmpeqq(check02, zero);
+    check13 = pcmpeqq(check13, zero);
     check02 = ~check02 & _mm_set_epi64x(2,1);
     check13 = ~check13 & _mm_set_epi64x(8,4);
 
@@ -279,17 +252,8 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
         __v2di from2 = doublebits[qs->move.from()];
         __v2di pin02 = from2 & dpins[CI].d02;
         __v2di pin13 = from2 & dpins[CI].d13;
-#ifdef __SSE4_1__
-        pin02 = _mm_cmpeq_epi64(pin02, zero);
-        pin13 = _mm_cmpeq_epi64(pin13, zero);
-#else
-        pin02 = _mm_cmpeq_epi32(pin02, zero);
-        pin13 = _mm_cmpeq_epi32(pin13, zero);
-        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-        pin02 = pin02 & pin02s;
-        pin13 = pin13 & pin13s;
-#endif
+        pin02 = pcmpeqq(pin02, zero);
+        pin13 = pcmpeqq(pin13, zero);
         pin02 = ~pin02 & a02;
         pin13 = ~pin13 & a13;
         for (uint64_t a=fold(pin02|pin13) & ~occupied1; a; a &= a-1 ) {
@@ -317,13 +281,7 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
         __v2di a02 = rs->d02;
         __v2di from2 = doublebits[rs->move.from()];
         __v2di pin02 = from2 & dpins[CI].d02;
-#ifdef __SSE4_1__
-        pin02 = _mm_cmpeq_epi64(pin02, zero);
-#else
-        pin02 = _mm_cmpeq_epi32(pin02, zero);
-        __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-        pin02 = pin02 & pin02s;
-#endif
+        pin02 = pcmpeqq(pin02, zero);
         pin02 = ~pin02 & a02;
         for (uint64_t a=fold(pin02) & ~occupied1; a; a &= a-1 ) {
             Move n;
@@ -342,13 +300,7 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
         __v2di a13 = bs->d13;
         __v2di from2 = doublebits[bs->move.from()];
         __v2di pin13 = from2 & dpins[CI].d13;
-#ifdef __SSE4_1__
-        pin13 = _mm_cmpeq_epi64(pin13, zero);
-#else
-        pin13 = _mm_cmpeq_epi32(pin13, zero);
-        __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-        pin13 = pin13 & pin13s;
-#endif
+        pin13 = pcmpeqq(pin13, zero);
         pin13 = ~pin13 & a13;
         for (uint64_t a=fold(pin13) & ~occupied1; a; a &= a-1 ) {
             Move n;
