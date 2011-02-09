@@ -123,6 +123,21 @@ static inline int popcount(uint64_t x) {
 #endif
 }
 
+static __v2di inline pcmpeqq(__v2di a, __v2di b) {
+#ifdef __SSE4_1__
+    return _mm_cmpeq_epi64(a, b);
+#else
+/*
+ * emulate a pcmpeqq instruction by comparing 32 bit wise, then swapping the
+ * 32 bit halfes of each 64 bit operand. Only if both 32 bit halfes happen to
+ * compare equal, the and operation will set all bits in one 64 bit half.
+ */
+    a = _mm_cmpeq_epi32(a, b);
+    b = _mm_shuffle_epi32(a, 0b10110001);
+    return a & b;
+#endif
+}
+
 static inline uint64_t ror(uint64_t x, unsigned k) {
     return __rorq(x, k);
 }
