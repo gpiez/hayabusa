@@ -92,8 +92,10 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         bestMove = *ml;
         system_clock::time_point now = system_clock::now();
         if (now >= lastStatus2) {
+            std::stringstream g;
             lastStatus2 = now + milliseconds(1000);
-            console->send("info currmove " + bestMove.algebraic() + " currmovenumber 1");
+            g << "info depth " << depth-(dMaxCapture+dMaxThreat) << " currmove " << (*ml).algebraic() << " currmovenumber 1";
+            console->send(g.str());
         }
 #ifdef QT_GUI_LIB
         NodeData data;
@@ -259,8 +261,8 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 */
     if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
 
-    if (P != vein && (stats.node & 0xff) == 0) {
-        system_clock::time_point now = system_clock::now();
+    if (P != vein && (stats.node & 0xfff) == 0) { //FIXME Use a timer instead
+        system_clock::time_point now = system_clock::now();  //TODO system_clock::now has a very bad performance in win
         if (!infinite && now > hardBudget) {
 	    stopSearch = true;
         }
@@ -444,11 +446,13 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 #endif
                 break;
             }
-            Move* j;
-            for (Move* i = j = good; i<bad; ++i)
+/*            Move* j;
+            for (Move* i = j = good; i<bad; ++i) {
+                ASSERT(!"Never executed");
                 if (i->capture())
                     *j++ = *i;
-            bad = j;
+            }
+            bad = j;*/
         }
 
         Move *nonMate;
@@ -469,13 +473,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                 for (Move* i = j = good; i<bad; ++i)
                     if (i->capture())
                         *j++ = *i;
-/* TODO
- * Normally we don't want to search checks in q search,
- * but if a check is given and no capture response is possible
- * and a piece hangs, this may be an unstable position
- */
-//                if (!qsearch_checks_with_no_recap || good != j)
-//                    bad = j;
+                bad = j;
                 goto nosort;
             }
 
@@ -534,11 +532,13 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
                             }
                         }
                     }
+                    if (bad < endSort) endSort = bad;
 //                    goto nosort;
                 }
             }
         }
         if (endSort > afterGoodCap+1) {
+            ASSERT(endSort <= bad);
             history.sort<C>(afterGoodCap, endSort-afterGoodCap, ply);
         }
 
@@ -547,7 +547,7 @@ nosort:
 //         if (node && threatening) node->flags |= Threatening;
 #endif
         // move best move from tt / history to front
-        if (ttMove.data && ttMove.fromto() != good[0].fromto()) {
+        if (P != vein && ttMove.data && good+1 < bad && ttMove.fromto() != good[0].fromto()) {
             Move first = good[0];
             for (Move* i = good+1; i<bad; ++i) {
                 Move second = *i;
@@ -627,6 +627,8 @@ nosort:
                 nextNodeType = NodeFailHigh;
 
             // Stay in leaf search if it already is or change to it if the next depth would be 0
+            // FIXME don't go immediatly to vein, allow one check or so in threat search, to get knight forks at c7
+            // only go to vein, if two consecutive capture moves without check happen
             if ((P == leaf && i >= nonMate && !threatened) || P == vein || depth <= dMaxCapture + 1)
                 search<(Colors)-C, vein>(nextNodeType, b, *i, 0, beta.unshared(), current, ply+1, false NODE);
             else if (depth <= dMaxCapture + dMaxThreat + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
