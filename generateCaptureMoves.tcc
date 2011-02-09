@@ -50,13 +50,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
 #endif
             __v2di from2 = doublebits[m.from()];
             __v2di pin13 = from2 & dpins[CI].d13;
-#ifdef __SSE4_1__
-            pin13 = _mm_cmpeq_epi64(pin13, zero);
-#else
-            pin13 = _mm_cmpeq_epi32(pin13, zero);
-            __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-            pin13 = pin13 & pin13s;
-#endif
+            pin13 = pcmpeqq(pin13, zero);
             pin13 = ~pin13 & d2 & a13;
             for (uint64_t a=fold(pin13); a; a&=a-1) {
                 Move n;
@@ -84,17 +78,12 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
         __v2di a02 = rs->d02;
 #ifdef __SSE4_1__
         if (!_mm_testz_si128(d2, a02)) {
-            __v2di from2 = doublebits[m.from()];
-            __v2di pin02 = from2 & dpins[CI].d02;
-            pin02 = _mm_cmpeq_epi64(pin02, zero);
 #else
         if (fold(d2 & a02)) {
+#endif
             __v2di from2 = doublebits[m.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
-            pin02 = _mm_cmpeq_epi32(pin02, zero);
-            __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-            pin02 = pin02 & pin02s;
-#endif
+            pin02 = pcmpeqq(pin02, zero);
             pin02 = ~pin02 & d2 & a02;
             uint64_t attPKB = getAttacks<-C,Pawn>() | getAttacks<-C,Knight>() | getAttacks<-C,Bishop>();
             for (uint64_t a=fold(pin02); a; a&=a-1) {
@@ -130,17 +119,8 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
             __v2di from2 = doublebits[m.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
             __v2di pin13 = from2 & dpins[CI].d13;
-#ifdef __SSE4_1__
-            pin02 = _mm_cmpeq_epi64(pin02, zero);
-            pin13 = _mm_cmpeq_epi64(pin13, zero);
-#else
-            pin02 = _mm_cmpeq_epi32(pin02, zero);
-            pin13 = _mm_cmpeq_epi32(pin13, zero);
-            __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-            __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-            pin02 = pin02 & pin02s;
-            pin13 = pin13 & pin13s;
-#endif
+            pin02 = pcmpeqq(pin02, zero);
+            pin13 = pcmpeqq(pin13, zero);
             pin02 = ~pin02 & a02;
             pin13 = ~pin13 & a13;
             uint64_t attPKBR = getAttacks<-C,Pawn>()
@@ -283,17 +263,8 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
                 __v2di from2 = doublebits[rs->move.from()];
                 __v2di pin02 = from2 & dpins[CI].d02;
 //                __v2di xray02 = a02 & datt[EI].d02;
-    #ifdef __SSE4_1__
-                pin02 = _mm_cmpeq_epi64(pin02, zero);
+                pin02 = pcmpeqq(pin02, zero);
 //                xray02 = _mm_cmpeq_epi64(xray02, zero);
-    #else
-                pin02 = _mm_cmpeq_epi32(pin02, zero);
-                __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-                pin02 = pin02 & pin02s;
-//                xray02 = _mm_cmpeq_epi32(xray02, zero);
-//                __v2di xray02s = _mm_shuffle_epi32(xray02, 0b10110001);
-//                xray02 = xray02 & xray02s;
-    #endif
                 pin02 = ~pin02 & a02 /*& xray02*/;
                 for (uint64_t a=fold(pin02) & forks; a; a&=a-1) {
                     Move n;
@@ -330,17 +301,8 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
                 __v2di from2 = doublebits[bs->move.from()];
                 __v2di pin13 = from2 & dpins[CI].d13;
 //                __v2di xray13 = a13 & datt[EI].d13;     //TODO capture mate moves are wrongly recognized as moves on a x-ray protected square
-    #ifdef __SSE4_1__
-                pin13 = _mm_cmpeq_epi64(pin13, zero);
+                pin13 = pcmpeqq(pin13, zero);
 //                xray13 = _mm_cmpeq_epi64(xray13, zero);
-    #else
-                pin13 = _mm_cmpeq_epi32(pin13, zero);
-                __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-                pin13 = pin13 & pin13s;
-//                xray13 = _mm_cmpeq_epi32(xray13, zero);
-//                __v2di xray13s = _mm_shuffle_epi32(xray13, 0b10110001);
-//                 xray13 = xray13 & xray13s;
-    #endif
                 pin13 = ~pin13 & a13 /*& xray13*/;
                 for (uint64_t a=fold(pin13) & skewers; a; a&=a-1) {
                     Move n;
@@ -430,17 +392,8 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                 __v2di from2 = doublebits[rs->move.from()];
                 __v2di pin02 = from2 & dpins[CI].d02;
 //                __v2di xray02 = a02 & datt[EI].d02;
-    #ifdef __SSE4_1__
-                pin02 = _mm_cmpeq_epi64(pin02, zero);
+                pin02 = pcmpeqq(pin02, zero);
 //                xray02 = _mm_cmpeq_epi64(xray02, zero);
-    #else
-                pin02 = _mm_cmpeq_epi32(pin02, zero);
-                __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-                pin02 = pin02 & pin02s;
-//                xray02 = _mm_cmpeq_epi32(xray02, zero);
-//                __v2di xray02s = _mm_shuffle_epi32(xray02, 0b10110001);
-//                xray02 = xray02 & xray02s;
-    #endif
                 pin02 = ~pin02 & a02 /*& xray02*/;
                 for (uint64_t a=fold(pin02) & rmate; a; a&=a-1) {
                     if (AbortOnFirst) return true;
@@ -583,25 +536,10 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                 __v2di pin13 = from2 & dpins[CI].d13;
 //                __v2di xray02 = a02 & datt[EI].d02;
 //                __v2di xray13 = a13 & datt[EI].d13;
-    #ifdef __SSE4_1__
-                pin02 = _mm_cmpeq_epi64(pin02, zero);
-                pin13 = _mm_cmpeq_epi64(pin13, zero);
+                pin02 = pcmpeqq(pin02, zero);
+                pin13 = pcmpeqq(pin13, zero);
 //                xray02 = _mm_cmpeq_epi64(xray02, zero);
 //                xray13 = _mm_cmpeq_epi64(xray13, zero);
-    #else
-                pin02 = _mm_cmpeq_epi32(pin02, zero);
-                pin13 = _mm_cmpeq_epi32(pin13, zero);
-                __v2di pin02s = _mm_shuffle_epi32(pin02, 0b10110001);
-                __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-                pin02 = pin02 & pin02s;
-                pin13 = pin13 & pin13s;
-//                xray02 = _mm_cmpeq_epi32(xray02, zero);
-//                xray13 = _mm_cmpeq_epi32(xray13, zero);
-//                __v2di xray02s = _mm_shuffle_epi32(xray02, 0b10110001);
-//                __v2di xray13s = _mm_shuffle_epi32(xray13, 0b10110001);
-//                xray02 = xray02 & xray02s;
-//                xray13 = xray13 & xray13s;
-    #endif
                 pin02 = ~pin02 & a02/* & xray02*/;
                 pin13 = ~pin13 & a13/* & xray13*/;
                 for (uint64_t a=fold(pin02|pin13) & qmate; a; a&=a-1) {
@@ -696,17 +634,8 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                     __v2di from2 = doublebits[bs->move.from()];
                     __v2di pin13 = from2 & dpins[CI].d13;
                     __v2di xray13 = a13 & datt[EI].d13;     //TODO capture mate moves are wrongly recognized as moves on a x-ray protected square
-        #ifdef __SSE4_1__
-                    pin13 = _mm_cmpeq_epi64(pin13, zero);
-                    xray13 = _mm_cmpeq_epi64(xray13, zero);
-        #else
-                    pin13 = _mm_cmpeq_epi32(pin13, zero);
-                    __v2di pin13s = _mm_shuffle_epi32(pin13, 0b10110001);
-                    pin13 = pin13 & pin13s;
-                    xray13 = _mm_cmpeq_epi32(xray13, zero);
-                    __v2di xray13s = _mm_shuffle_epi32(xray13, 0b10110001);
-                    xray13 = xray13 & xray13s;
-        #endif
+                    pin13 = pcmpeqq(pin13, zero);
+                    xray13 = pcmpeqq(xray13, zero);
                     pin13 = ~pin13 & a13 & xray13;
                     for (uint64_t a=fold(pin13) & bmate; a; a&=a-1) {
                         if (AbortOnFirst) return true;
