@@ -140,9 +140,6 @@ void Console::getResult(std::string result) {
 }
 
 void Console::dataArrived() {
-#ifdef __WIN32__    
-    notifier->setEnabled(false);
-#endif    
     std::string temp;
     if (Options::server) {
         if (!socket->canReadLine()) return;
@@ -158,11 +155,8 @@ void Console::dataArrived() {
         temp.erase(temp.length()-1);
     }
     parse(temp);
-    if (socket->canReadLine())
+    if (Options::server && socket->canReadLine())
         dataArrived();
-#ifdef __WIN32__
-    notifier->setEnabled(true);
-#endif    
 //    QTimer::singleShot(50, this, SLOT(delayedEnable()));
 }
 
@@ -403,9 +397,5 @@ void Console::ordering(StringList cmds) {
 
 void Console::eval(StringList)
 {
-#ifdef MYDEBUG
-    board->eval.debug = true;
     board->eval.eval(board->currentBoard());
-    board->eval.debug = false;
-#endif    
 }

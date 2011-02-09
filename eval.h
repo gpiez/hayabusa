@@ -153,7 +153,6 @@ class Eval {
 public:
     static Parameters parameters;
 #ifdef MYDEBUG
-    bool debug;
     mutable uint64_t bmob1, bmob2, bmob3, bmobn;
     mutable uint64_t rmob1, rmob2, rmob3, rmobn;
     mutable uint64_t qmob1, qmob2, qmob3, qmobn;
