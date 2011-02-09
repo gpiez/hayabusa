@@ -700,10 +700,11 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
     const __v2di v2queen = _mm_set1_epi64x(b.getPieces<C,Queen>());
     
     uint64_t restrictions = ~b.getAttacks<-C,Pawn>();
-    
+    __v2di allBishopAttacks = zero;
     //TODO generally optimize for at most two pieces of a kind. In positions with more the evaluation will most likely be way off anyway.
     for (const BoardBase::MoveTemplateB* bs = b.bsingle[CI]; bs->move.data; ++bs) {
         // restriced mobility in one move, including own defended pieces
+        allBishopAttacks |= bs->d13;
         uint64_t rmob0 = fold(bs->d13);
         uint64_t rmob1 = rmob0 & restrictions;
         // generator for two move squares, mask blocked pawns
@@ -772,8 +773,10 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
     }
 
     restrictions &= ~(b.getAttacks<-C,Bishop>() | b.getAttacks<-C,Knight>());
+    __v2di allRookAttacks = zero;
     for (const BoardBase::MoveTemplateR* rs = b.rsingle[CI]; rs->move.data; ++rs) {
         // restriced mobility in one move, including own defended pieces
+        allRookAttacks |= rs->d02;
         uint64_t rmob0 = fold(rs->d02);
         uint64_t rmob1 = rmob0 & restrictions;
         // generator for two move squares, mask blocked pawns
@@ -788,8 +791,8 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         rmob3 |= b.build02Attack(rmob2) & restrictions & ~b.getOcc<C>();
         
         __v2di connectedQR = ~pcmpeqq(rs->d02 & v2queen, zero) & b.qsingle[CI][0].d02;
-        //TODO isn't needed in case of only one rook
-        connectedQR |= ~ pcmpeqq(rs->d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02);
+        if (b.rsingle[CI][1].move.data)
+            connectedQR |= ~ pcmpeqq(rs->d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02);
         rmob1 |= fold(connectedQR) & ~b.getOcc<C>() & restrictions;
         rmob2 &= ~rmob1;
         rmob3 &= ~(rmob1 | rmob2);
@@ -821,10 +824,10 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         
         unsigned q=bit(b.getPieces<C,Queen>());
         __v2di connectedBR = ~ pcmpeqq(b.qsingle[CI][0].d13 & _mm_set1_epi64x(b.getPieces<C,Bishop>()), zero) 
-            & (b.bsingle[CI][0].d13 | b.bsingle[CI][1].d13);
+            & allBishopAttacks
             & b.mask13x[q];
         connectedBR |= ~ pcmpeqq(b.qsingle[CI][0].d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) 
-            & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02) 
+            & allRookAttacks 
             & b.mask02[q].x;
         
         rmob1 |= fold(connectedBR) & ~b.getOcc<C>() & restrictions;
