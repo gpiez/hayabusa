@@ -39,9 +39,12 @@ RootBoard::RootBoard(Console *c):
     currentPly(0),
     wtime(300000),
     btime(300000),
+    winc(5000),
+    binc(5000),
     movestogo(0),
     console(c),
-    color(White)
+    color(White),
+    stopSearch(false)
 {
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
     clearEE();
