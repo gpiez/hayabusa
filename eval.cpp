@@ -17,7 +17,7 @@
 
 */
 #include <pch.h>
-
+#include <random>
 #include "eval.h"
 #include "boardbase.h"
 #include "options.h"
@@ -354,19 +354,14 @@ void Eval::initPS() {
 }
 
 void Eval::initZobrist() {
-    srand(1);
+    std::mt19937 rng;
+    
+    rng.seed(1);
     for (int p = -nPieces; p <= (signed int)nPieces; p++)
         for (unsigned int i = 0; i < nSquares; ++i) {
             uint64_t r;
             do {
-                r = (uint64_t) rand()
-                    ^ (uint64_t) rand() << 8
-                    ^ (uint64_t) rand() << 16
-                    ^ (uint64_t) rand() << 24
-                    ^ (uint64_t) rand() << 32
-                    ^ (uint64_t) rand() << 40
-                    ^ (uint64_t) rand() << 48
-                    ^ (uint64_t) rand() << 56;
+                r = rng() + ((uint64_t)rng() << 32);                    
             } while (popcount(r) >= 29 && popcount(r) <= 36);
 
             if (p)
