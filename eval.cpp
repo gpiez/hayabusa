@@ -479,12 +479,8 @@ int Eval::pawns(const BoardBase& b) const {
 
         int pbw = pawnBackward * (popcount15(wBackward) - popcount15(bBackward));
         int pbwo = pawnBackwardOpen * (popcount15(wBackward & ~bAbove) - popcount15(bBackward & ~wBelow));
-#ifdef MYDEBUG
-        if (debug) {
-            std::cout << "pawn backward:  " << pbw << std::endl;
-            std::cout << "pawn bw open:   " << pbwo << std::endl;
-        }
-#endif
+        print_debug(debugEval, "pawn backward:  %d\n", pbw);
+        print_debug(debugEval, "pawn bwo:       %d\n", pbwo);
         pawnEntry.score += pbw + pbwo;
         // a white pawn is not passed, if he is below a opponent pawn or its attack squares
         // store positions of passers for later use in other eval functions
@@ -498,22 +494,14 @@ int Eval::pawns(const BoardBase& b) const {
             int pos = __builtin_ctzll(wPassed);
             int y = pos >> 3;
             pawnEntry.score += pawnPasser[y];
-#ifdef MYDEBUG
-            if (debug) {
-                std::cout << "pawn wpasser:   " << pawnPasser[y] << std::endl;
-            }
-#endif
+            print_debug(debugEval, "pawn wpasser:   %d\n", pawnPasser[y]);
             pawnEntry.passers[0][i] = pos;
         }
         for ( i=0; bPassed && i<nHashPassers; bPassed &= bPassed-1, i++ ) {
             int pos = __builtin_ctzll(bPassed);
             int y = pos>>3;
             pawnEntry.score -= pawnPasser[7-y];
-#ifdef MYDEBUG
-            if (debug) {
-                std::cout << "pawn wpasser:   " << pawnPasser[7-y] << std::endl;
-            }
-#endif
+            print_debug(debugEval, "pawn bpasser:   %d\n", pawnPasser[7-y]);
             pawnEntry.passers[1][i] = pos;
         }
 
@@ -734,7 +722,7 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
          * increased one move mobility and the bishop gets counted in an possible
          * king attack
          */
-        rmob1 |= fold( ~ _mm_cmpeq_epi64(bs->d13 & v2queen, zero) & b.qsingle[CI][0].d13) & ~b.getOcc<C>(); //TODO optimize for queenless positions
+        rmob1 |= fold( ~ pcmpeqq(bs->d13 & v2queen, zero) & b.qsingle[CI][0].d13) & ~b.getOcc<C>(); //TODO optimize for queenless positions
         rmob2 &= ~rmob1;
         rmob3 &= ~(rmob1 | rmob2);
 
@@ -799,9 +787,9 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         // restriced mobility in three moves
         rmob3 |= b.build02Attack(rmob2) & restrictions & ~b.getOcc<C>();
         
-        __v2di connectedQR = ~ _mm_cmpeq_epi64(rs->d02 & v2queen, zero) & b.qsingle[CI][0].d02;
+        __v2di connectedQR = ~pcmpeqq(rs->d02 & v2queen, zero) & b.qsingle[CI][0].d02;
         //TODO isn't needed in case of only one rook
-        connectedQR |= ~ _mm_cmpeq_epi64(rs->d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02);
+        connectedQR |= ~ pcmpeqq(rs->d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02);
         rmob1 |= fold(connectedQR) & ~b.getOcc<C>() & restrictions;
         rmob2 &= ~rmob1;
         rmob3 &= ~(rmob1 | rmob2);
@@ -832,10 +820,10 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         rmob3 |= (b.build02Attack(rmob2) | b.build13Attack(rmob2)) & restrictions & ~b.getOcc<C>();
         
         unsigned q=bit(b.getPieces<C,Queen>());
-        __v2di connectedBR = ~ _mm_cmpeq_epi64(b.qsingle[CI][0].d13 & _mm_set1_epi64x(b.getPieces<C,Bishop>()), zero) 
+        __v2di connectedBR = ~ pcmpeqq(b.qsingle[CI][0].d13 & _mm_set1_epi64x(b.getPieces<C,Bishop>()), zero) 
             & (b.bsingle[CI][0].d13 | b.bsingle[CI][1].d13);
             & b.mask13x[q];
-        connectedBR |= ~ _mm_cmpeq_epi64(b.qsingle[CI][0].d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) 
+        connectedBR |= ~ pcmpeqq(b.qsingle[CI][0].d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) 
             & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02) 
             & b.mask02[q].x;
         
@@ -917,12 +905,12 @@ int Eval::eval(const BoardBase& b) const {
     for (int p=Rook; p<=King; ++p) {
         for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
             unsigned sq=bit(x);
-            if (debug) std::cout << "materialw" << p << "     " << getPS( p, sq).calc(b.material) << std::endl;                
+            print_debug(debugEval, "materialw%d     %d\n", p, getPS( p, sq).calc(b.material));                
             value += getPS( p, sq).calc(b.material);
         }
         for (uint64_t x=b.getPieces<Black>(p); x; x&=x-1) {
             unsigned sq=bit(x);
-            if (debug) std::cout << "materialb" << p << "     " << getPS(-p, sq).calc(b.material) << std::endl;                
+            print_debug(debugEval, "materialb%d     %d\n", p, getPS(-p, sq).calc(b.material));                
             value += getPS(-p, sq).calc(b.material);
         }
     }
@@ -941,15 +929,11 @@ int Eval::eval(const BoardBase& b) const {
     } else
         a = 0;
     int pi = pieces<White>(b) - pieces<Black>(b);
-#ifdef MYDEBUG    
-    if (debug) {
-        std::cout << "material:       " << e << std::endl;
-        std::cout << "mobility:       " << m << std::endl;
-        std::cout << "pawns:          " << p << std::endl;
-        std::cout << "attack:         " << a << std::endl;
-        std::cout << "pieces:         " << pi << std::endl;
-    }
-#endif
+    print_debug(debugEval, "material:       %d\n", e);
+    print_debug(debugEval, "mobility:       %d\n", m);
+    print_debug(debugEval, "pawns:          %d\n", p);
+    print_debug(debugEval, "attack:         %d\n", a);
+    print_debug(debugEval, "pieces:         %d\n", pi);
     
     return e + m + p + a + pi;
 }
