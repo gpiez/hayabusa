@@ -1,23 +1,22 @@
-cmake_minimum_required(VERSION 2.6)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -pipe" CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG -march=core2 -Wuninitialized -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants" CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=core2 -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants -flto" CACHE STRING "")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-static -O3 -flto -fwhole-program" CACHE STRING "")
+# SSSE3 (Note the additional S) is mandatory because of the pshufb instruction.
+SET(CMAKE_CXX_FLAGS "-std=c++0x -mssse3 -flax-vector-conversions -fdiagnostics-show-option $ENV{CXXFLAGS}" CACHE STRING "")
 
-if(COMMAND cmake_policy)
-	cmake_policy(SET CMP0003 NEW)
-endif(COMMAND cmake_policy)
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
+
+cmake_minimum_required(VERSION 2.6)
 
 PROJECT (hayabusa)
 
-if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif(NOT CMAKE_BUILD_TYPE)
+#if (NOT CMAKE_BUILD_TYPE)
+ #   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+#endif(NOT CMAKE_BUILD_TYPE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 #enable_language(ASM-FASM)
-
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -pipe")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=core2 -Wuninitialized")
-
-# SSSE3 (Note the additional S) is mandatory because of the pshufb instruction.
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -mssse3 -flax-vector-conversions -fdiagnostics-show-option $ENV{CXXFLAGS}")
 
 FIND_PACKAGE(PrecompiledHeaders)
 
@@ -32,12 +31,13 @@ SET(USE_QTNETWORK FALSE CACHE BOOL "Build the server")
 
 if (USE_QTNETWORK)
     set(packages ${packages} QtNetwork)
+    SET(hayabusa_MOC_H console.h)
 endif(USE_QTNETWORK)
 
 if (USE_QTGUI)
     set(packages ${packages} QtGUI)
     SET(hayabusa_UIS stats.ui)
-    SET(hayabusa_MOC_H rootboard.h)
+    SET(hayabusa_MOC_H console.h rootboard.h jobs.h statwidget.h nodemodel.h nodedelegate.h)
     SET(common_SRCS ${common_SRCS} statwidget.cpp  nodeitem.cpp nodemodel.cpp nodedelegate.cpp)
 else(USE_QTGUI)
     SET(QT_DONT_USE_QTGUI TRUE)
@@ -48,7 +48,7 @@ if (USE_QTGUI OR USE_QTNETWORK)
 ENDIF(USE_QTGUI OR USE_QTNETWORK)
 
 SET(hayabusa_SRCS main.cpp)
-SET(hayabusa_MOC_H ${hayabusa_MOC_H} jobs.h console.h statwidget.h nodemodel.h nodedelegate.h)
+SET(hayabusa_MOC_H ${hayabusa_MOC_H})
 SET(hayabusa_RCCS hayabusa.qrc)
 
 SET(test_SRCS test.cpp)
@@ -80,9 +80,14 @@ IF (USE_QTGUI OR USE_QTNETWORK)
     TARGET_LINK_LIBRARIES (test ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
 #    target_link_libraries(offsets ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
 ELSE(USE_QTGUI OR USE_QTNETWORK)
-    FIND_PACKAGE(Threads REQUIRED)
     ADD_EXECUTABLE(hayabusa ${common_SRCS} ${hayabusa_SRCS})
-    TARGET_LINK_LIBRARIES (hayabusa ${CMAKE_THREAD_LIBS_INIT})
+    IF (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        FIND_PACKAGE(Boost COMPONENTS Thread)
+        TARGET_LINK_LIBRARIES (hayabusa -lboost_thread )
+    ELSE(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        FIND_PACKAGE(Threads REQUIRED)
+        TARGET_LINK_LIBRARIES (hayabusa -Wl,-whole-archive ${CMAKE_THREAD_LIBS_INIT} -Wl,-no-whole-archive )
+    ENDIF(CMAKE_SYSTEM_NAME STREQUAL "Windows")    
 ENDIF(USE_QTGUI OR USE_QTNETWORK)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
