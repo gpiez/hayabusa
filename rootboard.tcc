@@ -273,8 +273,9 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
     if (stopSearch) return false;
 
     RawScore& eE = prev.CI == 0 ? estimatedError[nPieces + (m.piece()&7)][m.to()] : estimatedError[nPieces - (m.piece()&7)][m.to()];
-
-    A current(alpha);    // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
+    // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
+    // FIXME connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
+    A current(alpha);
 
     if (P==vein) {
         current.max(estimate.score.calc(prev.material)+lastPositionalEval-C*eE);
@@ -549,6 +550,7 @@ nosort:
         for (unsigned int d = (depth+1)%2 + 1 + dMaxCapture + dMaxThreat; d < depth; d+=2) {
 //      if (depth > 2 + dMaxCapture + dMaxThreat && depth > ttDepth+2) {
 //          unsigned d = depth-2;
+            typename A::Base preCurrent(current);
             if (d<=ttDepth) continue;
             for (Move* i = good; i<bad; ++i) {
                 NodeType nextNodeType;
@@ -562,12 +564,12 @@ nosort:
                     nextNodeType = NodeFailHigh;
 //              if (!i->data) continue;
                 ASSERT(d>0);
-                if (d <= 1 + dMaxCapture + dMaxThreat ? search<(Colors)-C, leaf, B, A>(nextNodeType, b, *i, d - 1, beta, current, ply+1, false NODE) :
+                if (d <= 1 + dMaxCapture + dMaxThreat ? search<(Colors)-C, leaf, B, typename A::Base>(nextNodeType, b, *i, d - 1, beta, preCurrent, ply+1, false NODE) :
     //                d == depth-4 ? search<(Colors)-C, tree, B, A>(nextNodeType, b, *i, d-1, B(C*infinity), current) :
-                                   search<(Colors)-C, tree, B, A>(nextNodeType, b, *i, d-1, beta, current, ply+1, false NODE)) {
-                    ASSERT(current.m.data == i->data);
+                                   search<(Colors)-C, tree, B, typename A::Base>(nextNodeType, b, *i, d-1, beta, preCurrent, ply+1, false NODE)) {
+                    ASSERT(preCurrent.m.data == i->data);
                     Move first = good[0];
-                    good[0] = current.m;
+                    good[0] = preCurrent.m;
                     for (Move* j = good+1; j<i; ++j) {
                         Move second = *j;
                         *j = first;
@@ -575,15 +577,14 @@ nosort:
                     }
                     *i = first;
                 }
-                if (current >= beta.v) {
+                if (preCurrent >= beta.v) {
                     if (d+2 >= depth) {
                         /*betaNode = true;*/
                     }
                     break;
                 }
             }
-            if (current >= infinity*C) break;
-            current.v = alpha.v;
+            if (preCurrent >= infinity*C) break;
         }
 
         bool extSingle = false;
@@ -615,9 +616,9 @@ nosort:
             // FIXME don't go immediatly to vein, allow one check or so in threat search, to get knight forks at c7
             // only go to vein, if two consecutive capture moves without check happen
             if ((P == leaf && i >= nonMate && !threatened) || P == vein || depth <= dMaxCapture + 1)
-                search<(Colors)-C, vein>(nextNodeType, b, *i, 0, beta.unshared(), current, ply+1, false NODE);
+                search<(Colors)-C, vein>(nextNodeType, b, *i, 0, beta.unshared(), current.unshared(), ply+1, false NODE);
             else if (depth <= dMaxCapture + dMaxThreat + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
-                search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-1, beta.unshared(), current, ply+1, i < nonMate NODE);
+                search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-1, beta.unshared(), current.unshared(), ply+1, i < nonMate NODE);
             else { // possible null search in tree or trunk
                 int reduction = Options::reduction
                     && depth > 3 + dMaxCapture + dMaxThreat
@@ -636,14 +637,14 @@ nosort:
                     && (i != good || alphaNode)
                     && bad-good > maxMovesNull)
                 {
-                    B null;
+                    typename B::Base null;
                     null.v = current.v + C;
                     if (depth >= nullReduction + Options::splitDepth + dMaxCapture + dMaxThreat)
-                        search<C, P>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current, null, ply+2, i < nonMate NODE);
+                        search<C, P>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current.unshared(), null, ply+2, i < nonMate NODE);
                     else if (depth > nullReduction+1+reduction + dMaxCapture + dMaxThreat)
-                        search<C, tree>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current, null, ply+2, i < nonMate NODE);
+                        search<C, tree>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current.unshared(), null, ply+2, i < nonMate NODE);
                     else
-                        search<C, leaf>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current, null, ply+2, i < nonMate NODE);
+                        search<C, leaf>(nextNodeType, b, *i, depth-(nullReduction+1+reduction), current.unshared(), null, ply+2, i < nonMate NODE);
                     pruneNull = current >= null.v;
                     if (pruneNull) {
                         typename A::Base nalpha(current);
@@ -664,11 +665,11 @@ nosort:
                         if (reduction) {
 //                              reduction += (__bsrq(depth) + __bsrq(i-good))/4;
                             typename A::Base nalpha(current);
-                            search<(Colors)-C, tree>(nextNodeType, b, *i, depth-reduction-1, beta, nalpha, ply+1, i < nonMate NODE);
+                            search<(Colors)-C, tree>(nextNodeType, b, *i, depth-reduction-1, beta.unshared(), nalpha, ply+1, i < nonMate NODE);
                             research = current < nalpha.v;
                         }
                         if (research) {
-                            search<(Colors)-C, tree>(nextNodeType, b, *i, depth-1, beta, current, ply+1, i < nonMate NODE);
+                            search<(Colors)-C, tree>(nextNodeType, b, *i, depth-1, beta.unshared(), current, ply+1, i < nonMate NODE);
                         }
                     // Multi threaded search: After the first move try to find a free thread, otherwise do a normal
                     // search but stay in trunk. To avoid multithreading search at cut off nodes
