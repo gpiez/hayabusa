@@ -34,7 +34,7 @@ inline __v2di BoardBase::build13Attack(const unsigned sq) const {
     maskedDirs &= mask13x[sq];
     return maskedDirs;
 }
-void printBit(uint64_t);
+
 inline uint64_t BoardBase::build13Attack(uint64_t flood1) const {
     
     uint64_t flood3 = flood1, flood5 = flood1, flood7 = flood1;
@@ -70,6 +70,43 @@ inline uint64_t BoardBase::build13Attack(uint64_t flood1) const {
     
     return ((flood1 << 9 | flood7 >> 7 ) & ~file<'a'>())
          | ((flood3 << 7 | flood5 >> 9 ) & ~file<'h'>());
+}
+
+inline __v2di BoardBase::build13Attack(__v2di flood1) const {
+    
+    __v2di flood3 = flood1, flood5 = flood1, flood7 = flood1;
+    
+    const __v2di e01 = _mm_set1_epi64x(~occupied1 & ~file<'a'>());
+    const __v2di e03 = _mm_set1_epi64x(~occupied1 & ~file<'h'>());
+    // uint64_t e05 = ~occupied1 & ~file<'h'>();
+    // uint64_t e07 = ~occupied1 & ~file<'a'>();
+    const __v2di e11 = e01 & _mm_slli_epi64(e01, 9);
+    const __v2di e13 = e03 & _mm_slli_epi64(e03, 7);
+    const __v2di e15 = e03 & _mm_srli_epi64(e03, 9);
+    const __v2di e17 = e01 & _mm_srli_epi64(e01, 7);
+    
+    const __v2di e21 = e11 & _mm_slli_epi64(e11, 18);
+    const __v2di e23 = e13 & _mm_slli_epi64(e13, 14);
+    const __v2di e25 = e15 & _mm_srli_epi64(e15, 18);
+    const __v2di e27 = e17 & _mm_srli_epi64(e17, 14);
+    
+    flood1 |= _mm_slli_epi64(flood1, 9) & e01;
+    flood3 |= _mm_slli_epi64(flood3, 7) & e03;
+    flood5 |= _mm_srli_epi64(flood5, 9) & e03;
+    flood7 |= _mm_srli_epi64(flood7, 7) & e01;
+    
+    flood1 |= _mm_slli_epi64(flood1, 18) & e11;
+    flood3 |= _mm_slli_epi64(flood3, 14) & e13;
+    flood5 |= _mm_srli_epi64(flood5, 18) & e15;
+    flood7 |= _mm_srli_epi64(flood7, 14) & e17;
+    
+    flood1 |= _mm_slli_epi64(flood1, 36) & e21;
+    flood3 |= _mm_slli_epi64(flood3, 28) & e23;
+    flood5 |= _mm_srli_epi64(flood5, 36) & e25;
+    flood7 |= _mm_srli_epi64(flood7, 28) & e27;
+    
+    return ((_mm_slli_epi64(flood1, 9) | _mm_srli_epi64(flood7, 7) ) & _mm_set1_epi64x(~file<'a'>()))
+         | ((_mm_slli_epi64(flood3, 7) | _mm_srli_epi64(flood5, 9) ) & _mm_set1_epi64x(~file<'h'>()));
 }
 
 inline __v2di BoardBase::build02Attack(const unsigned sq) const {
