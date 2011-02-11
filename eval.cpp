@@ -690,64 +690,123 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
     const uint64_t oppking = (ktemp<<1 & ~file<'a'>()) | (ktemp>>1 & ~file<'h'>());
     const uint64_t ownking = b.getAttacks< C,King>() | shift<C* 8>(b.getAttacks< C,King>());
     const uint64_t noBlockedPawns = ~(b.getPieces<C,Pawn>() & shift<C*-8>(b.getPieces<-C,Pawn>()));
+    const __v2di noBlockedPawns2 = _mm_set1_epi64x(noBlockedPawns);
+    const uint64_t empty = ~b.getOcc<C>();
+    const __v2di empty2 = _mm_set1_epi64x(empty);
+    
     __v2di w0 = zero, w1 = zero, w2 = zero, w3 = zero;
     
     const __v2di v2queen = _mm_set1_epi64x(b.getPieces<C,Queen>());
     
     uint64_t restrictions = ~b.getAttacks<-C,Pawn>();
+    __v2di restrictions2 = _mm_set1_epi64x(restrictions);
     __v2di allBishopAttacks = zero;
     //TODO generally optimize for at most two pieces of a kind. In positions with more the evaluation will most likely be way off anyway.
-    for (const BoardBase::MoveTemplateB* bs = b.bsingle[CI]; bs->move.data; ++bs) {
-        // restriced mobility in one move, including own defended pieces
-        allBishopAttacks |= bs->d13;
-        uint64_t rmob0 = fold(bs->d13);
-        uint64_t rmob1 = rmob0 & restrictions;
-        // generator for two move squares, mask blocked pawns
-        uint64_t rmob2 = rmob1 & noBlockedPawns;
-        // remove own pieces
-        rmob1 &= ~b.getOcc<C>();
-        // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move        
-        rmob2 |= b.build13Attack(rmob1) & restrictions & ~b.getOcc<C>();
-        // generator for three move squares, mask blocked pawns
-        uint64_t rmob3 = rmob2 & noBlockedPawns;
-        // restriced mobility in three moves
-        rmob3 |= b.build13Attack(rmob2) & restrictions & ~b.getOcc<C>();
-        /*
-         * If the queen is on an attack line of the bishop, include the attack
-         * line of the queen in the attack line of the bishop. This leads to
-         * increased one move mobility and the bishop gets counted in an possible
-         * king attack
-         */
-        rmob1 |= fold( ~ pcmpeqq(bs->d13 & v2queen, zero) & b.qsingle[CI][0].d13) & ~b.getOcc<C>(); //TODO optimize for queenless positions
-        rmob2 &= ~rmob1;
-        rmob3 &= ~(rmob1 | rmob2);
+    if (b.bsingle[CI][0].move.data) {
+        if (0 && b.bsingle[CI][1].move.data) {
+            allBishopAttacks |= b.bsingle[CI][0].d13 | b.bsingle[CI][1].d13;
+            __v2di rmob0 = _mm_set_epi64x( fold(b.bsingle[CI][0].d13), fold(b.bsingle[CI][1].d13) ) ;
+            __v2di rmob1 = rmob0 &  restrictions2;
+            // generator for two move squares, mask blocked pawns
+            __v2di rmob2 = rmob1 & noBlockedPawns2;
+            // remove own pieces
+            rmob1 &= empty2;
+            // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move        
+            rmob2 |= b.build13Attack(rmob1) & restrictions2 & empty2;
+            // generator for three move squares, mask blocked pawns
+            __v2di rmob3 = rmob2 & noBlockedPawns2;
+            // restriced mobility in three moves
+            rmob3 |= b.build13Attack(rmob2) & restrictions2 & empty2;
+            /*
+            * If the queen is on an attack line of the bishop, include the attack
+            * line of the queen in the attack line of the bishop. This leads to
+            * increased one move mobility and the bishop gets counted in an possible
+            * king attack
+            */
+            rmob1 |= _mm_set_epi64x( fold( ~pcmpeqq(b.bsingle[CI][0].d13 & v2queen, zero) & b.qsingle[CI][0].d13),
+                                    fold( ~pcmpeqq(b.bsingle[CI][1].d13 & v2queen, zero) & b.qsingle[CI][0].d13) )
+                    & empty2; 
+            rmob2 &= ~rmob1;
+            rmob3 &= ~(rmob1 | rmob2);
 
-        if (rmob1 & oppking) attackingPieces+=4;
-        if (rmob0 & ~rmob1 & oppking) attackingPieces+=2;
-        if (rmob2 & oppking) attackingPieces+=2;
-        if (rmob3 & oppking) attackingPieces++;
-        if (rmob0 & ownking) defendingPieces++;
-        
-/*        sumup(rmob1, weightB1, w0, w1, w2, w3);
-        sumup(rmob2, weightB2, w0, w1, w2, w3);
-        sumup(rmob3, weightB3, w0, w1, w2, w3);*/
-        
-        score += mobB1[popcount(rmob1)] + mobB2[popcount(rmob2)] + mobB3[popcount(rmob3)];
+            __v2di oppking0 = _mm_set_epi64x(oppking, 0);
+            __v2di ownking0 = _mm_set_epi64x(ownking, 0);
+            if (!_mm_testz_si128(rmob1, oppking0)) attackingPieces+=4;
+            if (!_mm_testz_si128(rmob0, ~rmob1 & oppking0)) attackingPieces+=2;
+            if (!_mm_testz_si128(rmob2, oppking0)) attackingPieces+=2;
+            if (!_mm_testz_si128(rmob3, oppking0)) attackingPieces++;
+            if (!_mm_testz_si128(rmob0, ownking0)) defendingPieces++;
+            
+            __v2di oppking1 = _mm_set_epi64x(0, oppking);
+            __v2di ownking1 = _mm_set_epi64x(0, ownking);
+            if (!_mm_testz_si128(rmob1, oppking1)) attackingPieces+=4;
+            if (!_mm_testz_si128(rmob0, ~rmob1 & oppking1)) attackingPieces+=2;
+            if (!_mm_testz_si128(rmob2, oppking1)) attackingPieces+=2;
+            if (!_mm_testz_si128(rmob3, oppking1)) attackingPieces++;
+            if (!_mm_testz_si128(rmob0, ownking1)) defendingPieces++;
+            
+    /*        sumup(rmob1, weightB1, w0, w1, w2, w3);
+            sumup(rmob2, weightB2, w0, w1, w2, w3);
+            sumup(rmob3, weightB3, w0, w1, w2, w3);*/
+            
+            score += mobB1[popcount(_mm_extract_epi64(rmob1, 0))] + mobB2[popcount(_mm_extract_epi64(rmob2, 0))] + mobB3[popcount(_mm_extract_epi64(rmob3, 0))];
+            score += mobB1[popcount(_mm_extract_epi64(rmob1, 1))] + mobB2[popcount(_mm_extract_epi64(rmob2, 1))] + mobB3[popcount(_mm_extract_epi64(rmob3, 1))];
 
-        print_debug(debugMobility, "b mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2), popcount(rmob3));
-        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); printBit(rmob3); }
+            //print_debug(debugMobility, "b mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2), popcount(rmob3));
+            if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); printBit(rmob3); }
+        } else {
+            for (const BoardBase::MoveTemplateB* bs = b.bsingle[CI]; bs->move.data; ++bs) {
+                // restriced mobility in one move, including own defended pieces
+                allBishopAttacks |= bs->d13;
+                uint64_t rmob0 = fold(bs->d13);
+                uint64_t rmob1 = rmob0 & restrictions;
+                // generator for two move squares, mask blocked pawns
+                uint64_t rmob2 = rmob1 & noBlockedPawns;
+                // remove own pieces
+                rmob1 &= ~b.getOcc<C>();
+                // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move        
+                rmob2 |= b.build13Attack(rmob1) & restrictions & ~b.getOcc<C>();
+                // generator for three move squares, mask blocked pawns
+//                 uint64_t rmob3 = rmob2 & noBlockedPawns;
+                // restriced mobility in three moves
+//                 rmob3 |= b.build13Attack(rmob2) & restrictions & ~b.getOcc<C>();
+                /*
+                * If the queen is on an attack line of the bishop, include the attack
+                * line of the queen in the attack line of the bishop. This leads to
+                * increased one move mobility and the bishop gets counted in an possible
+                * king attack
+                */
+                rmob1 |= fold( ~ pcmpeqq(bs->d13 & v2queen, zero) & b.qsingle[CI][0].d13) & ~b.getOcc<C>(); //TODO optimize for queenless positions
+                rmob2 &= ~rmob1;
+//                 rmob3 &= ~(rmob1 | rmob2);
+
+                if (rmob1 & oppking) attackingPieces+=4;
+                if (rmob0 & ~rmob1 & oppking) attackingPieces+=2;
+                if (rmob2 & oppking) attackingPieces+=2;
+//                 if (rmob3 & oppking) attackingPieces++;
+                if (rmob0 & ownking) defendingPieces++;
+                
+        /*        sumup(rmob1, weightB1, w0, w1, w2, w3);
+                sumup(rmob2, weightB2, w0, w1, w2, w3);
+                sumup(rmob3, weightB3, w0, w1, w2, w3);*/
+                
+                score += mobB1[popcount(rmob1)] + mobB2[popcount(rmob2)] /*+ mobB3[popcount(rmob3)]*/;
+
+                print_debug(debugMobility, "b mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2)/*, popcount(rmob3)*/);
+                if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2);/* printBit(rmob3);*/ }
+            }
+        }
     }
-    
     for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
         uint64_t sq = bit(p);
         uint64_t rmob1 = b.knightAttacks[sq] & restrictions;
         uint64_t rmob2 = rmob1 & noBlockedPawns;
         rmob1 &= ~b.getOcc<C>();
         rmob2 |= b.buildNAttack(rmob1) & restrictions & ~b.getOcc<C>();
-        uint64_t rmob3 = rmob2 & noBlockedPawns;
-        rmob3 |= b.buildNAttack(rmob2) & restrictions & ~b.getOcc<C>();
+//         uint64_t rmob3 = rmob2 & noBlockedPawns;
+//         rmob3 |= b.buildNAttack(rmob2) & restrictions & ~b.getOcc<C>();
         rmob2 &= ~rmob1;
-        rmob3 &= ~(rmob1 | rmob2);
+//         rmob3 &= ~(rmob1 | rmob2);
         
 // #ifdef MYDEBUG        
 //         bmob1 += popcount(rmob1);
@@ -759,12 +818,12 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         if (rmob1 & oppking) attackingPieces+=4;
         if (b.knightAttacks[sq] & ~rmob1 & oppking) attackingPieces+=2; //defended squares
         if (rmob2 & oppking) attackingPieces+=2;
-        if (rmob3 & oppking) attackingPieces++;
+//         if (rmob3 & oppking) attackingPieces++;
         if (b.knightAttacks[sq] & ownking) defendingPieces++;
-        score += mobN1[popcount(rmob1)] + mobN2[popcount(rmob2)] + mobN3[popcount(rmob3)];
+        score += mobN1[popcount(rmob1)] + mobN2[popcount(rmob2)] /*+ mobN3[popcount(rmob3)]*/;
 
-        print_debug(debugMobility, "n mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2), popcount(rmob3));
-        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); printBit(rmob3); }
+        print_debug(debugMobility, "n mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2)/*, popcount(rmob3)*/);
+        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); /*printBit(rmob3);*/ }
     }
 
     restrictions &= ~(b.getAttacks<-C,Bishop>() | b.getAttacks<-C,Knight>());
@@ -781,26 +840,26 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move        
         rmob2 |= b.build02Attack(rmob1) & restrictions & ~b.getOcc<C>();
         // generator for three move squares, mask blocked pawns
-        uint64_t rmob3 = rmob2 & noBlockedPawns;
+//         uint64_t rmob3 = rmob2 & noBlockedPawns;
         // restriced mobility in three moves
-        rmob3 |= b.build02Attack(rmob2) & restrictions & ~b.getOcc<C>();
+//         rmob3 |= b.build02Attack(rmob2) & restrictions & ~b.getOcc<C>();
         
         __v2di connectedQR = ~pcmpeqq(rs->d02 & v2queen, zero) & b.qsingle[CI][0].d02;
         if (b.rsingle[CI][1].move.data)
             connectedQR |= ~ pcmpeqq(rs->d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02);
         rmob1 |= fold(connectedQR) & ~b.getOcc<C>() & restrictions;
         rmob2 &= ~rmob1;
-        rmob3 &= ~(rmob1 | rmob2);
+//         rmob3 &= ~(rmob1 | rmob2);
         
         if (rmob1 & oppking) attackingPieces+=4;
         if (rmob0 & ~rmob1 & oppking) attackingPieces+=2; //defended squares
         if (rmob2 & oppking) attackingPieces+=2;
-        if (rmob3 & oppking) attackingPieces++;
+//         if (rmob3 & oppking) attackingPieces++;
         if (rmob0 & ownking) defendingPieces++;
-        score += mobR1[popcount(rmob1)] + mobR2[popcount(rmob2)] + mobR3[popcount(rmob3)];
+        score += mobR1[popcount(rmob1)] + mobR2[popcount(rmob2)] /*+ mobR3[popcount(rmob3)]*/;
 
-        print_debug(debugMobility, "r mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2), popcount(rmob3));
-        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); printBit(rmob3); }
+        print_debug(debugMobility, "r mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2)/*, popcount(rmob3)*/);
+        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); /*printBit(rmob3);*/ }
     }
 
     if (b.getPieces<C,Queen>()) {
@@ -813,9 +872,9 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move        
         rmob2 |= (b.build02Attack(rmob1) | b.build13Attack(rmob1)) & restrictions & ~b.getOcc<C>();
         // generator for three move squares, mask blocked pawns
-        uint64_t rmob3 = rmob2 & noBlockedPawns;
+//         uint64_t rmob3 = rmob2 & noBlockedPawns;
         // restriced mobility in three moves
-        rmob3 |= (b.build02Attack(rmob2) | b.build13Attack(rmob2)) & restrictions & ~b.getOcc<C>();
+//         rmob3 |= (b.build02Attack(rmob2) | b.build13Attack(rmob2)) & restrictions & ~b.getOcc<C>();
         
         unsigned q=bit(b.getPieces<C,Queen>());
         __v2di connectedBR = ~ pcmpeqq(b.qsingle[CI][0].d13 & _mm_set1_epi64x(b.getPieces<C,Bishop>()), zero) 
@@ -827,16 +886,16 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
         
         rmob1 |= fold(connectedBR) & ~b.getOcc<C>() & restrictions;
         rmob2 &= ~rmob1;
-        rmob3 &= ~(rmob1 | rmob2);
+//         rmob3 &= ~(rmob1 | rmob2);
 
         if (rmob1 & oppking) attackingPieces+=4;        //undefended squares
         if (b.getAttacks<C,Queen>() & ~rmob1 & oppking) attackingPieces+=2; //defended squares
         if (rmob2 & oppking) attackingPieces+=2;
-        if (rmob3 & oppking) attackingPieces++;
-        score += mobQ1[popcount(rmob1)] + mobQ2[popcount(rmob2)] + mobQ3[popcount(rmob3)];
+//         if (rmob3 & oppking) attackingPieces++;
+        score += mobQ1[popcount(rmob1)] + mobQ2[popcount(rmob2)] /*+ mobQ3[popcount(rmob3)]*/;
         
-        print_debug(debugMobility, "q mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2), popcount(rmob3));
-        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); printBit(rmob3); }
+        print_debug(debugMobility, "q mobility%d: %d, %d, %d\n", CI, popcount(rmob1), popcount(rmob2)/*, popcount(rmob3)*/);
+        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); /*printBit(rmob3);*/ }
     }
     return score;
 }
