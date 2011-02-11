@@ -28,6 +28,7 @@
 #include "testpositions.h"
 #include "transpositiontable.tcc"
 #include "rootboard.tcc"
+#include "rootsearch.tcc"
 #include "stringlist.h"
 
 namespace Options {
