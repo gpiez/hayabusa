@@ -125,7 +125,9 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
     // isn't sufficient, don't write anything.
     for (unsigned int i = 0; i < assoc; ++i)         //TODO compare all keys simultaniously suing sse
         if (subTable->entries[i].upperKey == entry.upperKey) {
-            if (entry.loBound + entry.hiBound >= subTable->entries[i].loBound + subTable->entries[i].hiBound || entry.depth >= subTable->entries[i].depth) {
+            if (entry.loBound + entry.hiBound >= subTable->entries[i].loBound + subTable->entries[i].hiBound 
+                || entry.depth >= subTable->entries[i].depth) 
+            {
                 stats.ttoverwrite++;
                 stats.ttinsufficient--;
                 subTable->entries[i] = entry;
@@ -159,12 +161,13 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
         stats.ttuse++;
     unsigned int i;
     for (i = 0; i < assoc-1; ++i)                // TODO possibly checking only assoc/2 and a LRU in retrieve would be better
-        if (entry.depth >= subTable->entries[i].depth)
+        if (subTable->entries[i].aged || entry.depth >= subTable->entries[i].depth)
             break;
 
     for (unsigned j = assoc-1; j>i; --j) {
         subTable->entries[j] = subTable->entries[j-1];
     }
+    if (subTable->entries[i].aged) stats.ttuse++;
     subTable->entries[i] = entry;
 }
 //#pragma GCC diagnostic pop
@@ -216,6 +219,15 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::clear() {
     memset(table, 0, size);
+}
+
+template<typename Entry, unsigned int assoc, typename Key>
+void Table<Entry, assoc, Key>::agex() {
+    for (size_t i=0; i<nEntries; ++i) {
+        for (size_t j=0; j<assoc; ++j) {
+            table[i].entries[j].aged |= 1;
+        }
+    }
 }
 
 template<typename Entry, unsigned assoc, typename Key>
@@ -277,16 +289,16 @@ inline int tt2Score(int s) {
         return s;
     if (s > 0) {
         if (s < 0x600)
-            return s*2 - 0x400*1;
+            return s*2 - 0x400*2 + 0x400;
         if (s < 0x700)
-            return s*4 - 0x600*3;
-        return s*16 - 0x700*15;
+            return s*4 - 0x600*4 + 0x800;
+        return s*16 - 0x700*16 + 0x1000;
     } else {
         if (s > -0x600)
-            return s*2 + 0x400*1;
+            return s*2 + 0x400*2 - 0x400;
         if (s > -0x700)
-            return s*4 + 0x600*3;
-        return s*16 + 0x700*15;
+            return s*4 + 0x600*4 - 0x800;
+        return s*16 + 0x700*16 - 0x1000;
     }
 }
 
