@@ -68,6 +68,35 @@ int main(int, char** argv) {
                 else
                     std::cout << " ";
             }
+    } else if (argv[1] && std::string("king1bits") == argv[1]) {
+        for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
+             {
+                uint64_t bits=0;
+                for (int u=-1; u<=1; ++u)
+                    for (int v=-1; v<=1; ++v)
+                        if (x+u >= 0 && x+u<8 && y+v>=0 && y+v<8)
+                            bits |= 1ULL << (x+u+(y+v)*8);
+                std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ",";
+                if (x == 7)
+                    std::cout << std::endl;
+                else
+                    std::cout << " ";
+            }
+    } else if (argv[1] && std::string("king2bits") == argv[1]) {
+        for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
+             {
+                uint64_t bits=0;
+                for (int u=-2; u<=2; ++u)
+                    for (int v=-2; v<=2; ++v)
+                        if (abs(u)==2 || abs(v)==2)
+                        if (x+u >= 0 && x+u<8 && y+v>=0 && y+v<8)
+                            bits |= 1ULL << (x+u+(y+v)*8);
+                std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ",";
+                if (x == 7)
+                    std::cout << std::endl;
+                else
+                    std::cout << " ";
+            }
     } else if (argv[1] && std::string("psqr") == argv[1]) {
         int xopen[8] = { 0, 0, 6, 8, 8, 6, 0, 0 };
         int xend[8] = { 0, 10, 11, 12, 12, 11, 10, 0};
