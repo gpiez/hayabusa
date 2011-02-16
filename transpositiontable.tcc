@@ -26,6 +26,7 @@
 #include "transpositiontable.h"
 #include "rootboard.h"
 #include "coloredboard.tcc"
+#include "workthread.h"
 
 #ifdef HAVE_HUGE_PAGES
 extern "C" {
@@ -157,7 +158,7 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
             return;
         }
 
-    if (subTable->entries[assoc-1].data == 0)
+    if (subTable->entries[assoc-1].data == 0 || subTable->entries[assoc-1].aged)
         stats.ttuse++;
     unsigned int i;
     for (i = 0; i < assoc-1; ++i)                // TODO possibly checking only assoc/2 and a LRU in retrieve would be better
@@ -167,7 +168,6 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
     for (unsigned j = assoc-1; j>i; --j) {
         subTable->entries[j] = subTable->entries[j-1];
     }
-    if (subTable->entries[i].aged) stats.ttuse++;
     subTable->entries[i] = entry;
 }
 //#pragma GCC diagnostic pop
@@ -217,12 +217,27 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
 }
 
 template<typename Entry, unsigned int assoc, typename Key>
+void Table<Entry, assoc, Key>::resetStats() {
+    auto& threads = WorkThread::getThreads();
+    for (auto th = threads.begin(); th !=threads.end(); ++th) {
+        (*th)->getStats()->ttuse = 0;
+        (*th)->getStats()->tthit = 0;
+        (*th)->getStats()->ttalpha = 0;
+        (*th)->getStats()->ttbeta = 0;
+        (*th)->getStats()->ttoverwrite = 0;
+        (*th)->getStats()->ttstore = 0;
+    }
+}
+
+template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::clear() {
+    resetStats();
     memset(table, 0, size);
 }
 
 template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::agex() {
+    resetStats();
     for (size_t i=0; i<nEntries; ++i) {
         for (size_t j=0; j<assoc; ++j) {
             table[i].entries[j].aged |= 1;
