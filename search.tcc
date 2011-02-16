@@ -63,7 +63,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
         NodeItem::nNodes++;
         NodeItem::m.unlock();
     }
-//     if (NodeItem::nNodes == 589577) asm("int3");
+   // if (stats.node == 1076359) asm("int3");
 #endif
 /*
     prefetching is not very effective for core2, probably because each access
@@ -393,6 +393,7 @@ nosort:
         }
 
         bool extSingle = false;
+        current.m = *good;
 //         if (/*P == leaf &&*/ b.template inCheck<C>() && bad - good <= 2) {
 //            nonMate+=2;
 //             extSingle = true;
@@ -425,16 +426,25 @@ nosort:
             else if (depth <= dMaxCapture + dMaxThreat + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
                 search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-1, beta.unshared(), current.unshared(), ply+1, i < nonMate NODE);
             else { // possible null search in tree or trunk
-                int reduction = Options::reduction
-                    && depth > 3 + dMaxCapture + dMaxThreat
-                    && i > afterGoodCap + 3
-//                        && !i->isSpecial()
-                    && !threatened
-                    && !((fold(b.doublebits[i->to()] & b.kingIncoming[EI].d02) && i->piece() & Rook)
-                       || (fold(b.doublebits[i->to()] & b.kingIncoming[EI].d13) && i->piece() & Bishop)
-                       || (BoardBase::knightAttacks[i->to()] & b.template getPieces<-C,King>() && i->piece() == Knight));
-                if (i->isSpecial() && (bool[nPieces+1]){false, true, true, false, true, false, false}[i->piece() & 7]) {
-                    reduction = 2+depth/2;
+                int reduction = 0;
+                if (i>good) {
+                    if (Options::reduction
+//                        && depth > 3 + dMaxCapture + dMaxThreat
+                        && i > good // + 3
+    //                        && !i->isSpecial()
+                        && !threatened
+                        && !((fold(b.doublebits[i->to()] & b.kingIncoming[EI].d02) && i->piece() & Rook)
+                        || (fold(b.doublebits[i->to()] & b.kingIncoming[EI].d13) && i->piece() & Bishop)
+                        || (BoardBase::knightAttacks[i->to()] & b.template getPieces<-C,King>() && i->piece() == Knight))) {
+                        reduction = std::min(((depth-dMaxCapture-dMaxThreat)/2 + i-good + 2)/8*2, 4L);
+                        
+/*                        if (abs(realScore - alpha.v) > 500 && depth==4)
+                            reduction = 3;
+                        else if (abs(realScore - alpha.v) > 150 && depth==3)
+                            reduction = 2;*/
+                        }
+                    if (i->isSpecial() && (bool[nPieces+1]){false, true, true, false, true, false, false}[i->piece() & 7])
+                        reduction = 2+depth/2;
                 }
                 bool pruneNull = false;
                 if (depth > 2 + dMaxCapture + dMaxThreat + reduction
@@ -454,8 +464,8 @@ nosort:
                     if (pruneNull) {
                         typename A::Base nalpha(current);
                         null.v = current.v + C;
-                        if (depth > 2*(nullReduction+reduction) + dMaxCapture + dMaxThreat) {
-                            search<(Colors)-C, tree>(nextNodeType, b, *i, depth-2*(nullReduction+reduction), null, nalpha, ply+1, i < nonMate NODE);
+                        if (depth > 2*nullReduction+reduction + dMaxCapture + dMaxThreat) {
+                            search<(Colors)-C, tree>(nextNodeType, b, *i, depth-2*nullReduction-reduction, null, nalpha, ply+1, i < nonMate NODE);
                             pruneNull = current >= nalpha.v;
                         }
 
@@ -470,7 +480,10 @@ nosort:
                         if (reduction) {
 //                              reduction += (bitr(depth) + bitr(i-good))/4;
                             typename A::Base nalpha(current);
-                            search<(Colors)-C, tree>(nextNodeType, b, *i, depth-reduction-1, beta.unshared(), nalpha, ply+1, i < nonMate NODE);
+                            if (depth <= dMaxCapture + dMaxThreat + 1 + reduction/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
+                                search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-reduction-1, beta.unshared(), nalpha, ply+1, i < nonMate NODE);
+                            else
+                                search<(Colors)-C, tree>(nextNodeType, b, *i, depth-reduction-1, beta.unshared(), nalpha, ply+1, i < nonMate NODE);
                             research = current < nalpha.v;
                         }
                         if (research) {
@@ -520,10 +533,10 @@ nosort:
         stored.upperKey |= z >> stored.upperShift;
         stored.score |= score2tt(current.v);
         stored.loBound |= current > alpha.v;
-        if (current > alpha.v && current.m.capture() == 0 && current.m.data)
+        if (current > alpha.v && current.m.capture() == 0 && current.m.fromto())
             history.good<C>(current.m, ply);
         stored.hiBound |= current < beta.v;
-        stored.from |= current.m.from();
+        stored.from |= current.m.from(); //TODO store a best move even if all moves are fail low
         stored.to |= current.m.to();
         tt->store(st, stored);
     }
