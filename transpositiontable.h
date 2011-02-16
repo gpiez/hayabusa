@@ -52,10 +52,11 @@ private:
     bool usesHugePages;
 
 public:
-    Table(uint64_t size = 0x1000000);
+    Table(uint64_t size = hashDefaultSize*0x100000ULL);
     ~Table();
 
     void setSize(size_t s);
+    void resetStats();
     Key nextKey(Key k, Move m);
     SubTable* getSubTable( Key k, Mutex*& l) {
 //        l = lock + ((k>>4) & (nTTLocks-1));
@@ -81,10 +82,16 @@ public:
     std::string bestLine(const RootBoard& );
     template<Colors C> std::string bestLineNext(const ColoredBoard<(Colors)-C>&, Move, std::set<Key>&, const RootBoard&);
     void clear();
+    void agex();
+    uint64_t getEntries() const {
+        return assoc*nEntries;
+    }
 };
 
 template<typename Entry, unsigned assoc, typename Key>
-class TranspositionTable: public Table<Entry, assoc, Key> {};
+class TranspositionTable: public Table<Entry, assoc, Key> {
+public:
+};
 
 template<unsigned assoc, typename Key>
 class TranspositionTable<PawnEntry, assoc, Key>: public Table<PawnEntry, assoc, Key> {
