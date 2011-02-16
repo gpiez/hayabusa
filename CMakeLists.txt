@@ -92,6 +92,7 @@ ENDIF(USE_QTGUI OR USE_QTNETWORK)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
   add_precompiled_header(hayabusa pch.h)
+  add_dependencies(hayabusa_gch constants.h)
 endif()
 find_library(HUGE_PAGES hugetlbfs)
 
