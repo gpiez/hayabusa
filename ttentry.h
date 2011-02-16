@@ -72,8 +72,9 @@ union TTEntry {
     Bitfield<19, 1, unsigned int> hiBound;
     Bitfield<20, 12, int> score;
     Bitfield<32, 1, unsigned int> visited;
-    Bitfield<33, 31, Key> upperKey;
-    enum { upperShift = 33 };
+    Bitfield<33, 1, unsigned int> aged;
+    Bitfield<34, 30, Key> upperKey;
+    enum { upperShift = 34 };
     uint64_t data;
 
     void zero() { data = 0; };
@@ -100,6 +101,7 @@ struct PerftEntry {
     Bitfield<62, 1, uint64_t> loBound;
     Bitfield<63, 1, uint64_t> hiBound;
     uint64_t data;
+    uint64_t aged; //dummy
     };
     enum { upperShift = 6 };
     uint64_t value;
