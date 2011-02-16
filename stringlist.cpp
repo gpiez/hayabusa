@@ -63,6 +63,7 @@ std::string simplified(std::string str) {
 }
 
 std::string toLower(std::string str) {
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
     return str;
 }
 
