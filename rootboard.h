@@ -98,8 +98,8 @@ private:
     int movetime;
     Move bm;
     volatile bool stopSearch;
-    TimedMutex stopTimerMutex;
     TimedMutex infoTimerMutex;
+    TimedMutex stopTimerMutex;
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
@@ -144,7 +144,6 @@ public:
     void divide(unsigned int depth) const;
     Stats getStats() const;
     std::string getLine() const;
-    void ttClear();
     bool doMove(Move);
     template<Colors C> bool doMove(Move);
     std::string getInfo() const;
@@ -152,5 +151,7 @@ public:
     Move findMove(const std::string&) const;
     void stopTimer(milliseconds hardlimit);
     void infoTimer(milliseconds repeat);
+    void clearHash();
+    void ageHash();
 };
 #endif

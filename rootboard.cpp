@@ -40,6 +40,12 @@ void RootBoard::stopTimer(milliseconds hardlimit) {
 #else    
     UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
 #endif    
+/*#ifdef __WIN32__    
+    Sleep(hardlimit.count()*1000);
+#else
+    timespec ts = { hardlimit.count()/1000, (hardlimit.count()%1000)*1000000 };
+    nanosleep(&ts, NULL);
+#endif    */
     stopSearch = true;
 }
 
@@ -49,19 +55,23 @@ void RootBoard::infoTimer(milliseconds repeat) {
         UniqueLock<TimedMutex> lock(infoTimerMutex, boost::posix_time::millisec(repeat.count()));
 #else        
         UniqueLock<TimedMutex> lock(infoTimerMutex, repeat);
-#endif    
-        uint64_t ntemp = getStats().node;
+#endif  
+        Stats tempStats = getStats();
+        uint64_t ntemp = tempStats.node;
         std::stringstream g;
         g   << "info"
             << " nodes " << ntemp
             << " nps " << (1000*ntemp)/(duration_cast<milliseconds>(system_clock::now()-start).count()+1)
+            << " hashfull " << (2000*tempStats.ttuse+1)/(2*tt->getEntries())
         ;
 #ifdef MYDEBUG
+#if 0        
         g << std::endl;
         g << "info string ";
         g << " bmob1 " << eval.bmob1 / (eval.bmobn+0.1);
         g << " bmob2 " << eval.bmob2 / (eval.bmobn+0.1);
         g << " bmob3 " << eval.bmob3 / (eval.bmobn+0.1);
+#endif        
 #endif            
         console->send(g.str());
     }
@@ -180,7 +190,7 @@ const BoardBase& RootBoard::setup(const std::string& str) {
 
     board.init();
     board.fiftyMoves = fiftyTemp;
-    clearEE();
+    //clearEE();
 
     unsigned int p,x,y;
     for ( p=0, x=0, y=7; p<(unsigned int)piecePlacement.length(); p++, x++ ) {
@@ -267,7 +277,8 @@ const BoardBase& RootBoard::setup(const std::string& str) {
         }
         bm = m;
     }
-    history.init();
+    if (getStats().ttuse) tt->agex();
+    
     rootPly = 0;
     return board;
 }
@@ -352,19 +363,13 @@ void update(Result<uint64_t>& r, uint64_t v) {
 }
 
 Stats RootBoard::getStats() const {
-    Stats sum = {{0}};
     auto& threads = WorkThread::getThreads();
-    for (auto th = threads.begin(); th !=threads.end(); ++th) {
+    Stats sum = * (* threads.begin() )->getStats();
+    for (auto th = threads.begin() + 1; th !=threads.end(); ++th) {
         for (unsigned int i=0; i<sizeof(Stats)/sizeof(uint64_t); ++i)
             sum.data[i] += (*th)->getStats()->data[i];
     }
     return sum;
-}
-
-void RootBoard::ttClear()
-{
-    tt->clear();
-    eval.ptClear();
 }
 
 std::string RootBoard::getLine() const {
@@ -411,4 +416,12 @@ bool RootBoard::doMove(Move m) {
 
 std::string RootBoard::getInfo() const {
     return info;
+}
+
+void RootBoard::clearHash()
+{
+    tt->clear();        //FIXME needs locking
+    eval.ptClear();
+    history.init();
+    clearEE();
 }
