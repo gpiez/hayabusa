@@ -253,6 +253,13 @@ void Console::divide(StringList cmds) {
 void Console::uci(StringList /*cmds*/) {
     send("id name hayabusa 0.1");
     send("author Gunther Piez");
+    std::stringstream str;
+    str << " 32768"; //TranspositionTable::maxSize;
+    str << " default ";
+    str << hashDefaultSize;
+    send("option name Hash type spin min 1 max " + str.str());
+    send("option name Reduction type check default false");
+    send("option name Clear Hash type button");
     send("uciok");
 }
 
@@ -283,7 +290,14 @@ void Console::setoption(StringList cmds) {
         } else if (name == "quiet") {
             Options::quiet = convert(data);
         } else if (name == "reduction") {
-            Options::reduction = true;
+            if (data == "true")
+                Options::reduction = true;
+            else if (data == "true")
+                Options::reduction = false;
+            else
+                std::cerr << "reduction value " << data << " not understood" << std::endl;
+        } else if (name == "clear hash") {
+            board->clearHash();
 #ifdef QT_NETWORK_LIB
         } else if (name == "server") {
             Options::server = true;
@@ -291,6 +305,8 @@ void Console::setoption(StringList cmds) {
             server->listen(QHostAddress::Any, 7788);
             connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
 #endif
+        } else {
+            std::cerr << "option " << name << " not understood";
         }
     }
 }
@@ -300,7 +316,7 @@ void Console::reg(StringList /*cmds*/) {
 
 void Console::ucinewgame(StringList /*cmds*/) {
     WorkThread::stopAll();
-    board->ttClear();
+    board->clearHash();
 }
 
 void Console::position(StringList cmds) {
@@ -365,7 +381,7 @@ void Console::ordering(StringList cmds) {
             stats.node=0;
             board->maxSearchNodes = 1000000;
             board->setup(testPositions[i]);
-            board->ttClear();
+            board->clearHash();
             if (board->color == White)
                 board->rootSearch<White>(40);
             else
@@ -385,7 +401,7 @@ void Console::ordering(StringList cmds) {
             tested++;
             stats.node=0;
             board->setup(testPositions[i]);
-            board->ttClear();
+            board->clearHash();
             if (board->color == White)
                 board->rootSearch<White>(testDepths[i]);
             else
