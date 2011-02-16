@@ -78,7 +78,7 @@ struct BoardBase {
         __v2di d02, d13;
     } qsingle[nColors][1+8+1];                   //960
 
-    unsigned material;
+    int material;
 
     struct XB {
         __v2di x;
@@ -89,6 +89,8 @@ struct BoardBase {
     static const __v2di doublebits[nSquares]; // 1 KByte    1<<sq  : 1<<sq
     static const __v2di doublereverse[nSquares]; // 1 KByte    1<<sq  : 1<<sq
     static const uint64_t knightAttacks[nSquares];
+    static const uint64_t kAttacked1[nSquares];
+    static const uint64_t kAttacked2[nSquares];
     static uint64_t kingAttacks[16][nSquares];
     static uint64_t epTab[nPieces+1][nSquares];
 
