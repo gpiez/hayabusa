@@ -68,6 +68,9 @@ public:
     const Stats* getStats() const {
         return stats;
     }
+    Stats* getStats() {
+        return stats;
+    }
     unsigned& getThreadId() {
         return *threadId;
     }
