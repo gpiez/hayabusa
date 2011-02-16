@@ -42,14 +42,15 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     milliseconds time( C==White ? wtime : btime );
     milliseconds inc( C==White ? winc : binc );
     
-    if (movestogo == 0)
-        movestogo = 40;
-    time -= operatorTime;
+    if (movestogo == 0) movestogo = 20;
+    
+    if (time > operatorTime) time -= operatorTime;
+    else time = milliseconds(0);
+    
     time = std::max(minimumTime, time);
     
     system_clock::time_point softLimit = start + (time + inc*movestogo)/(2*movestogo);
     milliseconds hardBudget = std::min(time/2, (2*time + 2*inc*movestogo)/(movestogo+1));
-
     stopTimerMutex.lock();
     Thread* stopTimerThread = NULL;
     if (!infinite) stopTimerThread = new Thread(&RootBoard::stopTimer, this, hardBudget);
@@ -63,23 +64,21 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         ml.begin();
         bestMove = *ml;
         system_clock::time_point now = system_clock::now();
-        if (now >= lastStatus2) {
-            std::stringstream g;
-            lastStatus2 = now + milliseconds(1000);
-            g << "info depth " << depth-(dMaxCapture+dMaxThreat) << " currmove " << (*ml).algebraic() << " currmovenumber 1";
-            console->send(g.str());
-        }
+        std::stringstream g;
+        lastStatus2 = now + milliseconds(1000);
+        g << "info depth " << depth-(dMaxCapture+dMaxThreat) << " currmove " << (*ml).algebraic() << " currmovenumber 1";
+        console->send(g.str());
     #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
         data.ply = depth;
+        NodeItem::m.lock();
         NodeItem* node=0;
         if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
-            NodeItem::m.lock();
             node = new NodeItem(data, statWidget->tree->root());
             NodeItem::nNodes++;
-            NodeItem::m.unlock();
         }
+        NodeItem::m.unlock();
     #endif
 
         currentMoveIndex = 1;
@@ -94,16 +93,22 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 // Fail-Low at first root, research with low bound = alpha and high bound = old low bound
                 now = system_clock::now();
                 console->send(status(now, alpha2.v) + " upperbound");
-                if (stopSearch) break;   //TODO check if trying other moves first is an better option
+                if (stopSearch) {
+                    alpha.v = alpha0.v;
+                    break;   //TODO check if trying other moves first is an better option
+                }
                 beta2.v = alpha2.v;
                 search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta2, alpha, ply+1, false NODE);
             } else if (alpha2 >= beta2.v) {
                 // Fail-High at first root, research with high bound = beta and low bound = old high bound
                 console->send(status(now, alpha2.v) + " lowerbound");
-                if (stopSearch) break;   //TODO check if trying other moves first is an better option
+                if (stopSearch) {
+                    alpha.v = alpha0.v;
+                    break;   //TODO check if trying other moves first is an better option
+                }
                 now = system_clock::now();
-                if (!infinite && now > softLimit && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
                 alpha.v = alpha2.v;
+                if (!infinite && now > softLimit && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
                 search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta, alpha, ply+1, false NODE);
             } else {
                 alpha.v = alpha2.v;
@@ -111,15 +116,22 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         } else {
             search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta, alpha, ply+1, false NODE);
         }
+        
+        if (stopSearch) {
+            alpha.v = alpha0.v;
+            break;   //TODO check if trying other moves first is an better option
+        }
+        
         now = system_clock::now();
         console->send(status(now, alpha.v));
 
         if (alpha >= infinity*C) break;
-        if (!infinite && now > softLimit && alpha > alpha0.v - C*Eval::parameters.evalHardBudget) break;
+        if (!infinite && now > softLimit && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
         beta2.v = alpha.v + Eval::parameters.aspiration1*C;
-
+        
         for (++ml; ml.isValid() && !stopSearch; ++ml) {
             currentMoveIndex++;
+            now = system_clock::now();
             if (now > lastStatus2) {
                 std::stringstream g;
                 lastStatus2 = now + milliseconds(1000);
@@ -129,7 +141,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             bool pruneNull = false;
             if (alpha.v != -infinity*C
                 && depth > dMaxCapture+dMaxThreat+2
-                && ml.count() > maxMovesNull)
+                && ml.count() > maxMovesNull
+                && !stopSearch)
             {
                 SharedScore<(Colors)-C> null;
                 SharedScore<C> nalpha(alpha);
@@ -162,11 +175,11 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             if (alpha >= infinity*C) break;
             if (!infinite) {
                 system_clock::time_point now = system_clock::now();
-                if (now > softLimit && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
+                if (now > softLimit && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) stopSearch = true;
             }
         }
-        now = system_clock::now();
-        console->send(status(now, alpha.v) + " done");
+//         now = system_clock::now();
+//         console->send(status(now, alpha.v) + " done");
 
         if (alpha >= infinity*C) break;
         if (alpha <= -infinity*C) break;
