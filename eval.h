@@ -60,10 +60,11 @@ struct CompoundScore {
         opening /= x;
         endgame /= x;
     }
-    int calc(unsigned material) const {
-//        return material >= endgameMaterial ? opening : endgame;
-        int compound = *(int*)this;
-        return material >= endgameMaterial ? (int16_t)compound : compound >> 16;
+    int calc(unsigned /*material*/) const {
+        return opening;
+        //        return material >= endgameMaterial ? opening : endgame;
+//        int compound = *(int*)this;
+//        return material >= endgameMaterial ? (int16_t)compound : compound >> 16;
     }
     void operator = (int x) {
         opening = x;
@@ -113,7 +114,7 @@ class Eval {
 
     static CompoundScore pawn, knight, bishop, rook, queen;
     static CompoundScore bishopPair;
-    static CompoundScore trappedRook;
+    static int trappedRook;
     static CompoundScore knightAlone;
     static CompoundScore bishopAlone;
     static CompoundScore n_p_ram[9], n_p[17];
@@ -123,12 +124,42 @@ class Eval {
     // needs to be the same kind of type as PawnEntry.score.
     static int pawnBackward;
     static int pawnBackwardOpen;
-    static int pawnIsolated;
-    static int pawnHalfIsolated;
+    static int pawnIsolatedCenter;
+    static int pawnIsolatedEdge;
+    static int pawnIsolatedOpen;
+//    static int pawnHalfIsolated;
     static int pawnPasser[8];
     static int pawnEdge;
     static int pawnCenter;
-
+    static int pawnDouble;
+    static int pawnShoulder;
+    static int pawnHole;
+    static int pawnConnPasser;
+    static int pawnUnstoppable;
+    
+    static int attack1b1;
+    static int attack2b1;
+    static int attack1b2;
+    static int attack2b2;
+    static int attack1n1;
+    static int attack2n1;
+    static int attack1n2;
+    static int attack2n2;
+    static int attack1r1;
+    static int attack2r1;
+    static int attack1r2;
+    static int attack2r2;
+    static int attack1q1;
+    static int attack2q1;
+    static int attack1q2;
+    static int attack2q2;
+    static int attack1p1;
+    static int attack2p1;
+    static int attack1k1;
+    static int attack2k1;
+    
+    static int endgameMaterial;
+    
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
 
     RawScore controls[nSquares];

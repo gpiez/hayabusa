@@ -47,6 +47,8 @@
 #define ALIGN_CACHE __attribute__((aligned(CACHE_LINE_SIZE)))
 #define ALIGN_PAGE __attribute__((aligned(4096)))
 
+#define STR(x) #x
+
 enum GamePhase { Opening, Endgame };
 
 enum Pieces { NoPiece = 0, Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6, All = 7 };
@@ -75,13 +77,13 @@ enum NodeFlag { Threatened = 1, Threatening = 2 };
 typedef uint64_t Key;
 typedef uint32_t PawnKey;
 
+static const int hashDefaultSize = 16ULL; //Mibibytes
 // tcp server incurs some lag
 static const std::chrono::milliseconds operatorTime = std::chrono::milliseconds(200);
 static const std::chrono::milliseconds minimumTime = std::chrono::milliseconds(100);
 static const unsigned int maxMovesNull = 8;     // So a lone king with 8 possible moves will always inhibit null moves
 static const int maxRows = 1000;
 static const unsigned int maxThreadId = 255;
-static const unsigned int endgameMaterial = 30;
 static const int maxHistory = 256;
 static const int nullReduction = 3;
 static const int initialError = 100;
