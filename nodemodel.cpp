@@ -33,9 +33,12 @@ NodeModel::NodeModel( QObject* parent ):
 }
 
 void NodeModel::init() {
+    std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
+    beginResetModel();
     delete rootItem;
     NodeData rootData = {};
     rootItem = new NodeItem( rootData );
+    endResetModel();
 }
 
 NodeModel::~NodeModel()

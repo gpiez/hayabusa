@@ -27,7 +27,7 @@ NodeItem::NodeItem( const NodeData& nodeData_, NodeItem* parent_ ):
         parent( parent_ )
 {
     id = stats.node;
-    std::lock_guard<std::recursive_mutex> lock(m);
+//     std::lock_guard<std::recursive_mutex> lock(m);
     if (parent_)
         parent_->appendChild( this );
     else
@@ -48,25 +48,25 @@ void NodeItem::appendChild( NodeItem* item )
 
 const NodeItem *NodeItem::child( int row )
 {
-    std::lock_guard<std::recursive_mutex> lock(m);
+//    std::lock_guard<std::recursive_mutex> lock(m);
     return children.value( row );
 }
 
 NodeItem *NodeItem::lastChild(  )
 {
-    std::lock_guard<std::recursive_mutex> lock(m);
+//    std::lock_guard<std::recursive_mutex> lock(m);
     return children.last();
 }
 
 int NodeItem::childCount() const
 {
-    std::lock_guard<std::recursive_mutex> lock(m);
+//    std::lock_guard<std::recursive_mutex> lock(m);
     return children.count();
 }
 
 int NodeItem::row()
 {
-    std::lock_guard<std::recursive_mutex> lock(m);
+//    std::lock_guard<std::recursive_mutex> lock(m);
     if ( parent )
         return parent->children.indexOf( this );
     return 0;
@@ -79,7 +79,7 @@ const NodeData& NodeItem::data() const
 
 NodeItem* NodeItem::getParent() const
 {
-    std::lock_guard<std::recursive_mutex> lock(m);
+//    std::lock_guard<std::recursive_mutex> lock(m);
     return parent;
 }
 

@@ -46,21 +46,6 @@
      <attribute name="verticalHeaderVisible">
       <bool>false</bool>
      </attribute>
-     <attribute name="verticalHeaderVisible">
-      <bool>false</bool>
-     </attribute>
-     <attribute name="horizontalHeaderStretchLastSection">
-      <bool>true</bool>
-     </attribute>
-     <attribute name="horizontalHeaderCascadingSectionResizes">
-      <bool>true</bool>
-     </attribute>
-     <attribute name="horizontalHeaderVisible">
-      <bool>true</bool>
-     </attribute>
-     <attribute name="horizontalHeaderDefaultSectionSize">
-      <number>45</number>
-     </attribute>
      <column>
       <property name="text">
        <string>Depth</string>
@@ -369,12 +354,12 @@
                <item row="1" column="0">
                 <widget class="QLabel" name="tNodes_4">
                  <property name="text">
-                  <string>Free</string>
+                  <string>Entries</string>
                  </property>
                 </widget>
                </item>
                <item row="1" column="1">
-                <widget class="QLabel" name="vttfree">
+                <widget class="QLabel" name="vttentries">
                  <property name="minimumSize">
                   <size>
                    <width>0</width>
@@ -393,7 +378,7 @@
                 </widget>
                </item>
                <item row="1" column="2">
-                <widget class="QLabel" name="nttfree">
+                <widget class="QLabel" name="nttentries">
                  <property name="text">
                   <string>0</string>
                  </property>
@@ -901,7 +886,7 @@
       </layout>
      </item>
      <item>
-      <widget class="QTreeView" name="treeView">
+      <widget class="LockedTreeView" name="treeView">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -984,15 +969,19 @@
        <attribute name="headerVisible">
         <bool>false</bool>
        </attribute>
-       <attribute name="headerVisible">
-        <bool>false</bool>
-       </attribute>
       </widget>
      </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>LockedTreeView</class>
+   <extends>QTreeView</extends>
+   <header location="global">statwidget.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -25,6 +25,15 @@
 
 #ifdef QT_GUI_LIB
 
+class LockedTreeView: public QTreeView {
+    Q_OBJECT
+    //using QTreeView::QTreeView;
+public:    
+    LockedTreeView(QWidget*);
+protected:    
+    void paintEvent(QPaintEvent* event);
+};
+
 #include "ui_stats.h"
 #include "nodemodel.h"
 
@@ -54,5 +63,6 @@ public:
 public slots:
     void emptyTree();
 };
+
 #endif // QT_GUI_LIB
 #endif // STATWIDGET_H

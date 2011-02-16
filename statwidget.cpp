@@ -170,7 +170,6 @@ void StatWidget::update()
     DISPLAYNUM(eval)
     DISPLAYNUM(tthit)
     DISPLAYNUM(ttuse)
-    DISPLAYNUM(ttfree)
     DISPLAYNUM(ttalpha)
     DISPLAYNUM(ttbeta)
     DISPLAYNUM(ttoverwrite)
@@ -245,4 +244,14 @@ void StatWidget::emptyTree() {
     tree->init();
 }
 
+LockedTreeView::LockedTreeView(QWidget* w): QTreeView(w)
+{
+
+}
+
+void LockedTreeView::paintEvent(QPaintEvent* event)
+{
+    std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
+    QTreeView::paintEvent(event);
+}
 #endif // QT_GUI_LIB
