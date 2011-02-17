@@ -434,9 +434,10 @@ nosort:
                     nextNodeType = NodeFailHigh;
 //              if (!i->data) continue;
                 ASSERT(d>0);
-                if (d <= 1 + dMaxCapture + dMaxThreat ? search<(Colors)-C, leaf>(nextNodeType, b, *i, d - 1, beta.unshared(), preCurrent, ply+1, false NODE) :
+                int red = calcReduction(b, i-good, *i, d);
+                if (d-red <= 1 + dMaxCapture + dMaxThreat ? search<(Colors)-C, leaf>(nextNodeType, b, *i, d -red - 1, beta.unshared(), preCurrent, ply+1, false NODE) :
     //                d == depth-4 ? search<(Colors)-C, tree, B, A>(nextNodeType, b, *i, d-1, B(C*infinity), current) :
-                                   search<(Colors)-C, tree>(nextNodeType, b, *i, d-1, beta.unshared(), preCurrent, ply+1, false NODE)) {
+                                   search<(Colors)-C, tree>(nextNodeType, b, *i, d-red-1, beta.unshared(), preCurrent, ply+1, false NODE)) {
                     ASSERT(preCurrent.m.data == i->data);
                     Move first = good[0];
                     good[0] = preCurrent.m;
