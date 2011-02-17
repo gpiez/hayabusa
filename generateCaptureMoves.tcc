@@ -420,13 +420,24 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
         uint64_t qescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
         qescape = ror(qescape, k-9);
         uint64_t qmate = 0;
-        if ((qescape & 0x10106) == 0)
+    
+        // emptiness of near king squares in even directions
+        // this is needed for the mate patterns, where the queen mates on an
+        // adjacent diagonal square. if the rays to the other diagonal squares
+        // are blocked, we need to test these squares too, otherwise
+        // the queen will cover them
+        uint64_t k0 = ror((king << 1) & ~occupied1 & ~file<'a'>(), k-9);
+        uint64_t k2 = ror((king << 8) & ~occupied1, k-9);
+        uint64_t k4 = ror((king >> 1) & ~occupied1 & ~file<'h'>(), k-9);
+        uint64_t k6 = ror((king >> 8) & ~occupied1, k-9);
+    
+        if ((qescape & 0x10106 & ~(k2>>1) & ~(k0>>8)) == 0)
             qmate |= king << 9 & ~file<'a'>();
-        if ((qescape & 0x40403) == 0)
+        if ((qescape & 0x40403 & ~(k2<<1) & ~(k4>>8)) == 0)
             qmate |= king << 7 & ~file<'h'>();
-        if ((qescape & 0x30404) == 0)
+        if ((qescape & 0x30404 & ~(k6<<1) & ~(k4<<8)) == 0)
             qmate |= king >> 9 & ~file<'h'>();
-        if ((qescape & 0x60101) == 0)
+        if ((qescape & 0x60101 & ~(k6>>1) & ~(k0<<8)) == 0)
             qmate |= king >> 7 & ~file<'a'>();
         if ((qescape & 0x10001) == 0)
             qmate |= king << 1 & ~file<'a'>();

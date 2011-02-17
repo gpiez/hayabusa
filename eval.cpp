@@ -1076,7 +1076,7 @@ int Eval::eval(const BoardBase& b) const {
     
     int m = mobility<White>(b, wap, wdp) - mobility<Black>(b, bap, bdp);
     int a;
-    if (b.material >= endgameMaterial) {
+    if (b.material > endgameMaterial) {
         a = attack<White>(b, wap, bdp) - attack<Black>(b, bap, wdp);
     } else
         a = 0;

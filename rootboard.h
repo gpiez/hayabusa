@@ -153,5 +153,7 @@ public:
     void infoTimer(milliseconds repeat);
     void clearHash();
     void ageHash();
+    template<Colors C> int calcReduction(const ColoredBoard<C>& b, int movenr, Move m, int depth
+);
 };
 #endif

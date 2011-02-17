@@ -40,6 +40,7 @@ namespace Options {
     unsigned            veinDepth = 20;
     unsigned            leafDepth = 8;
     bool                reduction = false;
+    bool                pruning = false;
     unsigned            debug = 0;
 #ifdef QT_NETWORK_LIB    
     bool                server = false;
@@ -296,6 +297,13 @@ void Console::setoption(StringList cmds) {
                 Options::reduction = false;
             else
                 std::cerr << "reduction value " << data << " not understood" << std::endl;
+        } else if (name == "pruning") {
+            if (data == "true")
+                Options::pruning = true;
+            else if (data == "true")
+                Options::pruning = false;
+            else
+                std::cerr << "pruning value " << data << " not understood" << std::endl;
         } else if (name == "clear hash") {
             board->clearHash();
 #ifdef QT_NETWORK_LIB

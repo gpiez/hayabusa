@@ -20,12 +20,12 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
         str1 = QString().fromStdString(item->move.string());
 
         str2 = QString( "D%4 [%1 %2]\n %3" ).arg( item->alpha ).arg( item->beta ).arg( item->bestEval ).arg( (int)item->depth );
+        str2+=QString( " ply: %1 " ).arg( item->ply );
     } else {
-        str1 = QString( "Iteration %1" ).arg( item->ply );
+        str1 = QString( "Depth %1" ).arg( item->ply - 20);
         str2 = "";
     }
 
-    str2+=QString( " ply: %1 " ).arg( item->ply );
     switch(item->nodeType) {
     case NodePrecut1:
         str2 += "Precut1";
@@ -39,6 +39,12 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
     case NodeTT:
         str2 += "TT";
         break;
+    case NodeFutile1:
+        str2 += "Futile1";
+        break;
+    case NodeFutile2:
+        str2 += "Futile2";
+        break;
     case NodeMate:
         str2 += "Mate";
         break;
@@ -47,6 +53,9 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
         break;
     case NodeRepetition:
         str2 += "Repetition";
+        break;
+    case NodeEndgameEval:
+        str2 += "EndgameEval";
         break;
     default:
         str2 += "Full";

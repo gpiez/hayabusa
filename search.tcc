@@ -28,6 +28,45 @@
 #else
 #define NODE
 #endif
+
+//                 int reduction = 0;
+//                 if (i>good) {
+//                     if (Options::reduction
+// //                        && depth > 3 + dMaxCapture + dMaxThreat
+//                         && i > good // + 3
+//     //                        && !i->isSpecial()
+//                         && !threatened
+//                         && ) {
+//                         reduction = std::min(((depth-dMaxCapture-dMaxThreat)/2 + i-good + 2)/8*2, 4L);
+//                         
+// /*                        if (abs(realScore - alpha.v) > 500 && depth==4)
+//                             reduction = 3;
+//                         else if (abs(realScore - alpha.v) > 150 && depth==3)
+//                             reduction = 2;*/
+//                         }
+//                     if (i->isSpecial() && (bool[nPieces+1]){false, true, true, false, true, false, false}[i->piece() & 7])
+//                         reduction = 2+depth/2;
+//                 }
+
+template<Colors C>
+int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int depth) {
+    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+    depth -= dMaxThreat + dMaxCapture;
+    if (Options::reduction && movenr >= 1 && depth > 2 ) {
+        bool check = ((fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && m.piece() & Rook)
+                   || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && m.piece() & Bishop)
+                   || (BoardBase::knightAttacks[m.to()] & b.template getPieces<-C,King>() && m.piece() == Knight));
+        int red = bitr(movenr + depth - 3)/2;
+        if (check && depth<9)
+            red=0;
+        if (red >= depth-1)
+            red = depth-2;
+        if (red<0) red=0;
+        return red;
+    }
+    return 0;
+}
+
 /*
  * Search with color C to move, executing a -C colored move m from a board prev.
  * beta is the return value, it is updated at the end
@@ -62,8 +101,8 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
         node = new NodeItem(data, parent);
         NodeItem::nNodes++;
         NodeItem::m.unlock();
+//    if(NodeItem::nNodes == 230012) asm("int3");
     }
-   // if (stats.node == 1076359) asm("int3");
 #endif
 /*
     prefetching is not very effective for core2, probably because each access
@@ -99,8 +138,13 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
         eval.draw<C>(b, upperbound, lowerbound);
         current.max(lowerbound);
         beta.max(upperbound);
-        if (current > beta.v)
+        if (current > beta.v) {
+#ifdef QT_GUI_LIB
+            if (node) node->bestEval = beta.v;
+            if (node) node->nodeType = NodeEndgameEval;
+#endif
             return false;
+        }
     }
     threatened |= b.template inCheck<C>();
     if (!threatened) {
@@ -176,7 +220,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
             ttDepth = subentry.depth;
             ScoreBase<C> ttScore;
             ttScore.v = tt2Score(subentry.score);
-            if (ttDepth >= depth) {
+            if (ttDepth >= depth || ttScore>=infinity*C && subentry.loBound || ttScore<=-infinity*C && subentry.hiBound) {
 
                 if (subentry.loBound) {
                     stats.ttalpha++;
@@ -220,6 +264,27 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
 
         stats.eval++;
         int realScore = eval.eval(b);
+        if (P == tree && Options::pruning && !threatened) {
+            if (depth == dMaxCapture + dMaxThreat + 1) {
+                ScoreBase<C> fScore;
+                fScore.v = realScore - C*150;
+#ifdef QT_GUI_LIB
+                if (node) node->bestEval = beta.v;
+                if (node) node->nodeType = NodeFutile1;
+#endif
+                
+                if (fScore >= beta.v) return false;
+            }
+            if (depth == dMaxCapture + dMaxThreat + 2) {
+                ScoreBase<C> fScore;
+                fScore.v = realScore - C*900;
+#ifdef QT_GUI_LIB
+                if (node) node->bestEval = beta.v;
+                if (node) node->nodeType = NodeFutile2;
+#endif
+                if (fScore >= beta.v) return false;
+            }
+        }
         static const int minEstimatedError = 10;
         int error = C*(estimate.score.calc(b.material) + lastPositionalEval - realScore) + minEstimatedError;
         if (isMain) {
@@ -393,7 +458,7 @@ nosort:
         }
 
         bool extSingle = false;
-        current.m = *good;
+        if (bad > good) current.m = *good;
 //         if (/*P == leaf &&*/ b.template inCheck<C>() && bad - good <= 2) {
 //            nonMate+=2;
 //             extSingle = true;
@@ -426,29 +491,10 @@ nosort:
             else if (depth <= dMaxCapture + dMaxThreat + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
                 search<(Colors)-C, leaf>(nextNodeType, b, *i, depth-1, beta.unshared(), current.unshared(), ply+1, i < nonMate NODE);
             else { // possible null search in tree or trunk
-                int reduction = 0;
-                if (i>good) {
-                    if (Options::reduction
-//                        && depth > 3 + dMaxCapture + dMaxThreat
-                        && i > good // + 3
-    //                        && !i->isSpecial()
-                        && !threatened
-                        && !((fold(b.doublebits[i->to()] & b.kingIncoming[EI].d02) && i->piece() & Rook)
-                        || (fold(b.doublebits[i->to()] & b.kingIncoming[EI].d13) && i->piece() & Bishop)
-                        || (BoardBase::knightAttacks[i->to()] & b.template getPieces<-C,King>() && i->piece() == Knight))) {
-                        reduction = std::min(((depth-dMaxCapture-dMaxThreat)/2 + i-good + 2)/8*2, 4L);
-                        
-/*                        if (abs(realScore - alpha.v) > 500 && depth==4)
-                            reduction = 3;
-                        else if (abs(realScore - alpha.v) > 150 && depth==3)
-                            reduction = 2;*/
-                        }
-                    if (i->isSpecial() && (bool[nPieces+1]){false, true, true, false, true, false, false}[i->piece() & 7])
-                        reduction = 2+depth/2;
-                }
+                int reduction = calcReduction(b, i-good, *i, depth);
                 bool pruneNull = false;
                 if (depth > 2 + dMaxCapture + dMaxThreat + reduction
-                    && current.v != -infinity*C
+                    && current.v != -infinity*C //FIXME compare to alpha0.v of rootsearch
                     && (i != good || alphaNode)
                     && bad-good > maxMovesNull)
                 {
@@ -533,7 +579,7 @@ nosort:
         stored.upperKey |= z >> stored.upperShift;
         stored.score |= score2tt(current.v);
         stored.loBound |= current > alpha.v;
-        if (current > alpha.v && current.m.capture() == 0 && current.m.fromto())
+        if (current > alpha.v && current.m.capture() == 0 && current.m.data)
             history.good<C>(current.m, ply);
         stored.hiBound |= current < beta.v;
         stored.from |= current.m.from(); //TODO store a best move even if all moves are fail low

@@ -74,6 +74,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         data.ply = depth;
         NodeItem::m.lock();
         NodeItem* node=0;
+        uint64_t startnode = NodeItem::nNodes;
         if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
             node = new NodeItem(data, statWidget->tree->root());
             NodeItem::nNodes++;
@@ -86,7 +87,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
         SharedScore<         C> alpha2;
         SharedScore<(Colors)-C> beta2 ;
-        if (alpha0.v != -infinity*C) {
+        if (alpha0.v != -infinity*C && abs(alpha0.v) < 1024) {
             alpha2.v = alpha0.v - Eval::parameters.aspiration0*C;
             beta2.v  = alpha0.v + Eval::parameters.aspiration1*C;
             if (!search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta2, alpha2, ply+1, false NODE)) {
@@ -127,7 +128,10 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 
         if (alpha >= infinity*C) break;
         if (!infinite && now > softLimit && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
-        beta2.v = alpha.v + Eval::parameters.aspiration1*C;
+        if (abs(alpha.v) <= 1024)
+            beta2.v = alpha.v + Eval::parameters.aspiration1*C;
+        else
+            beta2.v = infinity*C;
         
         for (++ml; ml.isValid() && !stopSearch; ++ml) {
             currentMoveIndex++;
@@ -181,6 +185,11 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 //         now = system_clock::now();
 //         console->send(status(now, alpha.v) + " done");
 
+#ifdef QT_GUI_LIB
+    if (node) {
+        node->nodes = stats.node - startnode;
+    }
+#endif
         if (alpha >= infinity*C) break;
         if (alpha <= -infinity*C) break;
         alpha0.v = alpha.v;

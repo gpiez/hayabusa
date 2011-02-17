@@ -11,7 +11,9 @@
 template<Colors C>
 void History::good(Move m, unsigned ply) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-
+    ASSERT((m.piece() & 7) <= 6);    
+    ASSERT((m.piece() & 7));
+    ASSERT((m.from() != m.to()));
     uint8_t& h = v[ply+2][C*(m.piece() & 7) + nPieces][m.to()];
 
     if (h == sum[CI][ply+2]) return;
