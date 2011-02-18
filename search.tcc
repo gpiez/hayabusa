@@ -220,7 +220,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
             ttDepth = subentry.depth;
             ScoreBase<C> ttScore;
             ttScore.v = tt2Score(subentry.score);
-            if (ttDepth >= depth || ttScore>=infinity*C && subentry.loBound || ttScore<=-infinity*C && subentry.hiBound) {
+            if (ttDepth >= depth || (ttScore>=infinity*C && subentry.loBound) || (ttScore<=-infinity*C && subentry.hiBound)) {
 
                 if (subentry.loBound) {
                     stats.ttalpha++;

@@ -24,60 +24,10 @@
 #include "transpositiontable.tcc"
 //#include <cstdio>
 
-__thread PawnEntry Eval::pawnEntry;
-
 const __v2di zero = {0};
-
-CompoundScore Eval::pawn, Eval::knight, Eval::bishop, Eval::rook, Eval::queen;
-CompoundScore Eval::bishopPair;
-int Eval::trappedRook = -50;
-CompoundScore Eval::knightAlone;
-CompoundScore Eval::bishopAlone;
-CompoundScore Eval::n_p_ram[9], Eval::n_p[17];
-CompoundScore Eval::b_bad_own_p[9], Eval::b_p[17], Eval::b_p_ram[9], Eval::bpair_p[17];
-CompoundScore Eval::r_p[17];
-CompoundScore Eval::q_p[17];
-int Eval::pawnBackward = -12;
-int Eval::pawnBackwardOpen = -12;
-int Eval::pawnPasser[8] = { 0, 50, 50, 60, 80, 115, 160, 0 };
-//int Eval::pawnHalfIsolated = -5;
-int Eval::pawnIsolatedCenter = -16;// - Eval::pawnBackwardOpen;
-int Eval::pawnIsolatedOpen = -8;// - Eval::pawnBackwardOpen;
-int Eval::pawnIsolatedEdge = -8;// - Eval::pawnBackwardOpen;
-int Eval::pawnEdge = -12;
-int Eval::pawnCenter = 10;
-int Eval::pawnDouble = -25;
-int Eval::pawnShoulder = 4;
-int Eval::pawnHole = -8;
-int Eval::pawnConnPasser = 100;
-int Eval::pawnUnstoppable = 100;
-
-int Eval::attack1b1 = 4;        //direct attack of ring around king
-int Eval::attack2b1 = 2;        //direct attack of 2nd ring around king
-int Eval::attack1b2 = 2;        //indirect attack of ring around king
-int Eval::attack2b2 = 1;        //indirect attack of 2nd ring around king
-int Eval::attack1n1 = 4;
-int Eval::attack2n1 = 2;
-int Eval::attack1n2 = 2;
-int Eval::attack2n2 = 1;
-int Eval::attack1r1 = 6;
-int Eval::attack2r1 = 2;
-int Eval::attack1r2 = 3;
-int Eval::attack2r2 = 1;
-int Eval::attack1q1 = 8;
-int Eval::attack2q1 = 4;
-int Eval::attack1q2 = 4;
-int Eval::attack2q2 = 2;
-int Eval::attack1k1 = 3;        //king is not able to deliver mate
-int Eval::attack2k1 = 1;
-int Eval::attack1p1 = 4;
-int Eval::attack2p1 = 1;
-
-Parameters Eval::parameters;
 
 int mobB1[64], mobB2[64], mobB3[64], mobN1[64], mobN2[64], mobN3[64], mobR1[64], mobR2[64], mobR3[64], mobQ1[64], mobQ2[64], mobQ3[64];
 int attackTable[256], defenseTable[256];
-int Eval::endgameMaterial = 30;
 
 #if !defined(__SSE_4_2__)
 // popcount, which counts at most 15 ones, for counting pawns
@@ -122,34 +72,68 @@ static const int maxAttack = 712;
 static const int baseDefense = 256;
 static const int maxDefense = 356;
 
-Eval::Eval() {
+Eval::Eval():
+    pawnPasser{ 0, 50, 50, 60, 80, 115, 160, 0 }
+{
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
 //    pt->setSize(0x100000000);
-    pawn = 80;      // +20 psq = 80
-    knight = 300;   // +25 psq = 300
-    bishop = 300;   // +16 psq = 300
-    rook = 450;     // +20 psq = 450
-    queen = 925;    // +25 psq = 925
+    pawn = 80;      
+    knight = 300;   
+    bishop = 300;   
+    rook = 450;     
+    queen = 925;    
 
     bishopPair = 50;
-    knightAlone = -125;
+    bishopBlockPasser = 20;
     bishopAlone = -100;
-
     
-    parameters.aspiration0 = 40;
-    parameters.aspiration1 = 5;
-    parameters.evalHardBudget = -20;
+    knightAlone = -125;
+    knightBlockPasser = 30;
 
-    sigmoid(n_p_ram, 0, 75, 5);             // bonus for each pawn ram, max is 75
-    sigmoid(n_p, -25, 25, 12);
+    rookTrapped = -50;
+    rookOpen = 8;
+    rookHalfOpen = 6;
 
-    sigmoid(b_bad_own_p, 0, -30, 6);
-    sigmoid(b_p, 0, -30, 12);
-    sigmoid(b_p_ram, 0, -30, 5);
-    sigmoid(bpair_p, 15, -15, 12);
+    pawnBackward = -12;
+    pawnBackwardOpen = -12;
+    pawnIsolatedCenter = -16;// - Eval::pawnBackwardOpen;
+    pawnIsolatedOpen = -8;// - Eval::pawnBackwardOpen;
+    pawnIsolatedEdge = -8;// - Eval::pawnBackwardOpen;
+    pawnEdge = -12;
+    pawnCenter = 10;
+    pawnDouble = -25;
+    pawnShoulder = 4;
+    pawnHole = -8;
+    pawnConnPasser = 100;
+    pawnUnstoppable = 100;
 
-    sigmoid(r_p, 50, -50, 12);
-    sigmoid(q_p, 50, -50, 12);
+    attack1b1 = 4;        //direct attack of ring around king
+    attack2b1 = 2;        //direct attack of 2nd ring around king
+    attack1b2 = 2;        //indirect attack of ring around king
+    attack2b2 = 1;        //indirect attack of 2nd ring around king
+    attack1n1 = 4;
+    attack2n1 = 2;
+    attack1n2 = 2;
+    attack2n2 = 1;
+    attack1r1 = 6;
+    attack2r1 = 2;
+    attack1r2 = 3;
+    attack2r2 = 1;
+    attack1q1 = 8;
+    attack2q1 = 4;
+    attack1q2 = 4;
+    attack2q2 = 2;
+    attack1k1 = 3;        //king is not able to deliver mate
+    attack2k1 = 1;
+    attack1p1 = 4;
+    attack2p1 = 1;
+
+    endgameMaterial = 30;
+
+    aspiration0 = 40;
+    aspiration1 = 5;
+    evalHardBudget = -20;
+
 //4 11 14
 //5 10 14
 //3 10 13
@@ -188,7 +172,7 @@ Eval::Eval() {
 //4 5 5
 //8 17 8
 //3 6 7
-    sigmoid(mobR1, -10, 10, 0, 2.5);
+    sigmoid(mobR1, -10, 10, 0, 3);
     sigmoid(mobR2, -7, 7, 0, 5.0);
     sigmoid(mobR3, -3, 3, 0, 5.0);
 
@@ -434,20 +418,34 @@ void Eval::initTables() {
 }
 
 template<Colors C>
-int Eval::pieces(const BoardBase& b) const {
+int Eval::pieces(const BoardBase& b, const PawnEntry& p) const {
+    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int value = 0;
     if (popcount3(b.getPieces<C, Bishop>()) >= 2) {
-        value += bishopPair.opening;
+        value += bishopPair;
     }
     if  (   (  b.getPieces<C, Rook>() & (file<'h'>()|file<'g'>()) & (rank<C,1>()|rank<C,2>()) 
             && b.getPieces<C, Pawn>() & file<'h'>() & (rank<C,2>() | rank<C,3>())
-            && (   b.getPieces<C, King>() & file<'g'>() & rank<C,1>()
-                || b.getPieces<C, King>() & file<'f'>() & rank<C,1>() && b.getPieces<C, Pawn>() & file<'g'>() & (rank<C,2>() | rank<C,3>())))
+            &&  (   b.getPieces<C, King>() & file<'g'>() & rank<C,1>()
+                || (b.getPieces<C, King>() & file<'f'>() & rank<C,1>() && b.getPieces<C, Pawn>() & file<'g'>() & (rank<C,2>() | rank<C,3>()))))
         ||  (  b.getPieces<C, Rook>() & (file<'a'>()|file<'b'>()) & (rank<C,1>()|rank<C,2>()) 
             && b.getPieces<C, Pawn>() & file<'a'>() & (rank<C,2>() | rank<C,3>())
-            && (   b.getPieces<C, King>() & file<'b'>() & rank<C,1>()
-                || b.getPieces<C, King>() & file<'c'>() & rank<C,1>() && b.getPieces<C, Pawn>() & file<'b'>() & (rank<C,2>() | rank<C,3>()))))
-            value += trappedRook;
+            &&  (   b.getPieces<C, King>() & file<'b'>() & rank<C,1>()
+                || (b.getPieces<C, King>() & file<'c'>() & rank<C,1>() && b.getPieces<C, Pawn>() & file<'b'>() & (rank<C,2>() | rank<C,3>())))))
+            value += rookTrapped;
+            
+    uint64_t own = p.openFiles[CI];
+    own += own << 32;
+    
+    uint64_t opp = p.openFiles[EI];
+    opp += opp << 32;
+
+    value += rookHalfOpen * popcount3(b.getPieces<C,Rook>() & own);
+    value += rookOpen * popcount3(b.getPieces<C,Rook>() & own & opp);
+
+    value += knightBlockPasser * popcount3(b.getPieces<C,Knight>() & shift<C*8>(p.passers[EI]));
+    value += bishopBlockPasser * popcount3(b.getPieces<C,Bishop>() & shift<C*8>(p.passers[EI]));
+    
     return value;
 }
 
@@ -484,9 +482,10 @@ PawnEntry::Shield evalShield(const BoardBase &b) {
     return ret;
 }
 //TODO asess blocked pawns and their consequences on an attack
-int Eval::pawns(const BoardBase& b) const {
+PawnEntry Eval::pawns(const BoardBase& b) const {
     PawnKey k=b.keyScore.pawnKey;
     Sub<PawnEntry, 4>* st = pt->getSubTable(k);
+    PawnEntry pawnEntry;
     if (k >> PawnEntry::upperShift && pt->retrieve(st, k, pawnEntry)) {
         stats.pthit++;
     } else {
@@ -548,19 +547,19 @@ int Eval::pawns(const BoardBase& b) const {
         uint64_t wPassed = wpawn & ~wNotPassedMask & ~wBack;
         uint64_t bPassed = bpawn & ~bNotPassedMask & ~bBack;
         unsigned i;
+        pawnEntry.passers[0] = wPassed;
         for (i = 0; wPassed && i < nHashPassers; wPassed &= wPassed - 1, i++) {
             int pos = __builtin_ctzll(wPassed);
             int y = pos >> 3;
             pawnEntry.score += pawnPasser[y];
             print_debug(debugEval, "pawn wpasser:   %d\n", pawnPasser[y]);
-            pawnEntry.passers[0][i] = pos;
         }
+        pawnEntry.passers[1] = bPassed;
         for ( i=0; bPassed && i<nHashPassers; bPassed &= bPassed-1, i++ ) {
             int pos = __builtin_ctzll(bPassed);
             int y = pos>>3;
             pawnEntry.score -= pawnPasser[7-y];
             print_debug(debugEval, "pawn bpasser:   %d\n", pawnPasser[7-y]);
-            pawnEntry.passers[1][i] = pos;
         }
 
         // possible weak pawns are adjacent to open files or below pawns an a adjacent file on both sides
@@ -601,7 +600,7 @@ int Eval::pawns(const BoardBase& b) const {
         if (k >> PawnEntry::upperShift)
             pt->store(st, pawnEntry);
     }
-    return pawnEntry.score;
+    return pawnEntry;
 }
 
 // double popcount of two quadwords
@@ -993,7 +992,7 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
 }
 
 template<Colors C>
-int Eval::attack(const BoardBase& b, unsigned attackingPieces, unsigned defendingPieces) const {
+int Eval::attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     uint64_t king = b.getPieces<-C,King>();
     unsigned kpos = bit(king);
@@ -1008,7 +1007,7 @@ int Eval::attack(const BoardBase& b, unsigned attackingPieces, unsigned defendin
     } else if (king & (rank<C,8>() | rank<C,7>()) & (file<'f'>() | file<'g'>() | file<'h'>())) {
         side = KSide;
     } else if (b.cep.castling.color[EI].q && b.cep.castling.color[EI].k) {
-        side = pawnEntry.shield[EI].kside>=pawnEntry.shield[EI].qside ? KSide:QSide;
+        side = p.shield[EI].kside>=p.shield[EI].qside ? KSide:QSide;
     } else if (b.cep.castling.color[EI].q) {
         side = QSide;
     } else if (b.cep.castling.color[EI].k) {
@@ -1021,13 +1020,13 @@ int Eval::attack(const BoardBase& b, unsigned attackingPieces, unsigned defendin
     // and real safety after castling
     int def = 0;
     if (side == KSide) {
-        def = pawnEntry.shield[EI].kside;
+        def = p.shield[EI].kside;
         if (b.cep.castling.color[EI].k) {
             if (b.occupied1 & rank<C,8>() & file<'g'>()) def--;
             if (b.occupied1 & rank<C,8>() & file<'f'>()) def--;
         }
     } else if (side == QSide) {
-        def = pawnEntry.shield[EI].qside;
+        def = p.shield[EI].qside;
         if (b.cep.castling.color[EI].k) {
             if (b.occupied1 & rank<C,8>() & file<'b'>()) def--;
             if (b.occupied1 & rank<C,8>() & file<'c'>()) def--;
@@ -1068,7 +1067,7 @@ int Eval::eval(const BoardBase& b) const {
     }
     if (value != e) asm("int3");
 #endif
-    int p = pawns(b);
+    PawnEntry p = pawns(b);
     unsigned wap = 0;
     unsigned bap = 0;
     unsigned wdp = 0;
@@ -1077,17 +1076,17 @@ int Eval::eval(const BoardBase& b) const {
     int m = mobility<White>(b, wap, wdp) - mobility<Black>(b, bap, bdp);
     int a;
     if (b.material > endgameMaterial) {
-        a = attack<White>(b, wap, bdp) - attack<Black>(b, bap, wdp);
+        a = attack<White>(b, p, wap, bdp) - attack<Black>(b, p, bap, wdp);
     } else
         a = 0;
-    int pi = pieces<White>(b) - pieces<Black>(b);
+    int pi = pieces<White>(b, p) - pieces<Black>(b, p);
     print_debug(debugEval, "material:       %d\n", e);
     print_debug(debugEval, "mobility:       %d\n", m);
-    print_debug(debugEval, "pawns:          %d\n", p);
+    print_debug(debugEval, "pawns:          %d\n", p.score);
     print_debug(debugEval, "attack:         %d\n", a);
     print_debug(debugEval, "pieces:         %d\n", pi);
     
-    return e + m + p + a + pi;
+    return e + m + p.score + a + pi;
 }
 
 void Eval::ptClear() {

@@ -88,8 +88,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         SharedScore<         C> alpha2;
         SharedScore<(Colors)-C> beta2 ;
         if (alpha0.v != -infinity*C && abs(alpha0.v) < 1024) {
-            alpha2.v = alpha0.v - Eval::parameters.aspiration0*C;
-            beta2.v  = alpha0.v + Eval::parameters.aspiration1*C;
+            alpha2.v = alpha0.v - eval.aspiration0*C;
+            beta2.v  = alpha0.v + eval.aspiration1*C;
             if (!search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta2, alpha2, ply+1, false NODE)) {
                 // Fail-Low at first root, research with low bound = alpha and high bound = old low bound
                 now = system_clock::now();
@@ -109,7 +109,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 }
                 now = system_clock::now();
                 alpha.v = alpha2.v;
-                if (!infinite && now > softLimit && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
+                if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                 search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta, alpha, ply+1, false NODE);
             } else {
                 alpha.v = alpha2.v;
@@ -127,9 +127,9 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         console->send(status(now, alpha.v));
 
         if (alpha >= infinity*C) break;
-        if (!infinite && now > softLimit && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) break;
+        if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
         if (abs(alpha.v) <= 1024)
-            beta2.v = alpha.v + Eval::parameters.aspiration1*C;
+            beta2.v = alpha.v + eval.aspiration1*C;
         else
             beta2.v = infinity*C;
         
@@ -171,7 +171,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                         console->send(status(now, alpha.v) + " lowerbound");
                         search<(Colors)-C, trunk>(NodeFailHigh, b, bestMove, depth-1, beta, alpha, ply+1, false NODE);
                     }
-                    beta2.v = alpha.v + Eval::parameters.aspiration1*C;
+                    beta2.v = alpha.v + eval.aspiration1*C;
                     now = system_clock::now();
                     console->send(status(now, alpha.v));
                 }
@@ -179,7 +179,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             if (alpha >= infinity*C) break;
             if (!infinite) {
                 system_clock::time_point now = system_clock::now();
-                if (now > softLimit && alpha > alpha0.v + C*Eval::parameters.evalHardBudget) stopSearch = true;
+                if (now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) stopSearch = true;
             }
         }
 //         now = system_clock::now();

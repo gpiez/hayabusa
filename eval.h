@@ -84,105 +84,81 @@ union KeyScore {
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986 );
 
-union Parameters {
-    struct {
-        struct {
-            float center;
-            float slopex;
-            float curvx;
-            float slopey;
-            float curvy;
-            float mobility;
-            float mobilityCurv;
-        } pp[nPieces];
-        float rookOpen;
-        float rookBehindPasser;
-        float rookHalfOpen;
-        float rookAttackP;
-        float rookAttackK;
-        float aspiration0;
-        float aspiration1;
-        float evalHardBudget;
-   };
-    float data[];
-};
-
 class PieceList;
 class BoardBase;
 class Eval {
     KeyScore zobristPieceSquare[nTotalPieces][nSquares];
-
-    static CompoundScore pawn, knight, bishop, rook, queen;
-    static CompoundScore bishopPair;
-    static int trappedRook;
-    static CompoundScore knightAlone;
-    static CompoundScore bishopAlone;
-    static CompoundScore n_p_ram[9], n_p[17];
-    static CompoundScore b_bad_own_p[9], b_p[17], b_p_ram[9], bpair_p[17];
-    static CompoundScore r_p[17];
-    static CompoundScore q_p[17];
-    // needs to be the same kind of type as PawnEntry.score.
-    static int pawnBackward;
-    static int pawnBackwardOpen;
-    static int pawnIsolatedCenter;
-    static int pawnIsolatedEdge;
-    static int pawnIsolatedOpen;
-//    static int pawnHalfIsolated;
-    static int pawnPasser[8];
-    static int pawnEdge;
-    static int pawnCenter;
-    static int pawnDouble;
-    static int pawnShoulder;
-    static int pawnHole;
-    static int pawnConnPasser;
-    static int pawnUnstoppable;
-    
-    static int attack1b1;
-    static int attack2b1;
-    static int attack1b2;
-    static int attack2b2;
-    static int attack1n1;
-    static int attack2n1;
-    static int attack1n2;
-    static int attack2n2;
-    static int attack1r1;
-    static int attack2r1;
-    static int attack1r2;
-    static int attack2r2;
-    static int attack1q1;
-    static int attack2q1;
-    static int attack1q2;
-    static int attack2q2;
-    static int attack1p1;
-    static int attack2p1;
-    static int attack1k1;
-    static int attack2k1;
-    
-    static int endgameMaterial;
-    
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
 
-    RawScore controls[nSquares];
-/*    static uint32_t borderTab4_0[nSquares];
-    static uint32_t borderTab321[nSquares];
-    static uint32_t borderTab567[nSquares];
-    static __v16qi kMask0[nSquares];
-    static __v16qi kMask1[nSquares];*/
-    static __thread PawnEntry pawnEntry;
+    int pawn, knight, bishop, rook, queen;
+    
+    int bishopPair;
+    int bishopBlockPasser;
+    int bishopAlone;
+    
+    int knightAlone;
+    int knightBlockPasser;
+
+    int rookTrapped;
+    int rookOpen;
+    int rookHalfOpen;
+
+    int pawnBackward;
+    int pawnBackwardOpen;
+    int pawnIsolatedCenter;
+    int pawnIsolatedEdge;
+    int pawnIsolatedOpen;
+//    int pawnHalfIsolated;
+    int pawnPasser[8];
+    int pawnEdge;
+    int pawnCenter;
+    int pawnDouble;
+    int pawnShoulder;
+    int pawnHole;
+    int pawnConnPasser;
+    int pawnUnstoppable;
+    
+    int attack1b1;
+    int attack2b1;
+    int attack1b2;
+    int attack2b2;
+    int attack1n1;
+    int attack2n1;
+    int attack1n2;
+    int attack2n2;
+    int attack1r1;
+    int attack2r1;
+    int attack1r2;
+    int attack2r2;
+    int attack1q1;
+    int attack2q1;
+    int attack1q2;
+    int attack2q2;
+    int attack1p1;
+    int attack2p1;
+    int attack1k1;
+    int attack2k1;
+    
+    int endgameMaterial;
+    
     void initPS();
     void initZobrist();
     static void initTables();
     unsigned int attackHash( unsigned int  pos );
     int squareControl();
     template<Colors C> int mobility(const BoardBase&, unsigned& attackingPieces, unsigned& defendingPieces) const;
-    template<Colors C> int attack(const BoardBase&, unsigned attackingPieces, unsigned defendingPieces) const;
-    template<Colors C> int pieces(const BoardBase&) const;
-    int pawns(const BoardBase&) const;
+    template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces
+) const;
+    template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const;
+    PawnEntry pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
 //    template<Colors C> int mobility(const BoardBase &b, unsigned& attackingPieces, unsigned& defendingPieces) const;
 
 public:
-    static Parameters parameters;
+    int aspiration0;
+    int aspiration1;
+    int evalHardBudget;
+    
 #ifdef MYDEBUG
     mutable uint64_t bmob1, bmob2, bmob3, bmobn;
     mutable uint64_t rmob1, rmob2, rmob3, rmobn;
