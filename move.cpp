@@ -35,12 +35,13 @@ std::string Move::string() const
         if ((piece() & 7) < Pawn) {
             temp += " RBQN"[piece() & 7];
             temp = temp.substr(1);
-        } else {
+        } else if ((piece() & 7) == King) {
             if ((to() & 7) == 6)
                 return "O-O";
             else
                 return "O-O-O";
-        }
+        } else
+            temp += " ep";
     }
     return temp;
 }
