@@ -293,7 +293,7 @@ void Console::setoption(StringList cmds) {
         } else if (name == "reduction") {
             if (data == "true")
                 Options::reduction = true;
-            else if (data == "true")
+            else if (data == "false")
                 Options::reduction = false;
             else
                 std::cerr << "reduction value " << data << " not understood" << std::endl;
