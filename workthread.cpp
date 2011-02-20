@@ -48,7 +48,7 @@ namespace boost {
 #endif
 
 WorkThread::WorkThread():
-    isStopped(true),
+    isStopped(false),
     keepRunning(true),
     job(NULL)
 {
@@ -66,6 +66,8 @@ void WorkThread::run() {
     workThread = this;
 
     UniqueLock <Mutex> lock(runningMutex);
+    isStopped = true;
+    stopped.notify_one();
 #ifdef __linux__
     std::stringstream name;
     name << "WorkThread " << std::find(threads.begin(), threads.end(), this) - threads.begin();
@@ -270,6 +272,9 @@ void WorkThread::init() {
         WorkThread* th = new WorkThread();
         new Thread(&WorkThread::run, th);
         threads.push_back(th);
+        UniqueLock<Mutex> lock(th->stoppedMutex);
+        while (!th->isStopped)
+            th->stopped.wait(lock);    //waits until initialized
     }
 }
 
