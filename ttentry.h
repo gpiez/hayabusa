@@ -102,6 +102,7 @@ struct PerftEntry {
     Bitfield<63, 1, uint64_t> hiBound;
     uint64_t data;
     uint64_t aged; //dummy
+    uint64_t score;
     };
     enum { upperShift = 6 };
     uint64_t value;

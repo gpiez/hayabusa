@@ -166,6 +166,7 @@ void StatWidget::update()
 #define DISPLAYNUM(x) n##x->setText(number(prev.last().x)); if (prev.size() > 1) v##x->setText(number((prev.last().x - prev.first().x) / (prev.size()-1)));
 
     ninternalNode->setText(number(WorkThread::running));
+//    vttentries->setText(stats.tt);
     DISPLAYNUM(node)
     DISPLAYNUM(eval)
     DISPLAYNUM(tthit)
@@ -175,6 +176,7 @@ void StatWidget::update()
     DISPLAYNUM(ttoverwrite)
     DISPLAYNUM(ttinsufficient)
     DISPLAYNUM(ttstore)
+    DISPLAYNUM(ttoverwrite)
     DISPLAYNUM(leafcut);
     DISPLAYNUM(pthit);
     DISPLAYNUM(ptmiss);

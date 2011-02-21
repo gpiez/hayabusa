@@ -39,6 +39,7 @@ union Stats {
         uint64_t    ttoverwrite;
         uint64_t    ttinsufficient;
         uint64_t    ttstore;
+        uint64_t    ttmerge;
         uint64_t    leafcut;
         uint64_t    pthit;
         uint64_t    ptmiss;

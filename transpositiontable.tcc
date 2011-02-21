@@ -131,6 +131,14 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
             {
                 stats.ttoverwrite++;
                 stats.ttinsufficient--;
+                if (entry.depth == subTable->entries[i].depth/* && subTable->entries[i].score == entry.score*/) 
+                    if (   (subTable->entries[i].loBound && entry.hiBound) 
+                        || (subTable->entries[i].hiBound && entry.loBound)) {
+                            entry.hiBound |= 1;
+                            entry.loBound |= 1;
+                            stats.ttmerge++;
+                        }
+                
                 subTable->entries[i] = entry;
 /*                unsigned j;
                 for (j=i; j; ) {

@@ -2331,7 +2331,7 @@ const char* testPositions[] = {
 "8/8/8/2p5/1pp5/brpp4/1pprp2P/qnkbK3 w - - bm h3; c0 \"CCC post by Joachim Rang, mate in 15, h4 is only draw\"; id \"ZPTS.24\";",
 "8/1B6/8/5p2/8/8/5Qrq/1K1R2bk w - - bm Qa7; c0 \"CCC post by Tim Foden, id CCC.321759, mate in 3\"; id \"ZPTS.25\";",
 "8/3p1p2/5Ppp/K2R2bk/4pPrr/6Pp/4B2P/3N4 w - - bm Nc3; c0 \"CCC post by Tim Foden, id CCC.321751, mate in 4: 1.Nc3 e3 2.Rb5 d6 3.Nd5 Bxf4 4.Nxf4#\"; id \"ZPTS.26\";",
-"8/8/p5p1/p2N3p/k2P3P/5P2/KP1qB3/8 w - - bm f4; c0 \"white wins, derived from the more difficult ZPTS.28, Zugzwang after f4\"; id \"ZPTS.27\";",
+"8/8/p5p1/p2N3p/k2P3P/5P2/KP1qB3/8 w - - bm f4; c0 \"white wins, derived from the more difficult 28, Zugzwang after f4\"; id \"ZPTS.27\";",
 "8/p5pq/8/p2N3p/k2P3P/8/KP3PB1/8 w - - bm Be4; c0 \"Kubbel 1925, 1.Be4!! Qh6 2.Bd3!! Qd2 [2...Qd6 3.b3#] 3.Be2 g6 [3...Qc2 4.Bd1 Qxd1 5.Nc3 -; 3...a6 4.f3 g6 5.f4 -] 4.f3 a6 5.f4 Qc2 6.Bd1, Zugzwang after f4, white wins\"; id \"ZPTS.28\";",
 "8/5p2/4b1p1/7R/5K1P/2r3B1/7N/4b1k1 w - - bm Nf3+; c0 \"Noam Elkies 1984, 1 Nf3+! Rxf3+! 2 Kxf3 Bg4+! 3 Kf4!! Bxg3+ 4 Kxg4 gxh5+ 5 Kh3!! Kf1 6 Kxg3 Ke2 7 Kf4 f6 8 Kf5 Kf3 9 Kxf6 Kg4 10 Ke5 Kh4 11 Kf4, draw\"; id \"ZPTS.29\";",
 "5R2/2K5/1pP5/4k2p/3pp3/2p4N/B4N1b/n1R1B2b w - - bm Rxc3; c0 \"CCC post by Tim Foden, id CCC.321966, mate in 4\"; id \"ZPTS.30\";",
