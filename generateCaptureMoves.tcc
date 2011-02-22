@@ -334,10 +334,47 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
     uint64_t king = getPieces<-C,King>();
     unsigned k = bit(king);
     uint64_t attNotEnemyKing = getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Queen>() | getAttacks<-C,Pawn>();
-
+    /*
+     * Rook mates: Generate all possible checking moves by rooks. Determine
+     * which squares are attacked by any piece but a rook, because a rook can
+     * not defend itself when mating. If there are two rooks, the other rook
+     * can assist in blocking escape squares. X-ray attacks may assist in
+     * defending the attacking rook.
+     */
     if (uint64_t checkingMoves = getAttacks<C,Rook>() & ~occupied[CI] & (kingIncoming[EI].d[0] | kingIncoming[EI].d[1])) {
+        uint64_t attNotSelfRook;
         uint64_t attNotRook = getAttacks<C,Queen>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
-        uint64_t rescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotRook);
+        if (rsingle[CI][1].move.data) {
+            uint64_t r0attacks = fold(rsingle[CI][0].d02); //TODO check if precalculating is cheaper, this is needed in mobility too
+            uint64_t r1attacks = fold(rsingle[CI][1].d02); //TODO check if precalculating is cheaper, this is needed in mobility too
+            uint64_t checkR0Moves = r0attacks & ~occupied[CI] & (kingIncoming[EI].d[0] | kingIncoming[EI].d[1]);
+            if (checkR0Moves) {
+                attNotSelfRook = getAttacks<C,Queen>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>() | r1attacks;
+            } else
+                attNotSelfRook = getAttacks<C,Queen>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>() | r0attacks;
+            __v2di connectedRR = rsingle[CI][0].d02|rsingle[CI][1].d02;
+            __v2di areRooksConnected = ~pcmpeqq(connectedRR & _mm_set1_epi64x(getPieces<C,Rook>()), zero);
+            uint64_t rxray = fold(areRooksConnected & connectedRR);
+            if (getAttacks<C,Queen>()) {
+                __v2di connectedQR0 = rsingle[CI][0].d02 | qsingle[CI][0].d02;
+                __v2di connectedQR1 = rsingle[CI][1].d02 | qsingle[CI][0].d02;
+                __v2di isRook0Connected = ~pcmpeqq(connectedQR0 & _mm_set1_epi64x(getPieces<C,Rook>()), zero);
+                __v2di isRook1Connected = ~pcmpeqq(connectedQR1 & _mm_set1_epi64x(getPieces<C,Rook>()), zero);
+                rxray |= fold(isRook0Connected & connectedQR0) | fold(isRook1Connected & connectedQR1);
+            }
+            attNotRook |= rxray;
+            attNotSelfRook |= rxray;
+        } else {
+            if (getAttacks<C,Queen>()) {
+                __v2di connectedQR0 = rsingle[CI][0].d02 | qsingle[CI][0].d02;
+                __v2di isRook0Connected = ~pcmpeqq(connectedQR0 & _mm_set1_epi64x(getPieces<C,Rook>()), zero);
+                uint64_t rxray = fold(isRook0Connected & connectedQR0);
+                attNotRook |= rxray;
+            }
+            attNotSelfRook = attNotRook;
+        }
+        
+        uint64_t rescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotSelfRook);
         rescape = ror(rescape, k-9);
         uint64_t rmate = 0;
         if ((rescape & 0x30003) == 0)
@@ -391,15 +428,14 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                 __v2di a02 = rs->d02;
                 __v2di from2 = doublebits[rs->move.from()];
                 __v2di pin02 = from2 & dpins[CI].d02;
-//                __v2di xray02 = a02 & datt[EI].d02;
                 pin02 = pcmpeqq(pin02, zero);
-//                xray02 = _mm_cmpeq_epi64(xray02, zero);
                 pin02 = ~pin02 & a02 /*& xray02*/;
                 for (uint64_t a=fold(pin02) & rmate; a; a&=a-1) {
                     if (AbortOnFirst) return true;
                     Move n;
                     n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
                     *--*good = n;
+//                     if (rsingle[CI][1].move.data && getAttacks<-C,King>() & attNotRook & ~occupied1 & ~(getAttacks<C,Queen>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>()))                        print();
                 }
             }
         }
@@ -416,7 +452,19 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
     if (uint64_t checkingMoves  = (getAttacks<C,Queen>() | pMoves)
                                 & ~occupied[CI]
                                 & (kingIncoming[EI].d[0] | kingIncoming[EI].d[1] | kingIncoming[EI].d[2] | kingIncoming[EI].d[3])) {
-        uint64_t attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
+        uint64_t rook1 = getPieces<C,Rook>() & (getPieces<C,Rook>()-1);
+        uint64_t bishop1 = getPieces<C,Bishop>() & (getPieces<C,Bishop>()-1);
+        uint64_t rook0 = getPieces<C,Rook>() & ~rook1;
+        uint64_t bishop0 = getPieces<C,Bishop>() & ~bishop1;
+        __v2di isQR1Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(rook1), zero);
+        __v2di isQB1Connected = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(bishop1), zero);
+        __v2di isQR0Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(rook0), zero);
+        __v2di isQB0Connected = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(bishop0), zero);
+        uint64_t xray = fold( (isQR1Connected & rsingle[CI][1].d02) 
+                            | (isQR0Connected & rsingle[CI][0].d02) 
+                            | (isQB1Connected & bsingle[CI][1].d13) 
+                            | (isQB0Connected & bsingle[CI][0].d13));
+        uint64_t attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>() | xray;
         uint64_t qescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
         qescape = ror(qescape, k-9);
         uint64_t qmate = 0;
@@ -545,14 +593,10 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
                 __v2di from2 = doublebits[qs->move.from()];
                 __v2di pin02 = from2 & dpins[CI].d02;
                 __v2di pin13 = from2 & dpins[CI].d13;
-//                __v2di xray02 = a02 & datt[EI].d02;
-//                __v2di xray13 = a13 & datt[EI].d13;
                 pin02 = pcmpeqq(pin02, zero);
                 pin13 = pcmpeqq(pin13, zero);
-//                xray02 = _mm_cmpeq_epi64(xray02, zero);
-//                xray13 = _mm_cmpeq_epi64(xray13, zero);
-                pin02 = ~pin02 & a02/* & xray02*/;
-                pin13 = ~pin13 & a13/* & xray13*/;
+                pin02 = ~pin02 & a02;
+                pin13 = ~pin13 & a13;
                 for (uint64_t a=fold(pin02|pin13) & qmate; a; a&=a-1) {
                     if (AbortOnFirst) return true;
                     Move n;
