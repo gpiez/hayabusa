@@ -63,5 +63,6 @@ private:
     uint64_t rank() const {
         return ::rank<C,R>();
     }
+    uint64_t generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, uint64_t king, unsigned k) const;
 };
 #endif /* COLOREDBOARD_H_ */

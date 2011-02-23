@@ -41,7 +41,39 @@ void TestRootBoard::initTestCase() {
     b = c->board;
 }
 
-void TestRootBoard::setPiece() {
+void TestRootBoard::cmpMates(std::string bstr, std::string mstr) {
+    Move ml[256];
+    Move* good = ml+192;
+    b->setup(bstr);
+    b->boards[0].wb.generateMateMoves<false>(&good);
+    StringList mstrl = split(mstr);
+    while(good < ml+192) {
+        std::string res = good++->algebraic();
+        StringList::iterator i = find(mstrl.begin(), mstrl.end(), res);
+        if (i!=mstrl.end())
+            mstrl.erase(i);
+        else
+            std::cerr << bstr << ": " << res << " missing mate" << std::endl;
+    }
+    for (StringList::iterator i = mstrl.begin(); i != mstrl.end(); ++i) {
+        std::cerr << bstr << ": " << *i << " wrong mate" << std::endl;
+    }
+}
+
+void TestRootBoard::generateMateMoves() {
+    cmpMates("6k/R/1R/////K w - -", "b6b8");
+    cmpMates("K/////1R/R/6k w - -", "b3b1");
+    cmpMates("5nkn/RR//////K w - -","b7g7");
+    cmpMates("5nkn/QR//////K w - -", "a7g1 b7g7");
+    cmpMates("5nkn/RQ//////K w - -", "b7g7 b7g2");
+    cmpMates("R/5nkn/RQ/////K w - -", "b6g6 b6g1");
+    cmpMates("R/5nkn/QR/////K w - -", "b6g6");
+    cmpMates("Q/5nkn/RR/////K w - -", "b6g6");
+    cmpMates("6k/R/1Q/////K w - -", "b6d8 b6b8");
+    cmpMates("6k/R/4Q/////K w - -", "e6e8 e6c8");
+    cmpMates("6k/6pp/4Q/////K w - -", "e6e8");
+    cmpMates("6k/5ppp/4Q/////K w - -", "e6e8 e6c8");
+    cmpMates("6k/5pbp/4Q/////K w - -", "");
 }
 
 void TestRootBoard::pieceList() {

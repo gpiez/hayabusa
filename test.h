@@ -29,10 +29,10 @@ class TestRootBoard: public QObject {
     Q_OBJECT
     RootBoard *b;
     Console *c;
-
+    void cmpMates(std::string, std::string);
 private slots:
     void initTestCase();
-    void setPiece();
+    void generateMateMoves();
     void pieceList();
     void generateCaptures();
     void perft();
