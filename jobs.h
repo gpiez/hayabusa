@@ -42,7 +42,6 @@ struct Job {
 
 template<Colors C, typename A, typename B, typename T>
 class SearchJob: public Job {
-    NodeType n;
     RootBoard& rb;
     const T& b;
     Move m;
@@ -56,12 +55,12 @@ class SearchJob: public Job {
     NodeItem* node;
 #endif
 public:
-    SearchJob(NodeType n, RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent, const RepetitionKeys& rep
+    SearchJob(RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent, const RepetitionKeys& rep
 #ifdef QT_GUI_LIB
         , NodeItem* node
 #endif
         ):
-        n(n), rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), parent(parent), rep(rep)
+        rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), parent(parent), rep(rep)
 #ifdef QT_GUI_LIB
     , node(node)
 #endif
@@ -70,7 +69,7 @@ public:
     };
     void job() {
         rb.clone(b, rep, ply);
-        rb.search<C, trunk>(n, b, m, depth, alpha, beta, ply, false
+        rb.search<C, trunk>(b, m, depth, alpha, beta, ply, false
 #ifdef QT_GUI_LIB
                         , node
 #endif

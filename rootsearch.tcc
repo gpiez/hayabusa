@@ -90,7 +90,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         if (alpha0.v != -infinity*C && abs(alpha0.v) < 1024) {
             alpha2.v = alpha0.v - eval.aspiration0*C;
             beta2.v  = alpha0.v + eval.aspiration1*C;
-            if (!search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta2, alpha2, ply+1, false NODE)) {
+            if (!search<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha2, ply+1, false NODE)) {
                 // Fail-Low at first root, research with low bound = alpha and high bound = old low bound
                 now = system_clock::now();
                 console->send(status(now, alpha2.v) + " upperbound");
@@ -99,7 +99,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                     break;   //TODO check if trying other moves first is an better option
                 }
                 beta2.v = alpha2.v;
-                search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta2, alpha, ply+1, false NODE);
+                search<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, false NODE);
             } else if (alpha2 >= beta2.v) {
                 // Fail-High at first root, research with high bound = beta and low bound = old high bound
                 console->send(status(now, alpha2.v) + " lowerbound");
@@ -110,12 +110,12 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 now = system_clock::now();
                 alpha.v = alpha2.v;
                 if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
-                search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta, alpha, ply+1, false NODE);
+                search<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, false NODE);
             } else {
                 alpha.v = alpha2.v;
             }
         } else {
-            search<(Colors)-C, trunk>(NodePV, b, *ml, depth-1, beta, alpha, ply+1, false NODE);
+            search<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, false NODE);
         }
         
         if (stopSearch) {
@@ -152,24 +152,24 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 SharedScore<C> nalpha(alpha);
                 null.v = alpha.v + C;
                 if (depth > nullReduction+1 + dMaxThreat + dMaxCapture)
-                    search<C, trunk>(NodeFailHigh, b, *ml, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
+                    search<C, trunk>(b, *ml, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
                 else
-                    search<C, leaf>(NodeFailHigh, b, *ml, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
+                    search<C, leaf>(b, *ml, depth-(nullReduction+1), nalpha, null, ply+2, false NODE);
                 pruneNull = alpha >= null.v;
                 if (!stopSearch && pruneNull && depth > 2*(nullReduction) + dMaxCapture + dMaxThreat) {
                     null.v = alpha.v + C;
-                    search<(Colors)-C, trunk>(NodeFailHigh, b, *ml, depth-2*(nullReduction), null, nalpha, ply+1, false NODE);
+                    search<(Colors)-C, trunk>(b, *ml, depth-2*(nullReduction), null, nalpha, ply+1, false NODE);
                     pruneNull = alpha >= nalpha.v;
                 }
             }
             if (!pruneNull && !stopSearch) {
-                if (search<(Colors)-C, trunk>(NodeFailHigh, b, *ml, depth-1, beta2, alpha, ply+1, false NODE)) {
+                if (search<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, false NODE)) {
                     bestMove = *ml;
                     ml.currentToFront();
                     if (alpha >= beta2.v && !stopSearch) {
                         now = system_clock::now();
                         console->send(status(now, alpha.v) + " lowerbound");
-                        search<(Colors)-C, trunk>(NodeFailHigh, b, bestMove, depth-1, beta, alpha, ply+1, false NODE);
+                        search<(Colors)-C, trunk>(b, bestMove, depth-1, beta, alpha, ply+1, false NODE);
                     }
                     beta2.v = alpha.v + eval.aspiration1*C;
                     now = system_clock::now();
