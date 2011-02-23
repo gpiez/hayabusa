@@ -108,7 +108,6 @@ class Eval {
     int pawnIsolatedCenter;
     int pawnIsolatedEdge;
     int pawnIsolatedOpen;
-//    int pawnHalfIsolated;
     int pawnPasser[8];
     int pawnEdge;
     int pawnCenter;
@@ -144,15 +143,11 @@ class Eval {
     void initPS();
     void initZobrist();
     static void initTables();
-    unsigned int attackHash( unsigned int  pos );
-    int squareControl();
     template<Colors C> int mobility(const BoardBase&, unsigned& attackingPieces, unsigned& defendingPieces) const;
-    template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces
-) const;
+    template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const;
     template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const;
     PawnEntry pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
-//    template<Colors C> int mobility(const BoardBase &b, unsigned& attackingPieces, unsigned& defendingPieces) const;
 
 public:
     int aspiration0;
@@ -165,7 +160,7 @@ public:
     mutable uint64_t qmob1, qmob2, qmob3, qmobn;
 #endif
     Eval();
-    int eval(const BoardBase&) const;
+    int operator () (const BoardBase&) const;
     template<Colors C> Move evalMate(const BoardBase&) const;
     CompoundScore getPS(int8_t piece, uint8_t square) const {
         ASSERT(square < nSquares);

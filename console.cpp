@@ -423,5 +423,5 @@ void Console::ordering(StringList cmds) {
 
 void Console::eval(StringList)
 {
-    board->eval.eval(board->currentBoard());
+    board->eval(board->currentBoard());
 }

@@ -1049,7 +1049,7 @@ int Eval::attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPiece
     return att;
 }
 
-int Eval::eval(const BoardBase& b) const {
+int Eval::operator () (const BoardBase& b) const {
     int e = b.keyScore.score.calc(b.material);
 #if defined(MYDEBUG)
     int value = 0;

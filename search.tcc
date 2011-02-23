@@ -262,7 +262,7 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
         Move* afterGoodCap;
 
         stats.eval++;
-        int realScore = eval.eval(b);
+        int realScore = eval(b);
         if (P == tree && Options::pruning && !threatened) {
             if (depth == dMaxCapture + dMaxThreat + 1) {
                 ScoreBase<C> fScore;
