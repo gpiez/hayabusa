@@ -74,6 +74,7 @@ void TestRootBoard::generateMateMoves() {
     cmpMates("6k/6pp/4Q/////K w - -", "e6e8");
     cmpMates("6k/5ppp/4Q/////K w - -", "e6e8 e6c8");
     cmpMates("6k/5pbp/4Q/////K w - -", "");
+    cmpMates("7k/4r1p1/5p1p/1pp2Q2/1b2B1P1/1P2P2P/5PK1/q7 w - -", "f5c8 f5h7"); 
 }
 
 void TestRootBoard::pieceList() {
