@@ -28,7 +28,7 @@ void Eval::draw(const BoardBase& b, int& upperbound, int& lowerbound) const {
     lowerbound = -C*infinity;
     uint64_t RQP = b.getPieces<C, Rook>() + b.getPieces<C, Queen>() + b.getPieces<C, Pawn>();
     if (!RQP) {
-        if (popcount(b.getPieces<White, Bishop>() + b.getPieces<White, Knight>()) <= 1)
+        if (popcount(b.getPieces<C, Bishop>() + b.getPieces<C, Knight>()) <= 1)
             upperbound = 0;
     }
     if (b.getPieces<White, Pawn>() | b.getPieces<Black, Pawn>()) {

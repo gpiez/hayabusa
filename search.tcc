@@ -146,32 +146,31 @@ bool RootBoard::search(const NodeType nodeType, const T& prev, const Move m, con
             return false;
         }
     }
-    threatened |= b.template inCheck<C>();
-    if (!threatened) {
-        threatened = ((ColoredBoard<(Colors)-C>*)&b) -> template generateMateMoves<true>();
+    
+    Key z;
+    if (P!=vein) {
+        threatened |= b.template inCheck<C>();
         if (!threatened) {
-            threatened = ((ColoredBoard<(Colors)-C>*)&b) -> template generateSkewers(0);
-            if (P==leaf && !threatened) {
-                ScoreBase<C> current(alpha);
-                current.max(estimate.score.calc(prev.material)+lastPositionalEval-C*eE);
-                if (current >= beta.v) {
+            threatened = ((ColoredBoard<(Colors)-C>*)&b) -> template generateMateMoves<true>();
+            if (!threatened) {
+                threatened = ((ColoredBoard<(Colors)-C>*)&b) -> template generateSkewers(0);
+                if (P==leaf && !threatened) {
+                    ScoreBase<C> current(alpha);
+                    current.max(estimate.score.calc(prev.material)+lastPositionalEval-C*eE);
+                    if (current >= beta.v) {
 #ifdef QT_GUI_LIB
-                    if (node) node->bestEval = beta.v;
-                    if (node) node->nodeType = NodePrecut2;
+                        if (node) node->bestEval = beta.v;
+                        if (node) node->nodeType = NodePrecut2;
 #endif
-                    stats.leafcut++;
-                    return false;
+                        stats.leafcut++;
+                        return false;
+                    }
                 }
             }
         }
-    }
-
 #ifdef QT_GUI_LIB
-    if (node && threatened) node->flags |= Threatened;
+        if (node && threatened) node->flags |= Threatened;
 #endif
-
-    Key z;
-    if (P != vein) {
         z = b.getZobrist();
         store(z, ply);
     }
