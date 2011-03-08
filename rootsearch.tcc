@@ -58,16 +58,42 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     infoTimerMutex.lock();
     Thread infoTimerThread(&RootBoard::infoTimer, this, milliseconds(1000));
     
-    SharedScore<C> alpha0; alpha0.v = -infinity*C;
     nMoves = ml.count();
+    ml.begin();
+    bestMove = *ml;
+    if (nMoves == 1) stopSearch = true;
+    #ifdef QT_GUI_LIB
+        NodeData data;
+        data.move.data = 0;
+        data.ply = depth;
+        NodeItem::m.lock();
+        NodeItem* node=0;
+        uint64_t startnode = NodeItem::nNodes;
+        if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
+            node = new NodeItem(data, statWidget->tree->root());
+            NodeItem::nNodes++;
+        }
+        NodeItem::m.unlock();
+    #endif
+
+    SharedScore<C> alpha0; alpha0.v = -infinity*C;
+    SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
+    for (++ml; ml.isValid() && !stopSearch; ++ml)
+        if (search<(Colors)-C, tree>(b, *ml, dMaxCapture+dMaxThreat, beta, alpha0, ply+1, false NODE)) {
+            bestMove = *ml;
+            ml.currentToFront();            
+        }
+
     for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes && !stopSearch; depth++) {
         ml.begin();
         bestMove = *ml;
         system_clock::time_point now = system_clock::now();
-        std::stringstream g;
         lastStatus2 = now + milliseconds(1000);
-        g << "info depth " << depth-(dMaxCapture+dMaxThreat) << " currmove " << (*ml).algebraic() << " currmovenumber 1";
-        console->send(g.str());
+        if (!Options::humanreadable) {
+            std::stringstream g;
+            g << "info depth " << depth-(dMaxCapture+dMaxThreat) << " currmove " << (*ml).algebraic() << " currmovenumber 1";
+            console->send(g.str());
+        }
     #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
@@ -136,7 +162,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         for (++ml; ml.isValid() && !stopSearch; ++ml) {
             currentMoveIndex++;
             now = system_clock::now();
-            if (now > lastStatus2) {
+            if (now > lastStatus2 && !Options::humanreadable) {
                 std::stringstream g;
                 lastStatus2 = now + milliseconds(1000);
                 g << "info currmove " << (*ml).algebraic() << " currmovenumber " << currentMoveIndex;
