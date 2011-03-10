@@ -44,8 +44,9 @@ void TestRootBoard::initTestCase() {
 void TestRootBoard::cmpMates(std::string bstr, std::string mstr) {
     Move ml[256];
     Move* good = ml+192;
+    Move* bad=good;
     b->setup(bstr);
-    b->boards[0].wb.generateMateMoves<false>(&good);
+    b->boards[0].wb.generateMateMoves<false>(&good, &bad);
     StringList mstrl = split(mstr);
     while(good < ml+192) {
         std::string res = good++->algebraic();
