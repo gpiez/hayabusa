@@ -24,10 +24,23 @@
 #include "transpositiontable.tcc"
 //#include <cstdio>
 
-const __v2di zero = {0};
+static const __v2di zero = {0};
+static const __v2di mask01 = { 0x0101010101010101, 0x0202020202020202 };
+static const __v2di mask23 = { 0x0404040404040404, 0x0808080808080808 };
+static const __v2di mask45 = { 0x1010101010101010, 0x2020202020202020 };
+static const __v2di mask67 = { 0x4040404040404040, 0x8080808080808080 };
+static const int logEndgameTransitionSlope = 4; //16 pieces material between full endgame and full opening
+static const int baseAttack = 512;
+static const int maxAttack = 712;
+static const int baseDefense = 256;
+static const int maxDefense = 356;
 
 int mobB1[64], mobB2[64], mobB3[64], mobN1[64], mobN2[64], mobN3[64], mobR1[64], mobR2[64], mobR3[64], mobQ1[64], mobQ2[64], mobQ3[64];
 int attackTable[256], defenseTable[256];
+int pawnFileOpen[4], pawnFileEnd[4];
+int pawnRankOpen[6], pawnRankEnd[6];
+int8_t wpawnOpen[64], wpawnEnd[64];
+int8_t bpawnOpen[64], bpawnEnd[64];
 
 #if !defined(__SSE_4_2__)
 // popcount, which counts at most 15 ones, for counting pawns
@@ -62,26 +75,38 @@ static inline int popcount2( uint64_t x )
 #define popcount2(x) __builtin_popcountll(x)
 #endif
 
-/*int CompoundScore::calc(const BoardBase& b, const Eval& ) const
-{
-    return b.material >= endgameMaterial ? opening : endgame;
+static inline int weightedPopcount(const uint64_t bb, const int8_t weights[64]) {
+
+    __v2di x0 = _mm_set1_epi64x(bb);
+    __v2di x3 = _mm_andnot_si128(x0, mask67);
+    __v2di x2 = _mm_andnot_si128(x0, mask45);
+    __v2di x1 = _mm_andnot_si128(x0, mask23);
+    x0 = _mm_andnot_si128(x0, mask01);
+
+    x3 = _mm_cmpeq_epi8(x3, zero);
+    x2 = _mm_cmpeq_epi8(x2, zero);
+    x1 = _mm_cmpeq_epi8(x1, zero);
+    x0 = _mm_cmpeq_epi8(x0, zero);
+
+    x3 &= ((const __v2di*)weights)[3];
+    x2 &= ((const __v2di*)weights)[2];
+    x1 &= ((const __v2di*)weights)[1];
+    x0 &= ((const __v2di*)weights)[0];
+
+    __v2di s = _mm_sad_epu8(x3+x2+x1+x0, zero);
+    return _mm_extract_epi16(s,0) + _mm_extract_epi16(s,4);
 }
-*/
-static const int baseAttack = 512;
-static const int maxAttack = 712;
-static const int baseDefense = 256;
-static const int maxDefense = 356;
 
 Eval::Eval():
     pawnPasser{ 0, 50, 50, 60, 80, 115, 160, 0 }
 {
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
 //    pt->setSize(0x100000000);
-    pawn = 80;      
-    knight = 300;   
-    bishop = 300;   
-    rook = 450;     
-    queen = 925;    
+    pawn = 90;
+    knight = 325;   
+    bishop = 325;   
+    rook = 500;
+    queen = 975;    
 
     bishopPair = 50;
     bishopBlockPasser = 20;
@@ -128,95 +153,57 @@ Eval::Eval():
     attack1p1 = 4;
     attack2p1 = 1;
 
-    endgameMaterial = 30;
+    endgameMaterial = 28;
 
     aspiration0 = 40;
     aspiration1 = 5;
     evalHardBudget = -20;
 
-//4 11 14
-//5 10 14
-//3 10 13
-//3 8 12
-//3 9 13
-//5 14 17
-//4 11 14
-//2 6 10
-//4 11 16
-    
-    sigmoid(mobN1, -15, 15, 0, 2.0);
-    sigmoid(mobN2, -10, 10, 0, 5.0);
+    sigmoid(mobN1, -25, 25, 0, 2.0);
+    sigmoid(mobN2, -20, 20, 4, 5.0);
     sigmoid(mobN3, -5, 5, 0, 7.0);
 
-//4 8 4
-//4 6 2
-//5 11 5
-//4 5 4
-//4 7 5
-//4 8 3
-//3 4 2
-//3 6 5
-//5 9 4
-//4 8 6    
-    sigmoid(mobB1, -15, 15, 0, 2.0);
-    sigmoid(mobB2, -10, 10, 0, 4.0);
+    sigmoid(mobB1, -20, 20, 0, 2.5);
+    sigmoid(mobB2, -25, 25, 4, 6.0);
     sigmoid(mobB3, -5, 5, 0, 2.0);
-//typical rook mobilites
-//3 6 8
-//5 6 7
-//6 13 12
-//6 11 11
-//5 10 8
-//7 14 12
-//5 8 6
-//4 5 5
-//8 17 8
-//3 6 7
-    sigmoid(mobR1, -10, 10, 0, 3);
-    sigmoid(mobR2, -7, 7, 0, 5.0);
+    
+    sigmoid(mobR1, -15, 15, 0, 4);
+    sigmoid(mobR2, -35, 35, 16, 8.0);
     sigmoid(mobR3, -3, 3, 0, 5.0);
 
-    //7 13 7
-    //6 12 7
-    //8 16 5
-    //8 19 5
-    //8 13 7
-    //8 17 7
-    //6 12 6
-    //7 10 4
-    //11 22 5
-    //5 11 8
-    //10 15 10
-    //9 16 6
-    
-    sigmoid(mobQ1, -6, 6, 0, 3.5);
-    sigmoid(mobQ2, -4, 4, 0, 7.5);
+    sigmoid(mobQ1, -10, 10, 0, 5);
+    sigmoid(mobQ2, -20, 20, 10, 10);
     sigmoid(mobQ3, -3, 3, 0, 2.5);
 
     sigmoid(attackTable, baseAttack, maxAttack, 40, 30);
     sigmoid(defenseTable, maxDefense, baseDefense, 8, 4);
-//     printSigmoid(mobN1, "mobN1");
-//     printSigmoid(mobN2, "mobN2");
-//     printSigmoid(mobN3, "mobN3");
+
+    sigmoid(pawnFileOpen, 0, 20, 2);
+    sigmoid(pawnFileEnd, 30, 0, 1);
+    sigmoid(pawnRankOpen, 0, 20, 6);
+    sigmoid(pawnRankEnd, 0, 30, 6);
+
+    for (unsigned x=0; x<4; ++x)
+        for (unsigned y=1; y<7; ++y) {
+            bpawnOpen[(7-x)*8 + 7-y] = bpawnOpen[    x*8 + 7-y] = wpawnOpen[(7-x)*8 + y] = wpawnOpen[    x*8 + y]
+            = (pawn + pawnFileOpen[x])*(pawn + pawnRankOpen[y-1]) / pawn - pawn;
+            bpawnEnd [(7-x)*8 + 7-y] = bpawnEnd [    x*8 + 7-y] = wpawnEnd [(7-x)*8 + y] = wpawnEnd [    x*8 + y]
+            = (pawn + pawnFileEnd[x])*(pawn + pawnRankEnd[y-1]) / pawn - pawn;
+        }
+        
     initPS();
     initZobrist();
     initTables();
-//    static RawScore bishopGoodD;
-//    static RawScore bishopKnightD;
-//    static RawScore bishopRookD;
-/*#ifndef NDEBUG
-    printSigmoid(n_p_ram, "n_p_ram");             // bonus for each pawn ram, max is 75
-    printSigmoid(n_p, "n_p");
 
-    printSigmoid(b_bad_own_p, "bad_own_p");
-    printSigmoid(b_p, "b_p");
-    printSigmoid(b_p_ram, "b_p_ram");
-    printSigmoid(bpair_p, "bpair_p");
-
-    printSigmoid(r_p, "r_p");
-    printSigmoid(q_p, "r_p");
-
-#endif*/
+#ifndef NDEBUG
+    printSigmoid(pawnFileOpen, "pfo");
+    printSigmoid(pawnFileEnd, "pfe");
+    for (unsigned y=0; y<8; ++y) {
+        for (unsigned x=0; x<8; ++x) 
+            std::cerr << std::setw(3) << (int)wpawnOpen[x*8+y];
+        std::cerr << std::endl;
+    }
+#endif
 }
 
 void Eval::initPS() {
@@ -435,9 +422,13 @@ int Eval::pieces(const BoardBase& b, const PawnEntry& p) const {
             value += rookTrapped;
             
     uint64_t own = p.openFiles[CI];
+    own += own << 8;
+    own += own << 16;
     own += own << 32;
     
     uint64_t opp = p.openFiles[EI];
+    opp += opp << 8;
+    opp += opp << 16;
     opp += opp << 32;
 
     value += rookHalfOpen * popcount3(b.getPieces<C,Rook>() & own);
@@ -445,7 +436,7 @@ int Eval::pieces(const BoardBase& b, const PawnEntry& p) const {
 
     value += knightBlockPasser * popcount3(b.getPieces<C,Knight>() & shift<C*8>(p.passers[EI]));
     value += bishopBlockPasser * popcount3(b.getPieces<C,Bishop>() & shift<C*8>(p.passers[EI]));
-    
+
     return value;
 }
 
@@ -493,6 +484,16 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         pawnEntry.score = 0;
         uint64_t wpawn = b.getPieces<White,Pawn>();
         uint64_t bpawn = b.getPieces<Black,Pawn>();
+
+        int w0 = weightedPopcount(wpawn, wpawnOpen);
+        int b0 = weightedPopcount(bpawn, bpawnOpen);
+        pawnEntry.centerOpen = w0-b0;
+        print_debug(debugEval, "pawnCenterOpen:%3d/%3d\n", w0, b0);
+        
+        w0 = weightedPopcount(wpawn, wpawnEnd);
+        b0 = weightedPopcount(bpawn, bpawnEnd);
+        pawnEntry.centerEnd = w0-b0;
+        print_debug(debugEval, "pawnCenterEnd:%3d/%3d\n", w0, b0);
 
         uint64_t wpawnShoulder = wpawn & wpawn<<1 & ~file<'a'>();
         uint64_t bpawnShoulder = bpawn & bpawn<<1 & ~file<'a'>();
@@ -583,16 +584,6 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         pawnEntry.score -= pawnIsolatedOpen * (popcount15(bIsolani & ~wFront));
         print_debug(debugEval, "wpawn oiso:     %3d\n", pawnIsolatedOpen * (popcount15(wIsolani & ~bFront)));
         print_debug(debugEval, "bpawn oiso:     %3d\n", pawnIsolatedOpen * (popcount15(bIsolani & ~wFront)));
-        
-        pawnEntry.score += popcount15(wpawn & (file<'a'>()|file<'h'>())) * pawnEdge;
-        pawnEntry.score -= popcount15(bpawn & (file<'a'>()|file<'h'>())) * pawnEdge;
-        print_debug(debugEval, "wpawnEdge:     %3d\n", popcount15(wpawn & (file<'a'>()|file<'h'>())) * pawnEdge);
-        print_debug(debugEval, "bpawnEdge:     %3d\n", popcount15(bpawn & (file<'a'>()|file<'h'>())) * pawnEdge);
-        
-        pawnEntry.score += popcount15(wpawn & (file<'d'>()|file<'e'>())) * pawnCenter;
-        pawnEntry.score -= popcount15(bpawn & (file<'d'>()|file<'e'>())) * pawnCenter;
-        print_debug(debugEval, "wpawnCenter:     %3d\n", popcount15(wpawn & (file<'d'>()|file<'e'>())) * pawnCenter);
-        print_debug(debugEval, "bpawnCenter:     %3d\n", popcount15(bpawn & (file<'d'>()|file<'e'>())) * pawnCenter);
         
         pawnEntry.shield[0] = evalShield<White>(b);
         pawnEntry.shield[1] = evalShield<Black>(b);
@@ -716,34 +707,6 @@ void printBit(__v2di bits) {
 
     }
     std::cout << std::endl;
-}
-
-static inline void sumup(const uint64_t bb, const __v2di weights[4], __v2di& s0, __v2di& s1, __v2di& s2, __v2di& s3) {
-    const __v2di mask01 = { 0x0101010101010101, 0x0202020202020202 };
-    const __v2di mask23 = { 0x0404040404040404, 0x0808080808080808 };
-    const __v2di mask45 = { 0x1010101010101010, 0x2020202020202020 };
-    const __v2di mask67 = { 0x4040404040404040, 0x8080808080808080 };
-    
-    __v2di x0 = _mm_set1_epi64x(bb);
-    __v2di x3 = _mm_andnot_si128(x0, mask67);
-    __v2di x2 = _mm_andnot_si128(x0, mask45);
-    __v2di x1 = _mm_andnot_si128(x0, mask23);
-    x0 = _mm_andnot_si128   (x0, mask01);
-    
-    x3 = _mm_cmpeq_epi8     (x3, zero);
-    x2 = _mm_cmpeq_epi8     (x2, zero);
-    x1 = _mm_cmpeq_epi8     (x1, zero);
-    x0 = _mm_cmpeq_epi8     (x0, zero);
-    
-    x3 &= weights[3];
-    x2 &= weights[2];
-    x1 &= weights[1];
-    x0 &= weights[0];
-    
-    s3 += x3;
-    s2 += x2;
-    s1 += x1;
-    s0 += x0;
 }
 
 static const __v2di weightB1[4] = {
@@ -1034,11 +997,9 @@ int Eval::attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPiece
         }
     }
 
-    ASSERT(b.material > endgameMaterial);
-    int scale = std::min(b.material - endgameMaterial, 16);
     ASSERT(attackingPieces < 256);
-    int att = scale * ( (attackTable[attackingPieces]      - baseAttack) * defenseTable[def + defendingPieces] / baseDefense
-                      + (defenseTable[def+defendingPieces] - baseDefense)* attackTable[attackingPieces]        / baseAttack) >> 4;
+    int att = ( (attackTable[attackingPieces]      - baseAttack) * defenseTable[def + defendingPieces] / baseDefense
+              + (defenseTable[def+defendingPieces] - baseDefense)* attackTable[attackingPieces]        / baseAttack);
     
     print_debug(debugEval, "pa defense%d: %3d\n", EI, def);
     print_debug(debugEval, "pi defense%d: %3d\n", EI, defendingPieces);
@@ -1067,26 +1028,24 @@ int Eval::operator () (const BoardBase& b) const {
     }
     if (value != e) asm("int3");
 #endif
-    PawnEntry p = pawns(b);
+    PawnEntry pe = pawns(b);
     unsigned wap = 0;
     unsigned bap = 0;
     unsigned wdp = 0;
     unsigned bdp = 0;
     
     int m = mobility<White>(b, wap, wdp) - mobility<Black>(b, bap, bdp);
-    int a;
-    if (b.material > endgameMaterial) {
-        a = attack<White>(b, p, wap, bdp) - attack<Black>(b, p, bap, wdp);
-    } else
-        a = 0;
-    int pi = pieces<White>(b, p) - pieces<Black>(b, p);
+    int openingScale = std::min(b.material - popcount(b.getPieces<White,Pawn>()+b.getPieces<Black,Pawn>()) - endgameMaterial + (1<<(logEndgameTransitionSlope-1)), 1<<logEndgameTransitionSlope);
+    int a = openingScale ? (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope : 0;
+    int pi = pieces<White>(b, pe) - pieces<Black>(b, pe);
+    int pa = pe.score + (openingScale*pe.centerOpen + ((1<<logEndgameTransitionSlope)-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope;
     print_debug(debugEval, "material:       %d\n", e);
     print_debug(debugEval, "mobility:       %d\n", m);
-    print_debug(debugEval, "pawns:          %d\n", p.score);
+    print_debug(debugEval, "pawns:          %d\n", pa);
     print_debug(debugEval, "attack:         %d\n", a);
     print_debug(debugEval, "pieces:         %d\n", pi);
     
-    return e + m + p.score + a + pi;
+    return e + m + pa + a + pi;
 }
 
 void Eval::ptClear() {
