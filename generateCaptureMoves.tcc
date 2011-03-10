@@ -381,7 +381,7 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
 #pragma GCC diagnostic ignored "-Wreturn-type"
 template<Colors C>
 template<bool AbortOnFirst>
-bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
+bool ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     const __v2di zero = _mm_set1_epi64x(0);
 
@@ -438,20 +438,23 @@ bool ColoredBoard<C>::generateMateMoves( Move** const good ) const {
         
         mate = generateRookMates(checkingMoves, attNotSelfRook, attNotRook & ~attNotEnemyKing, king, k);
 haveMate:
-        if (mate) {
-            for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
-                __v2di a02 = rs->d02;
-                __v2di from2 = doublebits[rs->move.from()];
-                __v2di pin02 = from2 & dpins[CI].d02;
-                pin02 = pcmpeqq(pin02, zero);
-                pin02 = ~pin02 & a02 /*& xray02*/;
-                for (uint64_t a=fold(pin02) & mate; a; a&=a-1) {
-                    if (AbortOnFirst) return true;
-                    Move n;
-                    n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
-                    *--*good = n;
-//                     if (rsingle[CI][1].move.data && getAttacks<-C,King>() & attNotRook & ~occupied1 & ~(getAttacks<C,Queen>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>()))                        print();
-                }
+        for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
+            __v2di a02 = rs->d02;
+            __v2di from2 = doublebits[rs->move.from()];
+            __v2di pin02 = from2 & dpins[CI].d02;
+            pin02 = pcmpeqq(pin02, zero);
+            pin02 = ~pin02 & a02 /*& xray02*/;
+            for (uint64_t a=fold(pin02) & mate; a; a&=a-1) {
+                if (AbortOnFirst) return true;
+                Move n;
+                n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                *--*good = n;
+            }
+            if (!AbortOnFirst) for (uint64_t a = fold(pin02) & checkingMoves & ~mate & ~attNotEnemyKing
+                                               & ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotRook)); a; a&=a-1) {
+                Move n;
+                n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                *(*bad)++ = n;
             }
         }
     }
@@ -459,7 +462,7 @@ haveMate:
     // promotion moves, always assuming queen promotions are counted as queen moves.
     // pawn promotions may only move if not pinned at all.
     uint64_t pMoves = getPieces<C,Pawn>() & pins[CI];
-    pMoves  = ( (shift<C*8  >(pMoves)                & ~occupied[EI])
+    pMoves  = ( (shift<C*8  >(pMoves)                & ~occupied1)
               | (shift<C*8+1>(pMoves) & ~file<'a'>() &  occupied[EI])
               | (shift<C*8-1>(pMoves) & ~file<'h'>() &  occupied[EI])
               )
@@ -606,7 +609,7 @@ haveMate:
             qmate |= p & ~d3 & ~d7;
         }
 
-        if (qmate & getAttacks<C,Queen>()) {
+//         if (qmate & getAttacks<C,Queen>()) {
             for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
                 __v2di a02 = qs->d02;
                 __v2di a13 = qs->d13;
@@ -624,8 +627,15 @@ haveMate:
                     n.data = qs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
                     *--*good = n;
                 }
+                if (!AbortOnFirst) for (uint64_t a = fold(pin02|pin13) & checkingMoves & ~qmate & ~attNotEnemyKing
+                                                   & ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotQueen)); a; a&=a-1) {
+                    Move n;
+                    ASSERT((a ^ (a & (a-1))) == (a & -a));
+                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                    *(*bad)++ = n;
+                }
             }
-        }
+//         }
         for (uint64_t p = qmate & pMoves; p; p &= p-1) {
             if (AbortOnFirst) return true;
             unsigned to = bit(p);
@@ -703,28 +713,33 @@ haveMate:
                 bmate |= p & ~d3 & ~d7;
             }
 
-            if (bmate) {
-                for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
-                    __v2di a13 = bs->d13;
-                    __v2di from2 = doublebits[bs->move.from()];
-                    __v2di pin13 = from2 & dpins[CI].d13;
-                    __v2di xray13 = a13 & datt[EI].d13;     //TODO capture mate moves are wrongly recognized as moves on a x-ray protected square
-                    pin13 = pcmpeqq(pin13, zero);
-                    xray13 = pcmpeqq(xray13, zero);
-                    pin13 = ~pin13 & a13 & xray13;
-                    for (uint64_t a=fold(pin13) & bmate; a; a&=a-1) {
-                        if (AbortOnFirst) return true;
-                        Move n;
-                        n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
-                        *--*good = n;
-                    }
+            for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
+                __v2di a13 = bs->d13;
+                __v2di from2 = doublebits[bs->move.from()];
+                __v2di pin13 = from2 & dpins[CI].d13;
+                __v2di xray13 = a13 & datt[EI].d13;     //TODO capture mate moves are wrongly recognized as moves on a x-ray protected square
+                pin13 = pcmpeqq(pin13, zero);
+                xray13 = pcmpeqq(xray13, zero);
+                pin13 = ~pin13 & a13 & xray13;
+                for (uint64_t a=fold(pin13) & bmate; a; a&=a-1) {
+                    if (AbortOnFirst) return true;
+                    Move n;
+                    n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                    *--*good = n;
                 }
+                if (!AbortOnFirst) for (uint64_t a = fold(pin13) & checkingMoves & ~bmate & ~attNotEnemyKing & 
+                                                   ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotBishop)); a; a&=a-1) {
+                    Move n;
+                    n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                    *(*bad)++ = n;
+                }
+                
             }
         }
     }
 
     if (uint64_t checkingMoves = getAttacks<C,Knight>() & ~occupied[CI] & knightAttacks[k] ) {
-        uint64_t nblock0246 = occupied[EI] | getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Bishop>() |                          getAttacks<C,Pawn>() | getAttacks<C,King>();
+        uint64_t nblock0246 = occupied[EI] | getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Bishop>() |  getAttacks<C,Pawn>() | getAttacks<C,King>();
         uint64_t nblock1357 = occupied[EI] | getAttacks<C,All>();
         uint64_t nescape0246 = getAttacks<-C,King>() & ~nblock0246;
         uint64_t nescape1357 = getAttacks<-C,King>() & ~nblock1357;
@@ -758,6 +773,10 @@ haveMate:
             }
         }
     }
+
+    if (uint64_t checkingMoves = shift<C*8>(getPieces<C,Pawn>()) & ~occupied1 & shift<-C*8>(king>>1 & ~file<'h'>() | king<<1 & ~file<'a'>())) {
+            
+        }
     if (AbortOnFirst) return false;
 }
 #pragma GCC diagnostic warning "-Wreturn-type"
