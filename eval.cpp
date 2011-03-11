@@ -201,6 +201,17 @@ Eval::Eval():
     for (unsigned y=0; y<8; ++y) {
         for (unsigned x=0; x<8; ++x) 
             std::cerr << std::setw(3) << (int)wpawnOpen[x*8+y];
+        std::cerr << "       ";
+        for (unsigned x=0; x<8; ++x)
+            std::cerr << std::setw(3) << (int)bpawnOpen[x*8+y];
+        std::cerr << std::endl;
+    }
+    for (unsigned y=0; y<8; ++y) {
+        for (unsigned x=0; x<8; ++x)
+            std::cerr << std::setw(3) << (int)wpawnEnd[x*8+y];
+        std::cerr << "       ";
+        for (unsigned x=0; x<8; ++x)
+            std::cerr << std::setw(3) << (int)bpawnEnd[x*8+y];
         std::cerr << std::endl;
     }
 #endif
@@ -549,14 +560,14 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         uint64_t bPassed = bpawn & ~bNotPassedMask & ~bBack;
         unsigned i;
         pawnEntry.passers[0] = wPassed;
-        for (i = 0; wPassed && i < nHashPassers; wPassed &= wPassed - 1, i++) {
+        for (i = 0; wPassed; wPassed &= wPassed - 1, i++) {
             int pos = __builtin_ctzll(wPassed);
             int y = pos >> 3;
             pawnEntry.score += pawnPasser[y];
             print_debug(debugEval, "pawn wpasser:   %d\n", pawnPasser[y]);
         }
         pawnEntry.passers[1] = bPassed;
-        for ( i=0; bPassed && i<nHashPassers; bPassed &= bPassed-1, i++ ) {
+        for ( i=0; bPassed; bPassed &= bPassed-1, i++ ) {
             int pos = __builtin_ctzll(bPassed);
             int y = pos>>3;
             pawnEntry.score -= pawnPasser[7-y];
@@ -1035,7 +1046,8 @@ int Eval::operator () (const BoardBase& b) const {
     unsigned bdp = 0;
     
     int m = mobility<White>(b, wap, wdp) - mobility<Black>(b, bap, bdp);
-    int openingScale = std::min(b.material - popcount(b.getPieces<White,Pawn>()+b.getPieces<Black,Pawn>()) - endgameMaterial + (1<<(logEndgameTransitionSlope-1)), 1<<logEndgameTransitionSlope);
+    int openingScale = b.material - popcount(b.getPieces<White,Pawn>()+b.getPieces<Black,Pawn>()) - endgameMaterial + (1<<(logEndgameTransitionSlope-1));
+    openingScale = std::max(0, std::min(openingScale, 1<<logEndgameTransitionSlope));
     int a = openingScale ? (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope : 0;
     int pi = pieces<White>(b, pe) - pieces<Black>(b, pe);
     int pa = pe.score + (openingScale*pe.centerOpen + ((1<<logEndgameTransitionSlope)-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope;
