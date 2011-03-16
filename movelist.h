@@ -42,7 +42,7 @@ public:
     MoveList(const ColoredBoard<C>& b) {
         first = list+goodMoves;
         last = first;
-        b.template generateMateMoves<false>(&first);
+//        b.template generateMateMoves<false>(&first, &last);
         if (b.template inCheck<C>())
             b.generateCheckEvasions(first, last);
         else {
