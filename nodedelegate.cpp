@@ -22,7 +22,7 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
         str2 = QString( "D%4 [%1 %2]\n %3" ).arg( item->alpha ).arg( item->beta ).arg( item->bestEval ).arg( (int)item->depth );
         str2+=QString( " ply: %1 " ).arg( item->ply );
     } else {
-        str1 = QString( "Depth %1" ).arg( item->ply - 20);
+        str1 = QString( "Depth %1" ).arg( item->ply );
         str2 = "";
     }
 
