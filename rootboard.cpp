@@ -32,7 +32,7 @@
 #endif
 
 unsigned RootBoard::dMaxCapture = 12;
-unsigned RootBoard::dMaxThreat = 8;
+unsigned RootBoard::dMaxThreat = 13;
 
 void RootBoard::stopTimer(milliseconds hardlimit) {
 #ifdef __WIN32__    
@@ -49,6 +49,16 @@ void RootBoard::stopTimer(milliseconds hardlimit) {
     stopSearch = true;
 }
 
+std::string RootBoard::commonStatus() const {
+    std::stringstream g;
+    g.imbue(std::locale("de_DE"));
+    g << "D" << std::setfill('0') << std::setw(2) << depth-(dMaxCapture+dMaxThreat)
+        << " " << std::setfill(' ') << std::fixed << std::setprecision(3) << std::showpoint << std::setw(11) << duration_cast<milliseconds>(system_clock::now()-start).count()/1000.0 
+        << "s " << std::setw(7) << getStats().node/1000000
+        << "M ";
+    return g.str();
+}
+
 void RootBoard::infoTimer(milliseconds repeat) {
     while(!infoTimerMutex.try_lock()) {
 #ifdef __WIN32__    
@@ -58,12 +68,22 @@ void RootBoard::infoTimer(milliseconds repeat) {
 #endif  
         Stats tempStats = getStats();
         uint64_t ntemp = tempStats.node;
+        uint64_t t = duration_cast<milliseconds>(system_clock::now()-start).count();
         std::stringstream g;
-        g   << "info"
-            << " nodes " << ntemp
-            << " nps " << (1000*ntemp)/(duration_cast<milliseconds>(system_clock::now()-start).count()+1)
-            << " hashfull " << (2000*tempStats.ttuse+1)/(2*tt->getEntries())
-        ;
+        if (Options::humanreadable) {
+            g << commonStatus() 
+            << std::fixed << std::setprecision(0) << std::setw(5) << getStats().node/(t+1) << "knps " 
+            << getLine();
+            std::string str = g.str();
+            str.resize(80,' ');
+            std::cout << str << "\015" << std::flush;
+        } else {
+            g   << "info"
+                << " nodes " << ntemp
+                << " nps " << (1000*ntemp)/(t+1)
+                << " hashfull " << (2000*tempStats.ttuse+1)/(2*tt->getEntries())
+                ;
+            console->send(g.str());
 #ifdef MYDEBUG
 #if 0        
         g << std::endl;
@@ -73,7 +93,7 @@ void RootBoard::infoTimer(milliseconds repeat) {
         g << " bmob3 " << eval.bmob3 / (eval.bmobn+0.1);
 #endif        
 #endif            
-        console->send(g.str());
+        }
     }
     infoTimerMutex.unlock();
 }
@@ -105,14 +125,10 @@ std::string RootBoard::status(system_clock::time_point now, int score)
     std::stringstream g;
     milliseconds t = duration_cast<milliseconds>(now-start);
     if (Options::humanreadable) {
-        g.imbue(std::locale("de_DE"));
-        g   << "d" << std::setfill('0') << std::setw(2) << d << "; "
-            << std::setfill(' ') << std::fixed << std::setprecision(3) << std::showpoint << std::setw(7) << t.count()/1000.0 << " s; "
-            << std::setw(13) << getStats().node << " n; "
-            << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t.count()*1000.0+1) << " Mnps; "
+        g << commonStatus() 
             << Score<White>::str(score) << " " << tt->bestLine(*this);
     } else {
-        g   << "info depth " << d << " time " << duration_cast<milliseconds>(now-start).count()
+        g   << "info depth " << d << " time " << t.count()
             << " nodes " << getStats().node 
             << " pv " << tt->bestLine(*this)
             << " score cp " << score*color

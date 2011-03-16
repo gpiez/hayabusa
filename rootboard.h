@@ -23,7 +23,6 @@
 #include <pch.h>
 #endif
 
-#include <chrono>
 #include "eval.h"
 #include "coloredboard.h"
 #include "result.h"
@@ -153,7 +152,7 @@ public:
     void infoTimer(milliseconds repeat);
     void clearHash();
     void ageHash();
-    template<Colors C> int calcReduction(const ColoredBoard<C>& b, int movenr, Move m, int depth
-);
+    template<Colors C> int calcReduction(const ColoredBoard<C>& b, int movenr, Move m, int depth);
+    std::string commonStatus() const;
 };
 #endif
