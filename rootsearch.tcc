@@ -65,7 +65,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
-        data.ply = depth;
+        data.ply = 1;
         NodeItem::m.lock();
         NodeItem* node=0;
         uint64_t startnode = NodeItem::nNodes;
@@ -97,7 +97,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
-        data.ply = depth;
+        data.ply = depth-(dMaxCapture+dMaxThreat);
         NodeItem::m.lock();
         NodeItem* node=0;
         uint64_t startnode = NodeItem::nNodes;

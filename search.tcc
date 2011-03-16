@@ -29,32 +29,13 @@
 #define NODE
 #endif
 
-//                 int reduction = 0;
-//                 if (i>good) {
-//                     if (Options::reduction
-// //                        && depth > 3 + dMaxCapture + dMaxThreat
-//                         && i > good // + 3
-//     //                        && !i->isSpecial()
-//                         && !threatened
-//                         && ) {
-//                         reduction = std::min(((depth-dMaxCapture-dMaxThreat)/2 + i-good + 2)/8*2, 4L);
-//                         
-// /*                        if (abs(realScore - alpha.v) > 500 && depth==4)
-//                             reduction = 3;
-//                         else if (abs(realScore - alpha.v) > 150 && depth==3)
-//                             reduction = 2;*/
-//                         }
-//                     if (i->isSpecial() && (bool[nPieces+1]){false, true, true, false, true, false, false}[i->piece() & 7])
-//                         reduction = 2+depth/2;
-//                 }
-
 template<Colors C>
 int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int depth) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     depth -= dMaxThreat + dMaxCapture;
     if (Options::reduction && movenr >= 1 && depth > 2 ) {
-        bool check = ((fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && m.piece() & Rook)
-                   || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && m.piece() & Bishop)
+        bool check = ((fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && (m.piece() == Rook | m.piece() == Queen))
+                   || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && (m.piece() == Bishop | m.piece() == Queen))
                    || (BoardBase::knightAttacks[m.to()] & b.template getPieces<-C,King>() && m.piece() == Knight));
         int red = bitr(movenr + depth - 3)/2;
         if (check && depth<9)
@@ -150,6 +131,12 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     Key z;
     if (P!=vein) {
         threatened |= b.template inCheck<C>();
+        uint64_t pMoves = b.template getPieces<-C,Pawn>() & b.pins[EI];
+        pMoves = ( (  shift<-C*8  >(pMoves)               & ~b.occupied1)
+                   | (shift<-C*8+1>(pMoves) & file<'a'>() &  b.occupied[CI])
+                   | (shift<-C*8-1>(pMoves) & file<'h'>() &  b.occupied[CI]))
+                 & rank<C,1>() & ~b.template getAttacks<C,All>();
+        if (pMoves) threatened = 1;
         if (!threatened) {
             threatened = ((ColoredBoard<(Colors)-C>*)&b) -> template generateMateMoves<true>();
             if (!threatened) {
@@ -229,7 +216,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                     stats.ttbeta++;
                     if (beta.max(ttScore.v, m)) {
 #ifdef QT_GUI_LIB
-                        if (node) node->bestEval = beta.v;
+                        if (node) node->bestEval = ttScore.v;
                         if (node) node->nodeType = NodeTT;
 #endif
                         return true;
@@ -237,7 +224,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                 }
                 if (current >= beta.v) {
 #ifdef QT_GUI_LIB
-                    if (node) node->bestEval = beta.v;
+                    if (node) node->bestEval = ttScore.v;
                     if (node) node->nodeType = NodeTT;
 #endif
                     return false;
@@ -268,7 +255,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                 ScoreBase<C> fScore;
                 fScore.v = realScore - C*150;
 #ifdef QT_GUI_LIB
-                if (node) node->bestEval = beta.v;
+                if (node) node->bestEval = fScore.v;
                 if (node) node->nodeType = NodeFutile1;
 #endif
                 
@@ -278,7 +265,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                 ScoreBase<C> fScore;
                 fScore.v = realScore - C*900;
 #ifdef QT_GUI_LIB
-                if (node) node->bestEval = beta.v;
+                if (node) node->bestEval = fScore.v;
                 if (node) node->nodeType = NodeFutile2;
 #endif
                 if (fScore >= beta.v) return false;
@@ -339,7 +326,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                 nonMate = good;
                 if ( P == leaf ) {
                     b.template generateSkewers(&good);
-                    b.template generateMateMoves<false>(&good);
+                    b.template generateMateMoves<false>(&good, &bad);
                     if (good < nonMate) {
 //                        threatening = true;
                         for (Move* removing = good; removing<nonMate; ++removing) {
@@ -375,7 +362,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                     }
                 }*/
                 b.template generateSkewers(&good);
-                b.template generateMateMoves<false>(&good);
+                b.template generateMateMoves<false>(&good, &bad);
                 if (good < nonMate) {
                     for (Move* removing = good; removing<nonMate; ++removing) {
                         for (Move* removed = nonMate; ; ++removed) {
@@ -473,20 +460,15 @@ nosort:
                 else
                     extSingle = false;
             }
-//             NodeType nextNodeType;
-//             if (nodeType == NodeFailHigh)
-//                 nextNodeType = NodeFailLow;
-//             else if (nodeType == NodeFailLow)
-//                 nextNodeType = NodeFailHigh;
-//             else if (i == good)
-//                 nextNodeType = NodePV;
-//             else
-//                 nextNodeType = NodeFailHigh;
 
             // Stay in leaf search if it already is or change to it if the next depth would be 0
             // FIXME don't go immediatly to vein, allow one check or so in threat search, to get knight forks at c7
             // only go to vein, if two consecutive capture moves without check happen
-            if ((P == leaf && i >= nonMate && !threatened) || P == vein || depth <= dMaxCapture + 1)
+//             bool check = /*(b.template getAttacks<-C,All>() & 1ULL<<i->to()) ? 0 :*/
+//                 ((fold(b.doublebits[i->to()] & b.kingIncoming[EI].d02) && (i->piece() == Rook | i->piece() == Queen))
+//                 || (fold(b.doublebits[i->to()] & b.kingIncoming[EI].d13) && (i->piece() == Bishop | i->piece() == Queen))
+//                 || (BoardBase::knightAttacks[i->to()] & b.template getPieces<-C,King>() && i->piece() == Knight));
+            if ((P == leaf && 0/*i >= nonMate*/ && !threatened /*&& !check*/) || P == vein || depth <= dMaxCapture + 1)
                 search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, false NODE);
             else if (depth <= dMaxCapture + dMaxThreat + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
                 search<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), current.unshared(), ply+1, i < nonMate NODE);
