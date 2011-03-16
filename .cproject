@@ -32,7 +32,8 @@
 							<tool id="org.eclipse.cdt.build.core.settings.holder.libs.620596018" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.719600125" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.234230634" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/iostream"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/x86_64-pc-linux-gnu/"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.151502331" name="Undefined Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths"/>
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.2143053043" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
@@ -42,7 +43,8 @@
 							</tool>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.843740602" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.876986160" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/x86_64-pc-linux-gnu/"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.1207694642" name="Undefined Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths"/>
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.471469270" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
@@ -52,7 +54,8 @@
 							</tool>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.1202065063" name="GNU C" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.856771646" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/iostream"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/x86_64-pc-linux-gnu/"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.1024526334" name="Undefined Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths"/>
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.123562234" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
@@ -650,8 +653,10 @@
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.635417406" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1771430276" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
+								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1771430276" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/iostream"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/x86_64-pc-linux-gnu/bits/gthr.h"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1497009611" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -659,8 +664,10 @@
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1835926065" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.156999100" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
+								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.156999100" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/iostream"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/x86_64-pc-linux-gnu/bits/gthr.h"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1571589718" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -668,8 +675,10 @@
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1248131866" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1379645430" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
+								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1379645430" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/iostream"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/x86_64-pc-linux-gnu/bits/gthr.h"/>
+									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.585404807" languageId="org.eclipse.cdt.core.gcc" languageName="GNU C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
