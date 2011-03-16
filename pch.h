@@ -75,6 +75,4 @@ typedef std::timed_mutex TimedMutex;
 #define UniqueLock std::unique_lock
 #endif
 
-#include "constants.h"  // this header rarely changes
-
 #endif /* PCH_H_ */
