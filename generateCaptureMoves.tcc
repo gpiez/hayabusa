@@ -738,39 +738,27 @@ haveMate:
         }
     }
 
-    if (uint64_t checkingMoves = getAttacks<C,Knight>() & ~occupied[CI] & knightAttacks[k] ) {
-        uint64_t nblock0246 = occupied[EI] | getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Bishop>() |  getAttacks<C,Pawn>() | getAttacks<C,King>();
-        uint64_t nblock1357 = occupied[EI] | getAttacks<C,All>();
-        uint64_t nescape0246 = getAttacks<-C,King>() & ~nblock0246;
-        uint64_t nescape1357 = getAttacks<-C,King>() & ~nblock1357;
-        nescape0246 = ror(nescape0246, k-9);
-        nescape1357 = ror(nescape1357, k-9);
-        if ((nescape0246 & 0x20502) == 0) {
-            uint64_t nmate = 0;
-            if ((nescape1357 & 0x50004) == 0) {
-                nmate |= king << 6 & ~file<'h'>() & ~file<'g'>();
-                nmate |= king >> 15 & ~file<'a'>();
-            }
-            if ((nescape1357 & 0x10005) == 0) {
-                nmate |= king << 15 & ~file<'h'>();
-                nmate |= king >> 6 & ~file<'a'>() & ~file<'b'>();
-            }
-            if ((nescape1357 & 0x50001) == 0) {
-                nmate |= king >> 17 & ~file<'h'>();
-                nmate |= king << 10 & ~file<'a'>() & ~file<'b'>();
-            }
-            if ((nescape1357 & 0x40005) == 0) {
-                nmate |= king >> 10 & ~file<'h'>() & ~file<'g'>();
-                nmate |= king << 17 & ~file<'a'>();
-            }
-            nmate &= checkingMoves & ~getAttacks<-C,All>() & ~occupied[CI];
-            for (; nmate; nmate &= nmate-1 ) {
-                unsigned to = bit(nmate);
+    if (uint64_t checkingMoves = getAttacks<C,Knight>() & ~occupied[CI] & knightAttacks[k] & ~getAttacks<-C,All>() ) {
+        unsigned n0 = bit(getPieces<C,Knight>());
+        unsigned n1 = bitr(getPieces<C,Knight>());
+        uint64_t attNotKnight = getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Bishop>() |  getAttacks<C,Pawn>() | getAttacks<C,King>();
+        if (n1 != n0) {
+            uint64_t n0attacks = BoardBase::knightAttacks[n0]; 
+            uint64_t n1attacks = BoardBase::knightAttacks[n1];
+            uint64_t checkN0Moves = n0attacks & checkingMoves;
+            uint64_t checkN1Moves = n1attacks & checkingMoves;
+            if (checkN0Moves) mate = checkN0Moves & generateKnightMates(attNotKnight | n1attacks, king, k);
+            else mate = 0;
+            if (checkN1Moves) mate|= checkN1Moves & generateKnightMates(attNotKnight | n0attacks, king, k);
+        } else
+            mate = checkingMoves & generateKnightMates(attNotKnight, king, k);
+          
+            for (; mate; mate &= mate-1 ) {
+                unsigned to = bit(mate);
                 for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1) {
                     if (AbortOnFirst) return true;
                     *--*good = Move(bit(f), to, Knight, getPieceFromBit(1ULL << to));
                 }
-            }
         }
     }
 
@@ -780,5 +768,34 @@ haveMate:
     if (AbortOnFirst) return false;
 }
 #pragma GCC diagnostic warning "-Wreturn-type"
+
+template<Colors C>
+uint64_t ColoredBoard<C>::generateKnightMates(uint64_t block, uint64_t king, unsigned k) const {
+    uint64_t nblock0246 = occupied[EI] | block;
+    uint64_t nblock1357 = occupied[EI] | getAttacks<C,All>();
+    uint64_t nescape0246 = getAttacks<-C,King>() & ~nblock0246;
+    uint64_t nescape1357 = getAttacks<-C,King>() & ~nblock1357;
+    nescape0246 = ror(nescape0246, k-9);
+    nescape1357 = ror(nescape1357, k-9);
+    if ((nescape0246 & 0x20502) != 0) return 0;
+    uint64_t nmate = 0;
+    if ((nescape1357 & 0x50004) == 0) {
+        nmate |= king << 6 & ~file<'h'>() & ~file<'g'>();
+        nmate |= king >> 15 & ~file<'a'>();
+    }
+    if ((nescape1357 & 0x10005) == 0) {
+        nmate |= king << 15 & ~file<'h'>();
+        nmate |= king >> 6 & ~file<'a'>() & ~file<'b'>();
+    }
+    if ((nescape1357 & 0x50001) == 0) {
+        nmate |= king >> 17 & ~file<'h'>();
+        nmate |= king << 10 & ~file<'a'>() & ~file<'b'>();
+    }
+    if ((nescape1357 & 0x40005) == 0) {
+        nmate |= king >> 10 & ~file<'h'>() & ~file<'g'>();
+        nmate |= king << 17 & ~file<'a'>();
+    }
+    return nmate;
+}
 
 #endif /* GENERATECAPTUREMOVES_TCC_ */
