@@ -34,8 +34,8 @@ int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     depth -= dMaxThreat + dMaxCapture;
     if (Options::reduction && movenr >= 1 && depth > 2 ) {
-        bool check = ((fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && (m.piece() == Rook | m.piece() == Queen))
-                   || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && (m.piece() == Bishop | m.piece() == Queen))
+        bool check = ((fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
+                   || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
                    || (BoardBase::knightAttacks[m.to()] & b.template getPieces<-C,King>() && m.piece() == Knight));
         int red = bitr(movenr + depth - 3)/2;
         if (check && depth<9)
@@ -82,7 +82,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         node = new NodeItem(data, parent);
         NodeItem::nNodes++;
         NodeItem::m.unlock();
-//    if(NodeItem::nNodes == 230012) asm("int3");
+//         if(NodeItem::nNodes == 884) asm("int3");
     }
 #endif
 /*
@@ -468,10 +468,10 @@ nosort:
 //                 ((fold(b.doublebits[i->to()] & b.kingIncoming[EI].d02) && (i->piece() == Rook | i->piece() == Queen))
 //                 || (fold(b.doublebits[i->to()] & b.kingIncoming[EI].d13) && (i->piece() == Bishop | i->piece() == Queen))
 //                 || (BoardBase::knightAttacks[i->to()] & b.template getPieces<-C,King>() && i->piece() == Knight));
-            if ((P == leaf && 0/*i >= nonMate*/ && !threatened /*&& !check*/) || P == vein || depth <= dMaxCapture + 1)
+            if ((P == leaf && i >= nonMate && !threatened /*&& !check*/) || P == vein || depth <= dMaxCapture + 1)
                 search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, false NODE);
             else if (depth <= dMaxCapture + dMaxThreat + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
-                search<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), current.unshared(), ply+1, i < nonMate NODE);
+                search<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), current.unshared(), ply+1, /*i < nonMate ||*/ (b.template inCheck<C>() && bad-good<3) NODE);
             else { // possible null search in tree or trunk
                 int reduction = calcReduction(b, i-good, *i, depth);
                 bool pruneNull = false;
@@ -487,7 +487,7 @@ nosort:
                     else if (depth > nullReduction+1+reduction + dMaxCapture + dMaxThreat)
                         search<C, tree>(b, *i, depth-(nullReduction+1+reduction), current.unshared(), null, ply+2, i < nonMate NODE);
                     else
-                        search<C, leaf>(b, *i, depth-(nullReduction+1+reduction), current.unshared(), null, ply+2, i < nonMate NODE);
+                        search<C, leaf>(b, *i, depth-(nullReduction+1+reduction), current.unshared(), null, ply+2, (b.template inCheck<C>() && bad-good<3) NODE);
                     pruneNull = current >= null.v;
                     if (pruneNull) {
                         typename A::Base nalpha(current);
@@ -509,7 +509,7 @@ nosort:
 //                              reduction += (bitr(depth) + bitr(i-good))/4;
                             typename A::Base nalpha(current);
                             if (depth <= dMaxCapture + dMaxThreat + 1 + reduction/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
-                                search<(Colors)-C, leaf>(b, *i, depth-reduction-1, beta.unshared(), nalpha, ply+1, i < nonMate NODE);
+                                search<(Colors)-C, leaf>(b, *i, depth-reduction-1, beta.unshared(), nalpha, ply+1, (b.template inCheck<C>() && bad-good<3) NODE);
                             else
                                 search<(Colors)-C, tree>(b, *i, depth-reduction-1, beta.unshared(), nalpha, ply+1, i < nonMate NODE);
                             research = current < nalpha.v;
