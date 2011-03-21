@@ -327,17 +327,17 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
     uint64_t rescape = getAttacks<-C,King>() & ~(occupied[EI] | blockedEscapes);
     rescape = ror(rescape, k-9);
     uint64_t rmate = 0;
-    if ((rescape & 0x30003) == 0)
+    if (!(rescape & 0x30003))
         rmate |= king << 1 & ~file<'a'>();
-    if ((rescape & 0x00505) == 0)
+    if (!(rescape & 0x00505))
         rmate |= king << 8;
-    if ((rescape & 0x60006) == 0)
+    if (!(rescape & 0x60006))
         rmate |= king >> 1 & ~file<'h'>();
-    if ((rescape & 0x50500) == 0)
+    if (!(rescape & 0x50500))
         rmate |= king >> 8;
     rmate &= checkingMoves & undefended;
 
-    if ((rescape & 0x70007) == 0)
+    if (!(rescape & 0x70007))
     if (uint64_t p = kingIncoming[EI].d[0] & checkingMoves & ~getAttacks<-C,All>()) {
         uint64_t d04 = kingIncoming[EI].d[0]
                 &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -356,7 +356,7 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
         d4 >>= 077-k;
         rmate |=  p & ~d0 & ~d4; //TODO check if capture mate moves should be generated here
     }
-    if ((rescape & 0x50505) == 0)
+    if (!(rescape & 0x50505))
     if (uint64_t p = kingIncoming[EI].d[1] & checkingMoves & ~getAttacks<-C,All>()) {
         uint64_t d26 = kingIncoming[EI].d[1] 
                 &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -497,37 +497,37 @@ haveMate:
         uint64_t k4 = ror((king >> 1) & ~occupied1 & ~file<'h'>(), k-9);
         uint64_t k6 = ror((king >> 8) & ~occupied1, k-9);
     
-        if ((qescape & 0x10106 & ~(k2>>1) & ~(k0>>8)) == 0)
+        if (!(qescape & 0x10106 & ~(k2>>1) & ~(k0>>8)))
             qmate |= king << 9 & ~file<'a'>();
-        if ((qescape & 0x40403 & ~(k2<<1) & ~(k4>>8)) == 0)
+        if (!(qescape & 0x40403 & ~(k2<<1) & ~(k4>>8)))
             qmate |= king << 7 & ~file<'h'>();
-        if ((qescape & 0x30404 & ~(k6<<1) & ~(k4<<8)) == 0)
+        if (!(qescape & 0x30404 & ~(k6<<1) & ~(k4<<8)))
             qmate |= king >> 9 & ~file<'h'>();
-        if ((qescape & 0x60101 & ~(k6>>1) & ~(k0<<8)) == 0)
+        if (!(qescape & 0x60101 & ~(k6>>1) & ~(k0<<8)))
             qmate |= king >> 7 & ~file<'a'>();
-        if ((qescape & 0x10001) == 0)
+        if (!(qescape & 0x10001))
             qmate |= king << 1 & ~file<'a'>();
-        if ((qescape & 0x00005) == 0)
+        if (!(qescape & 0x00005))
             qmate |= king << 8;
-        if ((qescape & 0x40004) == 0)
+        if (!(qescape & 0x40004))
             qmate |= king >> 1 & ~file<'h'>();
-        if ((qescape & 0x50000) == 0)
+        if (!(qescape & 0x50000))
             qmate |= king >> 8;
         qmate &= checkingMoves & attNotQueen & ~attNotEnemyKing;
 
         uint64_t qmate2 = 0;
-        if ((qescape & 0x30003) == 0)
+        if (!(qescape & 0x30003))
             qmate2 |= king << 2 & ~attNotEnemyKing<<1 & ~file<'a'>() & ~file<'b'>();
-        if ((qescape & 0x00505) == 0)
+        if (!(qescape & 0x00505))
             qmate2 |= king << 16 & ~attNotEnemyKing<<8;
-        if ((qescape & 0x60006) == 0)
+        if (!(qescape & 0x60006))
             qmate2 |= king >> 2 & ~attNotEnemyKing>>1 & ~file<'h'>() & ~file<'g'>();
-        if ((qescape & 0x50500) == 0)
+        if (!(qescape & 0x50500))
             qmate2 |= king >> 16 & ~attNotEnemyKing>>8;
         qmate2 &= checkingMoves & (kingIncoming[EI].d[0] | kingIncoming[EI].d[1]) & ~getAttacks<-C,All>();
         qmate |= qmate2;
 
-        if ((qescape & 0x70007) == 0)
+        if (!(qescape & 0x70007))
         if (uint64_t p=kingIncoming[EI].d[0] & checkingMoves & ~getAttacks<-C,All>()) {
             uint64_t d04 = kingIncoming[EI].d[0] 
                 &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -547,7 +547,7 @@ haveMate:
             d4 >>= 077-k;
             qmate |= p & ~d0 & ~d4;
         }
-        if ((qescape & 0x50505) == 0)
+        if (!(qescape & 0x50505))
         if (uint64_t p=kingIncoming[EI].d[1] & checkingMoves & ~getAttacks<-C,All>()) {
             uint64_t d26 = kingIncoming[EI].d[1]
                 &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -567,7 +567,7 @@ haveMate:
             qmate |= p & ~d2 & ~d6;
         }
 
-        if ((qescape & 0x30506) == 0)
+        if (!(qescape & 0x30506))
         if (uint64_t p=kingIncoming[EI].d[2] & checkingMoves & ~getAttacks<-C,All>()) {
             uint64_t d15 = kingIncoming[EI].d[2]
                 &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -588,7 +588,7 @@ haveMate:
             qmate |= p & ~d1 & ~d5;
         }
 
-        if ((qescape & 0x60503) == 0)
+        if (!(qescape & 0x60503))
         if (uint64_t p=kingIncoming[EI].d[3] & checkingMoves & ~getAttacks<-C,All>()) {
             uint64_t d37 = kingIncoming[EI].d[3]
                 &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -658,22 +658,22 @@ haveMate:
         uint64_t bescape0246 = getAttacks<-C,King>() & ~(occupied[EI] | getAttacks<C,All>());
         bescape0246 = ror(bescape0246, k-9);
 
-        if ((bescape0246 & 0x20502) == 0) {
+        if (!(bescape0246 & 0x20502)) {
             uint64_t attNotBishop = getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
             uint64_t bescape1357 = getAttacks<-C,King>() & ~(occupied[EI] | attNotBishop);
             bescape1357 = ror(bescape1357, k-9);
             uint64_t bmate = 0;
-            if ((bescape1357 & 0x10004) == 0) {
+            if (!(bescape1357 & 0x10004)) {
                 uint64_t b1 = kingIncoming[EI].d[2] & getAttacks<-C,King>();
                 bmate = b1;
             }
-            if ((bescape1357 & 0x40001) == 0) {
+            if (!(bescape1357 & 0x40001)) {
                 uint64_t b1 = kingIncoming[EI].d[3] & getAttacks<-C,King>();
                 bmate |= b1;
             }
             bmate &= checkingMoves & attNotBishop & ~attNotEnemyKing;
 
-            if ((bescape1357 & 0x10004) == 0)
+            if (!(bescape1357 & 0x10004))
             if (uint64_t p=kingIncoming[EI].d[2] & checkingMoves & ~getAttacks<-C,All>()) {
                 uint64_t d15 = kingIncoming[EI].d[2]
                     &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -693,7 +693,7 @@ haveMate:
                 bmate |= p & ~d1 & ~d5;
             }
 
-            if ((bescape1357 & 0x40001) == 0)
+            if (!(bescape1357 & 0x40001))
             if (uint64_t p=kingIncoming[EI].d[3] & checkingMoves & ~getAttacks<-C,All>()) {
                 uint64_t d37 = kingIncoming[EI].d[3]
                     &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -762,7 +762,7 @@ haveMate:
         }
     }
 
-    if (uint64_t checkingMoves = shift<C*8>(getPieces<C,Pawn>()) & ~occupied1 & shift<-C*8>(king>>1 & ~file<'h'>() | king<<1 & ~file<'a'>())) {
+    if (uint64_t checkingMoves = shift<C*8>(getPieces<C,Pawn>()) & ~occupied1 & shift<-C*8>((king>>1 & ~file<'h'>()) | (king<<1 & ~file<'a'>()))) {
             
         }
     if (AbortOnFirst) return false;
@@ -777,21 +777,21 @@ uint64_t ColoredBoard<C>::generateKnightMates(uint64_t block, uint64_t king, uns
     uint64_t nescape1357 = getAttacks<-C,King>() & ~nblock1357;
     nescape0246 = ror(nescape0246, k-9);
     nescape1357 = ror(nescape1357, k-9);
-    if ((nescape0246 & 0x20502) != 0) return 0;
+    if (nescape0246 & 0x20502) return 0;
     uint64_t nmate = 0;
-    if ((nescape1357 & 0x50004) == 0) {
+    if (!(nescape1357 & 0x50004)) {
         nmate |= king << 6 & ~file<'h'>() & ~file<'g'>();
         nmate |= king >> 15 & ~file<'a'>();
     }
-    if ((nescape1357 & 0x10005) == 0) {
+    if (!(nescape1357 & 0x10005)) {
         nmate |= king << 15 & ~file<'h'>();
         nmate |= king >> 6 & ~file<'a'>() & ~file<'b'>();
     }
-    if ((nescape1357 & 0x50001) == 0) {
+    if (!(nescape1357 & 0x50001)) {
         nmate |= king >> 17 & ~file<'h'>();
         nmate |= king << 10 & ~file<'a'>() & ~file<'b'>();
     }
-    if ((nescape1357 & 0x40005) == 0) {
+    if (!(nescape1357 & 0x40005)) {
         nmate |= king >> 10 & ~file<'h'>() & ~file<'g'>();
         nmate |= king << 17 & ~file<'a'>();
     }
