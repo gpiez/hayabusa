@@ -64,5 +64,6 @@ private:
         return ::rank<C,R>();
     }
     uint64_t generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, uint64_t king, unsigned k) const;
+    uint64_t generateKnightMates(uint64_t block, uint64_t king, unsigned k) const;
 };
 #endif /* COLOREDBOARD_H_ */
