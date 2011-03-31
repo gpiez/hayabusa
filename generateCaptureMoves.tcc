@@ -470,24 +470,27 @@ haveMate:
     if (uint64_t checkingMoves  = (getAttacks<C,Queen>() | pMoves)
                                 & ~occupied[CI]
                                 & (kingIncoming[EI].d[0] | kingIncoming[EI].d[1] | kingIncoming[EI].d[2] | kingIncoming[EI].d[3])) {
-        uint64_t rook1 = getPieces<C,Rook>() & (getPieces<C,Rook>()-1);
-        uint64_t bishop1 = getPieces<C,Bishop>() & (getPieces<C,Bishop>()-1);
-        uint64_t rook0 = getPieces<C,Rook>() & ~rook1;
-        uint64_t bishop0 = getPieces<C,Bishop>() & ~bishop1;
-        __v2di isQR1Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(rook1), zero);
-        __v2di isQB1Connected = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(bishop1), zero);
-        __v2di isQR0Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(rook0), zero);
-        __v2di isQB0Connected = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(bishop0), zero);
-        uint64_t xray = fold( (isQR1Connected & qsingle[CI][0].d02) 
-                            | (isQR0Connected & qsingle[CI][0].d02) 
-                            | (isQB1Connected & qsingle[CI][0].d13) 
-                            | (isQB0Connected & qsingle[CI][0].d13));
-        uint64_t attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>() | xray;
+        uint64_t attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
+        if (getAttacks<C,Queen>()) {
+            uint64_t rook1 = getPieces<C,Rook>() & (getPieces<C,Rook>()-1);
+            uint64_t bishop1 = getPieces<C,Bishop>() & (getPieces<C,Bishop>()-1);
+            uint64_t rook0 = getPieces<C,Rook>() & ~rook1;
+            uint64_t bishop0 = getPieces<C,Bishop>() & ~bishop1;
+            __v2di isQR1Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(rook1), zero);
+            __v2di isQB1Connected = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(bishop1), zero);
+            __v2di isQR0Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(rook0), zero);
+            __v2di isQB0Connected = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(bishop0), zero);
+            uint64_t xray = fold( (isQR1Connected & qsingle[CI][0].d02)
+                                | (isQR0Connected & qsingle[CI][0].d02)
+                                | (isQB1Connected & qsingle[CI][0].d13)
+                                | (isQB0Connected & qsingle[CI][0].d13));
+            attNotQueen |= xray;
+        }
         uint64_t qescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
         qescape = ror(qescape, k-9);
         uint64_t qmate = 0;
     
-        // emptiness of near king squagdb symbol loadres in even directions
+        // emptiness of near king squares in even directions
         // this is needed for the mate patterns, where the queen mates on an
         // adjacent diagonal square. if the rays to the other diagonal squares
         // are blocked, we need to test these squares too, otherwise
