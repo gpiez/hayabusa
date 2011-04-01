@@ -35,6 +35,7 @@ extern "C" void __throw_bad_alloc();
 #include <climits>
 #include <cstdint>
 #include <cstring>
+#include <cmath>
 
 #ifdef QT_GUI_LIB
 #include <QtCore>
