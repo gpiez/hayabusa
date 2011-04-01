@@ -56,7 +56,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     if (!infinite) stopTimerThread = new Thread(&RootBoard::stopTimer, this, hardBudget);
     
     infoTimerMutex.lock();
-    Thread infoTimerThread(&RootBoard::infoTimer, this, milliseconds(1000));
+    Thread* infoTimerThread = NULL;
+    if (!Options::quiet) infoTimerThread = new Thread(&RootBoard::infoTimer, this, milliseconds(1000));
     
     nMoves = ml.count();
     ml.begin();
@@ -89,7 +90,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         bestMove = *ml;
         system_clock::time_point now = system_clock::now();
         lastStatus2 = now + milliseconds(1000);
-        if (!Options::humanreadable) {
+        if (!Options::humanreadable && !Options::quiet) {
             std::stringstream g;
             g << "info depth " << depth-(dMaxCapture+dMaxThreat) << " currmove " << (*ml).algebraic() << " currmovenumber 1";
             console->send(g.str());
@@ -162,7 +163,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         for (++ml; ml.isValid() && !stopSearch; ++ml) {
             currentMoveIndex++;
             now = system_clock::now();
-            if (now > lastStatus2 && !Options::humanreadable) {
+            if (now > lastStatus2 && !Options::humanreadable && !Options::quiet) {
                 std::stringstream g;
                 lastStatus2 = now + milliseconds(1000);
                 g << "info currmove " << (*ml).algebraic() << " currmovenumber " << currentMoveIndex;
@@ -222,11 +223,13 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     }
     
     infoTimerMutex.unlock();
-    infoTimerThread.join();
+    if (infoTimerThread) infoTimerThread->join();
+    delete infoTimerThread;
     
     stopTimerMutex.unlock();
     if (stopTimerThread) stopTimerThread->join();
     delete stopTimerThread;
+    
     stopSearch = false;
     console->send("bestmove "+bestMove.algebraic());
     return bestMove;
