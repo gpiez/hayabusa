@@ -36,49 +36,14 @@ template<Colors C> struct ScoreBase
     enum { isNotShared = true };
 
     ScoreBase() {};
-    explicit ScoreBase (const ScoreBase& a) { v = a.v; };
-
-    bool operator >= (int a) const {
-        if ( C==White ) return v>=a;
-        else            return v<=a;
-    }
-    bool operator <= (int a) const {
-        if ( C==White ) return v<=a;
-        else            return v>=a;
-    }
-    bool operator > (int a) const {
-        if ( C==White ) return v>a;
-        else            return v<a;
-    }
-    bool operator < (int a) const {
-        if ( C==White ) return v<a;
-        else            return v>a;
-    }
-    void max(const int b) {
-        if (*this < b)
-            v = b;
-    }
-    static std::string str(int v) {
-        if (v == 0)
-            return " = 0";
-
-        std::stringstream s;
-        int sign = v/abs(v);
-        if (abs(v) < 50)
-            s << (sign > 0 ? " ⩲":" ⩱");
-        else if (abs(v) < 200)
-            s << (sign > 0 ? " ±":" ∓");
-        else if (abs(v) < infinity)
-            s << (sign > 0 ? "+-":"-+");
-        else {
-            s << (sign > 0 ? "+M":"-M");
-            s << abs(v)-infinity;
-            return s.str();
-        }
-
-        s << std::fixed << std::setw(5) << std::setprecision(2) << abs(v)/100.0;
-        return s.str();
-    }
+    explicit ScoreBase (const ScoreBase& a) __attribute__((__always_inline__));
+    bool operator >= (int a) const __attribute__((__always_inline__));
+    bool operator <= (int a) const __attribute__((__always_inline__));
+    bool operator > (int a) const __attribute__((__always_inline__));
+    bool operator < (int a) const __attribute__((__always_inline__));
+    void max(const int b) __attribute__((__always_inline__));
+    
+    static std::string str(int v);
 };
 
 template<Colors C> struct Score: ScoreBase<C>
@@ -91,34 +56,16 @@ template<Colors C> struct Score: ScoreBase<C>
     typedef Score<C> Base;
 
     Score() {};
-    explicit Score (int a) {
-        v = a;
-        m.data = 0;
-    }
-    explicit Score (const Score& a):
-        ScoreBase<C>(a) {
-        m.data = 0;
-    };
-
-    Score<C>& unshared() {
-        return *this;
-    }
-
+    explicit Score (int a) __attribute__((__always_inline__));
+    explicit Score (const Score& a) __attribute__((__always_inline__));
+    Score<C>& unshared() __attribute__((__always_inline__));
+    unsigned int isNotReady() const __attribute__((__always_inline__));
+    bool max(const int b, const Move n) __attribute__((__always_inline__));
+    
+    using ScoreBase<C>::max;
     void join() const {};
-    unsigned int isNotReady() const { return 0; }
     void setReady() {};
     void setNotReady() {};
-
-    using ScoreBase<C>::max;
-
-    bool max(const int b, const Move n) {
-        if (*this < b) {
-            v = b;
-            m = n;
-            return true;
-        }
-        return false;
-    }
 };
 
 template<Colors C> struct SharedScore: public Score<C>
