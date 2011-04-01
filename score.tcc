@@ -19,6 +19,74 @@
 #include "score.h"
 #include "workthread.h"
 
+template<Colors C> ScoreBase<C>::ScoreBase (const ScoreBase& a) {
+    v = a.v;
+};
+template<Colors C> bool ScoreBase<C>::operator >= (int a) const {
+    if ( C==White ) return v>=a;
+    else            return v<=a;
+}
+template<Colors C> bool ScoreBase<C>::operator <= (int a) const {
+    if ( C==White ) return v<=a;
+    else            return v>=a;
+}
+template<Colors C> bool ScoreBase<C>::operator > (int a) const {
+    if ( C==White ) return v>a;
+    else            return v<a;
+}
+template<Colors C> bool ScoreBase<C>::operator < (int a) const {
+    if ( C==White ) return v<a;
+    else            return v>a;
+}
+template<Colors C> void ScoreBase<C>::max(const int b) {
+    if (*this < b)
+        v = b;
+}
+template<Colors C> std::string ScoreBase<C>::str(int v) {
+    if (v == 0)
+        return " = 0";
+
+    std::stringstream s;
+    int sign = v/abs(v);
+    if (abs(v) < 50)
+        s << (sign > 0 ? " ⩲":" ⩱");
+    else if (abs(v) < 200)
+        s << (sign > 0 ? " ±":" ∓");
+    else if (abs(v) < infinity)
+        s << (sign > 0 ? "+-":"-+");
+    else {
+        s << (sign > 0 ? "+M":"-M");
+        s << abs(v)-infinity;
+        return s.str();
+    }
+
+    s << std::fixed << std::setw(5) << std::setprecision(2) << abs(v)/100.0;
+    return s.str();
+}
+
+template<Colors C> Score<C>::Score (int a) {
+    v = a;
+    m.data = 0;
+}
+template<Colors C> Score<C>::Score (const Score& a):
+    ScoreBase<C>(a) {
+    m.data = 0;
+}
+template<Colors C> Score<C>& Score<C>::unshared() {
+    return *this;
+}
+template<Colors C> unsigned int Score<C>::isNotReady() const {
+    return 0;
+}
+template<Colors C> bool Score<C>::max(const int b, const Move n) {
+    if (*this < b) {
+        v = b;
+        m = n;
+        return true;
+    }
+    return false;
+}
+
 template<Colors C>
 void SharedScore<C>::join() {
     UniqueLock<Mutex> lock(readyMutex);
