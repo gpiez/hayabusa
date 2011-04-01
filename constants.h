@@ -124,6 +124,7 @@ static inline int popcount(uint64_t x) {
 #endif
 }
 
+static __v2di inline pcmpeqq(__v2di a, __v2di b) __attribute__((__always_inline__));
 static __v2di inline pcmpeqq(__v2di a, __v2di b) {
 #ifdef __SSE4_1__
     return _mm_cmpeq_epi64(a, b);
@@ -139,47 +140,53 @@ static __v2di inline pcmpeqq(__v2di a, __v2di b) {
 #endif
 }
 
+static inline uint64_t ror(uint64_t x, unsigned k) __attribute__((__always_inline__));
 static inline uint64_t ror(uint64_t x, unsigned k) {
     return __rorq(x, k);
 }
 
+static inline uint64_t rol(uint64_t x, unsigned k) __attribute__((__always_inline__));
 static inline uint64_t rol(uint64_t x, unsigned k) {
     return __rolq(x, k);
 }
 
+static inline unsigned int bit(uint64_t x) __attribute__((__always_inline__));
 static inline unsigned int bit(uint64_t x) {
     return __bsfq(x);
 }
 
+static inline unsigned int bitr(uint64_t x) __attribute__((__always_inline__));
 static inline unsigned int bitr(uint64_t x) {
     return __bsrq(x);
 }
 
+static inline unsigned int bit(unsigned int x) __attribute__((__always_inline__));
 static inline unsigned int bit(unsigned int x) {
     return __bsfd(x);
 }
 
+static inline uint64_t fold(__v2di hilo) __attribute__((__always_inline__));
 static inline uint64_t fold(__v2di hilo) {
     return _mm_cvtsi128_si64(_mm_unpackhi_epi64(hilo, hilo))
         | _mm_cvtsi128_si64(hilo);
 }
 
-template<int N>
-uint64_t shift(uint64_t b) {
+template<int N> uint64_t shift(uint64_t b) __attribute__((__always_inline__));
+template<int N> uint64_t shift(uint64_t b) {
     if (N > 0)
         return b << N;
     else
         return b >> -N;
 }
 
-template<Colors C,int R>
-uint64_t rank() {
+template<Colors C,int R> uint64_t rank() __attribute__((__always_inline__));
+template<Colors C,int R> uint64_t rank() {
     static_assert( R>=1 && R<=8, "Wrong Rank" );
     return 0xffULL << (C == White ? R*8-8:64-8*R);
 }
 
-template<char F>
-uint64_t file() {
+template<char F> uint64_t file() __attribute__((__always_inline__));
+template<char F> uint64_t file() {
     static_assert( F>='a' && F<='h', "Wrong File" );
     return 0x0101010101010101ULL << (F-'a');
 }
