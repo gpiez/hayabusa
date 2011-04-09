@@ -75,6 +75,7 @@ static inline int popcount2( uint64_t x )
 #define popcount2(x) __builtin_popcountll(x)
 #endif
 
+static inline int weightedPopcount(const uint64_t bb, const int8_t weights[64]) __attribute__((always_inline));
 static inline int weightedPopcount(const uint64_t bb, const int8_t weights[64]) {
 
     __v2di x0 = _mm_set1_epi64x(bb);

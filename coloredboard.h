@@ -51,7 +51,6 @@ public:
     bool generateForks( Move** good) const;
     void generateNonCap(Move*& good, Move*& bad) const;
     void doMove(BoardBase* next, Move m) const;
-    void doMoveEst(ColoredBoard<(Colors)-C>* next, Move m, uint64_t cep) const;
     Key getZobrist() const;
 private:
     void generateTargetMove(Move* &good, Move* &bad, uint64_t tobit) const;

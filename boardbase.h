@@ -153,9 +153,9 @@ struct BoardBase {
     inline uint64_t build02Attack(const uint64_t) const;
     inline uint64_t build13Attack(const uint64_t) const;
     inline uint64_t buildNAttack(uint64_t n) const;
-    template<Colors C> inline void buildAttacks();
-    template<Colors C> inline void buildPins();
-    void buildAttacks();
+    template<Colors C> inline void buildAttacks() __attribute__((always_inline));
+    template<Colors C> inline void buildPins() __attribute__((always_inline));
+    void buildAttacks() __attribute__((noinline));
     KeyScore keyScore;
     unsigned fiftyMoves;
     CastlingAndEP cep;

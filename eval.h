@@ -143,9 +143,9 @@ class Eval {
     void initPS();
     void initZobrist();
     static void initTables();
-    template<Colors C> int mobility(const BoardBase&, unsigned& attackingPieces, unsigned& defendingPieces) const;
-    template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const;
-    template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const;
+    template<Colors C> int mobility(const BoardBase&, unsigned& attackingPieces, unsigned& defendingPieces) const __attribute__((__always_inline__));
+    template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const __attribute__((__always_inline__));
+    template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const __attribute__((__always_inline__));
     PawnEntry pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
 
@@ -160,8 +160,8 @@ public:
     mutable uint64_t qmob1, qmob2, qmob3, qmobn;
 #endif
     Eval();
-    int operator () (const BoardBase&) const;
-    template<Colors C> Move evalMate(const BoardBase&) const;
+    int operator () (const BoardBase&) const __attribute__((noinline));
+    template<Colors C> Move evalMate(const BoardBase&) const __attribute__((noinline));
     CompoundScore getPS(int8_t piece, uint8_t square) const {
         ASSERT(square < nSquares);
         ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);

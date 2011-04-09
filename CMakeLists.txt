@@ -1,7 +1,8 @@
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -pipe" CACHE STRING "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG -march=core2 -Wuninitialized -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants" CACHE STRING "")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=core2 -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants -flto" CACHE STRING "")
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-static -O3 -flto -fwhole-program" CACHE STRING "")
+#set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto-partition=none -fwhole-program" CACHE STRING "")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-fwhole-program" CACHE STRING "")
 # SSSE3 (Note the additional S) is mandatory because of the pshufb instruction.
 SET(CMAKE_CXX_FLAGS "-std=c++0x -mssse3 -flax-vector-conversions -fdiagnostics-show-option $ENV{CXXFLAGS}" CACHE STRING "")
 
@@ -18,7 +19,7 @@ PROJECT (hayabusa)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 #enable_language(ASM-FASM)
 
-FIND_PACKAGE(PrecompiledHeaders)
+#FIND_PACKAGE(PrecompiledHeaders)
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
@@ -86,14 +87,17 @@ ELSE(USE_QTGUI OR USE_QTNETWORK)
         TARGET_LINK_LIBRARIES (hayabusa -lboost_thread )
     ELSE(CMAKE_SYSTEM_NAME STREQUAL "Windows")
         FIND_PACKAGE(Threads REQUIRED)
-        TARGET_LINK_LIBRARIES (hayabusa -Wl,-whole-archive ${CMAKE_THREAD_LIBS_INIT} -Wl,-no-whole-archive )
+#       disable static linking for now        
+#        SET(CMAKE_CXX_LINK_EXECUTABLE ld.gold)
+#        TARGET_LINK_LIBRARIES (hayabusa -static -Wl,--whole-archive ${CMAKE_THREAD_LIBS_INIT} -Wl,--no-whole-archive)
+        TARGET_LINK_LIBRARIES (hayabusa ${CMAKE_THREAD_LIBS_INIT})
     ENDIF(CMAKE_SYSTEM_NAME STREQUAL "Windows")    
 ENDIF(USE_QTGUI OR USE_QTNETWORK)
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
-  add_precompiled_header(hayabusa pch.h)
-  add_dependencies(hayabusa_gch constants.h)
-endif()
+#if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
+#  add_precompiled_header(hayabusa pch.h)
+#  add_dependencies(hayabusa_gch constants.h)
+#endif()
 find_library(HUGE_PAGES hugetlbfs)
 
 if(HUGE_PAGES)
