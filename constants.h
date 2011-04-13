@@ -157,7 +157,24 @@ static inline unsigned int bit(uint64_t x) {
 
 static inline unsigned int bitr(uint64_t x) __attribute__((__always_inline__));
 static inline unsigned int bitr(uint64_t x) {
+#ifdef DRAGONEGG
+    uint8_t result;
+    asm(" bsrq %1, %0 \n"
+	: "=r"(result)
+	: "r"(x)
+    );
+#else
     return __bsrq(x);
+#endif    
+}
+
+static inline uint64_t btr(uint64_t x, uint64_t b) __attribute__((__always_inline__));
+static inline uint64_t btr(uint64_t x, uint64_t b) {
+    asm(" btrq %1, %0 \n"
+	: "=r"(x)
+	: "r"(b), "0"(x) 
+    );
+    return x;
 }
 
 static inline unsigned int bit(unsigned int x) __attribute__((__always_inline__));
