@@ -111,14 +111,13 @@ inline __v2di BoardBase::build13Attack(__v2di flood1) const {
 
 inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
-
     __v2di maskedDir02 = (_mm_set1_epi64x(occupied1)|b02) & mask02[sq].b;
     uint64_t d0 = _mm_cvtsi128_si64x(maskedDir02);
     uint64_t d2 = _mm_cvtsi128_si64x(_mm_unpackhi_epi64(maskedDir02,maskedDir02));
     d0 <<= 63-sq;
     d2 <<= 63-sq;
-    uint64_t lo = rol(6, sq + __bsrq(d0));
-    uint64_t hi = rol(6, sq + __bsrq(d2));
+    uint64_t lo = rol(6, sq + bitr(d0));
+    uint64_t hi = rol(6, sq + bitr(d2));
     maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
     maskedDir02 &= mask02[sq].x;
     return maskedDir02;
