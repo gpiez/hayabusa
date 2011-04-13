@@ -27,6 +27,8 @@
 #pragma GCC diagnostic ignored "-Winline"
 class StringList: public std::vector<std::string> {
 public:
+    StringList();
+    ~StringList();
     std::string join(const char* = "");
     StringList& operator << (const char*);
     std::map<std::string, StringList> parse(const StringList&) const;

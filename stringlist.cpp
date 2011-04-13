@@ -19,6 +19,10 @@
 #include "constants.h"
 #include "stringlist.h"
 
+StringList::StringList() {}
+
+StringList::~StringList() {}
+
 std::string StringList::join(const char* str) {
     auto i=begin();
     if (i == end()) return "";
