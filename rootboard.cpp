@@ -22,14 +22,10 @@
 #include "workthread.h"
 #include "console.h"
 #include "boardbase.tcc"
-#include "jobs.h"
-#include "transpositiontable.h"
+#include "jobs.tcc"
+#include "score.tcc"
+#include "repetition.tcc"
 #include "transpositiontable.tcc"
-#include "movelist.h"
-#include "history.cpp"
-#ifdef QT_GUI_LIB
-#include "statwidget.h"
-#endif
 
 unsigned RootBoard::dMaxCapture = 12;
 unsigned RootBoard::dMaxThreat = 13;

@@ -13,6 +13,7 @@
 #endif
 
 #include "constants.h"
+#include "move.h"
 
 class History {
     uint8_t v[maxDepth+4][16][nSquares] ALIGN_XMM;

@@ -35,19 +35,13 @@
 #include "generateMoves.tcc"
 #include "coloredboard.tcc"
 #include "perft.h"
-#include "result.h"
+#include "result.tcc"
 #include "workthread.h"
 #include "jobs.h"
-#include "score.tcc"
-#include "options.h"
 #include "testgame.h"
-#include "nodemodel.h"
 #include "transpositiontable.tcc"
-#include "history.tcc"
-#include "repetition.tcc"
-#include "nodeitem.h"
-#include "eval.tcc"
 #include "movelist.h"
+#include "options.h"
 
 template<Colors C>
 uint64_t RootBoard::rootDivide(unsigned int depth) {
