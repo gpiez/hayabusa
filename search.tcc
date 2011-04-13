@@ -21,7 +21,11 @@
 #include "rootboard.h"
 #include "options.h"
 #include "transpositiontable.tcc"
-#include "jobs.h"
+#include "jobs.tcc"
+#include "score.tcc"
+#include "repetition.tcc"
+#include "eval.tcc"
+#include "history.tcc"
 
 #ifdef QT_GUI_LIB
 #define NODE ,node
@@ -37,13 +41,13 @@ int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int
         bool check = ((fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
                    || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
                    || (BoardBase::knightAttacks[m.to()] & b.template getPieces<-C,King>() && m.piece() == Knight));
-        int red = bitr(movenr + depth - 3)/2;
+        int red = bitr(2*movenr + depth)/2;
         if (check && depth<9)
             red=0;
         if (red >= depth-1)
             red = depth-2;
         if (red<0) red=0;
-        return red;
+        return red & ~1;
     }
     return 0;
 }
