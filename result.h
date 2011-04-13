@@ -35,42 +35,12 @@ template< typename T > class Result
     Result(const Result&);
 
 public:
-    explicit Result(T x):
-        notReady(0)
-    {
-        value = x;
-    }
-    operator T () {
-        UniqueLock<Mutex> lock(readyMutex);
-        while (notReady)
-            readyCond.wait(lock);
-        return value;
-    }
-
-    void update(Result<T>& data) {
-        T dataValue = data;
-        UniqueLock<Mutex> lock(valueMutex);
-        value += dataValue;
-    }
-
-    void update(T data) {
-        UniqueLock<Mutex> lock(valueMutex);
-        value += data;
-    }
-
-    void setReady() {
-        readyMutex.lock();
-        --notReady;
-        readyCond.notify_one();    // if the wakeup happens after the unlocking, this Result
-        readyMutex.unlock();    // may be destroyed after the signaling the condition
-    }                           // but before .wakeOne() is completly done.
-
-    void setNotReady() {
-        readyMutex.lock();
-        ++notReady;
-        readyMutex.unlock();
-    }
-
+    explicit Result(T x);
+    operator T ();
+    void update(Result<T>& data);
+    void update(T data);
+    void setReady();
+    void setNotReady();
 };
 
 #endif // RESULT_H

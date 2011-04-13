@@ -59,23 +59,8 @@ public:
 #ifdef QT_GUI_LIB
         , NodeItem* node
 #endif
-        ):
-        rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), parent(parent), rep(rep)
-#ifdef QT_GUI_LIB
-    , node(node)
-#endif
-    {
-        beta.setNotReady();
-    };
-    void job() {
-        rb.clone(b, rep, ply);
-        rb.search<C, trunk>(b, m, depth, alpha, beta, ply, false
-#ifdef QT_GUI_LIB
-                        , node
-#endif
-                        );
-        beta.setReady();
-    }
+        );
+    void job();
 };
 
 template<Colors C>
@@ -83,11 +68,8 @@ class RootSearchJob: public Job {
     RootBoard& rb;
 
 public:
-    RootSearchJob(RootBoard& rb): rb(rb) {};
-    void job() {
-        threadId = 0;
-        /*Move m =*/ rb.rootSearch<C>();
-    }
+    RootSearchJob(RootBoard& rb);
+    void job();
 };
 
 template<Colors C, typename T>
