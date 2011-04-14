@@ -33,21 +33,25 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
         unsigned from = bit(getPieces<C,King>());
         *--good = Move(from, bit(p), King, cap);
     }
-    /* Check for attacks from sliding pieces. Bishop/Rook/Queen attacks are
-     * stored in single[], with a mov template matching the attack in move[]
-     */
     const __v2di zero = _mm_set1_epi64x(0);
     const __v2di d2 = _mm_set1_epi64x(d);
-
-    for(const MoveTemplateB* bs = bsingle[CI];; bs++) {
-        Move m = bs->move;
-        if (!m.data) break;
+    /*
+     * Check for attacks from sliding pieces. Bishop/Rook/Queen attacks are
+     * stored in single[], with a mov template matching the attack in move[]
+     * Because the probability of a capture is low, it is profitable to check
+     * if the target squares are attackable. If it is, there mus be at least one
+     * piece of that kind in the single array. Skip every entry with no matching
+     * attack squares and additionally we can skip the check for a valid move
+     * template at the first target found.
+     */
+    if (getAttacks<C,Bishop>() & d) {
+        const MoveTemplateB* bs = bsingle[CI];
         __v2di a13 = bs->d13;
-#ifdef __SSE4_1__
-        if (!_mm_testz_si128(d2, a13)) {
-#else
-        if (fold(d2 & a13)) {
-#endif
+        while (_mm_testz_si128(d2, a13))
+            a13 = (++bs)->d13;
+        Move m = bs->move;
+        ASSERT(m.data);
+        do {
             __v2di from2 = doublebits[m.from()];
             __v2di pin13 = from2 & dpins[CI].d13;
             pin13 = pcmpeqq(pin13, zero);
@@ -69,18 +73,19 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
                    ) *bad++ = n;
                 else *--good = n;
             }
-        }
+            m = (++bs)->move;
+            a13 = bs->d13;
+        } while (m.data);
     }
 
-    for(const MoveTemplateR* rs = rsingle[CI];; rs++) {
-        Move m = rs->move;
-        if (!m.data) break;
+    if (getAttacks<C,Rook>() & d) {
+        const MoveTemplateR* rs = rsingle[CI];
         __v2di a02 = rs->d02;
-#ifdef __SSE4_1__
-        if (!_mm_testz_si128(d2, a02)) {
-#else
-        if (fold(d2 & a02)) {
-#endif
+        while (_mm_testz_si128(d2, a02))
+            a02 = (++rs)->d02;
+        Move m = rs->move;
+        ASSERT (m.data);
+        do {
             __v2di from2 = doublebits[m.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
             pin02 = pcmpeqq(pin02, zero);
@@ -92,7 +97,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
                 if ( val[cap] < val[Rook]
                      &&  (
                            a & -a & attPKB
-/*                           || a & -a & getAttacks<-C,All>() &
+        /*                           || a & -a & getAttacks<-C,All>() &
                                          ~( getAttacks<C,Bishop>()
                                           | getAttacks<C,Queen>()
                                           | getAttacks<C,King>()
@@ -103,19 +108,18 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
                    ) *bad++ = n;
                 else *--good = n;
             }
-        }
+            m = (++rs)->move;
+            a02 = rs->d02;
+        } while (m.data);
     }
 
-    for(const MoveTemplateQ* qs = qsingle[CI];; qs++) {
+    if (getAttacks<C,Queen>() & d) {
+        const MoveTemplateQ* qs = qsingle[CI];
         Move m = qs->move;
-        if (!m.data) break;
-        __v2di a02 = qs->d02;
-        __v2di a13 = qs->d13;
-#ifdef __SSE4_1__
-        if (!_mm_testz_si128(d2, (a02|a13))) {
-#else
-        if (fold(d2 & (a02|a13))) {
-#endif
+        ASSERT(m.data);
+        do {
+            __v2di a02 = qs->d02;
+            __v2di a13 = qs->d13;
             __v2di from2 = doublebits[m.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
             __v2di pin13 = from2 & dpins[CI].d13;
@@ -123,18 +127,18 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
             pin13 = pcmpeqq(pin13, zero);
             pin02 = ~pin02 & a02;
             pin13 = ~pin13 & a13;
-            uint64_t attPKBR = getAttacks<-C,Pawn>()
+            for (uint64_t a=fold((pin02|pin13) & d2); a; a&=a-1) {
+                uint64_t attPKBR = getAttacks<-C,Pawn>()
                                     | getAttacks<-C,Knight>()
                                     | getAttacks<-C,Bishop>()
                                     | getAttacks<-C,Rook>();
-            uint64_t att2 = getAttacks<-C,All>() &
+                uint64_t att2 = getAttacks<-C,All>() &
                                          ~( getAttacks<C,Rook>()
                                           | getAttacks<C,Bishop>()
                                           | getAttacks<C,King>()
                                           | getAttacks<C,Knight>()
                                           | getAttacks<C,Pawn>()
                                           );
-            for (uint64_t a=fold((pin02|pin13) & d2); a; a&=a-1) {
                 Move n;
                 n.data = m.data + Move(0, bit(a), 0, cap).data;
                 if ( val[cap] < val[Queen]
@@ -144,7 +148,8 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
                    ) *bad++ = n;
                 else *--good = n;
             }
-        }
+            m = (++qs)->move;
+        } while (m.data);
     }
             // Knight captures something. Can't move at all if pinned.
     for ( uint64_t p = getAttacks<C,Knight>() & d; p; p &= p-1 ) {
@@ -163,10 +168,12 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
                ) *bad++ = Move(bit(f), to, Knight, cap);
             else *--good = Move(bit(f), to, Knight, cap);
     }
+
     // pawn capture to the absolute right, dir = 1 for white and 3 for black
     for(uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & shift<-C*8-1>(d) & getPins<C,2-C>();p ;p &= p-1) {
         unsigned from = bit(p);
         unsigned to = from + C*8+1;
+//         if (C==White && from >= 48 || C==Black && from <16) {
         if (rank<7>() & (p&-p)) {
             if (UPromo) {
                 *--good = Move(from, to, Knight, cap, true);
@@ -181,6 +188,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
     for (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & shift<-C*8+1>(d) & getPins<C,2+C>();p ;p &= p-1) {
         unsigned from = bit(p);
         unsigned to = from + C*8-1;
+//         if (C==White && from >= 48 || C==Black && from <16) {
         if (rank<7>() & (p&-p)) {
             if (UPromo) {
                 *--good = Move(from, to, Knight, cap, true);

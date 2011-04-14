@@ -50,66 +50,60 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
      * stored in single[], with a mov template matching the attack in move[]
      */
     const __v2di zero = _mm_set1_epi64x(0);
-    const __v2di d2 = _mm_set1_epi64x(tobit);
-    for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
-        __v2di a13 = bs->d13;
-#ifdef __SSE4_1__
-        if (!_mm_testz_si128(d2, a13)) {
-#else
-        if (fold(d2 & a13)) {
-#endif
-            __v2di from2 = doublebits[bs->move.from()];
+//     const __v2di d2 = _mm_set1_epi64x(tobit);
+    
+    if (getAttacks<C,Bishop>() & tobit) {
+        const MoveTemplateB* bs = bsingle[CI];
+        Move m = bs->move;
+        do {
+            __v2di from2 = doublebits[m.from()];
             __v2di pin13 = from2 & dpins[CI].d13;
             pin13 = pcmpeqq(pin13, zero);
-            pin13 = ~pin13 & d2 & a13;
-            for (uint64_t a=fold(pin13); a; a&=a-1) {
+            pin13 = ~pin13 & bs->d13;
+            for (uint64_t a=tobit & fold(pin13); a; a&=a-1) {
                 Move n;
-                n.data = bs->move.data + Move(0, bit(a), 0).data;
+                n.data = m.data + Move(0, bit(a), 0).data;
                 *bad++ = n;
             }
-        }
+            m = (++bs)->move;
+        } while (m.data);
     }
 
-    for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
-        __v2di a02 = rs->d02;
-#ifdef __SSE4_1__
-        if (!_mm_testz_si128(d2, a02)) {
-#else
-        if (fold(d2 & a02)) {
-#endif
-            __v2di from2 = doublebits[rs->move.from()];
+    if (getAttacks<C,Rook>() & tobit) {
+        const MoveTemplateR* rs = rsingle[CI];
+        Move m = rs->move;
+        do {
+            __v2di from2 = doublebits[m.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
             pin02 = pcmpeqq(pin02, zero);
-            pin02 = ~pin02 & d2 & a02;
-            for (uint64_t a=fold(pin02); a; a&=a-1) {
+            pin02 = ~pin02 & rs->d02;
+            for (uint64_t a=tobit & fold(pin02); a; a&=a-1) {
                 Move n;
-                n.data = rs->move.data + Move(0, bit(a), 0).data;
+                n.data = m.data + Move(0, bit(a), 0).data;
                 *bad++ = n;
             }
-        }
+            m = (++rs)->move;
+        } while (m.data);
     }
 
-    for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
-        __v2di a02 = qs->d02;
-        __v2di a13 = qs->d13;
-#ifdef __SSE4_1__
-        if (!_mm_testz_si128(d2, (a02|a13))) {
-#else
-        if (fold(d2 & (a02|a13))) {
-#endif
-            __v2di from2 = doublebits[qs->move.from()];
+    if (getAttacks<C,Queen>() & tobit) {
+        const MoveTemplateQ* qs = qsingle[CI];        
+        Move m = qs->move;
+        do {
+            __v2di from2 = doublebits[m.from()];
             __v2di pin02 = from2 & dpins[CI].d02;
             __v2di pin13 = from2 & dpins[CI].d13;
             pin02 = pcmpeqq(pin02, zero);
             pin13 = pcmpeqq(pin13, zero);
-            pin02 = ~pin02 & a02;
-            pin13 = ~pin13 & a13;
-            for (uint64_t a=fold((pin02|pin13) & d2); a; a&=a-1) {
+            pin02 = ~pin02 & qs->d02;
+            pin13 = ~pin13 & qs->d13;
+            for (uint64_t a=tobit & fold((pin02|pin13)); a; a&=a-1) {
                 Move n;
-                n.data = qs->move.data + Move(0, bit(a), 0).data;
+                n.data = m.data + Move(0, bit(a), 0).data;
                 *bad++ = n;
             }
-        }
+            m = (++qs)->move;
+        } while (m.data);
     }
 }
 
@@ -246,10 +240,12 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
      * generated earlier in buildAttacks()
      */
     const __v2di zero = _mm_set1_epi64x(0);
-    for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
+    for(const MoveTemplateQ* qs = qsingle[CI]; ; qs++) {
+        Move m = qs->move;
+        if (!m.data) break;
         __v2di a02 = qs->d02;
         __v2di a13 = qs->d13;
-        __v2di from2 = doublebits[qs->move.from()];
+        __v2di from2 = doublebits[m.from()];
         __v2di pin02 = from2 & dpins[CI].d02;
         __v2di pin13 = from2 & dpins[CI].d13;
         pin02 = pcmpeqq(pin02, zero);
@@ -259,7 +255,7 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
         for (uint64_t a=fold(pin02|pin13) & ~occupied1; a; a &= a-1 ) {
             Move n;
             unsigned to = bit(a);
-            n.data = qs->move.data + Move(0, to, 0).data;
+            n.data = m.data + Move(0, to, 0).data;
             if ( a & -a & ( getAttacks<-C,Pawn>()
                           | getAttacks<-C,Knight>()
                           | getAttacks<-C,Bishop>()
@@ -277,16 +273,18 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
         }
     }
 
-    for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
+    for(const MoveTemplateR* rs = rsingle[CI]; ; rs++) {
+        Move m = rs->move;
+        if (!m.data) break;
         __v2di a02 = rs->d02;
-        __v2di from2 = doublebits[rs->move.from()];
+        __v2di from2 = doublebits[m.from()];
         __v2di pin02 = from2 & dpins[CI].d02;
         pin02 = pcmpeqq(pin02, zero);
         pin02 = ~pin02 & a02;
         for (uint64_t a=fold(pin02) & ~occupied1; a; a &= a-1 ) {
             Move n;
             unsigned to = bit(a);
-            n.data = rs->move.data + Move(0, to, 0).data;
+            n.data = m.data + Move(0, to, 0).data;
             if ( a & -a & ( getAttacks<-C,Pawn>()
                           | getAttacks<-C,Knight>()
                           | getAttacks<-C,Bishop>()
@@ -296,16 +294,18 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
         }
     }
 
-    for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
+    for(const MoveTemplateB* bs = bsingle[CI]; ; bs++) {
+        Move m = bs->move;
+        if (!m.data) break;
         __v2di a13 = bs->d13;
-        __v2di from2 = doublebits[bs->move.from()];
+        __v2di from2 = doublebits[m.from()];
         __v2di pin13 = from2 & dpins[CI].d13;
         pin13 = pcmpeqq(pin13, zero);
         pin13 = ~pin13 & a13;
         for (uint64_t a=fold(pin13) & ~occupied1; a; a &= a-1 ) {
             Move n;
             unsigned to = bit(a);
-            n.data = bs->move.data + Move(0, to, 0).data;
+            n.data = m.data + Move(0, to, 0).data;
             if ( a & -a & ( getAttacks<-C,Pawn>() ) ) *bad++ = n;
             else *--good = n;
         }

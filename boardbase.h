@@ -108,6 +108,11 @@ struct BoardBase {
         static_assert(P>0 && P<=King, "Wrong Piece");
         return pieces[P][C==Black];
     }
+    template<Pieces P>
+    __v2di get2Pieces() const {
+        static_assert(P>0 && P<=King, "Wrong Piece");
+        return _mm_load_si128((__m128i*)&pieces[P]);
+    }
     template<int C>
     uint64_t getPieces(unsigned int p) const {
         ASSERT(p <= King);
@@ -163,16 +168,7 @@ struct BoardBase {
     void init();
     void print() const;
     int getPiece(unsigned pos) const;
-    inline unsigned getPieceFromBit(uint64_t bit) const {
-        return
-            (getPieces<White,King>() | getPieces<Black,King>()) & bit ? King:
-            (getPieces<White,Pawn>() | getPieces<Black,Pawn>()) & bit ? Pawn:
-            (getPieces<White,Knight>() | getPieces<Black,Knight>()) & bit ? Knight:
-            (getPieces<White,Queen>() | getPieces<Black,Queen>()) & bit ? Queen:
-            (getPieces<White,Bishop>() | getPieces<Black,Bishop>()) & bit ? Bishop:
-            (getPieces<White,Rook>() | getPieces<Black,Rook>()) & bit ? Rook:
-            NoPiece;
-    }
+    unsigned getPieceFromBit(uint64_t bit) const;
     static void initTables();
 
 } ALIGN_CACHE;                                    //sum:        3C0

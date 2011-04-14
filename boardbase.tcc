@@ -275,4 +275,29 @@ void BoardBase::buildPins() {
     pins[CI] = _mm_cvtsi128_si64(_mm_unpackhi_epi64(pins2, pins2))
          & _mm_cvtsi128_si64(pins2);
 }
+
+inline unsigned BoardBase::getPieceFromBit(uint64_t bit) const {
+    ASSERT( !((getPieces<White,King>() | getPieces<Black,King>()) & bit) );
+#ifdef __SSE4_1__
+    __v2di piece = _mm_set_epi64x(bit, bit);
+    __v2di zero = _mm_set_epi64x(0, 0);
+    __v2di r = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Rook  >(), piece), zero) & _mm_set_epi64x(Rook, Rook);
+    __v2di b = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Bishop>(), piece), zero) & _mm_set_epi64x(Bishop, Bishop);
+    __v2di q = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Queen >(), piece), zero) & _mm_set_epi64x(Queen, Queen);
+    __v2di n = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Knight>(), piece), zero) & _mm_set_epi64x(Knight, Knight);
+    __v2di p = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Pawn  >(), piece), zero) & _mm_set_epi64x(Pawn, Pawn);
+//        __v2di k = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<King  >(), piece), zero) & _mm_set_epi64x(King, King);
+    return fold(r|b|q|n|p);
+#else
+    return
+//            (getPieces<White,King>() | getPieces<Black,King>()) & bit ? King:
+        (getPieces<White,Pawn>() | getPieces<Black,Pawn>()) & bit ? Pawn:
+        (getPieces<White,Knight>() | getPieces<Black,Knight>()) & bit ? Knight:
+        (getPieces<White,Queen>() | getPieces<Black,Queen>()) & bit ? Queen:
+        (getPieces<White,Bishop>() | getPieces<Black,Bishop>()) & bit ? Bishop:
+        (getPieces<White,Rook>() | getPieces<Black,Rook>()) & bit ? Rook:
+        NoPiece;
+#endif
+}
+
 #endif

@@ -24,7 +24,6 @@
 #include <pch.h>
 #endif
 
-#pragma GCC diagnostic ignored "-Winline"
 class StringList: public std::vector<std::string> {
 public:
     StringList();
@@ -44,6 +43,5 @@ T convert(std::string str) {
     ss >> x;
     return x;
 }
-#pragma GCC diagnostic warning "-Winline"
 
 #endif // STRINGLIST_H
