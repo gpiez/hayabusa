@@ -43,25 +43,25 @@ inline uint64_t BoardBase::build13Attack(uint64_t flood1) const {
     const uint64_t e03 = ~occupied1 & ~file<'h'>();
     // uint64_t e05 = ~occupied1 & ~file<'h'>();
     // uint64_t e07 = ~occupied1 & ~file<'a'>();
+    flood1 |= flood1 << 9 & e01;
+    flood3 |= flood3 << 7 & e03;
+    flood5 |= flood5 >> 9 & e03;
+    flood7 |= flood7 >> 7 & e01;
+
     const uint64_t e11 = e01 & e01 << 9;
     const uint64_t e13 = e03 & e03 << 7;
     const uint64_t e15 = e03 & e03 >> 9;
     const uint64_t e17 = e01 & e01 >> 7;
     
-    const uint64_t e21 = e11 & e11 << 18;
-    const uint64_t e23 = e13 & e13 << 14;
-    const uint64_t e25 = e15 & e15 >> 18;
-    const uint64_t e27 = e17 & e17 >> 14;
-    
-    flood1 |= flood1 << 9 & e01;
-    flood3 |= flood3 << 7 & e03;
-    flood5 |= flood5 >> 9 & e03;
-    flood7 |= flood7 >> 7 & e01;
-    
     flood1 |= flood1 << 18 & e11;
     flood3 |= flood3 << 14 & e13;
     flood5 |= flood5 >> 18 & e15;
     flood7 |= flood7 >> 14 & e17;
+
+    const uint64_t e21 = e11 & e11 << 18;
+    const uint64_t e23 = e13 & e13 << 14;
+    const uint64_t e25 = e15 & e15 >> 18;
+    const uint64_t e27 = e17 & e17 >> 14;
     
     flood1 |= flood1 << 36 & e21;
     flood3 |= flood3 << 28 & e23;
@@ -70,40 +70,87 @@ inline uint64_t BoardBase::build13Attack(uint64_t flood1) const {
     
     return ((flood1 << 9 | flood7 >> 7 ) & ~file<'a'>())
          | ((flood3 << 7 | flood5 >> 9 ) & ~file<'h'>());
+
+/*    uint64_t result;
+    asm(" mov   %2, %%rsi               /n"
+        " mov   %%rdi, %%rax ;flood1 /n "
+        " mov   %%rdi, %%rbx ;flood3 /n "
+        " mov   %%rdi, %%rcx ;flood5 /n "
+        " mov   %%rdi, %%rdx ;flood7 /n "
+        " not   %%rsi                   /n"
+        " movabs %3, %%r8               /n"
+        " movabs %4, %%r9               /n"
+        " and   %%rsi, %%r8  ; e01      /n"
+        " and   %%rsi, %%r9  ; e03      /n"
+        " shl   9, %%rax                /n"
+        " shl   7, %%rbx                /n"
+        " shr   9, %%rcx                /n"
+        " shr   7, %%rdx                /n"
+        " and   %%r8, %%rax             /n"
+        " and   %%r9, %%rbx             /n"
+        " and   %%r9, %%rcx             /n"
+        " and   %%r8, %%rdx             /n"
+        " or    %%rdi, %%rax /n"
+        " or    %%rdi, %%rbx /n"
+        " or    %%rdi, %%rbx /n"
+        " or    %%rdi, %%rbx /n"
+        " mov   %%r8, %%r10 /n"
+        " mov   %%r9, %%r11 /n"
+        " mov   %%r9, %%r12 /n"
+        " mov   %%r8, %%r13 /n"
+        " shl   9, %%r10                /n"
+        " shl   7, %%r11                /n"
+        " shr   9, %%r12                /n"
+        " shr   7, %%r13                /n"
+        " and   %%r8, %%r10             /n"
+        " and   %%r9, %%r11             /n"
+        " and   %%r9, %%r12             /n"
+        " and   %%r8, %%r13             /n"
+        
+        
+        
+        
+        
+        : "a" (result)
+        : "D" (flood1), "m" (occupied1), "i" (~file<'a'>()), "i" (~file<'h'>())
+        : "%rbx", "%rcx", "%rdx", "%rsi", "%r8", "%r9"
+    );*/
 }
 
 inline __v2di BoardBase::build13Attack(__v2di flood1) const {
     
     __v2di flood3 = flood1, flood5 = flood1, flood7 = flood1;
-    
-    const __v2di e01 = _mm_set1_epi64x(~occupied1 & ~file<'a'>());
-    const __v2di e03 = _mm_set1_epi64x(~occupied1 & ~file<'h'>());
+
+    __v2di e01 = _mm_set1_epi64x(~occupied1 & ~file<'a'>());
+    __v2di e03 = _mm_set1_epi64x(~occupied1 & ~file<'h'>());
+    __v2di e05 = e03;
+    __v2di e07 = e01;
     // uint64_t e05 = ~occupied1 & ~file<'h'>();
     // uint64_t e07 = ~occupied1 & ~file<'a'>();
-    const __v2di e11 = e01 & _mm_slli_epi64(e01, 9);
-    const __v2di e13 = e03 & _mm_slli_epi64(e03, 7);
-    const __v2di e15 = e03 & _mm_srli_epi64(e03, 9);
-    const __v2di e17 = e01 & _mm_srli_epi64(e01, 7);
-    
-    const __v2di e21 = e11 & _mm_slli_epi64(e11, 18);
-    const __v2di e23 = e13 & _mm_slli_epi64(e13, 14);
-    const __v2di e25 = e15 & _mm_srli_epi64(e15, 18);
-    const __v2di e27 = e17 & _mm_srli_epi64(e17, 14);
-    
     flood1 |= _mm_slli_epi64(flood1, 9) & e01;
     flood3 |= _mm_slli_epi64(flood3, 7) & e03;
-    flood5 |= _mm_srli_epi64(flood5, 9) & e03;
-    flood7 |= _mm_srli_epi64(flood7, 7) & e01;
+    flood5 |= _mm_srli_epi64(flood5, 9) & e05;
+    flood7 |= _mm_srli_epi64(flood7, 7) & e07;
+
+    e01 &= _mm_slli_epi64(e01, 9);
+    e03 &= _mm_slli_epi64(e03, 7);
+    e05 &= _mm_srli_epi64(e05, 9);
+    e07 &= _mm_srli_epi64(e07, 7);
     
-    flood1 |= _mm_slli_epi64(flood1, 18) & e11;
-    flood3 |= _mm_slli_epi64(flood3, 14) & e13;
-    flood5 |= _mm_srli_epi64(flood5, 18) & e15;
-    flood7 |= _mm_srli_epi64(flood7, 14) & e17;
+    flood1 |= _mm_slli_epi64(flood1, 18) & e01;
+    flood3 |= _mm_slli_epi64(flood3, 14) & e03;
+    flood5 |= _mm_srli_epi64(flood5, 18) & e05;
+    flood7 |= _mm_srli_epi64(flood7, 14) & e07;
+
+    e01 &= _mm_slli_epi64(e01, 18);
+    e03 &= _mm_slli_epi64(e03, 14);
+    e05 &= _mm_srli_epi64(e05, 18);
+    e07 &= _mm_srli_epi64(e07, 14);
     
-    flood1 |= _mm_slli_epi64(flood1, 36) & e21;
-    flood3 |= _mm_slli_epi64(flood3, 28) & e23;
-    flood5 |= _mm_srli_epi64(flood5, 36) & e25;
-    flood7 |= _mm_srli_epi64(flood7, 28) & e27;
+    flood1 |= _mm_slli_epi64(flood1, 36) & e01;
+    flood3 |= _mm_slli_epi64(flood3, 28) & e03;
+    flood5 |= _mm_srli_epi64(flood5, 36) & e05;
+    flood7 |= _mm_srli_epi64(flood7, 28) & e07;
     
     return ((_mm_slli_epi64(flood1, 9) | _mm_srli_epi64(flood7, 7) ) & _mm_set1_epi64x(~file<'a'>()))
          | ((_mm_slli_epi64(flood3, 7) | _mm_srli_epi64(flood5, 9) ) & _mm_set1_epi64x(~file<'h'>()));
@@ -128,34 +175,35 @@ inline uint64_t BoardBase::build02Attack(uint64_t flood0) const {
     
     uint64_t flood2 = flood0, flood4 = flood0, flood6 = flood0;
     
-    const uint64_t e00 =  ~occupied1 & ~file<'a'>();
-    const uint64_t e02 =  ~occupied1;
-    const uint64_t e04 =  ~occupied1 & ~file<'h'>();
-    
-    const uint64_t e10 = e00 & e00 << 1;
-    const uint64_t e12 = e02 & e02 << 8;
-    const uint64_t e14 = e04 & e04 >> 1;
-    const uint64_t e16 = e02 & e02 >> 8;
-    
-    const uint64_t e20 = e10 & e10 << 2;
-    const uint64_t e22 = e12 & e12 << 16;
-    const uint64_t e24 = e14 & e14 >> 2;
-    const uint64_t e26 = e16 & e16 >> 16;
+    uint64_t e00 =  ~occupied1 & ~file<'a'>();
+    uint64_t e02 =  ~occupied1;
+    uint64_t e04 =  ~occupied1 & ~file<'h'>();
+    uint64_t e06 =  e02;
     
     flood0 |= flood0 << 1 & e00;
     flood2 |= flood2 << 8 & e02;
     flood4 |= flood4 >> 1 & e04;
-    flood6 |= flood6 >> 8 & e02;
+    flood6 |= flood6 >> 8 & e06;
+
+    e00 &= e00 << 1;
+    e02 &= e02 << 8;
+    e04 &= e04 >> 1;
+    e06 &= e06 >> 8;
     
-    flood0 |= flood0 <<  2 & e10;
-    flood2 |= flood2 << 16 & e12;
-    flood4 |= flood4 >>  2 & e14;
-    flood6 |= flood6 >> 16 & e16;
+    flood0 |= flood0 <<  2 & e00;
+    flood2 |= flood2 << 16 & e02;
+    flood4 |= flood4 >>  2 & e04;
+    flood6 |= flood6 >> 16 & e06;
+
+    e00 &= e00 << 2;
+    e02 &= e02 << 16;
+    e04 &= e04 >> 2;
+    e06 &= e06 >> 16;
     
-    flood0 |= flood0 <<  4 & e20;
-    flood2 |= flood2 << 32 & e22;
-    flood4 |= flood4 >>  4 & e24;
-    flood6 |= flood6 >> 32 & e26;
+    flood0 |= flood0 <<  4 & e00;
+    flood2 |= flood2 << 32 & e02;
+    flood4 |= flood4 >>  4 & e04;
+    flood6 |= flood6 >> 32 & e06;
     
     return (flood0 << 1 & ~file<'a'>()) | (flood4 >> 1 & ~file<'h'>())
         | flood2 << 8 | flood6 >> 8;
