@@ -67,14 +67,14 @@ struct Bitfield {
 union TTEntry {
     Bitfield<0, 6, unsigned int> from;
     Bitfield<6, 6, unsigned int> to;
-    Bitfield<12, 6, unsigned int> depth;
-    Bitfield<18, 1, unsigned int> loBound;
-    Bitfield<19, 1, unsigned int> hiBound;
+    Bitfield<12, 7, unsigned int> depth;
+    Bitfield<19, 1, unsigned int> loBound;
     Bitfield<20, 12, int> score;
-    Bitfield<32, 1, unsigned int> visited;
-    Bitfield<33, 1, unsigned int> aged;
-    Bitfield<34, 30, Key> upperKey;
-    enum { upperShift = 34 };
+    Bitfield<32, 1, unsigned int> hiBound;
+    Bitfield<33, 1, unsigned int> visited;
+    Bitfield<34, 1, unsigned int> aged;
+    Bitfield<35, 29, Key> upperKey;
+    enum { upperShift = 35 };
     uint64_t data;
 
     void zero() { data = 0; };
