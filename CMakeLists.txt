@@ -1,6 +1,6 @@
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -pipe" CACHE STRING "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG -march=core2 -Wuninitialized -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants" CACHE STRING "")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=core2 -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants -flto" CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=core2 -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants -flto --param max-inline-insns-single=2000" CACHE STRING "")
 #set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto-partition=none -fwhole-program" CACHE STRING "")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-fwhole-program" CACHE STRING "")
 # SSSE3 (Note the additional S) is mandatory because of the pshufb instruction.
@@ -48,7 +48,7 @@ if (USE_QTGUI OR USE_QTNETWORK)
     FIND_PACKAGE(Qt4 COMPONENTS QtCore ${packages} REQUIRED)
 ENDIF(USE_QTGUI OR USE_QTNETWORK)
 
-SET(hayabusa_SRCS main.cpp)
+SET(hayabusa_SRCS sortedmovelist.cpp main.cpp)
 SET(hayabusa_MOC_H ${hayabusa_MOC_H})
 SET(hayabusa_RCCS hayabusa.qrc)
 
