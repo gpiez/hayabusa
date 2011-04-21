@@ -31,28 +31,31 @@
 #include "coloredboard.h"
 
 class MoveList
-{    
+{        
+protected:    
     Move list[maxMoves];
-    Move* current;
-    Move* first;
-    Move* last;
+    unsigned first;
+    unsigned last;
     
 public:
+    unsigned current;
     template<Colors C>
     MoveList(const ColoredBoard<C>& b) {
-        first = list+goodMoves;
-        last = first;
+        Move* pfirst = list+goodMoves;
+        Move* plast = pfirst;
 //        b.template generateMateMoves<false>(&first, &last);
         if (b.template inCheck<C>())
-            b.generateCheckEvasions(first, last);
+            b.generateCheckEvasions(pfirst, plast);
         else {
-            b.generateNonCap(first, last);
-            b.template generateCaptureMoves<true>(first, last);
+            b.generateNonCap(pfirst, plast);
+            b.template generateCaptureMoves<true>(pfirst, plast);
         }
+        first = pfirst - list;
+        last = plast - list;
     }
 
     const Move& operator * () const {
-        return *current;
+        return list[current];
     }
 
     void operator ++ () {
@@ -72,9 +75,9 @@ public:
     }
     
     void currentToFront() {
-        Move temp = *current;
-        memmove(first+1, first, sizeof(Move) * (current-first));
-        *first = temp;
+        Move temp = list[current];
+        memmove(list+first+1, list+first, sizeof(Move) * (current-first));
+        list[first] = temp;
     }
 };
 
