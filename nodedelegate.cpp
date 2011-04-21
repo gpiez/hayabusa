@@ -79,9 +79,9 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
         break;
     }
     if (item->flags & Threatened)
-        str2 += QString(" TD ");
-    if (item->flags & Threatening)
-        str2 += QString(" TG ");
+        str2 += QString(" THR ");
+    if (item->flags & Extend)
+        str2 += QString(" EXT ");
 
     str2 += QString( " size: %2" ).arg(item->nodes);
 /*

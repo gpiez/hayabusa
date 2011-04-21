@@ -72,7 +72,7 @@ enum Sides { KSide, QSide, Middle };
 
 enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile1, NodeFutile2, NodeMate, NodePresearch, NodeIllegal, NodeRepetition, NodeEndgameEval };
 
-enum NodeFlag { Threatened = 1, Threatening = 2 };
+enum NodeFlag { Threatened = 1, Extend = 2 };
 
 typedef uint64_t Key;
 typedef uint32_t PawnKey;
