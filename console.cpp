@@ -39,8 +39,8 @@ namespace Options {
     bool                preCutIfNotThreatened = false;
     unsigned            veinDepth = 20;
     unsigned            leafDepth = 8;
-    bool                reduction = false;
-    bool                pruning = false;
+    bool                reduction = true;
+    bool                pruning = true;
     unsigned            debug = 0;
 #ifdef QT_NETWORK_LIB    
     bool                server = false;
@@ -181,6 +181,7 @@ void Console::send(std::string str) {
 
 void Console::privateSend(std::string str)
 {
+    if (Options::quiet) return;
 #if defined(QT_NETWORK_LIB)
     if (Options::server) {
         socket->write(str.c_str());
@@ -385,7 +386,7 @@ void Console::ordering(StringList cmds) {
     Options::quiet = true;
     board->infinite = true;
     if (cmds.size() > 1 && cmds[1] == "init") {
-        for (unsigned int i = 0; testDepths[i]; ++i) {
+        for (unsigned int i = 0; testPositions[i]; ++i) {
             stats.node=0;
             board->maxSearchNodes = 1000000;
             board->setup(testPositions[i]);
@@ -394,17 +395,18 @@ void Console::ordering(StringList cmds) {
                 board->rootSearch<White>(40);
             else
                 board->rootSearch<Black>(40);
-            if (!(i % 26)) std::cout << std::endl;
+            if (!(i % 26)) std::cerr << std::endl;
             if (stats.node < 1000000)
-                std::cout << " 0,";
+                std::cerr << " 0,";
             else
-                std::cout << std::setw(2) << board->depth - 21 << ",";
+                std::cerr << std::setw(2) << board->depth - (12 + 13 + 1) << ",";
         }
+        std::cerr << "0" << std::endl;
     } else {
         double sum=0.0;
         double tested=0.0;
-        for (int i = 0; testDepths[i]; ++i) {
-            if (testDepths[i] < 0) continue;
+        for (int i = 0; testPositions[i]; ++i) {
+            if (testDepths[i] <= 0) continue;
             board->maxSearchNodes = ~0;
             tested++;
             stats.node=0;
