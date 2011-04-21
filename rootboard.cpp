@@ -49,9 +49,9 @@ std::string RootBoard::commonStatus() const {
     std::stringstream g;
     g.imbue(std::locale("de_DE"));
     g << "D" << std::setfill('0') << std::setw(2) << depth-(dMaxCapture+dMaxThreat)
-        << " " << std::setfill(' ') << std::fixed << std::setprecision(3) << std::showpoint << std::setw(11) << duration_cast<milliseconds>(system_clock::now()-start).count()/1000.0 
-        << "s " << std::setw(7) << getStats().node/1000000
-        << "M ";
+        << " " << std::setfill(' ') << std::fixed << std::setprecision(1) << std::showpoint << std::setw(9) << duration_cast<milliseconds>(system_clock::now()-start).count()/1000.0
+        << "s " << std::setw(13) << getStats().node
+        << " ";
     return g.str();
 }
 
@@ -68,7 +68,7 @@ void RootBoard::infoTimer(milliseconds repeat) {
         std::stringstream g;
         if (Options::humanreadable) {
             g << commonStatus() 
-            << std::fixed << std::setprecision(0) << std::setw(5) << getStats().node/(t+1) << "knps " 
+            << std::fixed << std::setprecision(0) << std::setw(5) << getStats().node/(t*1000+1) << "/s "
             << getLine();
             std::string str = g.str();
             str.resize(80,' ');

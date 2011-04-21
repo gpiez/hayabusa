@@ -19,6 +19,7 @@
 #define ROOTSEARCH_TCC_
 
 #include "search.tcc"
+#include "sortedmovelist.h"
 
 template<Colors C>
 Move RootBoard::rootSearch(unsigned int endDepth) {
@@ -37,7 +38,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     const unsigned ply=0;
     store(b.getZobrist(), ply);
     stats.node = 1;
-    MoveList ml(b);
+    SortedMoveList ml(b);
 
     milliseconds time( C==White ? wtime : btime );
     milliseconds inc( C==White ? winc : binc );
@@ -80,15 +81,27 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     SharedScore<C> alpha0; alpha0.v = -infinity*C;
     SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
     bool maxDepth = false;
+    uint64_t subnode = stats.node;
     search<(Colors)-C, tree>(b, *ml, dMaxCapture+dMaxThreat, beta, alpha0, ply+1, false, maxDepth NODE);
-    for (++ml; ml.isValid() && !stopSearch; ++ml)
+    ml.nodesCount(stats.node - subnode);
+    for (++ml; ml.isValid() && !stopSearch; ++ml) {
+        uint64_t subnode = stats.node;
         if (search<(Colors)-C, tree>(b, *ml, dMaxCapture+dMaxThreat, beta, alpha0, ply+1, false, maxDepth NODE)) {
             bestMove = *ml;
+            ml.nodesCount(stats.node - subnode);
             ml.currentToFront();            
         }
+    }
+#ifdef QT_GUI_LIB
+    if (node) {
+        node->nodes = stats.node - startnode;
+    }
+#endif
 
+    unsigned bestMovesLimit = 1;
     for (depth=dMaxCapture+dMaxThreat+2; depth<endDepth+dMaxCapture+dMaxThreat && stats.node < maxSearchNodes && !stopSearch; depth++) {
         ml.begin();
+        ml.sort(bestMovesLimit);
         bestMove = *ml;
         system_clock::time_point now = system_clock::now();
         lastStatus2 = now + milliseconds(1000);
@@ -116,6 +129,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
         SharedScore<         C> alpha2;
         SharedScore<(Colors)-C> beta2 ;
+        uint64_t subnode = stats.node;
         if (alpha0.v != -infinity*C && abs(alpha0.v) < 1024) {
             alpha2.v = alpha0.v - eval.aspiration0*C;
             beta2.v  = alpha0.v + eval.aspiration1*C;
@@ -146,6 +160,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         } else {
             search<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, false, maxDepth NODE);
         }
+        ml.nodesCount(stats.node - subnode);
         
         if (stopSearch) {
             alpha.v = alpha0.v;
@@ -164,6 +179,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         
         for (++ml; ml.isValid() && !stopSearch; ++ml) {
             currentMoveIndex++;
+            uint64_t subnode = stats.node;
             now = system_clock::now();
             if (now > lastStatus2 && !Options::humanreadable && !Options::quiet) {
                 std::stringstream g;
@@ -191,19 +207,21 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                     pruneNull = alpha >= nalpha.v;
                 }
             }
-            if (!pruneNull && !stopSearch) {
-                if (search<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, false, maxDepth NODE)) {
-                    bestMove = *ml;
-                    ml.currentToFront();
-                    if (alpha >= beta2.v && !stopSearch) {
-                        now = system_clock::now();
-                        console->send(status(now, alpha.v) + " lowerbound");
-                        search<(Colors)-C, trunk>(b, bestMove, depth-1, beta, alpha, ply+1, false, maxDepth NODE);
-                    }
-                    beta2.v = alpha.v + eval.aspiration1*C;
+            if (!pruneNull && !stopSearch && search<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, false, maxDepth NODE)) {
+                if (ml.current >= bestMovesLimit) bestMovesLimit++;
+                bestMove = *ml;
+                if (alpha >= beta2.v && !stopSearch) {
                     now = system_clock::now();
-                    console->send(status(now, alpha.v));
+                    console->send(status(now, alpha.v) + " lowerbound");
+                    search<(Colors)-C, trunk>(b, bestMove, depth-1, beta, alpha, ply+1, false, maxDepth NODE);
                 }
+                ml.nodesCount(stats.node - subnode);
+                ml.currentToFront();
+                beta2.v = alpha.v + eval.aspiration1*C;
+                now = system_clock::now();
+                console->send(status(now, alpha.v));
+            } else {
+                ml.nodesCount(stats.node - subnode);
             }
             if (alpha >= infinity*C) break;
             if (!infinite) {
