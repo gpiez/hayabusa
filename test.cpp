@@ -23,11 +23,12 @@
 #include "rootboard.tcc"
 #include "generateMoves.tcc"
 #include "transpositiontable.tcc"
+#include "boardbase.tcc"
 #include <sched.h>
 
 static inline uint64_t readtsc() {
     uint64_t a, d;
-    asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
+    asm volatile("rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
     return a + (d << 32);
 }
 
@@ -82,6 +83,7 @@ void TestRootBoard::pieceList() {
 }
 
 void TestRootBoard::generateCaptures() {
+    QTextStream xout(stderr);
     cpu_set_t mask;
     CPU_ZERO( &mask );
     CPU_SET( 1, &mask );
@@ -93,6 +95,9 @@ void TestRootBoard::generateCaptures() {
     QVector<Sample> times(testCases, Sample(iter));
     QVector<Sample> movetimes(testCases, Sample(iter));
     QVector<Sample> captimes(testCases, Sample(iter));
+    QVector<Sample> b02flood(testCases, Sample(iter));
+    QVector<Sample> b02point(testCases, Sample(iter));
+    QVector<Sample> b02double(testCases, Sample(iter));
     Move moveList[256];
     uint64_t sum=0;
     uint64_t movesum=0;
@@ -101,6 +106,7 @@ void TestRootBoard::generateCaptures() {
     uint64_t a, d, tsc;
     Key blah;
     Colors color[testCases];
+    double cpufreq = 3900.0;
     for (unsigned int i = testCases; i;) {
         --i;
         b->setup(testPositions[i]);
@@ -112,6 +118,116 @@ void TestRootBoard::generateCaptures() {
         times[i].reserve(iter*2);
         captimes[i].reserve(iter*2);
     }
+    unsigned op = 1;
+    const unsigned int iter2 = 10000000;
+    __v2di res = _mm_set1_epi64x(0);
+    uint64_t time=0;
+    for (unsigned int i = 0; i < iter2; ++i) {
+        BoardBase& bb = b->boards[i & 0xf].wb;
+        tsc = readtsc();
+        res = bb.build02Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build02Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build02Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build02Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build02Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build02Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build02Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build02Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        time += readtsc() - tsc;
+//        op = fold(res) & 0x3f;
+    }
+    std::cout << "build02(pos): " << time/iter2 << " clocks" << std::endl;
+    
+    time=0;
+    for (unsigned int i = 0; i < iter2; ++i) {
+        BoardBase& bb = b->boards[i & 0xf].wb;
+        tsc = readtsc();
+        res = bb.build13Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build13Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build13Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build13Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build13Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build13Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build13Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        res = bb.build13Attack(op);
+        op = _mm_cvtsi128_si64(res) & 0x3f;
+        time += readtsc() - tsc;
+    }
+    std::cout << "build13(pos): " << time/iter2 << " clocks" << std::endl;
+    
+//     time=0;
+//     for (unsigned int i = 0; i < iter2; ++i) {
+//         BoardBase& bb = b->boards[i & 0xf].wb;
+//         tsc = readtsc();
+//         res = bb.build02Attack(res);
+//         time += readtsc() - tsc;
+//     }
+//     std::cout << "build02(vector): " << time/iter2 << " clocks" << std::endl;
+
+    time=0;
+    for (unsigned int i = 0; i < iter2; ++i) {
+        BoardBase& bb = b->boards[i & 0xf].wb;
+        tsc = readtsc();
+        res = b->boards[0].wb.build13Attack(res);
+        res = b->boards[1].wb.build13Attack(res);
+        res = b->boards[2].wb.build13Attack(res);
+        res = b->boards[3].wb.build13Attack(res);
+        res = b->boards[4].wb.build13Attack(res);
+        res = b->boards[5].wb.build13Attack(res);
+        res = b->boards[6].wb.build13Attack(res);
+        res = b->boards[7].wb.build13Attack(res);
+        time += readtsc() - tsc;
+    }
+    std::cout << "build13(vector): " << time/iter2 << " clocks" << std::endl;
+
+    time=0;
+    uint64_t op64=0x1234556789abcdef;
+    for (unsigned int i = 0; i < iter2; ++i) {
+        BoardBase& bb = b->boards[i & 0xf].wb;
+        tsc = readtsc();
+        op64 = b->boards[0].wb.build02Attack(op64);
+        op64 = b->boards[1].wb.build02Attack(op64);
+        op64 = b->boards[2].wb.build02Attack(op64);
+        op64 = b->boards[3].wb.build02Attack(op64);
+        op64 = b->boards[4].wb.build02Attack(op64);
+        op64 = b->boards[5].wb.build02Attack(op64);
+        op64 = b->boards[6].wb.build02Attack(op64);
+        op64 = b->boards[7].wb.build02Attack(op64);
+        time += readtsc() - tsc;
+    }
+    std::cout << "build02(bit): " << time/iter2 << " clocks" << std::endl;
+
+    time=0;
+    for (unsigned int i = 0; i < iter2; ++i) {
+        BoardBase& bb = b->boards[i & 0xf].wb;
+        tsc = readtsc();
+        op64 = b->boards[0].wb.build13Attack(op64);
+        op64 = b->boards[1].wb.build13Attack(op64);
+        op64 = b->boards[2].wb.build13Attack(op64);
+        op64 = b->boards[3].wb.build13Attack(op64);
+        op64 = b->boards[4].wb.build13Attack(op64);
+        op64 = b->boards[5].wb.build13Attack(op64);
+        op64 = b->boards[6].wb.build13Attack(op64);
+        op64 = b->boards[7].wb.build13Attack(op64);
+        time += readtsc() - tsc;
+    }
+    std::cout << "build13(bit): " << time/iter2 << " clocks" << std::endl;
+
     for (int j = 0; j < iter; ++j) {
         nmoves = 0;
         ncap=0;
@@ -179,11 +295,10 @@ void TestRootBoard::generateCaptures() {
         movesum += (*i)[iter / 2];
     }
 
-    QTextStream xout(stderr);
-    xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << 3750.0*nmoves/sum << " generated Mmoves/s, " << 3750.0*nmoves/movesum << " executed Mmoves/s" << endl;
-    xout << ncap << " Captures, " << capsum/ncap << " Clocks, " << 3750.0*ncap/capsum << " generated Mmoves/s, " /*<< 3750.0*ncap/movesum << " executed Mmoves/s" */<< endl;
-    xout << blah << endl;
-    xout << dec;
+    xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << cpufreq*nmoves/sum << " generated Mmoves/s, " << cpufreq*nmoves/movesum << " executed Mmoves/s" << endl;
+    xout << ncap << " Captures, " << capsum/ncap << " Clocks, " << cpufreq*ncap/capsum << " generated Mmoves/s, " /*<< cpufreq*ncap/movesum << " executed Mmoves/s" */<< endl;
+    xout << blah + fold(res) + op64 << endl;
+
 }
 
 void TestRootBoard::perft() {
