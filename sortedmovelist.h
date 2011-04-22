@@ -44,7 +44,8 @@ public:
     }
 
     void nodesCount(uint64_t n) {
-        nodes[current] = n;
+        return;
+        nodes[current] += n;
     }
 
     void currentToFront() {
@@ -58,12 +59,12 @@ public:
         return;
         ASSERT(bm >= 1 && bm <= last);
 //         bm = 1;
-        int spalten[] = {111, 41, 13, 4, 1};
+        int rows[] = {111, 41, 13, 4, 1};
 
         for (unsigned k=0; k<5; k++)
         {
-            unsigned h=spalten[k];
-            // Sortiere die "Spalten" mit Insertionsort
+            unsigned h = rows[k];
+            
             for (unsigned i = h+first+bm; i<last; i++)
             {
                 Move tm = list[i];
