@@ -87,7 +87,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         node = new NodeItem(data, parent);
         NodeItem::nNodes++;
         NodeItem::m.unlock();
-        if (stats.node == 253144) asm("int3");
+//        if (stats.node == 253144) asm("int3");
     }
 #endif
 /*
@@ -229,9 +229,10 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                     stats.ttalpha++;
                     current.max(ttScore.v);
                 }
+                bool isBetaUpdated = false;
                 if (subentry.hiBound) {
                     stats.ttbeta++;
-                    beta.max(ttScore.v, m);
+                    isBetaUpdated = beta.max(ttScore.v, m);
 /*                    if (beta.max(ttScore.v, m)) {
 #ifdef QT_GUI_LIB
                         if (node) node->bestEval = ttScore.v;
@@ -245,7 +246,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                     if (node) node->bestEval = ttScore.v;
                     if (node) node->nodeType = NodeTT;
 #endif
-                    return false;
+                    return isBetaUpdated;
                 }
             } else {
                 if (subentry.loBound && ttScore >= beta.v) {
