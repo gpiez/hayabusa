@@ -58,7 +58,13 @@ struct BoardBase {
         __v2di d02;
         __v2di d13;
         };
-        uint64_t d[4];
+        struct {
+            uint64_t d0;
+            uint64_t d2;
+            uint64_t d1;
+            uint64_t d3;
+        };
+       uint64_t d[4];
     } dpins[nColors],                            //+256
       datt[nColors],                             //+288 sum of all directed attacks, for each of the 4 main directions
       kingIncoming[nColors];                    //+320
@@ -136,7 +142,13 @@ struct BoardBase {
     template<Colors C, unsigned int dir>
     uint64_t getPins() const {
         enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-        return dpins[CI].d[((dir & 1) << 1) + ((dir & 2) >> 1)];
+        switch(dir) {
+            case 0: return dpins[CI].d0;
+            case 1: return dpins[CI].d1;
+            case 2: return dpins[CI].d2;
+            case 3: return dpins[CI].d3;
+        }
+//         return dpins[CI].d[((dir & 1) << 1) + ((dir & 2) >> 1)];
     }
     template<Colors C>
     bool inCheck() const {

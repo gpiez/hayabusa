@@ -109,59 +109,30 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
 
 template<Colors C>
 void ColoredBoard<C>::generateCheckEvasions(Move* &good, Move* &bad) const {
-    uint64_t king = getPieces<C,King>();
     ASSERT(inCheck<C>());
-    /*
-     * Determine directions of checking, set bits in "check" accordingly
-     * If attacked by a single piece, blocking moves or capturing the
-     * attacking piece is allowed, otherwise only escape moves are considered
-     * Escape directions are determined by precalculated kingAttacks.
-     */
-    __v2di king2 = _mm_set1_epi64x(king);
-    __v2di zero = _mm_set1_epi64x(0);
-    __v2di check02 = datt[EI].d02 & king2;
-    __v2di check13 = datt[EI].d13 & king2;
-
-    check02 = pcmpeqq(check02, zero);
-    check13 = pcmpeqq(check13, zero);
-    check02 = ~check02 & _mm_set_epi64x(2,1);
-    check13 = ~check13 & _mm_set_epi64x(8,4);
-
-    unsigned check = fold(check02|check13)
-                   + (king & getAttacks<-C, Knight>() ? 16:0)
-                   + (king & getAttacks<-C, Pawn>() ? 32:0);
-    ASSERT(check);
+    uint64_t king = getPieces<C,King>();
     unsigned int kingSq = bit(king);
-    uint64_t pawn = 0;
-    if (__builtin_parity(check)) {
-        if (check == 16) {
-            // attack by knight, try to capture it.
-            if (uint64_t p = knightAttacks[kingSq] & getPieces<-C, Knight>())
-                generateTargetCapture<true>(good, bad, p, Knight);
-        } else if (check & 0xf) {
-            // attack by a single sliding piece. determine position
-            // and try to capture it. generate blocking moves
-            uint64_t i02 = fold(kingIncoming[CI].d02) & getAttacks<C,All>();
-            uint64_t i13 = fold(kingIncoming[CI].d13) & getAttacks<C,All>();
-            if (uint64_t p = (i02|i13) & getPieces<-C,Queen>())
-                generateTargetCapture<true>(good, bad, p, Queen);
-            if (uint64_t p = i02 & getPieces<-C,Rook>())
-                generateTargetCapture<true>(good, bad, p, Rook);
-            if (uint64_t p = i13 & getPieces<-C,Bishop>())
-                generateTargetCapture<true>(good, bad, p, Bishop);
-
-            if (uint64_t p = datt[EI].d[bit(check)] & kingIncoming[CI].d[bit(check)] & ~occupied1)
-                generateTargetMove(good, bad, p);
+    unsigned check;
+    /*
+     * First generate in-between moves and the move capturing one of checking
+     * pieces if possible. Treat checks by pawns separatly, as there is only one
+     * case of discovered check.
+     */
+    if (king & getAttacks<-C, Pawn>()) {
+        uint64_t pawn = 0;
+        if (C == White)
+            pawn = (king << 7 & ~file<'h'>()) + (king << 9 & ~file<'a'>());
+        else
+            pawn = (king >> 9 & ~file<'h'>()) + (king >> 7 & ~file<'a'>());
+        pawn &= getPieces<-C, Pawn>();
+        ASSERT(popcount(pawn)==1);
+        // only way for a pawn to give check and to discover check is with an
+        // vertical attacking piece behind it.
+        if (datt[EI].d2 & king) {
+            check = 2;
         } else {
-            // No other pieces left, we are attacked by one pawn.
-            ASSERT(check == 32);
-            if (C == White)
-                pawn = (king << 7 & ~file<'h'>()) + (king << 9 & ~file<'a'>());
-            else
-                pawn = (king >> 9 & ~file<'h'>()) + (king >> 7 & ~file<'a'>());
-            pawn &= getPieces<-C, Pawn>();
-            ASSERT(popcount(pawn)==1);
-            generateTargetCapture<true>(good, bad, pawn, Pawn);
+            check = 0;
+            generateTargetCapture<NoKingPawn>(good, bad, pawn, Pawn);
             if (pawn == cep.enPassant) {
                 if (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & cep.enPassant<<1 & getPins<C,2+C>())
                     *--good = Move(bit(p), bit(p) + C*8-1, Pawn, Pawn, true);
@@ -169,19 +140,61 @@ void ColoredBoard<C>::generateCheckEvasions(Move* &good, Move* &bad) const {
                 if (uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & cep.enPassant>>1 & getPins<C,2-C>())
                     *--good = Move(bit(p), bit(p) + C*8+1, Pawn, Pawn, true);
             }
-
         }
+    /*
+     * All other cases of checks with sliding pieces and knights. Determine
+     * directions of checking, set bits in "check" accordingly
+     * If attacked by a single piece, blocking moves or capturing the
+     * attacking piece is allowed, otherwise only escape moves are considered
+     * Escape directions are determined by precalculated kingAttacks.
+     */
     } else {
-        // test, if capturing an adjacent checking piece with the king is possible
-        // this is not covered by non capturing king moves below.
-        if (uint64_t p = kingAttacks[0b1100][kingSq] & ~getAttacks<-C, All>() & getPieces<-C, Rook>())
-            *--good = Move(kingSq, bit(p), King, Rook);
-        else if (uint64_t p = kingAttacks[0b0011][kingSq] & ~getAttacks<-C, All>() & getPieces<-C, Bishop>())
-            *--good = Move(kingSq, bit(p), King, Bishop);
-        else if (uint64_t p = kingAttacks[0b0000][kingSq] & ~getAttacks<-C, All>() & getPieces<-C, Queen>())
-            *--good = Move(kingSq, bit(p), King, Queen);
-    }
+        __v2di king2 = _mm_set1_epi64x(king);
+        __v2di zero = _mm_set1_epi64x(0);
+        __v2di check02 = datt[EI].d02 & king2;
+        __v2di check13 = datt[EI].d13 & king2;
 
+        check02 = pcmpeqq(check02, zero);
+        check13 = pcmpeqq(check13, zero);
+        check02 = ~check02 & _mm_set_epi64x(2,1);
+        check13 = ~check13 & _mm_set_epi64x(8,4);
+
+        check = fold(check02|check13)
+                       + (king & getAttacks<-C, Knight>() ? 16:0);
+        ASSERT(check);
+        if (__builtin_parity(check)) {
+            if (check == 16) {
+                // attack by knight, try to capture it.
+                if (uint64_t p = knightAttacks[kingSq] & getPieces<-C, Knight>())
+                    generateTargetCapture<AllMoves>(good, bad, p, Knight);
+            } else {
+                ASSERT(check & 0xf);
+                // attack by a single sliding piece. determine position
+                // and try to capture it. generate blocking moves
+                uint64_t kinc = kingIncoming[CI].d[bit(check)];
+                if (uint64_t q = kinc & getAttacks<C,All>() & getPieces<-C,Queen>())
+                    generateTargetCapture<AllMoves>(good, bad, q, Queen);
+                else if (check & 3) {
+                    if (uint64_t r = kinc & getAttacks<C,All>() & getPieces<-C,Rook>())
+                        generateTargetCapture<AllMoves>(good, bad, r, Rook);
+                } else if (uint64_t b = kinc & getAttacks<C,All>() & getPieces<-C,Bishop>())
+                        generateTargetCapture<AllMoves>(good, bad, b, Bishop);
+
+                if (uint64_t p = datt[EI].d[bit(check)] & kinc & ~occupied1)
+                    generateTargetMove(good, bad, p);
+            }
+        } else {
+            // test, if capturing an adjacent checking piece with the king is possible
+            // this is not covered by non capturing king moves below.
+            if (uint64_t p = kingAttacks[0b1100][kingSq] & ~getAttacks<-C, All>() & getPieces<-C, Rook>())
+                *--good = Move(kingSq, bit(p), King, Rook);
+            else if (uint64_t p = kingAttacks[0b0011][kingSq] & ~getAttacks<-C, All>() & getPieces<-C, Bishop>())
+                *--good = Move(kingSq, bit(p), King, Bishop);
+            else if (uint64_t p = kingAttacks[0b0000][kingSq] & ~getAttacks<-C, All>() & getPieces<-C, Queen>())
+                *--good = Move(kingSq, bit(p), King, Queen);
+        }
+    }
+    
     // non capturing check evasions
     ASSERT(popcount(check & 0xf) <= 2);
     for (uint64_t p = kingAttacks[check & 0xf][kingSq] & ~getAttacks<-C, All>() & ~occupied1; p; p &= p-1)
@@ -208,8 +221,7 @@ void ColoredBoard<C>::generateCheckEvasions(Move* &good, Move* &bad) const {
 
     for (uint64_t p = kingAttacks[check & 0xf][kingSq]
                     & ~getAttacks<-C, All>()
-                    & getPieces<-C,Pawn>()
-                    & ~pawn; p; p &= p-1)
+                    & getPieces<-C,Pawn>(); p; p &= p-1)
         *--good = Move(kingSq, bit(p), King, Pawn);
     return;
 }
@@ -346,11 +358,11 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
      * is illegal, since both pieces are removed and the king will be in check
      */
     if (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & rank<5>() & cep.enPassant<<1 & getPins<C,2+C>())
-        if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
+        if (((datt[EI].d0|kingIncoming[CI].d0) & (p|cep.enPassant)) != (p|cep.enPassant))
             *--good = Move(bit(p), bit(p) + C*8-1, Pawn, Pawn, true);
 
     if (uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & rank<5>() & cep.enPassant>>1 & getPins<C,2-C>())
-        if (((datt[EI].d[0]|kingIncoming[CI].d[0]) & (p|cep.enPassant)) != (p|cep.enPassant))
+        if (((datt[EI].d0|kingIncoming[CI].d0) & (p|cep.enPassant)) != (p|cep.enPassant))
             *--good = Move(bit(p), bit(p) + C*8+1, Pawn, Pawn, true);
 }
 
