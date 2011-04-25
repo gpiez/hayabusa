@@ -48,7 +48,7 @@ public:
             b.generateCheckEvasions(pfirst, plast);
         else {
             b.generateNonCap(pfirst, plast);
-            b.template generateCaptureMoves<true>(pfirst, plast);
+            b.template generateCaptureMoves<AllMoves>(pfirst, plast);
         }
         first = pfirst - list;
         last = plast - list;

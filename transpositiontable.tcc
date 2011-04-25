@@ -277,7 +277,7 @@ std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C
         b.generateCheckEvasions(good, bad);
     else {
         b.generateNonCap(good, bad);
-        b.template generateCaptureMoves<true>(good, bad);
+        b.template generateCaptureMoves<AllMoves>(good, bad);
     }
     if (ttMove.data)
         for (Move *i=good; i<bad; ++i) {
