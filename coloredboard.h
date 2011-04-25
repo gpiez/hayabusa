@@ -27,6 +27,8 @@
 
 class Eval;
 class TestRootBoard;
+
+enum MoveType { AllMoves, NoUnderPromo, NoKingPawn };
 /*
  * Board with <color> to move. Serves as a common template for all color-dependant functions.
  */
@@ -44,7 +46,7 @@ public:
     template<typename T> ColoredBoard(const T& prev, Move m, __v8hi est);
     inline __v8hi estimatedEval(const Move m, const Eval& rb) const;
     static void initTables();
-    template<bool> void generateCaptureMoves(Move* &list, Move* &bad) const;
+    template<MoveType> void generateCaptureMoves(Move* &list, Move* &bad) const;
     void generateCheckEvasions(Move* &list, Move* &bad) const;
     template<bool AbortOnFirst> bool generateMateMoves( Move** good = NULL, Move** bad = NULL) const;
     bool generateSkewers( Move** good) const;
@@ -54,7 +56,7 @@ public:
     Key getZobrist() const;
 private:
     void generateTargetMove(Move* &good, Move* &bad, uint64_t tobit) const;
-    template<bool> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned cap) const;
+    template<MoveType> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned cap) const;
     uint64_t perft(unsigned int depth) const;
     void divide(unsigned int depth) const;
 
