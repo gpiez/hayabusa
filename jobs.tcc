@@ -37,7 +37,7 @@ template<Colors C, typename A, typename B, typename T>
 void SearchJob<C,A,B,T>::job() {
     rb.clone(b, rep, ply);
     bool dummy;
-    rb.search<C, trunk>(b, m, depth, alpha, beta, ply, false, dummy
+    rb.search<C, trunk>(b, m, depth, alpha, beta, ply, ExtNot, dummy
 #ifdef QT_GUI_LIB
                        , node
 #endif

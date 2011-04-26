@@ -53,7 +53,7 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
     if (b.template inCheck<C>())
         b.generateCheckEvasions(good, bad);
     else {
-        b.template generateCaptureMoves<true>(good, bad);
+        b.template generateCaptureMoves<AllMoves>(good, bad);
         b.generateNonCap(good, bad);
     }
 
@@ -108,7 +108,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
     if (b.template inCheck<C>())
         b.generateCheckEvasions(good, bad);
     else {
-        b.template generateCaptureMoves<true>(good, bad);
+        b.template generateCaptureMoves<AllMoves>(good, bad);
         b.generateNonCap(good, bad);
     }
     if (depth == 1) {
@@ -146,7 +146,7 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
     if (b.template inCheck<C>())
         b.generateCheckEvasions(good, bad);
     else {
-        b.template generateCaptureMoves<true>(good, bad);
+        b.template generateCaptureMoves<AllMoves>(good, bad);
         b.generateNonCap(good, bad);
     }
 
