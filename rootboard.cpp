@@ -28,7 +28,23 @@
 #include "transpositiontable.tcc"
 
 unsigned RootBoard::dMaxCapture = 12;
-unsigned RootBoard::dMaxThreat = 13;
+// odd extensions tend to blow up the tree. Average tree size over 2600 positions:
+// ext  size, error margin ~5k
+// 13   660k
+// 12   541k
+// 11   635k
+// 10   522k
+//  9   616k
+//  8   505k
+//  7   598k
+//  6   490k
+//  5   582k
+//  4   475k
+//  3   562k
+//  2   462k
+//  1   539k
+//  0   427k
+unsigned RootBoard::dMaxThreat = 8;
 
 void RootBoard::stopTimer(milliseconds hardlimit) {
 #ifdef __WIN32__    
@@ -128,11 +144,11 @@ std::string RootBoard::status(system_clock::time_point now, int score)
             << " nodes " << getStats().node 
             << " pv " << tt->bestLine(*this)
             << " score cp " << score*color
-            << " nps " << (1000*getStats().node)/(t.count()+1)
+            << " nps " << (1000*getStats().node)/(t.count()+1.0)
             ;
     }
 #ifdef QT_GUI_LIB
-    emit(signalInfo(d, (uint64_t)(now-start).count(), getStats().node, QString::fromStdString(Score<White>::str(score)), QString::fromStdString(tt->bestLine(*this))));
+    emit(signalInfo(d, (uint64_t)(now-start).count(), getStats().node, QString::fromUtf8(Score<White>::str(score).c_str()), QString::fromStdString(tt->bestLine(*this))));
 #endif
     return g.str();
 }

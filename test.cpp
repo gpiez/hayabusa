@@ -90,7 +90,7 @@ void TestRootBoard::generateCaptures() {
     if ( sched_setaffinity( 0, sizeof(mask), &mask ) == -1 )
         qDebug() << "Could not set CPU Affinity" << endl;
     static const unsigned testCases = 200;
-    static const int iter = 1000;
+    static const int iter = 10000;
     typedef QVector<uint64_t> Sample;
     QVector<Sample> times(testCases, Sample(iter));
     QVector<Sample> movetimes(testCases, Sample(iter));
@@ -122,6 +122,7 @@ void TestRootBoard::generateCaptures() {
     const unsigned int iter2 = 10000000;
     __v2di res = _mm_set1_epi64x(0);
     uint64_t time=0;
+#ifdef NDEBUG
     for (unsigned int i = 0; i < iter2; ++i) {
         BoardBase& bb = b->boards[i & 0xf].wb;
         tsc = readtsc();
@@ -240,7 +241,7 @@ void TestRootBoard::generateCaptures() {
              asm volatile("cpuid\n rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
              overhead = (a + (d << 32)) - tsc;
              */
-            overhead = 272;
+            overhead = 20;
             if (color[i] == White)
                 b->boards[i].wb.buildAttacks();
             else
@@ -250,9 +251,9 @@ void TestRootBoard::generateCaptures() {
             Move* good = moveList+192;
             Move* bad = good;
             if (color[i] == White)
-                b->boards[i].wb.generateCaptureMoves<false>(good, bad);
+                b->boards[i].wb.generateCaptureMoves<AllMoves>(good, bad);
             else
-                b->boards[i].bb.generateCaptureMoves<false>(good, bad);
+                b->boards[i].bb.generateCaptureMoves<AllMoves>(good, bad);
             ncap += bad - good;
             captimes[i][j] = readtsc() - tsc - overhead;
 
@@ -298,6 +299,7 @@ void TestRootBoard::generateCaptures() {
     xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << cpufreq*nmoves/sum << " generated Mmoves/s, " << cpufreq*nmoves/movesum << " executed Mmoves/s" << endl;
     xout << ncap << " Captures, " << capsum/ncap << " Clocks, " << cpufreq*ncap/capsum << " generated Mmoves/s, " /*<< cpufreq*ncap/movesum << " executed Mmoves/s" */<< endl;
     xout << blah + fold(res) + op64 << endl;
+#endif
 
 }
 
