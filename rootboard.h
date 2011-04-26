@@ -42,6 +42,8 @@ class Console;
 template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
 
+enum Extension { ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4, ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32, ExtFork = 64 };
+
 /* Board representing a position with history, color to move, castling and en
  * passant status. Has an associated Eval object and holds multiple worker
  * threads. Contains information about the time budget.
@@ -130,7 +132,7 @@ public:
     const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
     template<Colors C, Phase P, typename A, typename B, typename T>
-    bool search(const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, bool threatened, bool& nextMaxDepth
+    bool search(const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, Extension ext, bool& nextMaxDepth
 #ifdef QT_GUI_LIB
         , NodeItem*
 #endif

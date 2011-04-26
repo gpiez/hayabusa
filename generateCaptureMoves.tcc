@@ -243,8 +243,39 @@ void ColoredBoard<C>::generateCaptureMoves( Move* &good, Move* &bad) const {
 }
 
 template<Colors C>
+bool ColoredBoard<C>::isForked() const {
+//     // TODO use information already available in pins[]
+/*    if (getPieces<C,Queen>() & ~pins) {
+        
+    }*/
+//    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+    if (!qsingle[CI][0].move.data) return false;
+    const __v2di zero = _mm_set1_epi64x(0);
+    uint64_t king = getPieces<C,King>();
+    if (getAttacks<-C,Rook>() & getPieces<C,Queen>()) {
+        __v2di kq = (kingIncoming[CI].d02 & _mm_set1_epi64x(getPieces<C,Queen>()));
+        kq = pcmpeqq(kq, zero);
+        kq = ~kq & qsingle[CI][0].d02;
+        uint64_t r = fold(kq & _mm_set1_epi64x(getPieces<-C,Rook>()));
+        if (r & getAttacks<-C,All>())
+            if (r & ~(getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>()))
+                return true;
+    }
+    if (getAttacks<-C,Bishop>() & getPieces<C,Queen>()) {
+        __v2di kq = (kingIncoming[CI].d13 & _mm_set1_epi64x(getPieces<C,Queen>()));
+        kq = pcmpeqq(kq, zero);
+        kq = ~kq & qsingle[CI][0].d13;
+        uint64_t r = fold(kq & _mm_set1_epi64x(getPieces<-C,Bishop>()));
+        if (r & getAttacks<-C,All>())
+            if (r & ~(getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>()))
+                return true;
+    }
+    return false;
+}
+
+template<Colors C>
 bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
-    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+
     if (!qsingle[EI][0].move.data) return false;
     const __v2di zero = _mm_set1_epi64x(0);
     uint64_t king = getPieces<-C,King>();
@@ -255,16 +286,7 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
      * skewer position, return true but no move. Check if rook is defended and
      * if it is attacking in the right direction
      */
-    if (getAttacks<C,Rook>() & getPieces<-C,Queen>()) {
-        __v2di kq = (kingIncoming[EI].d02 & _mm_set1_epi64x(getPieces<-C,Queen>()));
-        kq = pcmpeqq(kq, zero);
-        kq = ~kq & qsingle[EI][0].d02;
-        uint64_t r = fold(kq & _mm_set1_epi64x(getPieces<C,Rook>()));
-        if (r & getAttacks<C,All>())
-            if (r & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>()))
-                return true;
-    }
-    
+
     if (uint64_t forks = getAttacks<C,Rook>() & getAttacks<-C,Queen>()) {
         if(kingIncoming[EI].d0 & getPieces<-C,Queen>()) {
             forks &= (((const uint64_t*)&mask02[k].x)[0]
@@ -302,20 +324,8 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
     /*
      * Bishop skewers
      */
-    if (getAttacks<C,Bishop>() & getPieces<-C,Queen>()) {
-        __v2di kq = (kingIncoming[EI].d13 & _mm_set1_epi64x(getPieces<-C,Queen>()));
-        kq = pcmpeqq(kq, zero);
-        kq = ~kq & qsingle[EI][0].d13;
-        uint64_t r = fold(kq & _mm_set1_epi64x(getPieces<C,Bishop>()));
-        if (r & getAttacks<C,All>())
-            if (r & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>()))
-                return true;
-    }
-
     if (uint64_t skewers = getAttacks<C,Bishop>() & getAttacks<-C,Queen>()) {
-        if (getAttacks<C,Bishop>() & getPieces<-C,Queen>())
-            skewers = 0;
-        else if (kingIncoming[EI].d1 & getPieces<-C,Queen>()) {
+        if (kingIncoming[EI].d1 & getPieces<-C,Queen>()) {
             skewers &= (((const uint64_t*)&mask13x[k])[0]
                 & ~occupied[CI]
                 & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
@@ -334,10 +344,8 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
                 __v2di a13 = bs->d13;
                 __v2di from2 = doublebits[bs->move.from()];
                 __v2di pin13 = from2 & dpins[CI].d13;
-//                __v2di xray13 = a13 & datt[EI].d13;     //TODO capture mate moves are wrongly recognized as moves on a x-ray protected square
                 pin13 = pcmpeqq(pin13, zero);
-//                xray13 = _mm_cmpeq_epi64(xray13, zero);
-                pin13 = ~pin13 & a13 /*& xray13*/;
+                pin13 = ~pin13 & a13;
                 for (uint64_t a=fold(pin13) & skewers; a; a&=a-1) {
                     Move n;
                     n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;

@@ -53,6 +53,7 @@ public:
     bool generateForks( Move** good) const;
     void generateNonCap(Move*& good, Move*& bad) const;
     void doMove(BoardBase* next, Move m) const;
+    bool isForked() const;
     Key getZobrist() const;
 private:
     void generateTargetMove(Move* &good, Move* &bad, uint64_t tobit) const;
