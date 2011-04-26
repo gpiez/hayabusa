@@ -70,7 +70,7 @@ enum Phase { root, trunk, tree, mate, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
 
-enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile1, NodeFutile2, NodeMate, NodePresearch, NodeIllegal, NodeRepetition, NodeEndgameEval };
+enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile1, NodeFutile2, NodeFutile3, NodeMate, NodePresearch, NodeIllegal, NodeRepetition, NodeEndgameEval };
 
 enum NodeFlag { Threatened = 1, Extend = 2 };
 
@@ -86,7 +86,6 @@ static const int maxRows = 1000;
 static const unsigned int maxThreadId = 255;
 static const int maxHistory = 256;
 static const int nullReduction = 3;
-static const int initialError = 100;
 static const unsigned int nTTLocks = 1;
 static const unsigned int maxMoves = 256; // maximum possible moves in a position
 static const unsigned int goodMoves = 192; // maximum possible good moves in a position

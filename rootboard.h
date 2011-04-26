@@ -117,10 +117,10 @@ public:
     bool infinite;
     uint64_t maxSearchNodes;
 
-    RawScore estimatedError[nPieces*2+1][nSquares];
-    double avgE[nPieces*2+1][nSquares];
-    double avgE2[nPieces*2+1][nSquares];
-    double avgN[nPieces*2+1][nSquares];
+    RawScore delta[nPieces*2+1][nSquares][nSquares];
+    double avgE[nPieces*2+1][nSquares][nSquares];
+    double avgE2[nPieces*2+1][nSquares][nSquares];
+    double avgN[nPieces*2+1][nSquares][nSquares];
 
     RootBoard(Console*);
     void clearEE();
