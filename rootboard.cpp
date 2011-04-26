@@ -84,7 +84,7 @@ void RootBoard::infoTimer(milliseconds repeat) {
         std::stringstream g;
         if (Options::humanreadable) {
             g << commonStatus() 
-            << std::fixed << std::setprecision(0) << std::setw(5) << getStats().node/(t*1000+1) << "/s "
+            << std::fixed << std::setprecision(0) << std::setw(5) << getStats().node/(t*1000+1.0) << "/s "
             << getLine();
             std::string str = g.str();
             str.resize(80,' ');
@@ -144,7 +144,7 @@ std::string RootBoard::status(system_clock::time_point now, int score)
             << " nodes " << getStats().node 
             << " pv " << tt->bestLine(*this)
             << " score cp " << score*color
-            << " nps " << (1000*getStats().node)/(t.count()+1.0)
+            << " nps " << (1000*getStats().node)/(t.count()+1)
             ;
     }
 #ifdef QT_GUI_LIB
@@ -155,10 +155,10 @@ std::string RootBoard::status(system_clock::time_point now, int score)
 
 void RootBoard::clearEE() {
     for (int p=-nPieces; p<=(int)nPieces; ++p)
-        for (unsigned int sq=0; sq<nSquares; ++sq) {
-            estimatedError[p+nPieces][sq] = initialError;
-            avgE[p+nPieces][sq] = 0.0;
-            avgN[p+nPieces][sq] = 0.001;
+        for (unsigned int sq1=0; sq1<nSquares; ++sq1) for (unsigned int sq=0; sq<nSquares; ++sq) {
+            delta[p+nPieces][sq1][sq] = 0;
+            avgE[p+nPieces][sq1][sq] = 0.0;
+            avgN[p+nPieces][sq1][sq] = 0.001;
         }
 }
 
@@ -308,6 +308,8 @@ const BoardBase& RootBoard::setup(const std::string& str) {
     if (getStats().ttuse) tt->agex();
     
     rootPly = 0;
+    board.positionalScore = eval(board);
+    board.isExact = true;
     return board;
 }
 

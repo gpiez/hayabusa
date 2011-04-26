@@ -85,6 +85,8 @@ struct BoardBase {
     } qsingle[nColors][1+8+1];                   //960
 
     int material;
+    mutable RawScore positionalScore;
+    mutable bool isExact;
 
     struct XB {
         __v2di x;

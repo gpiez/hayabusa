@@ -30,7 +30,6 @@ union Stats;
 
 extern __thread unsigned threadId;
 extern __thread bool isMain;
-extern __thread int lastPositionalEval;
 
 class WorkThread {
     static std::multimap<unsigned, Job*> jobs;

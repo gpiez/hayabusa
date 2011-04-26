@@ -1058,7 +1058,7 @@ int Eval::operator () (const BoardBase& b) const {
     print_debug(debugEval, "attack:         %d\n", a);
     print_debug(debugEval, "pieces:         %d\n", pi);
     
-    return e + m + pa + a + pi;
+    return /*e + */m + pa + a + pi;
 }
 
 void Eval::ptClear() {

@@ -231,7 +231,7 @@ void StatWidget::updateBoard()
                     if (radioButtonPSQ->isChecked())
                         ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard().material) - c*(int[]){0,450,300,925,300,100,0}[p]);
                     else
-                        ee = rb.estimatedError[nPieces + c*p][x+(7-y)*8];
+                        ee = rb.delta[nPieces + c*p][x+(7-y)*8][0];
 
                     if (ee > 127) ee = 127;
                     if (ee<-128) ee = -128;

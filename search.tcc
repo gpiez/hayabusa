@@ -102,13 +102,14 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 
     if (stopSearch) return false;
 
-    RawScore& eE = prev.CI == 0 ? estimatedError[nPieces + (m.piece()&7)][m.to()] : estimatedError[nPieces - (m.piece()&7)][m.to()];
+    //FIXME merge rooks/bishops/knights
+    RawScore& delta1 = prev.CI == 0 ? delta[nPieces + (m.piece()&7)][m.from()][m.to()] : delta[nPieces - (m.piece()&7)][m.from()][m.to()];
     // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     // FIXME connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
     A current(alpha);
-
+    RawScore estimatedScore = estimate.score.calc(prev.material) + prev.positionalScore + delta1; //FIXME move score() into ColorBoard ctor
     if (P==vein) {
-        current.max(estimate.score.calc(prev.material)+lastPositionalEval-C*eE-C*300);
+//         current.max(estimatedScore);
         if (current >= beta.v) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = beta.v;
@@ -147,7 +148,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     if (P!=vein) {
         if (b.template inCheck<C>())
             threatened = ExtCheck;
-        else if(!(extend & ExtPawnThreat)) {
+        else /*if(!(extend & ExtPawnThreat))*/ {
             uint64_t pMoves = b.template getPieces<-C,Pawn>() & b.pins[EI];
             pMoves = ( (  shift<-C*8  >(pMoves)               & ~b.occupied1)
                        | (shift<-C*8+1>(pMoves) & ~file<'a'>() &  b.occupied[CI])
@@ -178,7 +179,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
 
     if (P==vein || (P==leaf && !threatened)) {
         ScoreBase<C> current(alpha);
-        current.max(estimate.score.calc(prev.material)+lastPositionalEval-C*eE-C*300);
+        current.max(estimatedScore);
         if (current >= beta.v) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = beta.v;
@@ -268,37 +269,56 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     }
 
     do {
-        stats.eval++;
-        int realScore = eval(b);
-        if (P == tree && Options::pruning && !threatened && !extend) {
+        if (P==tree && Options::pruning && !threatened && !extend) {
             if (depth == dMaxCapture + dMaxThreat + 1) {
                 ScoreBase<C> fScore;
-                fScore.v = realScore - C*150;
+                fScore.v = estimatedScore - C*100;
 #ifdef QT_GUI_LIB
                 if (node) node->bestEval = fScore.v;
                 if (node) node->nodeType = NodeFutile1;
 #endif
-                
+
                 if (fScore >= beta.v) return false;
             }
             if (depth == dMaxCapture + dMaxThreat + 2) {
                 ScoreBase<C> fScore;
-                fScore.v = realScore - C*900;
+                fScore.v = estimatedScore - C*1000;
 #ifdef QT_GUI_LIB
                 if (node) node->bestEval = fScore.v;
                 if (node) node->nodeType = NodeFutile2;
 #endif
                 if (fScore >= beta.v) return false;
             }
+/*            if (depth == dMaxCapture + dMaxThreat + 3) {
+                ScoreBase<C> fScore;
+                fScore.v = estimatedScore - C*1000;
+#ifdef QT_GUI_LIB
+                if (node) node->bestEval = fScore.v;
+                if (node) node->nodeType = NodeFutile3;
+#endif
+                if (fScore >= beta.v) return false;
+            }*/
         }
-        static const int minEstimatedError = 10;
-        int error = C*(estimate.score.calc(b.material) + lastPositionalEval - realScore) + minEstimatedError;
-        if (isMain) {
-            if (eE < error) eE = error;
-            else eE--;
-        }
-        lastPositionalEval = realScore - estimate.score.calc(b.material);
 
+        RawScore realScore;
+        if (0 && prev.isExact) {
+            realScore = estimatedScore;
+            b.positionalScore = prev.positionalScore + delta1;
+            b.isExact = false;
+        } else {
+            stats.eval++;       
+            b.positionalScore = eval(b);
+            b.isExact = true;
+            ScoreBase<C> delta2;
+            delta2.v = b.positionalScore - prev.positionalScore;
+            realScore = estimate.score.calc(prev.material) + b.positionalScore;
+            ASSERT(realScore == estimatedScore - delta1 + delta2.v);
+            if (isMain) {
+                if (delta2 < delta1) delta1 = delta2.v;
+                else delta1 += C;
+            }
+        }
+        
         if (P==vein || (P==leaf && !threatened)) {
             current.max(realScore);
             if (current >= beta.v) {
