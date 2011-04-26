@@ -90,7 +90,7 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
         } else {
             // promotion
             next->occupied[CI] = occupied[CI] - from + to;
-            next->occupied[EI] = occupied[EI] - (m.capture()? to:0);
+            next->occupied[EI] = occupied[EI] & ~to;
             next->getPieces<C,Pawn>() -= from;
             next->getPieces<C>(piece) += to;
             next->getPieces<-C>(m.capture()) -= to;
@@ -99,12 +99,12 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
     } else {
         // standard move, e. p. is handled by captureOffset
         next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
-        next->cep.enPassant = m.piece()==Pawn ? to & shift<C*16>(from) & rank<4>() & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1) : 0;
+        next->cep.enPassant = shift<C*16>(getPieces<C,Pawn>() & from) & to & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1);
 	ASSERT(occupied[CI] & from);
 	ASSERT(~occupied[CI] & to);
 	ASSERT(from != to);
         next->occupied[CI] = occupied[CI] - from + to;
-        next->occupied[EI] = occupied[EI] - (m.capture() ? to:0);
+        next->occupied[EI] = occupied[EI] & ~to;
         next->getPieces<C>(m.piece()) += to - from;
         next->getPieces<-C>(m.capture()) -= to;
         next->material = material - materialTab[m.capture()];
