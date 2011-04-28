@@ -106,7 +106,7 @@ Eval::Eval():
     pawn = 90;
     knight = 325;   
     bishop = 325;   
-    rook = 500;
+    rook = 520;
     queen = 975;    
 
     bishopPair = 50;
@@ -125,8 +125,8 @@ Eval::Eval():
     pawnIsolatedCenter = -16;// - Eval::pawnBackwardOpen;
     pawnIsolatedOpen = -8;// - Eval::pawnBackwardOpen;
     pawnIsolatedEdge = -8;// - Eval::pawnBackwardOpen;
-    pawnEdge = -12;
-    pawnCenter = 10;
+//     pawnEdge = -12;
+//     pawnCenter = 10;
     pawnDouble = -25;
     pawnShoulder = 4;
     pawnHole = -8;
@@ -741,16 +741,16 @@ inline int Eval::mobility( const BoardBase &b, unsigned& attackingPieces, unsign
     const uint64_t oppking2 = b.kAttacked2[king];
     const uint64_t ownking = b.getAttacks< C,King>() | shift<C* 8>(b.getAttacks< C,King>());
     const uint64_t noBlockedPawns = ~(b.getPieces<C,Pawn>() & shift<C*-8>(b.getPieces<-C,Pawn>()));
-    const __v2di noBlockedPawns2 = _mm_set1_epi64x(noBlockedPawns);
-    const uint64_t empty = ~b.getOcc<C>();
-    const __v2di empty2 = _mm_set1_epi64x(empty);
+//     const __v2di noBlockedPawns2 = _mm_set1_epi64x(noBlockedPawns);
+//     const uint64_t empty = ~b.getOcc<C>();
+//     const __v2di empty2 = _mm_set1_epi64x(empty);
     
-    __v2di w0 = zero, w1 = zero, w2 = zero, w3 = zero;
+//     __v2di w0 = zero, w1 = zero, w2 = zero, w3 = zero;
     
     const __v2di v2queen = _mm_set1_epi64x(b.getPieces<C,Queen>());
     
     uint64_t restrictions = ~b.getAttacks<-C,Pawn>();
-    __v2di restrictions2 = _mm_set1_epi64x(restrictions);
+//     __v2di restrictions2 = _mm_set1_epi64x(restrictions);
     __v2di allBishopAttacks = zero;
     //TODO generally optimize for at most two pieces of a kind. In positions with more the evaluation will most likely be way off anyway.
     if (b.bsingle[CI][0].move.data) {
@@ -970,7 +970,7 @@ template<Colors C>
 int Eval::attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     uint64_t king = b.getPieces<-C,King>();
-    unsigned kpos = bit(king);
+//     unsigned kpos = bit(king);
     
     // If King has already moved, assess king safety by the pawn shield on the side he is standing
     // If on e/d file, treat him with no pawn shield at all for now.
@@ -1051,7 +1051,7 @@ int Eval::operator () (const BoardBase& b) const {
     openingScale = std::max(0, std::min(openingScale, 1<<logEndgameTransitionSlope));
     int a = openingScale ? (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope : 0;
     int pi = pieces<White>(b, pe) - pieces<Black>(b, pe);
-    int pa = pe.score + (openingScale*pe.centerOpen + ((1<<logEndgameTransitionSlope)-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope;
+    int pa = pe.score + ((openingScale*pe.centerOpen + ((1<<logEndgameTransitionSlope)-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope);
     print_debug(debugEval, "material:       %d\n", e);
     print_debug(debugEval, "mobility:       %d\n", m);
     print_debug(debugEval, "pawns:          %d\n", pa);
