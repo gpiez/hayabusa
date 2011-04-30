@@ -109,7 +109,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     A current(alpha);
     RawScore estimatedScore = estimate.score.calc(prev.material) + prev.positionalScore + delta1; //FIXME move score() into ColorBoard ctor
     if (P==vein) {
-//         current.max(estimatedScore);
+        current.max(estimatedScore);
         if (current >= beta.v) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = beta.v;
@@ -174,7 +174,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     
     if (P!=vein) {
         z = b.getZobrist();
-        store(z, ply);
+        store(z, ply);          //TODO could be delayed?
     }
 
     if (P==vein || (P==leaf && !threatened)) {
@@ -504,8 +504,24 @@ nosort:
         for (Move* i = good; i<bad && current < beta.v; ++i) {
             if ((P == leaf && ((i>=captures && i<threats) || i>=nonCaptures) && !threatened && !(extend & (ExtDualReply|ExtSingleReply))) || P == vein) {
                 if (!i->capture() && !i->isSpecial()) continue;
+/*                estimate.vector = b.estimatedEval(*i, eval);
+                RawScore delta3 = b.CI == 0 ? delta[nPieces + ((*i).piece()&7)][(*i).from()][(*i).to()] : delta[nPieces - ((*i).piece()&7)][(*i).from()][(*i).to()];
+                RawScore estimatedScore = estimate.score.calc(b.material) + b.positionalScore + delta3;
+                if (current >= estimatedScore) {
+                    stats.node++;
+                    stats.leafcut++;
+                    continue;
+                }                                 */
                 search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, ExtNot, hasMaxDepth NODE);
             } else if (depth <= dMaxCapture + 1) {
+/*                estimate.vector = b.estimatedEval(*i, eval);
+                RawScore delta3 = b.CI == 0 ? delta[nPieces + ((*i).piece()&7)][(*i).from()][(*i).to()] : delta[nPieces - ((*i).piece()&7)][(*i).from()][(*i).to()];
+                RawScore estimatedScore = estimate.score.calc(b.material) + b.positionalScore + delta3;
+                if (current >= estimatedScore) {
+                    stats.node++;
+                    stats.leafcut++;
+                    continue;
+                }*/
                 search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, ExtNot, hasMaxDepth NODE);
                 hasMaxDepth = true;
             }
