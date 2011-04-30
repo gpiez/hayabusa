@@ -24,6 +24,7 @@
 #endif
 
 #include <stdint.h>
+#include "constants.h"
 
 // This is thread local defined in workthread.cpp, because thread local storage
 // speeds up the program by a large factor.
@@ -51,5 +52,8 @@ union Stats {
 };
 
 extern __thread Stats stats;
+#ifdef MYDEBUG
+extern uint64_t mobStat[nColors][nPieces+1][2][nSquares];
+#endif
 
 #endif

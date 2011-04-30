@@ -219,13 +219,18 @@ void StatWidget::updateBoard()
         position->setPixmap(boardPixmap);
     }
 
-    size = (qMin(ww1->height(), ww1->width()))/8;
-    QPixmap pm(size*8, size*8);
+//     size = (qMin(ww1->height(), ww1->width()))/8;
+    size = ww1->width()/16;
+    int hh = ww1->height();
+    QPixmap pm(size*16, hh);
     QPainter pa( &pm );
-    for (int c=-1; c<=1; c+=2)
+//     for (int c=-1; c<=1; c+=2)
+#ifdef MYDEBUG
+    for (int r=0; r<=1; ++r)
         for (int p=Rook; p<=King; ++p) {
-            pa.setPen(Qt::NoPen);
-            for ( int x=0; x<8; x++ )
+    pm.fill(QColor(192, 192, 192, 255));
+             pa.setPen(Qt::NoPen);
+/*            for ( int x=0; x<8; x++ )
                 for ( int y=0; y<8; y++ ) {
                     int ee;
                     if (radioButtonPSQ->isChecked())
@@ -238,8 +243,19 @@ void StatWidget::updateBoard()
                     pa.setBrush(QBrush(pal[ee+128]));
                     pa.drawRect(x*size,y*size,size,size);
                 }
-            minipm[(1-c)/2][p]->setPixmap(pm);
+            minipm[(1-c)/2][p]->setPixmap(pm);*/
+            uint64_t mobMax = 1;
+            for ( int x=0; x<16; x++ )
+                mobMax = std::max(mobMax, mobStat[0][p][r][x]);
+            for ( int x=0; x<16; x++ ) {
+                int y = (hh*mobStat[0][p][r][x])/mobMax;
+                pa.setBrush(QBrush(pal[x*16]));
+//                 pa.setBrush(QBrush(QColor(192,192,192)));
+                pa.drawRect(x*size,hh-y,size,y);
+            }
+            minipm[r][p]->setPixmap(pm);
         }
+#endif
 }
 
 void StatWidget::emptyTree() {
