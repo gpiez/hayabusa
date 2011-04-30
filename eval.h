@@ -82,7 +82,7 @@ union KeyScore {
 };
 
 template<typename T>
-void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986 );
+void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986, unsigned istart=0 );
 
 class PieceList;
 class BoardBase;
@@ -102,22 +102,41 @@ class Eval {
     int rookTrapped;
     int rookOpen;
     int rookHalfOpen;
-
+    int rookWeakPawn;
+    
     int pawnBackward;
     int pawnBackwardOpen;
     int pawnIsolatedCenter;
     int pawnIsolatedEdge;
     int pawnIsolatedOpen;
-    int pawnPasser[8];
-    int pawnEdge;
-    int pawnCenter;
+    int pawnConnPasser[6];
+    int pawnPasser[6];
+//     int pawnEdge;
+//     int pawnCenter;
     int pawnDouble;
     int pawnShoulder;
-    int pawnHole;
-    int pawnConnPasser;
-    int pawnUnstoppable;
-    
-    int attack1b1;
+//     int pawnHole;
+//     int pawnUnstoppable;
+
+    int attackR1[21];
+    int attackR2[21];
+    int attackB1[21];
+    int attackB2[21];
+    int attackQ1[21];
+    int attackQ2[21];
+    int attackN1[21];
+    int attackN2[21];
+    int attackP[21];
+    int attackK[21];
+
+    int attackTable[256], defenseTable[256];
+
+    int mobB1[64], mobB2[64];
+    int mobN1[64], mobN2[64];
+    int mobR1[64], mobR2[64];
+    int mobQ1[64], mobQ2[64];
+
+/*    int attack1b1;
     int attack2b1;
     int attack1b2;
     int attack2b2;
@@ -136,14 +155,14 @@ class Eval {
     int attack1p1;
     int attack2p1;
     int attack1k1;
-    int attack2k1;
+    int attack2k1;*/
     
     int endgameMaterial;
     
     void initPS();
     void initZobrist();
     static void initTables();
-    template<Colors C> int mobility(const BoardBase&, unsigned& attackingPieces, unsigned& defendingPieces) const __attribute__((__always_inline__));
+    template<Colors C> int mobility(const BoardBase&, int& attackingPieces, int& defendingPieces) const __attribute__((__always_inline__));
     template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const __attribute__((__always_inline__));
     template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const __attribute__((__always_inline__));
     PawnEntry pawns(const BoardBase&) const;
@@ -189,8 +208,9 @@ public:
 };
 
 template<typename T>
-void sigmoid(T& p, double start, double end, double dcenter, double width) {
-    static const size_t n = sizeof(T)/sizeof(p[0])-1;
+void sigmoid(T& p, double start, double end, double dcenter, double width, unsigned istart) {
+    static const size_t n = sizeof(T)/sizeof(p[0])-1-istart;
+    dcenter -= istart;
     double t0 = -dcenter;
     double t1 = n-dcenter;
     double l0 = 1/(1+exp(-t0/width));
@@ -198,16 +218,19 @@ void sigmoid(T& p, double start, double end, double dcenter, double width) {
 
     double r = (end - start)/(l1-l0);
     double a = start - l0*r;
+    for (unsigned int i = 0; i < istart; ++i)
+        p[i] = 0;
     for (unsigned int i = 0; i <= n; ++i) {
         double t = i - dcenter;
-        p[i] = lrint(a + r/(1.0 + exp(-t/width)));
+        p[i+istart] = lrint(a + r/(1.0 + exp(-t/width)));
     }
 }
 
 template<typename T>
 void printSigmoid(T& p, std::string str) {
-    size_t n = sizeof(T)/sizeof(p[0])-1;
-    std::cout << std::setw(16) << str;
+    size_t n;
+    for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && !p[n]; --n);
+    std::cout << std::setw(5) << str;
     for (unsigned int i = 0; i <= n; ++i) {
         std::cout << std::setw(3) << p[i];
     }
