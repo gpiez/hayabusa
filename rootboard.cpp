@@ -84,7 +84,7 @@ void RootBoard::infoTimer(milliseconds repeat) {
         std::stringstream g;
         if (Options::humanreadable) {
             g << commonStatus() 
-            << std::fixed << std::setprecision(0) << std::setw(5) << getStats().node/(t*1000+1.0) << "/s "
+            << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t*1000+1.0) << "/s "
             << getLine();
             std::string str = g.str();
             str.resize(80,' ');
@@ -310,6 +310,7 @@ const BoardBase& RootBoard::setup(const std::string& str) {
     rootPly = 0;
     board.positionalScore = eval(board);
     board.isExact = true;
+    memset(mobStat, 0, sizeof(mobStat));
     return board;
 }
 
@@ -360,9 +361,9 @@ void RootBoard::go(const std::map<std::string, StringList>& param )
 
     Job* job;
     if (color == White)
-        job = new RootSearchJob<White>(*this);
+        job = new RootSearchJob<White>(*this, keys);
     else
-        job = new RootSearchJob<Black>(*this);
+        job = new RootSearchJob<Black>(*this, keys);
     WorkThread::findFree()->queueJob(0U, job);
 }
 
