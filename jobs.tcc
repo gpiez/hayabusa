@@ -47,10 +47,11 @@ void SearchJob<C,A,B,T>::job() {
 #endif
 
 template<Colors C>
-RootSearchJob<C>::RootSearchJob(RootBoard& rb): rb(rb) {};
+RootSearchJob<C>::RootSearchJob(RootBoard& rb, const RepetitionKeys& rep): rb(rb), rep(rep) {};
 
 template<Colors C>
 void RootSearchJob<C>::job() {
     threadId = 0;
-    /*Move m =*/ rb.rootSearch<C>();
+    rb.clone<C>(rb.currentBoard<C>(), rep, 0);
+    rb.rootSearch<C>();
 }

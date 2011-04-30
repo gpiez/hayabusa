@@ -50,7 +50,7 @@ class SearchJob: public Job {
     B& beta;
     unsigned ply;
     unsigned parent;
-    const RepetitionKeys& rep;
+    const RepetitionKeys& rep;  //TODO really needed? This should be always thread-local keys
 #ifdef QT_GUI_LIB
     NodeItem* node;
 #endif
@@ -66,9 +66,10 @@ public:
 template<Colors C>
 class RootSearchJob: public Job {
     RootBoard& rb;
+    const RepetitionKeys& rep;//TODO really needed? This should be always thread-local keys
 
 public:
-    RootSearchJob(RootBoard& rb);
+    RootSearchJob(RootBoard& rb, const RepetitionKeys& rep);
     void job();
 };
 
