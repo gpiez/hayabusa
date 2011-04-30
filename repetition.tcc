@@ -38,7 +38,9 @@ inline void RootBoard::store(Key k, unsigned ply) {
 }
 template<Colors C>
 inline void RootBoard::clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const {
-    for (int i = ply+rootPly; i+b.fiftyMoves >= ply+rootPly; --i)
+    for (unsigned i = ply+rootPly; i+b.fiftyMoves >= ply+rootPly; --i) {
         keys[i] = other[i];
+        if (!i) break;
+    }
 }
 
