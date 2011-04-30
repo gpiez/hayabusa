@@ -99,6 +99,7 @@ struct BoardBase {
     static const uint64_t knightAttacks[nSquares];
     static const uint64_t kAttacked1[nSquares];
     static const uint64_t kAttacked2[nSquares];
+    static const uint64_t kAttacked[nSquares];
     static uint64_t kingAttacks[16][nSquares];
     static uint64_t epTab[nPieces+1][nSquares];
 

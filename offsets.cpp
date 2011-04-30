@@ -68,6 +68,21 @@ int main(int, char** argv) {
                 else
                     std::cout << " ";
             }
+    } else if (argv[1] && std::string("kattack") == argv[1]) {
+        for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
+             {
+                uint64_t bits=0;
+                for (int u=-2; u<=2; ++u)
+                    for (int v=-2; v<=2; ++v)
+                        if (abs(u)!=2 || abs(v)!=2)
+                        if (x+u >= 0 && x+u<8 && y+v>=0 && y+v<8)
+                            bits |= 1ULL << (x+u+(y+v)*8);
+                std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ",";
+                if (x == 7)
+                    std::cout << std::endl;
+                else
+                    std::cout << " ";
+            }
     } else if (argv[1] && std::string("king1bits") == argv[1]) {
         for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
              {
