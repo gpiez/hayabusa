@@ -30,7 +30,7 @@
 #include "rootboard.tcc"
 #include "rootsearch.tcc"
 #include "stringlist.h"
-
+// #include <fstream>
 namespace Options {
     unsigned int        splitDepth = 1000;
     int                 humanreadable = 0;
@@ -110,9 +110,11 @@ int Console::exec() {
 #if defined(QT_NETWORK_LIB)
     return QCoreApplication::exec();
 #else
+//     std::ofstream f("log");
     while(true) {
         std::string str;
         std::getline(std::cin, str);
+//         f << str;
         if (str[str.length()-1] == 13 || str[str.length()-1] == 10) {
             str.erase(str.length()-1);
         }
