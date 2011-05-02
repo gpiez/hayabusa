@@ -162,12 +162,12 @@ class Eval {
     void initPS();
     void initZobrist();
     static void initTables();
-    template<Colors C> int mobility(const BoardBase&, int& attackingPieces, int& defendingPieces) const __attribute__((__always_inline__));
+    template<Colors C, GamePhase P> int mobility(const BoardBase&, int& attackingPieces, int& defendingPieces) const __attribute__((__always_inline__));
     template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const __attribute__((__always_inline__));
     template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const __attribute__((__always_inline__));
     PawnEntry pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
-
+    template<Colors C> int king(const BoardBase& b) const;
 public:
     int aspiration0;
     int aspiration1;

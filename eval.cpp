@@ -36,6 +36,37 @@ static const int maxAttack = 1324;
 static const int baseDefense = -256;
 static const int maxDefense = -331;
 
+static const int ksv[nSquares] = {
+     0,  2,  4,  6,  6,  4,  2,  0,
+     2, 10, 12, 14, 14, 12, 10,  2,
+     4, 12, 20, 22, 22, 20, 12,  4,
+     6, 14, 22, 30, 30, 22, 14,  6,
+     6, 14, 22, 30, 30, 22, 14,  6,
+     4, 12, 20, 22, 22, 20, 12,  4,
+     2, 10, 12, 14, 14, 12, 10,  2,
+     0,  2,  4,  6,  6,  4,  2,  0
+};
+static const int ksvb[2][nSquares] = {
+{
+     0, 10, 20, 30, 30, 26, 22, 18,
+    10, 21, 32, 43, 43, 36, 28, 22,
+    20, 32, 44, 56, 56, 45, 36, 26,
+    30, 43, 56, 69, 69, 56, 44, 30,
+    30, 43, 56, 69, 69, 56, 43, 30,
+    26, 36, 45, 56, 56, 44, 32, 20,
+    22, 28, 36, 43, 43, 32, 21, 10,
+    18, 22, 26, 30, 30, 20, 10,  0
+},{
+    18, 22, 26, 30, 30, 20, 10,  0,
+    22, 28, 36, 43, 43, 32, 21, 10,
+    26, 36, 45, 56, 56, 44, 32, 20,
+    30, 43, 56, 69, 69, 56, 43, 30,
+    30, 43, 56, 69, 69, 56, 44, 30,
+    20, 32, 44, 56, 56, 45, 36, 26,
+    10, 21, 32, 43, 43, 36, 28, 22,
+     0, 10, 20, 30, 30, 26, 22, 18
+}};
+
 int pawnFileOpen[4], pawnFileEnd[4];
 int pawnRankOpen[6], pawnRankEnd[6];
 int8_t wpawnOpen[64], wpawnEnd[64];
@@ -469,12 +500,8 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         pawnEntry.centerEnd = w0-b0;
         print_debug(debugEval, "pawnCenterEnd:%3d/%3d\n", w0, b0);
 
-        uint64_t wpawnShoulder = wpawn & wpawn<<1 & ~file<'a'>();
-        uint64_t bpawnShoulder = bpawn & bpawn<<1 & ~file<'a'>();
-        pawnEntry.score += pawnShoulder * popcount15(wpawnShoulder);
-        pawnEntry.score -= pawnShoulder * popcount15(bpawnShoulder);
-        print_debug(debugEval, "wpawnShoulder: %3d\n", pawnShoulder * popcount15(wpawnShoulder));
-        print_debug(debugEval, "bpawnShoulder: %3d\n", pawnShoulder * popcount15(bpawnShoulder));
+        int wps = pawnShoulder * popcount15(wpawn & wpawn<<1 & ~file<'a'>());
+        int bps = pawnShoulder * popcount15(bpawn & bpawn<<1 & ~file<'a'>());
         
 /*        uint64_t wpawnHole = wpawn & wpawn<<2 & ~file<'a'>() & ~file<'b'>();
         uint64_t bpawnHole = bpawn & bpawn<<2 & ~file<'a'>() & ~file<'b'>();
@@ -493,10 +520,8 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         uint64_t bFront = bpawn >> 8 | bpawn >> 16;
         bFront |= bFront >> 16 | bFront >> 32;
 
-        pawnEntry.score += pawnDouble*popcount15(wpawn & wBack);
-        pawnEntry.score -= pawnDouble*popcount15(bpawn & bBack);
-        print_debug(debugEval, "wpawnDouble:   %3d\n", pawnDouble*popcount15(wpawn & wBack));
-        print_debug(debugEval, "bpawnDouble:   %3d\n", pawnDouble*popcount15(bpawn & bBack));
+        int wdbl = pawnDouble*popcount15(wpawn & wBack);
+        int bdbl = pawnDouble*popcount15(bpawn & bBack);
         // calculate squares which are or possibly are attacked by w and b pawns
         // take only the most advanced attacker and the most backward defender into account
 
@@ -516,7 +541,9 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         uint64_t bBackward = bpawn & bstop;
         if(TRACE_DEBUG && Options::debug & debugEval) { printBit(wBackward); printBit(bBackward); }
         
-        int pbw = pawnBackward * (popcount15(wBackward) - popcount15(bBackward));
+        int wpbw = pawnBackward * popcount15(wBackward);
+        int bpbw = pawnBackward * popcount15(bBackward);
+        
         uint64_t wBackOpen = wBackward & ~bFront;
         uint64_t bBackOpen = bBackward & ~wFront;
         uint64_t wBack8 = wBackOpen | wBackOpen>>010;
@@ -529,10 +556,9 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         pawnEntry.weak[1] = bBack8;
         if(TRACE_DEBUG && Options::debug & debugEval) { printBit(wBack8); printBit(bBack8); }
         //TODO scale pbwo with the number of rooks + queens
-        int pbwo = pawnBackwardOpen * (popcount15(wBackOpen) - popcount15(bBackOpen));
-        print_debug(debugEval, "pawn backward: %3d\n", pbw);
-        print_debug(debugEval, "pawn bwo:      %3d\n", pbwo);
-        pawnEntry.score += pbw + pbwo;
+        int wpbwo = pawnBackwardOpen * popcount15(wBackOpen);
+        int bpbwo = pawnBackwardOpen * popcount15(bBackOpen);
+
         // a white pawn is not passed, if he is below a opponent pawn or its attack squares
         // store positions of passers for later use in other eval functions
 
@@ -569,23 +595,35 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         // rook pawns are always adjacent to a "open" file
         uint64_t wOpenFiles = ~(wFront | wpawn | wBack);
         uint64_t bOpenFiles = ~(bFront | bpawn | bBack);
-        pawnEntry.openFiles[0] = wOpenFiles;
-        pawnEntry.openFiles[1] = bOpenFiles;
+        pawnEntry.openFiles[0] = (uint8_t)wOpenFiles;
+        pawnEntry.openFiles[1] = (uint8_t)bOpenFiles;
         
         uint64_t wIsolani = wpawn & (wOpenFiles<<1 | 0x101010101010101LL) & (wOpenFiles>>1 | 0x8080808080808080LL);
         uint64_t bIsolani = bpawn & (bOpenFiles<<1 | 0x101010101010101LL) & (bOpenFiles>>1 | 0x8080808080808080LL);
-        pawnEntry.score += pawnIsolatedCenter * (popcount15(wIsolani & ~(file<'a'>()|file<'h'>())));
-        pawnEntry.score -= pawnIsolatedCenter * (popcount15(bIsolani & ~(file<'a'>()|file<'h'>())));
-        print_debug(debugEval, "wpawn ciso:     %3d\n", pawnIsolatedCenter * (popcount15(wIsolani & ~(file<'a'>()|file<'h'>()))));
-        print_debug(debugEval, "bpawn ciso:     %3d\n", pawnIsolatedCenter * (popcount15(bIsolani & ~(file<'a'>()|file<'h'>()))));
-        pawnEntry.score += pawnIsolatedEdge * (popcount15(wIsolani & (file<'a'>()|file<'h'>())));
-        pawnEntry.score -= pawnIsolatedEdge * (popcount15(bIsolani & (file<'a'>()|file<'h'>())));
-        print_debug(debugEval, "wpawn eiso:     %3d\n", pawnIsolatedEdge * (popcount15(wIsolani & (file<'a'>()|file<'h'>()))));
-        print_debug(debugEval, "bpawn eiso:     %3d\n", pawnIsolatedEdge * (popcount15(bIsolani & (file<'a'>()|file<'h'>()))));
-        pawnEntry.score += pawnIsolatedOpen * (popcount15(wIsolani & ~bFront));
-        pawnEntry.score -= pawnIsolatedOpen * (popcount15(bIsolani & ~wFront));
-        print_debug(debugEval, "wpawn oiso:     %3d\n", pawnIsolatedOpen * (popcount15(wIsolani & ~bFront)));
-        print_debug(debugEval, "bpawn oiso:     %3d\n", pawnIsolatedOpen * (popcount15(bIsolani & ~wFront)));
+        int wpic = pawnIsolatedCenter * (popcount15(wIsolani & ~(file<'a'>()|file<'h'>())));
+        int bpic = pawnIsolatedCenter * (popcount15(bIsolani & ~(file<'a'>()|file<'h'>())));
+        int wpie = pawnIsolatedEdge * (popcount15(wIsolani & (file<'a'>()|file<'h'>())));
+        int bpie = pawnIsolatedEdge * (popcount15(bIsolani & (file<'a'>()|file<'h'>())));
+        int wpio = pawnIsolatedOpen * (popcount15(wIsolani & ~bFront));
+        int bpio = pawnIsolatedOpen * (popcount15(bIsolani & ~wFront));
+        
+        pawnEntry.score += wdbl + wpbw + wpbwo + wps + wpic + wpio + wpie;
+        pawnEntry.score -= bdbl + bpbw + bpbwo + bps + bpic + bpio + bpie;
+        
+        print_debug(debugEval, "wpawnDouble:    %3d\n", wdbl);
+        print_debug(debugEval, "bpawnDouble:    %3d\n", bdbl);
+        print_debug(debugEval, "wpawn backward: %3d\n", wpbw);
+        print_debug(debugEval, "bpawn backward: %3d\n", bpbw);
+        print_debug(debugEval, "wpawn bwo:      %3d\n", wpbwo);
+        print_debug(debugEval, "bpawn bwo:      %3d\n", bpbwo);
+        print_debug(debugEval, "wpawnShoulder:  %3d\n", wps);
+        print_debug(debugEval, "bpawnShoulder:  %3d\n", bps);
+        print_debug(debugEval, "wpawn ciso:     %3d\n", wpic);
+        print_debug(debugEval, "bpawn ciso:     %3d\n", bpic);
+        print_debug(debugEval, "wpawn eiso:     %3d\n", wpie);
+        print_debug(debugEval, "bpawn eiso:     %3d\n", bpie);
+        print_debug(debugEval, "wpawn oiso:     %3d\n", wpio);
+        print_debug(debugEval, "bpawn oiso:     %3d\n", bpio);
         
         pawnEntry.shield[0] = evalShield<White>(b);
         pawnEntry.shield[1] = evalShield<Black>(b);
@@ -675,7 +713,7 @@ static const __v2di weightB1[4] = {
       0x0707070707070707 }      //h-file
 };
 
-template<Colors C>
+template<Colors C, GamePhase P>
 inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int score = 0;
@@ -783,15 +821,17 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             */
             uint64_t bxray = fold( ~ pcmpeqq(bs->d13 & v2queen, zero) & b.qsingle[CI][0].d13); //TODO optimize for queenless positions
             bmob1 |= bxray & ~b.getOcc<C>() & restrictions;
-            batt1 |= bxray;
             bmob2 |= bxray & ~b.getOcc<C>() & restrictions;
-            batt2 |= bxray | batt1;
             ASSERT((bmob2 & bmob1) == bmob1);
             ASSERT((batt2 & batt1) == batt1);
-            attackingPieces += attackB1[popcount15(batt1 & oppking)];
-            attackingPieces += attackB2[popcount15(batt2 & oppking)];
-            if (batt1 & ownking) defendingPieces++;
-            print_debug(debugMobility, "b attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(batt1 & oppking), attackB1[popcount15(batt1 & oppking)], popcount15(batt2 & oppking), attackB2[popcount15(batt2 & oppking)]);
+            if (P != Endgame) {
+                batt1 |= bxray;
+                batt2 |= bxray | batt1;
+                attackingPieces += attackB1[popcount15(batt1 & oppking)];
+                attackingPieces += attackB2[popcount15(batt2 & oppking)];
+                if (batt1 & ownking) defendingPieces++;
+                print_debug(debugMobility, "b attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(batt1 & oppking), attackB1[popcount15(batt1 & oppking)], popcount15(batt2 & oppking), attackB2[popcount15(batt2 & oppking)]);
+            }
             
             score += mobB1[popcount(bmob1)] + mobB2[popcount(bmob2)] /*+ mobB3[popcount(rmob3)]*/;
 #ifdef MYDEBUG
@@ -814,12 +854,13 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         natt2 |= natt1;
         ASSERT((nmob2 & nmob1) == nmob1);
         ASSERT((natt2 & natt1) == natt1);
-        
-        attackingPieces += attackN1[popcount15(natt1 & oppking)];
-        attackingPieces += attackN2[popcount15(natt2 & oppking)];
-        print_debug(debugMobility, "n attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(natt1 & oppking), attackN1[popcount15(natt1 & oppking)], popcount15(natt2 & oppking), attackN2[popcount15(natt2 & oppking)]);
+        if (P != Endgame) {
+            attackingPieces += attackN1[popcount15(natt1 & oppking)];
+            attackingPieces += attackN2[popcount15(natt2 & oppking)];
+            if (b.knightAttacks[sq] & ownking) defendingPieces++;
+            print_debug(debugMobility, "n attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(natt1 & oppking), attackN1[popcount15(natt1 & oppking)], popcount15(natt2 & oppking), attackN2[popcount15(natt2 & oppking)]);
+        }
 //         if (rmob3 & oppking) attackingPieces++;
-        if (b.knightAttacks[sq] & ownking) defendingPieces++;
         score += mobN1[popcount(nmob1)] + mobN2[popcount(nmob2)] /*+ mobN3[popcount(rmob3)]*/;
 #ifdef MYDEBUG        
         mobStat[CI][Knight][0][popcount(nmob1)]++;
@@ -850,17 +891,17 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             connectedQR |= ~ pcmpeqq(rs->d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02);
         uint64_t rxray = fold(connectedQR); //TODO optimize for queenless positions
         rmob1 |= rxray & ~b.getOcc<C>() & restrictions;
-        ratt1 |= rxray;
         rmob2 |= rxray & ~b.getOcc<C>() & restrictions;
-        ratt2 |= rxray | ratt1;
         ASSERT((rmob2 & rmob1) == rmob1);
-        ASSERT((ratt2 & ratt1) == ratt1);
-//                 rmob3 &= ~(rmob1 | rmob2);
-
-        attackingPieces += attackR1[popcount15(ratt1 & oppking)];
-        attackingPieces += attackR2[popcount15(ratt2 & oppking)];
-        print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
-        if (ratt1 & ownking) defendingPieces++;
+        if (P != Endgame) {
+            ratt1 |= rxray;
+            ratt2 |= rxray | ratt1;
+            ASSERT((ratt2 & ratt1) == ratt1);
+            attackingPieces += attackR1[popcount15(ratt1 & oppking)];
+            attackingPieces += attackR2[popcount15(ratt2 & oppking)];
+            if (ratt1 & ownking) defendingPieces++;
+            print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
+        }
         score += mobR1[popcount(rmob1)] + mobR2[popcount(rmob2)] /*+ mobR3[popcount(rmob3)]*/;
 #ifdef MYDEBUG
         mobStat[CI][Rook][0][popcount(rmob1)]++;
@@ -888,15 +929,17 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             & b.mask02[q].x;
         uint64_t qxray = fold(connectedBR); //TODO optimize for queenless positions
         qmob1 |= qxray & ~b.getOcc<C>() & restrictions;
-        qatt1 |= qxray;
         qmob2 |= qxray & ~b.getOcc<C>() & restrictions;
-        qatt2 |= qxray | qatt1;
         ASSERT((qmob2 & qmob1) == qmob1);
-        ASSERT((qatt2 & qatt1) == qatt1);
-        attackingPieces += attackQ1[popcount15(qatt1 & oppking)];
-        attackingPieces += attackQ2[popcount15(qatt2 & oppking)];
-        print_debug(debugMobility, "q attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(qatt1 & oppking), attackQ1[popcount15(qatt1 & oppking)], popcount15(qatt2 & oppking), attackQ2[popcount15(qatt2 & oppking)]);
-        if (qatt1 & ownking) defendingPieces++;
+        if (P != Endgame) {
+            qatt1 |= qxray;
+            qatt2 |= qxray | qatt1;
+            ASSERT((qatt2 & qatt1) == qatt1);
+            attackingPieces += attackQ1[popcount15(qatt1 & oppking)];
+            attackingPieces += attackQ2[popcount15(qatt2 & oppking)];
+            if (qatt1 & ownking) defendingPieces++;
+            print_debug(debugMobility, "q attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(qatt1 & oppking), attackQ1[popcount15(qatt1 & oppking)], popcount15(qatt2 & oppking), attackQ2[popcount15(qatt2 & oppking)]);
+        }
         score += mobQ1[popcount(qmob1)] + mobQ2[popcount(qmob2)] /*+ mobQ3[popcount(rmob3)]*/;
 #ifdef MYDEBUG
         mobStat[CI][Queen][0][popcount(qmob1)]++;
@@ -973,6 +1016,18 @@ int Eval::attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPiece
     return att;
 }
 
+template<Colors C>
+int Eval::king(const BoardBase& b) const {
+    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+    unsigned kpos = bit(b.getPieces<C,King>());
+    if (b.getPieces<-C,Bishop>() & !b.bsingle[EI][1].move.data) {
+        unsigned pos = bit(b.getPieces<-C,Bishop>());
+        unsigned corner = (pos ^ (pos >> 3)) & 1;
+        return ksvb[corner][kpos];
+    }
+    return ksv[kpos];
+}
+
 int Eval::operator () (const BoardBase& b) const {
     int e = b.keyScore.score.calc(b.material);
 #if defined(MYDEBUG)
@@ -991,25 +1046,41 @@ int Eval::operator () (const BoardBase& b) const {
     }
     if (value != e) asm("int3");
 #endif
-    PawnEntry pe = pawns(b);
-    int wap = 0;
-    int bap = 0;
-    int wdp = 0;
-    int bdp = 0;
-    
-    int m = mobility<White>(b, wap, wdp) - mobility<Black>(b, bap, bdp);
-    int openingScale = b.material - popcount(b.getPieces<White,Pawn>()+b.getPieces<Black,Pawn>()) - endgameMaterial + endgameTransitionSlope/2;
-    openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
-    int a = openingScale ? (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope : 0;
-    int pi = pieces<White>(b, pe) - pieces<Black>(b, pe);
-    int pa = pe.score + ((openingScale*pe.centerOpen + (endgameTransitionSlope-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope);
-    print_debug(debugEval, "material:       %d\n", e);
-    print_debug(debugEval, "mobility:       %d\n", m);
-    print_debug(debugEval, "pawns:          %d\n", pa);
-    print_debug(debugEval, "attack:         %d\n", a);
-    print_debug(debugEval, "pieces:         %d\n", pi);
-    
-    return /*e + */m + pa + a + pi;
+    if (b.getPieces<White,Pawn>() + b.getPieces<Black,Pawn>()) {
+        PawnEntry pe = pawns(b);
+
+        int openingScale = b.material - popcount(b.getPieces<White,Pawn>()+b.getPieces<Black,Pawn>()) - endgameMaterial + endgameTransitionSlope/2;
+        openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
+        int m;
+        int a;
+        if (openingScale) {
+            int wap, bap, wdp, bdp;
+            wap = bap = wdp = bdp = 0;
+            m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
+            a = (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope;
+        } else {
+            int wap, bap, wdp, bdp;
+            m = mobility<White, Endgame>(b, wap, wdp) - mobility<Black, Endgame>(b, bap, bdp);
+            a = 0;
+        }
+        int pi = pieces<White>(b, pe) - pieces<Black>(b, pe);
+        int pa = pe.score + ((openingScale*pe.centerOpen + (endgameTransitionSlope-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope);
+        print_debug(debugEval, "material:       %d\n", e);
+        print_debug(debugEval, "mobility:       %d\n", m);
+        print_debug(debugEval, "pawns:          %d\n", pa);
+        print_debug(debugEval, "attack:         %d\n", a);
+        print_debug(debugEval, "pieces:         %d\n", pi);
+
+        return /*e + */m + pa + a + pi;
+    } else {     // pawnless endgame
+        int wap = 0;    //FIXME not needed here
+        int bap = 0;
+        int wdp = 0;
+        int bdp = 0;
+        int m = mobility<White, Endgame>(b, wap, wdp) - mobility<Black, Endgame>(b, bap, bdp);
+        int p = (e>0 ? 1:4)*king<White>(b) - (e<0 ? 1:4)*king<Black>(b);
+        return m + p;        
+    }
 }
 
 void Eval::ptClear() {
