@@ -34,6 +34,10 @@
 #define NODE
 #endif
 
+#define lazy1 1
+#define lazy2 0
+#define lazyError 0
+
 template<Colors C>
 int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int depth) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
@@ -108,9 +112,9 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     // FIXME connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
     A current(alpha);
     RawScore estimatedScore = estimate.score.calc(prev.material) + prev.positionalScore + delta1; //FIXME move score() into ColorBoard ctor
-    if (P==vein) {
+    if (P==vein && lazy1) {
         current.max(estimatedScore);
-        if (current >= beta.v) {
+        if (current >= beta.v + C*lazyError) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = beta.v;
             if (node) node->nodeType = NodePrecut1;
@@ -309,11 +313,11 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
             stats.eval++;       
             b.positionalScore = eval(b);
             b.isExact = true;
-            ScoreBase<C> delta2;
-            delta2.v = b.positionalScore - prev.positionalScore;
             realScore = estimate.score.calc(prev.material) + b.positionalScore;
-            ASSERT(realScore == estimatedScore - delta1 + delta2.v);
             if (isMain) {
+                ScoreBase<C> delta2;
+                delta2.v = b.positionalScore - prev.positionalScore;
+                ASSERT(realScore == estimatedScore - delta1 + delta2.v);
                 if (delta2 < delta1) delta1 = delta2.v;
                 else delta1 += C;
             }
