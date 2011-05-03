@@ -116,7 +116,7 @@ class Eval {
     int pawnDouble;
     int pawnShoulder;
 //     int pawnHole;
-//     int pawnUnstoppable;
+    int pawnUnstoppable;
 
     int attackR1[21];
     int attackR2[21];
@@ -135,6 +135,11 @@ class Eval {
     int mobN1[64], mobN2[64];
     int mobR1[64], mobR2[64];
     int mobQ1[64], mobQ2[64];
+
+    int oppKingOwnPawn[8];
+    int ownKingOwnPawn[8];
+    int oppKingOwnPasser[8];
+    int ownKingOwnPasser[8];
 
 /*    int attack1b1;
     int attack2b1;
@@ -168,6 +173,7 @@ class Eval {
     PawnEntry pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
     template<Colors C> int king(const BoardBase& b) const;
+    template<Colors C> int endgame(const BoardBase& b, const PawnEntry&, int sideToMoves) const;
 public:
     int aspiration0;
     int aspiration1;
@@ -179,7 +185,7 @@ public:
     mutable uint64_t qmob1, qmob2, qmob3, qmobn;
 #endif
     Eval();
-    int operator () (const BoardBase&) const __attribute__((noinline));
+    int operator () (const BoardBase&, int sideToMove) const __attribute__((noinline));
     template<Colors C> Move evalMate(const BoardBase&) const __attribute__((noinline));
     CompoundScore getPS(int8_t piece, uint8_t square) const {
         ASSERT(square < nSquares);

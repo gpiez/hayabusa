@@ -67,6 +67,7 @@ static const int ksvb[2][nSquares] = {
      0, 10, 20, 30, 30, 26, 22, 18
 }};
 
+unsigned distance[nSquares][nSquares];
 int pawnFileOpen[4], pawnFileEnd[4];
 int pawnRankOpen[6], pawnRankEnd[6];
 int8_t wpawnOpen[64], wpawnEnd[64];
@@ -209,9 +210,13 @@ Eval::Eval()
     pawnDouble = -20;
     pawnShoulder = 4;
 //     pawnHole = -4;
+    sigmoid( oppKingOwnPawn, -12,  12, 1, 10);  // only 1..7 used
+    sigmoid( ownKingOwnPawn,   6,  -6, 1, 10);
+    sigmoid( oppKingOwnPasser, -32,  32, 1, 10);  // only 1..7 used
+    sigmoid( ownKingOwnPasser,  16, -16, 1, 10);
     sigmoid( pawnPasser, 25, 100, 6, 1.0 );
     sigmoid( pawnConnPasser, 0, 50, 6, 1.0 );
-//     pawnUnstoppable = 100;
+    pawnUnstoppable = 700;
 
 //     attack1b1 = 4;        //direct attack of ring around king
 //     attack2b1 = 2;        //direct attack of 2nd ring around king
@@ -280,7 +285,6 @@ Eval::Eval()
             bpawnEnd [(7-x)*8 + 7-y] = bpawnEnd [    x*8 + 7-y] = wpawnEnd [(7-x)*8 + y] = wpawnEnd [    x*8 + y]
             = (pawn + pawnFileEnd[x])*(pawn + pawnRankEnd[y-1]) / pawn - pawn;
         }
-        
     initPS();
     initZobrist();
     initTables();
@@ -300,7 +304,11 @@ Eval::Eval()
     printSigmoid(attackK, "attK");
     printSigmoid(attackTable, "att");
     printSigmoid(pawnPasser, "pass");
-//     printSigmoid(pawnConnPasser, "cpass");
+    printSigmoid(pawnConnPasser, "cpass");
+    printSigmoid(oppKingOwnPasser, "eKpas");
+    printSigmoid(ownKingOwnPasser, "mKpas");
+    printSigmoid(oppKingOwnPawn, "eKp");
+    printSigmoid(ownKingOwnPawn, "mKp");
     printSigmoid(pawnFileOpen, "pfo");
     printSigmoid(pawnFileEnd, "pfe");
     for (unsigned y=0; y<8; ++y) {
@@ -382,6 +390,12 @@ void Eval::initZobrist() {
 }
 
 void Eval::initTables() {
+    for (int x0=0; x0<8; ++x0)
+    for (int y0=0; y0<8; ++y0)
+    for (int x1=0; x1<8; ++x1)
+    for (int y1=0; y1<8; ++y1)
+        distance[x0+8*y0][x1+8*y1] = std::max(abs(x0-x1), abs(y0-y1));
+
     /*    for (unsigned int x = 0; x<nFiles; ++x)
         for (unsigned int y = 0; y<nRows; ++y) {
             uint64_t oking = x+y*nFiles;
@@ -823,10 +837,10 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             bmob1 |= bxray & ~b.getOcc<C>() & restrictions;
             bmob2 |= bxray & ~b.getOcc<C>() & restrictions;
             ASSERT((bmob2 & bmob1) == bmob1);
-            ASSERT((batt2 & batt1) == batt1);
             if (P != Endgame) {
                 batt1 |= bxray;
                 batt2 |= bxray | batt1;
+                ASSERT((batt2 & batt1) == batt1);
                 attackingPieces += attackB1[popcount15(batt1 & oppking)];
                 attackingPieces += attackB2[popcount15(batt2 & oppking)];
                 if (batt1 & ownking) defendingPieces++;
@@ -851,10 +865,10 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         nmob1 &= ~b.getOcc<C>();
         uint64_t natt2 = b.buildNAttack(nmob1);
         nmob2 |= natt2 & restrictions & ~b.getOcc<C>();
-        natt2 |= natt1;
         ASSERT((nmob2 & nmob1) == nmob1);
-        ASSERT((natt2 & natt1) == natt1);
         if (P != Endgame) {
+            natt2 |= natt1;
+            ASSERT((natt2 & natt1) == natt1);
             attackingPieces += attackN1[popcount15(natt1 & oppking)];
             attackingPieces += attackN2[popcount15(natt2 & oppking)];
             if (b.knightAttacks[sq] & ownking) defendingPieces++;
@@ -1028,9 +1042,58 @@ int Eval::king(const BoardBase& b) const {
     return ksv[kpos];
 }
 
-int Eval::operator () (const BoardBase& b) const {
-    int e = b.keyScore.score.calc(b.material);
+template<Colors C>
+int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int sideToMove) const {
+    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+    
+    int score = 0;
+    unsigned eking = bit(b.getPieces<-C,King>());
+    unsigned king = bit(b.getPieces<C,King>());
+    // pawn moves, non capture, non promo
+    print_debug(debugEval, "King dist pawn %d\n", CI);
+    for (uint64_t p = b.getPieces<C,Pawn>() & ~pe.passers[CI]; p; p &= p-1) {
+        unsigned pos = bit(p);
+        score += oppKingOwnPawn[distance[eking][pos]];
+        print_debug(debugEval, "(%3d:", oppKingOwnPawn[distance[eking][pos]]);
+        score += ownKingOwnPawn[distance[king][pos]];
+        print_debug(debugEval, "%3d)", ownKingOwnPawn[distance[king][pos]]);
+    }
+    print_debug(debugEval, "\nKing dist passer %d\n", CI);
+    /*
+     * calculate king distance to promotion square
+     */
+    for (uint64_t p = b.getPieces<C,Pawn>() & pe.passers[CI]; p; p &= p-1) {
+        unsigned pos = bit(p);
+        unsigned promo = pos & 7;
+        unsigned promodist = pos >> 3;
+        uint64_t pawnStops;
+        if (C == White) {
+            promo ^= 070;
+            promodist ^= 7;
+            pawnStops  = 1ULL << pos;
+            pawnStops += pawnStops << 010;
+            pawnStops += pawnStops << 020;
+            pawnStops += pawnStops << 040;      // TODO use table
+        } else {
+            pawnStops  = 1ULL << pos;
+            pawnStops += pawnStops >> 010;
+            pawnStops += pawnStops >> 020;
+            pawnStops += pawnStops >> 040;      // TODO use table
+        }
+        if (promodist + (C!=sideToMove) < distance[eking][promo] && !(pawnStops & (b.getAttacks<-C,All>() | b.occupied1)))
+            score += pawnUnstoppable;
+        score += oppKingOwnPasser[distance[eking][promo]];
+        print_debug(debugEval, "(%3d:", oppKingOwnPasser[distance[eking][promo]]);
+        score += ownKingOwnPasser[distance[king][promo]];
+        print_debug(debugEval, "%3d)", ownKingOwnPasser[distance[king][promo]]);
+    }
+    print_debug(debugEval, "\n", 0);
+    return score;
+}
+
+int Eval::operator () (const BoardBase& b, int stm) const {
 #if defined(MYDEBUG)
+    int cmp = b.keyScore.score.calc(b.material);
     int value = 0;
     for (int p=Rook; p<=King; ++p) {
         for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
@@ -1044,41 +1107,50 @@ int Eval::operator () (const BoardBase& b) const {
             value += getPS(-p, sq).calc(b.material);
         }
     }
-    if (value != e) asm("int3");
+    if (value != cmp) asm("int3");
 #endif
     if (b.getPieces<White,Pawn>() + b.getPieces<Black,Pawn>()) {
         PawnEntry pe = pawns(b);
 
         int openingScale = b.material - popcount(b.getPieces<White,Pawn>()+b.getPieces<Black,Pawn>()) - endgameMaterial + endgameTransitionSlope/2;
-        openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
-        int m;
-        int a;
-        if (openingScale) {
+//         openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
+        int m, a, e, pa;
+        if (openingScale >= endgameTransitionSlope) {
             int wap, bap, wdp, bdp;
             wap = bap = wdp = bdp = 0;
             m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
             a = (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope;
-        } else {
+            e = 0;
+            pa = pe.score + pe.centerOpen;
+        } else if (openingScale <= 0) {
             int wap, bap, wdp, bdp;
             m = mobility<White, Endgame>(b, wap, wdp) - mobility<Black, Endgame>(b, bap, bdp);
             a = 0;
+            e = endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm);
+            pa = pe.score + pe.centerEnd;
+        } else {
+            int wap, bap, wdp, bdp;
+            wap = bap = wdp = bdp = 0;
+            m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
+            a = (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope;
+            e = ((endgameTransitionSlope-openingScale)*(endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm))) >> logEndgameTransitionSlope;
+            pa = pe.score + ((openingScale*pe.centerOpen + (endgameTransitionSlope-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope);
+            
         }
         int pi = pieces<White>(b, pe) - pieces<Black>(b, pe);
-        int pa = pe.score + ((openingScale*pe.centerOpen + (endgameTransitionSlope-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope);
-        print_debug(debugEval, "material:       %d\n", e);
+//         int pa = pe.score + ((openingScale*pe.centerOpen + (endgameTransitionSlope-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope);
+        print_debug(debugEval, "endgame:        %d\n", e);
         print_debug(debugEval, "mobility:       %d\n", m);
         print_debug(debugEval, "pawns:          %d\n", pa);
         print_debug(debugEval, "attack:         %d\n", a);
         print_debug(debugEval, "pieces:         %d\n", pi);
 
-        return /*e + */m + pa + a + pi;
+        return e + m + pa + a + pi;
     } else {     // pawnless endgame
-        int wap = 0;    //FIXME not needed here
-        int bap = 0;
-        int wdp = 0;
-        int bdp = 0;
+        int mat = b.keyScore.score.calc(b.material);
+        int wap, bap, wdp, bdp; //FIXME not needed here
         int m = mobility<White, Endgame>(b, wap, wdp) - mobility<Black, Endgame>(b, bap, bdp);
-        int p = (e>0 ? 1:4)*king<White>(b) - (e<0 ? 1:4)*king<Black>(b);
+        int p = (mat>0 ? 1:4)*king<White>(b) - (mat<0 ? 1:4)*king<Black>(b);
         return m + p;        
     }
 }
