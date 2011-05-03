@@ -43,10 +43,14 @@ int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     depth -= dMaxThreat + dMaxCapture;
     if (Options::reduction && movenr >= 1 && depth > 2 ) {
-        bool check = ((fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
-                   || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
-                   || (BoardBase::knightAttacks[m.to()] & b.template getPieces<-C,King>() && m.piece() == Knight));
+        bool check = (!m.isSpecial() && (  (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
+                                        || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
+                                        )
+                     )
+                     || (BoardBase::knightAttacks[m.to()] & b.template getPieces<-C,King>() && m.piece() == Knight);
         int red = bitr(2*movenr + depth)/2;
+        if (m.isSpecial() && (m.piece() == Rook || m.piece() == Knight || m.piece() == Bishop))
+            red += 2;
         if (check && depth<9)
             red=0;
         if (red >= depth-1)
@@ -311,7 +315,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
             b.isExact = false;
         } else {
             stats.eval++;       
-            b.positionalScore = eval(b);
+            b.positionalScore = eval(b, C);
             b.isExact = true;
             realScore = estimate.score.calc(prev.material) + b.positionalScore;
             if (isMain) {
@@ -537,7 +541,8 @@ nosort:
                 if (depth > 2 + dMaxCapture + dMaxThreat + reduction
                     && current.v != -infinity*C //FIXME compare to alpha0.v of rootsearch
                     && (i != good || alphaNode)
-                    && bad-good > maxMovesNull)
+                    && bad-good > maxMovesNull
+                    && b.material)
                 {
                     typename B::Base null;
                     null.v = current.v + C;

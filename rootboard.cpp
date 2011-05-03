@@ -308,7 +308,7 @@ const BoardBase& RootBoard::setup(const std::string& str) {
     if (getStats().ttuse) tt->agex();
     
     rootPly = 0;
-    board.positionalScore = eval(board);
+    board.positionalScore = eval(board, color);
     board.isExact = true;
 #ifdef MYDEBUG    
     memset(mobStat, 0, sizeof(mobStat));
