@@ -100,7 +100,9 @@ int Console::exec() {
     }
 #if defined(QT_NETWORK_LIB)
     if (!Options::server) {
-        notifier = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, this);
+        stdinFile = new QFile(this);
+        stdinFile->open(stdin, QIODevice::ReadOnly);
+        notifier = new QSocketNotifier(stdinFile->handle(), QSocketNotifier::Read, this);
         connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
     }
 #endif
@@ -427,5 +429,5 @@ void Console::ordering(StringList cmds) {
 
 void Console::eval(StringList)
 {
-    board->eval(board->currentBoard());
+    board->eval(board->currentBoard(), board->color);
 }

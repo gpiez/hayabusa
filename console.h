@@ -92,6 +92,7 @@ public:
     void send(std::string);
 
 #if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
+    QFile* stdinFile;
 public slots:
     void dataArrived();
     void delayedEnable();
