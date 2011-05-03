@@ -1080,7 +1080,7 @@ int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int sideToMove) const
             pawnStops += pawnStops >> 020;
             pawnStops += pawnStops >> 040;      // TODO use table
         }
-        if (promodist + (C!=sideToMove) < distance[eking][promo] && !(pawnStops & (b.getAttacks<-C,All>() | b.occupied1)))
+        if (b.getAttacks<-C,All>() == b.getAttacks<-C,King>() && promodist + (C!=sideToMove) < distance[eking][promo])
             score += pawnUnstoppable;
         score += oppKingOwnPasser[distance[eking][promo]];
         print_debug(debugEval, "(%3d:", oppKingOwnPasser[distance[eking][promo]]);
