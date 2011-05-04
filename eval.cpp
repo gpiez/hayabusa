@@ -1087,7 +1087,7 @@ int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int sideToMove) const
         score += ownKingOwnPasser[distance[king][promo]];
         print_debug(debugEval, "%3d)", ownKingOwnPasser[distance[king][promo]]);
     }
-    print_debug(debugEval, "\n", 0);
+    print_debug(debugEval, "%d\n", 0);
     return score;
 }
 

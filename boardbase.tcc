@@ -299,7 +299,7 @@ void BoardBase::buildAttacks() {
     while(p) {
         unsigned sq = bit(p);
         p &= p-1;
-        if (0 & p) {
+        if (0 & p) {    //TODO why is the vector version slower?
             unsigned sq2 = bit(p);
             __v2di a02, b02;
             build02Attack(_mm_set_epi64x(1ULL<<sq2, 1ULL<<sq), a02, b02);

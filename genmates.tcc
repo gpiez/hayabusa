@@ -81,9 +81,7 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
 template<Colors C>
 template<bool AbortOnFirst>
 bool ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) const {
-    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     const __v2di zero = _mm_set1_epi64x(0);
-
     uint64_t king = getPieces<-C,King>();
     unsigned k = bit(king);
     uint64_t attNotEnemyKing = getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Queen>() | getAttacks<-C,Pawn>();
@@ -464,9 +462,9 @@ haveMate:
         }
     }
 
-    if (uint64_t checkingMoves = shift<C*8>(getPieces<C,Pawn>()) & ~occupied1 & shift<-C*8>((king>>1 & ~file<'h'>()) | (king<<1 & ~file<'a'>()))) {
+/*    if (uint64_t checkingMoves = shift<C*8>(getPieces<C,Pawn>()) & ~occupied1 & shift<-C*8>((king>>1 & ~file<'h'>()) | (king<<1 & ~file<'a'>()))) {
 
-        }
+        }*/
     if (AbortOnFirst) return false;
 }
 #pragma GCC diagnostic warning "-Wreturn-type"

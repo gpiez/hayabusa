@@ -176,8 +176,8 @@ struct BoardBase {
     inline __v2di build13Attack(const unsigned sq) const __attribute__((always_inline));
     inline void build02Attack(const __v2di, __v2di& result0, __v2di& result1) const __attribute__((always_inline));
     inline __v2di build13Attack(const __v2di) const;
-    inline uint64_t build02Attack(const uint64_t) const;
-    inline uint64_t build13Attack(const uint64_t) const;
+    uint64_t build02Attack(const uint64_t) const;
+    uint64_t build13Attack(const uint64_t) const;
     inline uint64_t buildNAttack(uint64_t n) const;
     template<Colors C> inline void buildAttacks() __attribute__((always_inline));
     template<Colors C> inline void buildPins() __attribute__((always_inline));

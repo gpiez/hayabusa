@@ -248,10 +248,8 @@ bool ColoredBoard<C>::isForked() const {
 /*    if (getPieces<C,Queen>() & ~pins) {
         
     }*/
-//    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     if (!qsingle[CI][0].move.data) return false;
     const __v2di zero = _mm_set1_epi64x(0);
-    uint64_t king = getPieces<C,King>();
     if (getAttacks<-C,Rook>() & getPieces<C,Queen>()) {
         __v2di kq = (kingIncoming[CI].d02 & _mm_set1_epi64x(getPieces<C,Queen>()));
         kq = pcmpeqq(kq, zero);
