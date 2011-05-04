@@ -157,12 +157,15 @@ inline __v2di BoardBase::build13Attack(__v2di flood1) const {
 }
 
 inline __v2di BoardBase::build02Attack(const unsigned sq) const {
-    const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
-    __v2di maskedDir02 = (_mm_set1_epi64x(occupied1)|b02) & mask02[sq].b;
+/*    const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
+    __v2di _maskedDir02 = (_mm_set1_epi64x(occupied1)|b02) & mask02[sq].b;
     uint64_t d0 = _mm_cvtsi128_si64x(maskedDir02);
-    uint64_t d2 = _mm_cvtsi128_si64x(_mm_unpackhi_epi64(maskedDir02,maskedDir02));
-    d0 <<= 63-sq;
-    d2 <<= 63-sq;
+    uint64_t d2 = _mm_cvtsi128_si64x(_mm_unpackhi_epi64(maskedDir02,maskedDir02));*/
+    uint64_t d0 = (occupied1 | 0x0101010101010101) & mask02[sq].d0;
+    uint64_t d2 = (occupied1 | 0xff) & mask02[sq].d2;
+    __v2di maskedDir02 = _mm_set_epi64x(d2, d0);
+    d0 <<= ~sq; //63-sq;
+    d2 <<= ~sq; //63-sq;
     uint64_t lo = rol(6, sq + bitr(d0));
     uint64_t hi = rol(6, sq + bitr(d2));
     maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
@@ -207,6 +210,47 @@ inline uint64_t BoardBase::build02Attack(uint64_t flood0) const {
     
     return (flood0 << 1 & ~file<'a'>()) | (flood4 >> 1 & ~file<'h'>())
         | flood2 << 8 | flood6 >> 8;
+}
+
+inline void BoardBase::build02Attack(__v2di flood0, __v2di& x02, __v2di& y02) const {
+
+    __v2di flood2 = flood0, flood4 = flood0, flood6 = flood0;
+
+    __v2di e00 =  _mm_set1_epi64x(~occupied1) & ~_mm_set1_epi64x(file<'a'>());
+    __v2di e02 =  _mm_set1_epi64x(~occupied1);
+    __v2di e04 =  _mm_set1_epi64x(~occupied1) & ~_mm_set1_epi64x(file<'h'>());
+    __v2di e06 =  e02;
+
+    flood0 |= _mm_slli_epi64(flood0, 1) & e00;
+    flood2 |= _mm_slli_epi64(flood2, 8) & e02;
+    flood4 |= _mm_srli_epi64(flood4, 1) & e04;
+    flood6 |= _mm_srli_epi64(flood6, 8) & e06;
+
+    e00 &= _mm_slli_epi64(e00, 1);
+    e02 &= _mm_slli_epi64(e02, 8);
+    e04 &= _mm_srli_epi64(e04, 1);
+    e06 &= _mm_srli_epi64(e06, 8);
+
+    flood0 |= _mm_slli_epi64(flood0,  2) & e00;
+    flood2 |= _mm_slli_epi64(flood2, 16) & e02;
+    flood4 |= _mm_srli_epi64(flood4,  2) & e04;
+    flood6 |= _mm_srli_epi64(flood6, 16) & e06;
+
+    e00 &= _mm_slli_epi64(e00, 2);
+    e02 &= _mm_slli_epi64(e02, 16);
+    e04 &= _mm_srli_epi64(e04, 2);
+    e06 &= _mm_srli_epi64(e06, 16);
+
+    flood0 |= _mm_slli_epi64(flood0,  4) & e00;
+    flood2 |= _mm_slli_epi64(flood2, 32) & e02;
+    flood4 |= _mm_srli_epi64(flood4,  4) & e04;
+    flood6 |= _mm_srli_epi64(flood6, 32) & e06;
+
+    __v2di res00 = (_mm_slli_epi64(flood0, 1) & ~_mm_set1_epi64x(file<'a'>()))
+        |  (_mm_srli_epi64(flood4, 1) & ~_mm_set1_epi64x(file<'h'>()));
+    __v2di res22 = _mm_slli_epi64(flood2, 8) | _mm_srli_epi64(flood6, 8);
+    x02 = _mm_unpacklo_epi64(res00, res22);
+    y02 = _mm_unpackhi_epi64(res00, res22);
 }
 
 inline uint64_t BoardBase::buildNAttack(uint64_t n) const {
@@ -255,11 +299,24 @@ void BoardBase::buildAttacks() {
     while(p) {
         unsigned sq = bit(p);
         p &= p-1;
-        __v2di a02 = build02Attack(sq);
-        rs->move = Move(sq, 0, Rook);
-        rs->d02 = a02;
-        rs++;
-        dir02 |= a02;
+        if (0 & p) {
+            unsigned sq2 = bit(p);
+            __v2di a02, b02;
+            build02Attack(_mm_set_epi64x(1ULL<<sq2, 1ULL<<sq), a02, b02);
+            p &= p-1;
+            rs[0].move = Move(sq, 0, Rook);
+            rs[0].d02 = a02;
+            rs[1].move = Move(sq2, 0, Rook);
+            rs[1].d02 = b02;
+            rs+=2;
+            dir02 |= a02 | b02;
+        } else {
+            __v2di a02 = build02Attack(sq);
+            rs->move = Move(sq, 0, Rook);
+            rs->d02 = a02;
+            rs++;
+            dir02 |= a02;
+        }
     }
     rs->move = Move(0,0,0);
     a = fold(dir02);

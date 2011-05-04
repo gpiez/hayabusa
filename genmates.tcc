@@ -19,6 +19,8 @@
 #ifndef GENMATES_TCC_
 #define GENMATES_TCC_
 
+#include "coloredboard.h"
+
 template<Colors C>
 uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, uint64_t king, unsigned k) const {
     uint64_t rescape = getAttacks<-C,King>() & ~(occupied[EI] | blockedEscapes);

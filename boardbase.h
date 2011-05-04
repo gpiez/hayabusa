@@ -90,7 +90,13 @@ struct BoardBase {
 
     struct XB {
         __v2di x;
-        __v2di b;
+        union {
+            __v2di b;
+            struct {
+                uint64_t d0;
+                uint64_t d2;
+            };
+        };
     };
     static const XB mask02[nSquares];
     static const __v2di mask13x[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
@@ -166,9 +172,9 @@ struct BoardBase {
         material += materialTab[piece];
     }
 
-    inline __v2di build02Attack(const unsigned sq) const;
-    inline __v2di build13Attack(const unsigned sq) const;
-    inline __v2di build02Attack(const __v2di) const;
+    inline __v2di build02Attack(const unsigned sq) const __attribute__((always_inline));
+    inline __v2di build13Attack(const unsigned sq) const __attribute__((always_inline));
+    inline void build02Attack(const __v2di, __v2di& result0, __v2di& result1) const __attribute__((always_inline));
     inline __v2di build13Attack(const __v2di) const;
     inline uint64_t build02Attack(const uint64_t) const;
     inline uint64_t build13Attack(const uint64_t) const;
