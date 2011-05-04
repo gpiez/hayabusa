@@ -8,43 +8,72 @@
 #include <pch.h>
 #endif
 
+#include "history.h"
+
 template<Colors C>
 void History::good(Move m, unsigned ply) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     ASSERT((m.piece() & 7) <= 6);    
     ASSERT((m.piece() & 7));
     ASSERT((m.from() != m.to()));
-    uint8_t& h = v[ply+2][C*(m.piece() & 7) + nPieces][m.to()];
+    {
+        uint8_t& h = v[ply+2][C*(m.piece() & 7) + nPieces][m.to()];
+        int& m  = max[CI][ply+2];
 
-    if (h == sum[CI][ply+2]) return;
+        if (m != h) {
 
-    if (maxHistory > ++sum[CI][ply+2]) {
-        h = sum[CI][ply+2];
-        return;
-    }
+            if (++m < maxHistory) h = m;
 
-    sum[CI][ply+2] = maxHistory/2;
-    __v16qi mh2 = _mm_set1_epi8(maxHistory/2);
-    for (unsigned p=1; p<=nPieces; ++p)
-        for (unsigned sq=0; sq<nSquares; sq += 16) {
-            __v16qi* v16 = (__v16qi*)&v[ply+2][C*p + nPieces][sq];
-            *v16 = _mm_subs_epu8(*v16, mh2);
-//             for (unsigned sq=0; sq<nSquares; ++sq)
-//             v[ply+2][C*p + nPieces][sq] = std::max(0, (signed)v[ply+2][C*p + nPieces][sq] - (signed)maxHistory/2);
+            else {
+                m = maxHistory/2;
+                __v16qi mh2 = _mm_set1_epi8(maxHistory/2);
+                for (unsigned p=1; p<=nPieces; ++p)
+                    for (unsigned sq=0; sq<nSquares; sq += 16) {
+                        __v16qi* v16 = (__v16qi*)&v[ply+2][C*p + nPieces][sq];
+                        *v16 = _mm_subs_epu8(*v16, mh2);
+                }
+                h = maxHistory/2;
+            }
         }
-    h = maxHistory/2;
+    }
+    {
+        uint8_t& h  = v2[ply+2][C*(m.piece() & 7) + nPieces][m.from()];
+        int& m  = max2[CI][ply+2];
+        /*
+         * Only if the last move target changed, the history table will be
+         * updated. As long as the current max stays below the allowed absolute
+         * max, just update the entry for the move, otherwise subtract the half
+         * of the allowed max from all entries, saturating to zero.
+         */
+        if (m != h) {
+
+            if (++m < maxHistory) h = m;
+
+            else {
+                m = maxHistory/2;
+                __v16qi mh2 = _mm_set1_epi8(maxHistory/2);
+                for (unsigned p=1; p<=nPieces; ++p)
+                    for (unsigned sq=0; sq<nSquares; sq += 16) {
+                        __v16qi* v16 = (__v16qi*)&v2[ply+2][C*p + nPieces][sq];
+                        *v16 = _mm_subs_epu8(*v16, mh2);
+                    }
+                h = maxHistory/2;
+            }
+        }
+    }
 }
 
 template<Colors C>
 int History::get(Move m, unsigned ply) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int value = v[ply+2][C*(m.piece() & 7) + nPieces][m.to()];
+    if (!value) value = v2[ply+2][C*(m.piece() & 7) + nPieces][m.from()] - max2[CI][ply+2];
 
-    if (!value) value = v[ply][C*(m.piece() & 7) + nPieces][m.to()] - sum[CI][ply];
+    if (!value) value = v[ply][C*(m.piece() & 7) + nPieces][m.to()] - max[CI][ply];
 
 //    if (!value) value = (m.to() ^ (C == Black ? 070:0)) - 077;
 
-    return std::max(value - sum[CI][ply+2] + (signed)maxHistory - 1, 0);
+    return std::max(value - max[CI][ply+2] + (signed)maxHistory - 1, 0);
 }
 
 template<Colors C>

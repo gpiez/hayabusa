@@ -434,7 +434,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         }
         if (badCaptures > nonCaptures+1) {
             ASSERT(badCaptures <= bad);
-            history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply);
+            history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply + rootPly);
         }
 
 nosort:
@@ -631,7 +631,7 @@ nosort:
         stored.score |= score2tt(current.v);
         stored.loBound |= current > alpha.v;
         if (current > alpha.v && current.m.capture() == 0 && current.m.data)
-            history.good<C>(current.m, ply);
+            history.good<C>(current.m, ply + rootPly);
         stored.hiBound |= current < beta.v;
         stored.from |= current.m.from(); //TODO store a best move even if all moves are fail low
         stored.to |= current.m.to();

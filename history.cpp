@@ -55,10 +55,11 @@ History::History()
 }
 
 void History::init() {
-    for (unsigned d=0; d<maxDepth+4; ++d) {
-        sum[0][d] = sum[1][d] = 1;
+    for (unsigned d=0; d<nMaxGameLength+4; ++d) {
+        max[0][d] = max[1][d] = 1;
+        max2[0][d] = max2[1][d] = 1;
         for (unsigned p=0; p<2*nPieces+1; ++p)
-                for (unsigned sq=0; sq<nSquares; ++sq)
-                    v[d][p][sq] = 0;
+                for (unsigned sq=0; sq<nSquares; ++sq) 
+                    v[d][p][sq] = v2[d][p][sq] = 0;
     }
 }
