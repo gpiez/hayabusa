@@ -44,7 +44,8 @@ unsigned RootBoard::dMaxCapture = 12;
 //  2   462k
 //  1   539k
 //  0   427k
-unsigned RootBoard::dMaxThreat = 8;
+unsigned RootBoard::dMaxExt = 8 + RootBoard::dMaxCapture;
+unsigned RootBoard::dMinDualExt = 4 + RootBoard::dMaxCapture;
 
 void RootBoard::stopTimer(milliseconds hardlimit) {
 #ifdef __WIN32__    
@@ -64,7 +65,7 @@ void RootBoard::stopTimer(milliseconds hardlimit) {
 std::string RootBoard::commonStatus() const {
     std::stringstream g;
     g.imbue(std::locale("de_DE"));
-    g << "D" << std::setfill('0') << std::setw(2) << depth-(dMaxCapture+dMaxThreat)
+    g << "D" << std::setfill('0') << std::setw(2) << depth-(dMaxExt)
         << " " << std::setfill(' ') << std::fixed << std::setprecision(1) << std::showpoint << std::setw(9) << duration_cast<milliseconds>(system_clock::now()-start).count()/1000.0
         << "s " << std::setw(13) << getStats().node
         << " ";
@@ -72,6 +73,7 @@ std::string RootBoard::commonStatus() const {
 }
 
 void RootBoard::infoTimer(milliseconds repeat) {
+    static int lastCurrentMoveIndex = 0;
     while(!infoTimerMutex.try_lock()) {
 #ifdef __WIN32__    
         UniqueLock<TimedMutex> lock(infoTimerMutex, boost::posix_time::millisec(repeat.count()));
@@ -82,6 +84,10 @@ void RootBoard::infoTimer(milliseconds repeat) {
         uint64_t ntemp = tempStats.node;
         uint64_t t = duration_cast<milliseconds>(system_clock::now()-start).count();
         std::stringstream g;
+        if (!Options::humanreadable && !Options::quiet && currentMoveIndex != lastCurrentMoveIndex ) {
+            g << "info currmove " << currentMove.algebraic() << " currmovenumber " << currentMoveIndex << std::endl;
+            lastCurrentMoveIndex = currentMoveIndex;
+        }
         if (Options::humanreadable) {
             g << commonStatus() 
             << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t*1000+1.0) << "/s "
@@ -133,7 +139,7 @@ RootBoard::RootBoard(Console *c):
 
 std::string RootBoard::status(system_clock::time_point now, int score)
 {
-    unsigned d = depth - dMaxCapture - dMaxThreat;
+    unsigned d = depth - dMaxExt;
     std::stringstream g;
     milliseconds t = duration_cast<milliseconds>(now-start);
     if (Options::humanreadable) {
