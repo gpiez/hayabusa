@@ -43,12 +43,15 @@ public:
     static const uint8_t pov = CI*56;    //for xoring square values to the other side
 
     ColoredBoard() = default;
-    template<typename T> inline ColoredBoard(const T& prev, Move m, __v8hi est);
+    template<typename T>
+    inline ColoredBoard(const T& prev, Move m, __v8hi est);
     inline __v8hi estimatedEval(const Move m, const Eval& rb) const;
     static void initTables();
-    template<MoveType> void generateCaptureMoves(Move* &list, Move* &bad) const __attribute__((noinline));
+    template<MoveType>
+    void generateCaptureMoves(Move* &list, Move* &bad) const __attribute__((noinline));
     void generateCheckEvasions(Move* &list, Move* &bad) const __attribute__((noinline));
-    template<bool AbortOnFirst> bool generateMateMoves( Move** good = NULL, Move** bad = NULL) const __attribute__((noinline));
+    template<bool AbortOnFirst, typename R>
+    R generateMateMoves( Move** good = NULL, Move** bad = NULL) const __attribute__((noinline));
     bool generateSkewers( Move** good) const __attribute__((noinline));
     bool generateForks( Move** good) const __attribute__((noinline));
     void generateNonCap(Move*& good, Move*& bad) const __attribute__((noinline));
@@ -57,7 +60,8 @@ public:
     inline Key getZobrist() const;
 private:
     void generateTargetMove(Move* &good, Move* &bad, uint64_t tobit) const;
-    template<MoveType> void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned cap) const;
+    template<MoveType>
+    void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned cap) const;
     uint64_t perft(unsigned int depth) const;
     void divide(unsigned int depth) const;
 
