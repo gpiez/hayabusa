@@ -77,10 +77,15 @@ private:
     WBBoard boards[nMaxGameLength];
 
     static unsigned dMaxCapture;
-    static unsigned dMaxThreat;
+    static unsigned dMaxExt;
+    static unsigned dMinDualExt;
+    static unsigned dMinSingleExt;
+    static unsigned dMinMateExt;
+    
     unsigned int iMove;                // current half move index of game
 
     int currentMoveIndex;
+    Move currentMove;
     int nMoves;
     Move line[nMaxGameLength];
     unsigned rootPly;
@@ -88,7 +93,6 @@ private:
     History history;        // FIXME probably needs to be thread local
     std::string info;
     system_clock::time_point start;
-    system_clock::time_point lastStatus2;
     int wtime;
     int btime;
     int winc;
