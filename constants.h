@@ -190,9 +190,9 @@ static inline uint64_t fold(__v2di hilo) {
 template<int N> uint64_t shift(uint64_t b) __attribute__((__always_inline__));
 template<int N> uint64_t shift(uint64_t b) {
     if (N > 0)
-        return b << N;
+        return b << (N & 0x3f);
     else
-        return b >> -N;
+        return b >> (-N & 0x3f);
 }
 
 template<Colors C,int R> uint64_t rank() __attribute__((__always_inline__));
