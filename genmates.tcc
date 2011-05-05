@@ -79,8 +79,8 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
 
 #pragma GCC diagnostic ignored "-Wreturn-type"
 template<Colors C>
-template<bool AbortOnFirst>
-bool ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) const {
+template<bool AbortOnFirst, typename R>
+R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) const {
     const __v2di zero = _mm_set1_epi64x(0);
     uint64_t king = getPieces<-C,King>();
     unsigned k = bit(king);
@@ -142,7 +142,7 @@ haveMate:
             pin02 = pcmpeqq(pin02, zero);
             pin02 = ~pin02 & a02 /*& xray02*/;
             for (uint64_t a=fold(pin02) & mate; a; a&=a-1) {
-                if (AbortOnFirst) return true;
+                if (AbortOnFirst) return (R)true;
                 Move n;
                 n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
                 *--*good = n;
@@ -321,7 +321,7 @@ haveMate:
                 pin02 = ~pin02 & a02;
                 pin13 = ~pin13 & a13;
                 for (uint64_t a=fold(pin02|pin13) & qmate; a; a&=a-1) {
-                    if (AbortOnFirst) return true;
+                    if (AbortOnFirst) return (R)true;
                     Move n;
                     ASSERT((a ^ (a & (a-1))) == (a & -a));
                     n.data = qs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
@@ -337,7 +337,7 @@ haveMate:
             }
 //         }
         for (uint64_t p = qmate & pMoves; p; p &= p-1) {
-            if (AbortOnFirst) return true;
+            if (AbortOnFirst) return (R)true;
             unsigned to = bit(p);
             if (p & -p & ~occupied1) {
                 ASSERT((getPieces<C,Pawn>() & shift<-C*8>(p & -p) & pins[CI]));
@@ -422,7 +422,7 @@ haveMate:
                 xray13 = pcmpeqq(xray13, zero);
                 pin13 = ~pin13 & a13 & xray13;
                 for (uint64_t a=fold(pin13) & bmate; a; a&=a-1) {
-                    if (AbortOnFirst) return true;
+                    if (AbortOnFirst) return (R)true;
                     Move n;
                     n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
                     *--*good = n;
@@ -456,7 +456,7 @@ haveMate:
             for (; mate; mate &= mate-1 ) {
                 unsigned to = bit(mate);
                 for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1) {
-                    if (AbortOnFirst) return true;
+                    if (AbortOnFirst) return (R)true;
                     *--*good = Move(bit(f), to, Knight, getPieceFromBit(1ULL << to));
                 }
         }
@@ -465,7 +465,7 @@ haveMate:
 /*    if (uint64_t checkingMoves = shift<C*8>(getPieces<C,Pawn>()) & ~occupied1 & shift<-C*8>((king>>1 & ~file<'h'>()) | (king<<1 & ~file<'a'>()))) {
 
         }*/
-    if (AbortOnFirst) return false;
+    return (R)false;
 }
 #pragma GCC diagnostic warning "-Wreturn-type"
 
