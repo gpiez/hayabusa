@@ -29,12 +29,10 @@ static const __v2di mask01 = { 0x0101010101010101, 0x0202020202020202 };
 static const __v2di mask23 = { 0x0404040404040404, 0x0808080808080808 };
 static const __v2di mask45 = { 0x1010101010101010, 0x2020202020202020 };
 static const __v2di mask67 = { 0x4040404040404040, 0x8080808080808080 };
-static const int logEndgameTransitionSlope = 4;
+static const int logEndgameTransitionSlope = 5;
 static const int endgameTransitionSlope = 1<<logEndgameTransitionSlope; //16 pieces material between full endgame and full opening
 static const int baseAttack = 1024;
-static const int maxAttack = 1324;
 static const int baseDefense = -256;
-static const int maxDefense = -331;
 
 static const int ksv[nSquares] = {
      0,  2,  4,  6,  6,  4,  2,  0,
@@ -68,10 +66,6 @@ static const int ksvb[2][nSquares] = {
 }};
 
 unsigned distance[nSquares][nSquares];
-int pawnFileOpen[4], pawnFileEnd[4];
-int pawnRankOpen[6], pawnRankEnd[6];
-int8_t wpawnOpen[64], wpawnEnd[64];
-int8_t bpawnOpen[64], bpawnEnd[64];
 
 uint64_t mobStat[nColors][nPieces+1][2][nSquares];
 
@@ -187,6 +181,19 @@ Eval::Eval()
     bishop = 300;   
     rook = 500;
     queen = 900;
+    /*
+     * These parameters decide the weight of the attack function
+     * For very shallow ply searches the attack functions is actually
+     * a disadvantage, relative ELO based on 4k games +/-9
+     * ply/att  3       4       5       6       7
+     * 150      2001    2022    1991    1980    1988
+     * 200      1999    1978    2009    2020    2012
+     */
+    maxAttack = baseAttack + 250;
+    maxDefense = baseDefense - 75;
+    const int totalMaterial = 4*(materialTab[Rook]+materialTab[Bishop]+materialTab[Knight]) + 2*materialTab[Queen];
+    ASSERT(totalMaterial == 56);
+    endgameMaterial = 27;       // +/- 16 ->  16 (Q) ... 48 (QRRB or QRBBN)
 
     bishopPair = 50;
     bishopBlockPasser = 20;
@@ -253,7 +260,6 @@ Eval::Eval()
     //attack Q + N                      = 330 = 20.5
     //attack Q + R + N = 200 + 80 + 110 = 475 = 30
     sigmoid(attackTable, baseAttack, maxAttack, 30, 7);
-    endgameMaterial = 28;
 
     aspiration0 = 40;
     aspiration1 = 5;
@@ -302,7 +308,7 @@ Eval::Eval()
     printSigmoid(attackQ2, "attQ2");
     printSigmoid(attackP, "attP");
     printSigmoid(attackK, "attK");
-    printSigmoid(attackTable, "att");
+    printSigmoid(attackTable, "att", baseAttack);
     printSigmoid(pawnPasser, "pass");
     printSigmoid(pawnConnPasser, "cpass");
     printSigmoid(oppKingOwnPasser, "eKpas");
@@ -1064,7 +1070,7 @@ int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int sideToMove) const
      */
     for (uint64_t p = b.getPieces<C,Pawn>() & pe.passers[CI]; p; p &= p-1) {
         unsigned pos = bit(p);
-        unsigned promo = pos & 7;
+/*        unsigned promo = pos & 7;
         unsigned promodist = pos >> 3;
         uint64_t pawnStops;
         if (C == White) {
@@ -1085,7 +1091,11 @@ int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int sideToMove) const
         score += oppKingOwnPasser[distance[eking][promo]];
         print_debug(debugEval, "(%3d:", oppKingOwnPasser[distance[eking][promo]]);
         score += ownKingOwnPasser[distance[king][promo]];
-        print_debug(debugEval, "%3d)", ownKingOwnPasser[distance[king][promo]]);
+        print_debug(debugEval, "%3d)", ownKingOwnPasser[distance[king][promo]]);*/
+        score += oppKingOwnPasser[distance[eking][pos]];
+        print_debug(debugEval, "(%3d:", oppKingOwnPasser[distance[eking][pos]]);
+        score += ownKingOwnPasser[distance[king][pos]];
+        print_debug(debugEval, "%3d)", ownKingOwnPasser[distance[king][pos]]);
     }
     print_debug(debugEval, "%d\n", 0);
     return score;
@@ -1112,14 +1122,18 @@ int Eval::operator () (const BoardBase& b, int stm) const {
     if (b.getPieces<White,Pawn>() + b.getPieces<Black,Pawn>()) {
         PawnEntry pe = pawns(b);
 
-        int openingScale = b.material - popcount(b.getPieces<White,Pawn>()+b.getPieces<Black,Pawn>()) - endgameMaterial + endgameTransitionSlope/2;
+        int openingScale = b.material - endgameMaterial + endgameTransitionSlope/2;
 //         openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
         int m, a, e, pa;
+/*        int wap, bap, wdp, bdp;
+        wap = bap = wdp = bdp = 0;
+        m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
+        a = attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);*/
         if (openingScale >= endgameTransitionSlope) {
             int wap, bap, wdp, bdp;
             wap = bap = wdp = bdp = 0;
             m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
-            a = (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope;
+            a = attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);
             e = 0;
             pa = pe.score + pe.centerOpen;
         } else if (openingScale <= 0) {
