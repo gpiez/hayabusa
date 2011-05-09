@@ -88,9 +88,15 @@ class PieceList;
 class BoardBase;
 class Eval {
     KeyScore zobristPieceSquare[nTotalPieces][nSquares];
+    int8_t wpawnOpen[64], wpawnEnd[64];         // TODO use psq instead
+    int8_t bpawnOpen[64], bpawnEnd[64];
+
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
 
     int pawn, knight, bishop, rook, queen;
+
+    int maxAttack;
+    int maxDefense;
     
     int bishopPair;
     int bishopBlockPasser;
@@ -111,6 +117,9 @@ class Eval {
     int pawnIsolatedOpen;
     int pawnConnPasser[6];
     int pawnPasser[6];
+    int pawnFileOpen[4], pawnFileEnd[4];
+    int pawnRankOpen[6], pawnRankEnd[6];
+
 //     int pawnEdge;
 //     int pawnCenter;
     int pawnDouble;
@@ -211,7 +220,7 @@ public:
     template<Colors C>
     void draw(const BoardBase& b, int& upperbound, int& lowerbound) const;
     void ptClear();
-};
+} ALIGN_XMM ;
 
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter, double width, unsigned istart) {
@@ -233,12 +242,12 @@ void sigmoid(T& p, double start, double end, double dcenter, double width, unsig
 }
 
 template<typename T>
-void printSigmoid(T& p, std::string str) {
+void printSigmoid(T& p, std::string str, int offset=0) {
     size_t n;
     for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && !p[n]; --n);
     std::cout << std::setw(5) << str;
     for (unsigned int i = 0; i <= n; ++i) {
-        std::cout << std::setw(3) << p[i];
+        std::cout << std::setw(4) << p[i]-offset;
     }
     std::cout << std::endl;
 }
