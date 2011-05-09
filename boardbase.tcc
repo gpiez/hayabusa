@@ -23,6 +23,7 @@
 #include "rootboard.h"
 
 inline __v2di BoardBase::build13Attack(const unsigned sq) const {
+#ifdef __SSSE3__    
     const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
 
     __v2di maskedDirs = _mm_set1_epi64x(occupied1) & mask13x[sq];
@@ -33,6 +34,43 @@ inline __v2di BoardBase::build13Attack(const unsigned sq) const {
     maskedDirs ^= reverse;
     maskedDirs &= mask13x[sq];
     return maskedDirs;
+#else
+    uint64_t flood1 = 1ULL << sq;
+    uint64_t flood3 = flood1, flood5 = flood1, flood7 = flood1;
+
+    const uint64_t e01 = ~occupied1 & ~file<'a'>();
+    const uint64_t e03 = ~occupied1 & ~file<'h'>();
+    // uint64_t e05 = ~occupied1 & ~file<'h'>();
+    // uint64_t e07 = ~occupied1 & ~file<'a'>();
+    flood1 |= flood1 << 9 & e01;
+    flood3 |= flood3 << 7 & e03;
+    flood5 |= flood5 >> 9 & e03;
+    flood7 |= flood7 >> 7 & e01;
+
+    const uint64_t e11 = e01 & e01 << 9;
+    const uint64_t e13 = e03 & e03 << 7;
+    const uint64_t e15 = e03 & e03 >> 9;
+    const uint64_t e17 = e01 & e01 >> 7;
+
+    flood1 |= flood1 << 18 & e11;
+    flood3 |= flood3 << 14 & e13;
+    flood5 |= flood5 >> 18 & e15;
+    flood7 |= flood7 >> 14 & e17;
+
+    const uint64_t e21 = e11 & e11 << 18;
+    const uint64_t e23 = e13 & e13 << 14;
+    const uint64_t e25 = e15 & e15 >> 18;
+    const uint64_t e27 = e17 & e17 >> 14;
+
+    flood1 |= flood1 << 36 & e21;
+    flood3 |= flood3 << 28 & e23;
+    flood5 |= flood5 >> 36 & e25;
+    flood7 |= flood7 >> 28 & e27;
+
+    return _mm_set_epi64x( (flood7 >> 7 & ~file<'a'>()) | (flood3 << 7 & ~file<'h'>()),
+                           (flood1 << 9 & ~file<'a'>()) | (flood5 >> 9 & ~file<'h'>()));
+
+#endif
 }
 
 inline uint64_t BoardBase::build13Attack(uint64_t flood1) const {

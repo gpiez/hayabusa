@@ -1,10 +1,9 @@
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -pipe" CACHE STRING "")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG -march=core2 -Wuninitialized -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants" CACHE STRING "")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=core2 -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants -flto --param max-inline-insns-single=2000" CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG -march=native -Wuninitialized -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants" CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants -flto --param max-inline-insns-single=2000" CACHE STRING "")
 #set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto-partition=none -fwhole-program" CACHE STRING "")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-fwhole-program" CACHE STRING "")
-# SSSE3 (Note the additional S) is mandatory because of the pshufb instruction.
-SET(CMAKE_CXX_FLAGS "-std=c++0x -mssse3 -flax-vector-conversions -fdiagnostics-show-option $ENV{CXXFLAGS}" CACHE STRING "")
+SET(CMAKE_CXX_FLAGS "-std=c++0x -flax-vector-conversions -fdiagnostics-show-option $ENV{CXXFLAGS}" CACHE STRING "")
 
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 

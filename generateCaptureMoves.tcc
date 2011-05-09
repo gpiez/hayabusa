@@ -49,8 +49,10 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
     if (getAttacks<C,Bishop>() & d) {
         const MoveTemplateB* bs = bsingle[CI];
         __v2di a13 = bs->d13;
+#ifdef __SSE_4_1__
         while (_mm_testz_si128(d2, a13))
             a13 = (++bs)->d13;
+#endif
         Move m = bs->move;
         ASSERT(m.data);
         do {
@@ -83,8 +85,10 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
     if (getAttacks<C,Rook>() & d) {
         const MoveTemplateR* rs = rsingle[CI];
         __v2di a02 = rs->d02;
+#ifdef __SSE_4_1__
         while (_mm_testz_si128(d2, a02))
             a02 = (++rs)->d02;
+#endif        
         Move m = rs->move;
         ASSERT (m.data);
         do {

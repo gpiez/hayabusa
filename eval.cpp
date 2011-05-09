@@ -69,11 +69,6 @@ unsigned distance[nSquares][nSquares];
 
 uint64_t mobStat[nColors][nPieces+1][2][nSquares];
 
-int look2up(__v2di x, __v16qi tab) {
-    __v8hi y = _mm_shuffle_epi8(tab, x);
-    return _mm_extract_epi16(y, 0) + _mm_extract_epi16(y, 4);
-}
-
 void printBit(uint64_t bits) {
     for (int y=8; y; ) {
         --y;
