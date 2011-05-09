@@ -98,14 +98,16 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 #endif
 
     unsigned bestMovesLimit = 1;
-    for (depth=dMaxExt+2; depth<endDepth+dMaxExt && stats.node < maxSearchNodes && !stopSearch; depth++) {
+    for (depth=dMaxExt+2; depth<=endDepth+dMaxExt && stats.node < maxSearchNodes && !stopSearch; depth++) {
         ml.begin();
         ml.sort(bestMovesLimit);
         bestMove = currentMove = *ml;
         currentMoveIndex = 1;
-        std::stringstream g;
-        g << "info depth " << depth-dMaxExt;
-        console->send(g.str());
+        if (!Options::humanreadable && !Options::quiet) {
+            std::stringstream g;
+            g << "info depth " << depth-dMaxExt;
+            console->send(g.str());
+        }
     #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;

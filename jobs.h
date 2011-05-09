@@ -67,9 +67,10 @@ template<Colors C>
 class RootSearchJob: public Job {
     RootBoard& rb;
     const RepetitionKeys& rep;//TODO really needed? This should be always thread-local keys
+    unsigned depth;
 
 public:
-    RootSearchJob(RootBoard& rb, const RepetitionKeys& rep);
+    RootSearchJob(RootBoard& rb, const RepetitionKeys& rep, unsigned depth);
     void job();
 };
 

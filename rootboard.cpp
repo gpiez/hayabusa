@@ -369,9 +369,9 @@ void RootBoard::go(const std::map<std::string, StringList>& param )
 
     Job* job;
     if (color == White)
-        job = new RootSearchJob<White>(*this, keys);
+        job = new RootSearchJob<White>(*this, keys, maxSearchDepth);
     else
-        job = new RootSearchJob<Black>(*this, keys);
+        job = new RootSearchJob<Black>(*this, keys, maxSearchDepth);
     WorkThread::findFree()->queueJob(0U, job);
 }
 

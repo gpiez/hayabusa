@@ -511,7 +511,11 @@ nosort:
  * The inner move loop
  */
         for (Move* i = good; i<bad && current < beta.v; ++i) {
-            if ((P == leaf && ((i>=captures && i<threats) || i>=nonCaptures) && !threatened && !(extend & (ExtDualReply|ExtSingleReply))) || P == vein) {
+            if ( ( P == leaf && ((i>=captures && i<threats) || i>=nonCaptures)
+                             && !threatened
+                             && !(extend & (ExtDualReply|ExtSingleReply))
+                             /*&& ~ply & 1*/)
+                || P == vein) {
                 if (!i->capture() && !i->isSpecial()) continue;
 /*                estimate.vector = b.estimatedEval(*i, eval);
                 RawScore delta3 = b.CI == 0 ? delta[nPieces + ((*i).piece()&7)][(*i).from()][(*i).to()] : delta[nPieces - ((*i).piece()&7)][(*i).from()][(*i).to()];
@@ -523,8 +527,8 @@ nosort:
                 }                                 */
                 bool unused __attribute__((unused));
                 search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, ExtNot, unused NODE);
-            } else if (depth <= dMaxCapture + 1
-                    || (depth <= dMinDualExt + 1 && extend & ExtDualReply) ) {
+            } else if ( P == leaf  && (   depth <= dMaxCapture + 1
+                                   || (depth <= dMinDualExt + 1 && extend & ExtDualReply))) {
 /*                estimate.vector = b.estimatedEval(*i, eval);
                 RawScore delta3 = b.CI == 0 ? delta[nPieces + ((*i).piece()&7)][(*i).from()][(*i).to()] : delta[nPieces - ((*i).piece()&7)][(*i).from()][(*i).to()];
                 RawScore estimatedScore = estimate.score.calc(b.material) + b.positionalScore + delta3;
@@ -537,7 +541,7 @@ nosort:
                 search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, ExtNot, unused NODE);
                 hasMaxDepth = true;
             }
-            else if (depth <= dMaxExt + 1/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/) {
+            else if ( P == leaf || /*~ply & 1 && */depth <= dMaxExt + 1) {
                 search<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), current.unshared(), ply+1, leafExt, hasMaxDepth NODE);
             } else { // possible null search in tree or trunk
                 int reduction = calcReduction(b, i-good, *i, depth);
