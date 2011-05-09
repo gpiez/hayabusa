@@ -110,7 +110,7 @@ static const unsigned int nSquares = nFiles*nRows;
 static const int dirOffsets[8] = { 1, 9, 8, 7, -1, -9, -8, -7 };
 static const int xOffsets[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 static const int yOffsets[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
-static const int materialTab[nPieces+1] = { 0, 5, 3, 9, 3, 0, 0 };
+static const int materialTab[nPieces+1] = { 0, 5, 2,10, 2, 0, 0 };
 static inline int popcount(uint64_t x) {
 #ifdef __SSE4_2__
     return _popcnt64(x);
