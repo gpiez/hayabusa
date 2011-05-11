@@ -464,18 +464,18 @@ template<Colors C>
 PawnEntry::Shield evalShield(const BoardBase &b) {
 
     uint64_t p = b.getPieces<C,Pawn>();
-    uint64_t kside = file<'f'>() | file<'g'>() | file<'h'>();
-    uint64_t qside = file<'a'>() | file<'b'>() | file<'c'>();
+    const uint64_t kside = p & (file<'f'>() | file<'g'>() | file<'h'>());
+    const uint64_t qside = p & (file<'a'>() | file<'b'>() | file<'c'>());
 
-    unsigned kshield = 4*popcount(kside & rank<C,2>() & p)
-                       + 2*popcount(kside & rank<C,3>() & p)
-                       + 1*popcount(kside & rank<C,4>() & p)
+    unsigned kshield = 4*popcount(kside & rank<C,2>())
+                       + 2*popcount(kside & rank<C,3>())
+                       + 1*popcount(kside & rank<C,4>())
                        + 2*!!(kside & file<'h'>())
                        + 2*!!(kside & file<'g'>());
 
-    unsigned qshield = 4*popcount(qside & rank<C,2>() & p)
-                       + 2*popcount(qside & rank<C,3>() & p)
-                       + 1*popcount(qside & rank<C,4>() & p)
+    unsigned qshield = 4*popcount(qside & rank<C,2>())
+                       + 2*popcount(qside & rank<C,3>())
+                       + 1*popcount(qside & rank<C,4>())
                        + 2*!!(qside & file<'a'>())
                        + 2*!!(qside & file<'b'>());
 
