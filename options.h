@@ -18,6 +18,9 @@
 */
 #ifndef OPTIONS_H_
 #define OPTIONS_H_
+/*
+ * Definitions are in console.cpp
+ */
 namespace Options {
     extern unsigned int splitDepth;
     extern int humanreadable;
@@ -29,6 +32,7 @@ namespace Options {
     extern bool reduction;
     extern bool pruning;
     extern unsigned debug;
+    extern bool currline;
 #ifdef QT_NETWORK_LIB    
     extern bool server;
 #endif    
