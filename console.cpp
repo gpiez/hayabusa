@@ -42,6 +42,7 @@ namespace Options {
     bool                reduction = true;
     bool                pruning = true;
     unsigned            debug = 0;
+    bool                currline = true;
 #ifdef QT_NETWORK_LIB    
     bool                server = false;
 #endif    
@@ -267,6 +268,7 @@ void Console::uci(StringList /*cmds*/) {
     send("option name Reduction type check default true");
     send("option name Pruning type check default true");
     send("option name Clear Hash type button");
+    send("option name UCI_ShowCurrLine type check default false");
     send("uciok");
 }
 
@@ -289,6 +291,8 @@ void Console::setoption(StringList cmds) {
         std::string data = toLower(o["value"].join(" "));
         if (name == "splitdepth") {
             Options::splitDepth = convert(data);
+        } else if (name == "UCI_ShowCurrLine") {
+            Options::currline = convert<bool>(data);
         } else if (name == "humanreadable") {
             Options::humanreadable = convert(data);
         } else if (name == "book") {
@@ -299,21 +303,11 @@ void Console::setoption(StringList cmds) {
             Options::hash = convert(data);
             if (Options::hash) board->tt->setSize(Options::hash*0x100000ULL);
         } else if (name == "quiet") {
-            Options::quiet = convert(data);
+            Options::quiet = convert<bool>(data);
         } else if (name == "reduction") {
-            if (data == "true")
-                Options::reduction = true;
-            else if (data == "false")
-                Options::reduction = false;
-            else
-                std::cerr << "reduction value " << data << " not understood" << std::endl;
+            Options::reduction = convert< bool >(data);
         } else if (name == "pruning") {
-            if (data == "true")
-                Options::pruning = true;
-            else if (data == "false")
-                Options::pruning = false;
-            else
-                std::cerr << "pruning value " << data << " not understood" << std::endl;
+            Options::pruning = convert< bool >(data);
         } else if (name == "clear hash") {
             board->clearHash();
 #ifdef QT_NETWORK_LIB
