@@ -290,6 +290,10 @@ void Console::setoption(StringList cmds) {
             Options::splitDepth = convert(data);
         } else if (name == "humanreadable") {
             Options::humanreadable = convert(data);
+        } else if (name == "book") {
+            board->openBook(data);
+        } else if (name == "bookreset") {
+            board->resetBook(data);
         } else if (name == "hash") {
             Options::hash = convert(data);
             if (Options::hash) board->tt->setSize(Options::hash*0x100000ULL);
@@ -305,7 +309,7 @@ void Console::setoption(StringList cmds) {
         } else if (name == "pruning") {
             if (data == "true")
                 Options::pruning = true;
-            else if (data == "true")
+            else if (data == "false")
                 Options::pruning = false;
             else
                 std::cerr << "pruning value " << data << " not understood" << std::endl;
