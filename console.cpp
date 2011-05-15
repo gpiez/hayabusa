@@ -264,7 +264,8 @@ void Console::uci(StringList /*cmds*/) {
     str << " default ";
     str << hashDefaultSize;
     send("option name Hash type spin min 1 max " + str.str());
-    send("option name Reduction type check default false");
+    send("option name Reduction type check default true");
+    send("option name Pruning type check default true");
     send("option name Clear Hash type button");
     send("uciok");
 }
