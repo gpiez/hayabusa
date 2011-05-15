@@ -257,8 +257,8 @@ void Console::divide(StringList cmds) {
 }
 
 void Console::uci(StringList /*cmds*/) {
-    send("id name hayabusa 0.1");
-    send("author Gunther Piez");
+    send("id name hayabusa 0.11.5");
+    send("id author Gunther Piez");
     std::stringstream str;
     str << " 32768"; //TranspositionTable::maxSize;
     str << " default ";
