@@ -728,10 +728,13 @@ static const __v2di weightB1[4] = {
       0x0707070707070707 }      //h-file
 };
 
-template<Colors C, GamePhase P>
+template<Colors C, GamePhase P> // TODO use overload for P == Endgame, where attack and defend are not used
 inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int score = 0;
+    if (P != Endgame) {
+        attackingPieces = defendingPieces = 0;
+    }
     int king = bit(b.getPieces<-C,King>());
     const uint64_t oppking = b.kAttacked[king];
 //     const uint64_t oppking2 = b.kAttacked2[king];
@@ -965,8 +968,10 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(qmob1); printBit(qmob2); /*printBit(rmob3);*/ }
     }
         
-    attackingPieces += attackP[popcount15(b.getAttacks<C,Pawn>() & oppking)];
-    attackingPieces += attackK[popcount15(b.getAttacks<C,King>() & oppking)];
+    if (P != Endgame) {
+        attackingPieces += attackP[popcount15(b.getAttacks<C,Pawn>() & oppking)];
+        attackingPieces += attackK[popcount15(b.getAttacks<C,King>() & oppking)];
+    }
     
     return score;
 }
@@ -1096,7 +1101,12 @@ int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int sideToMove) const
     return score;
 }
 
-int Eval::operator () (const BoardBase& b, int stm) const {
+int Eval::operator () (const BoardBase& b, int stm ) const {
+    int wap, bap;
+    return operator()(b, stm, wap, bap);
+}
+
+int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
 #if defined(MYDEBUG)
     int cmp = b.keyScore.score.calc(b.material);
     int value = 0;
@@ -1120,26 +1130,22 @@ int Eval::operator () (const BoardBase& b, int stm) const {
         int openingScale = b.material - endgameMaterial + endgameTransitionSlope/2;
 //         openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
         int m, a, e, pa;
+        int wdp, bdp;
 /*        int wap, bap, wdp, bdp;
         wap = bap = wdp = bdp = 0;
         m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
         a = attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);*/
         if (openingScale >= endgameTransitionSlope) {
-            int wap, bap, wdp, bdp;
-            wap = bap = wdp = bdp = 0;
             m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
             a = attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);
             e = 0;
             pa = pe.score + pe.centerOpen;
         } else if (openingScale <= 0) {
-            int wap, bap, wdp, bdp;
             m = mobility<White, Endgame>(b, wap, wdp) - mobility<Black, Endgame>(b, bap, bdp);
             a = 0;
             e = endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm);
             pa = pe.score + pe.centerEnd;
         } else {
-            int wap, bap, wdp, bdp;
-            wap = bap = wdp = bdp = 0;
             m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
             a = (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope;
             e = ((endgameTransitionSlope-openingScale)*(endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm))) >> logEndgameTransitionSlope;
