@@ -61,26 +61,9 @@ StatWidget::StatWidget(const RootBoard& rb):
     fixed.setFamily("Consolas");
     bestLine->setFont(fixed);
 
-    int pp = 0;
-    for (int i=0; i<50; i++) {
-        pal[pp++] = QColor(i,i,255-i);
+    for (int i=0; i<256; i++) {
+        pal[i] = QColor::fromHsvF(i/300.0, 1.0, 1.0);
     }
-    for (int i=0; i<50; i++) {
-        pal[pp++] = QColor(50, 50+2*i, 205-2*i);
-    }
-    for (int i=0; i<28; i++) {
-        pal[pp++] = QColor(50+(i*50)/28,150-(i*50)/28,105-(i*5)/55);
-    }
-    for (int i=0; i<28; i++) {
-        pal[pp++] = QColor(100+(i*50)/28,100+(i*50)/28,100-i*2);
-    }
-    for (int i=0; i<50; i++) {
-        pal[pp++] = QColor(150+i, 150+i, 44-(i*44)/50);
-    }
-    for (int i=0; i<50; i++) {
-        pal[pp++] = QColor(150+i, 150-2*i, i);
-    }
-    ASSERT(pp==256);
 
     minipm[0][Rook] = ww1;
     minipm[0][Bishop] = ww2;
@@ -127,17 +110,18 @@ void StatWidget::updateInfo(int depth, uint64_t time, uint64_t nodes, QString ev
         bestLine->removeRow(0);
         --iRow;
     }
-    bestLine->setRowCount(iRow);
-    bestLine->setItem(iRow-1, 0, depthItem);
-    bestLine->setItem(iRow-1, 1, timeItem);
-    bestLine->setItem(iRow-1, 2, nodesItem);
-    bestLine->setItem(iRow-1, 3, evalItem);
-    bestLine->setItem(iRow-1, 4, lineItem);
+    bestLine->insertRow(0);
+//     bestLine->setRowCount(iRow);
+    bestLine->setItem(0, 0, depthItem);
+    bestLine->setItem(0, 1, timeItem);
+    bestLine->setItem(0, 2, nodesItem);
+    bestLine->setItem(0, 3, evalItem);
+    bestLine->setItem(0, 4, lineItem);
     bestLine->resizeColumnToContents(1);
     bestLine->resizeColumnToContents(2);
     bestLine->resizeColumnToContents(3);
     bestLine->setSelectionMode(QAbstractItemView::NoSelection);
-    bestLine->setCurrentCell(iRow-1, 0);
+    bestLine->setCurrentCell(0, 0);
 }
 /* Store the last 10 stats for a sliding average */
 template<typename T>
@@ -187,6 +171,14 @@ void StatWidget::update()
 
 void StatWidget::updateBoard()
 {
+    QPixmap pm(scaleWidget->width(), scaleWidget->height());
+    QPainter pa( &pm );
+    for (int i=0; i<256; ++i) {
+        pa.setPen(Qt::NoPen);
+        pa.setBrush(QBrush(pal[i]));
+        pa.drawRect((i*scaleWidget->width())/256, 0, ((i+1)*scaleWidget->width())/256 - (i*scaleWidget->width())/256, scaleWidget->height());
+    }
+    scaleWidget->setPixmap(pm);
     static int oldsize = 0;
     int size=qMin( position->width(), position->height() )/8;
     if (size != oldsize) {
@@ -219,43 +211,73 @@ void StatWidget::updateBoard()
         position->setPixmap(boardPixmap);
     }
 
-//     size = (qMin(ww1->height(), ww1->width()))/8;
-    size = ww1->width()/16;
-    int hh = ww1->height();
-    QPixmap pm(size*16, hh);
-    QPainter pa( &pm );
-//     for (int c=-1; c<=1; c+=2)
+    if (radioButtonPSQ->isChecked()) {
+        size = (qMin(ww1->height(), ww1->width()))/8;
+        QPixmap pm(size*8, size*8);
+        QPainter pa( &pm );
+        for (int c=-1; c<=1; c+=2)
 #ifdef MYDEBUG
-    for (int r=0; r<=1; ++r)
-        for (int p=Rook; p<=King; ++p) {
-    pm.fill(QColor(192, 192, 192, 255));
-             pa.setPen(Qt::NoPen);
-/*            for ( int x=0; x<8; x++ )
-                for ( int y=0; y<8; y++ ) {
-                    int ee;
-                    if (radioButtonPSQ->isChecked())
-                        ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard().material) - c*(int[]){0,450,300,925,300,100,0}[p]);
-                    else
-                        ee = rb.delta[nPieces + c*p][x+(7-y)*8][0];
-
-                    if (ee > 127) ee = 127;
-                    if (ee<-128) ee = -128;
-                    pa.setBrush(QBrush(pal[ee+128]));
-                    pa.drawRect(x*size,y*size,size,size);
-                }
-            minipm[(1-c)/2][p]->setPixmap(pm);*/
-            uint64_t mobMax = 1;
-            for ( int x=0; x<16; x++ )
-                mobMax = std::max(mobMax, mobStat[0][p][r][x]);
-            for ( int x=0; x<16; x++ ) {
-                int y = (hh*mobStat[0][p][r][x])/mobMax;
-                pa.setBrush(QBrush(pal[x*16]));
-//                 pa.setBrush(QBrush(QColor(192,192,192)));
-                pa.drawRect(x*size,hh-y,size,y);
+            for (int p=Rook; p<=King; ++p) {
+                pm.fill(QColor(192, 192, 192, 255));
+                pa.setPen(Qt::NoPen);
+                for ( int x=0; x<8; x++ )
+                    for ( int y=0; y<8; y++ ) {
+                        double ee = 0;
+                        for (int i=0; i<64; ++i) {
+                            const PositionalError& err = rb.pe[nPieces + c*p][i][x+(7-y)*8];
+                            if (err.n > 0.0) {
+                                double v = err.e2/err.n - err.e*err.e/(err.n*err.n);
+                                ASSERT(v >= 0.0);
+                                v = sqrt(v);
+                                if (v > ee) ee = v;
+                            }
+                        }
+                        if (ee > 255.0) ee = 255.0;
+                        pa.setBrush(QBrush(pal[int(ee)]));
+                        pa.drawRect(x*size,y*size,size,size);
+                    }
+                minipm[(1-c)/2][p]->setPixmap(pm);
             }
-            minipm[r][p]->setPixmap(pm);
-        }
 #endif
+    } else {
+        //     size = (qMin(ww1->height(), ww1->width()))/8;
+        size = ww1->width()/16;
+        int hh = ww1->height();
+        QPixmap pm(size*16, hh);
+        QPainter pa( &pm );
+        //     for (int c=-1; c<=1; c+=2)
+        #ifdef MYDEBUG
+        for (int r=0; r<=1; ++r)
+            for (int p=Rook; p<=King; ++p) {
+        pm.fill(QColor(192, 192, 192, 255));
+                 pa.setPen(Qt::NoPen);
+        /*            for ( int x=0; x<8; x++ )
+                    for ( int y=0; y<8; y++ ) {
+                        int ee;
+                        if (radioButtonPSQ->isChecked())
+                            ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard().material) - c*(int[]){0,450,300,925,300,100,0}[p]);
+                        else
+                            ee = rb.delta[nPieces + c*p][x+(7-y)*8][0];
+
+                        if (ee > 127) ee = 127;
+                        if (ee<-128) ee = -128;
+                        pa.setBrush(QBrush(pal[ee+128]));
+                        pa.drawRect(x*size,y*size,size,size);
+                    }
+                minipm[(1-c)/2][p]->setPixmap(pm);*/
+                uint64_t mobMax = 1;
+                for ( int x=0; x<16; x++ )
+                    mobMax = std::max(mobMax, mobStat[0][p][r][x]);
+                for ( int x=0; x<16; x++ ) {
+                    int y = (hh*mobStat[0][p][r][x])/mobMax;
+                    pa.setBrush(QBrush(pal[x*16]));
+        //                 pa.setBrush(QBrush(QColor(192,192,192)));
+                    pa.drawRect(x*size,hh-y,size,y);
+                }
+                minipm[r][p]->setPixmap(pm);
+            }
+        #endif
+    }
 }
 
 void StatWidget::emptyTree() {
