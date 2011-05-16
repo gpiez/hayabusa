@@ -195,6 +195,7 @@ public:
 #endif
     Eval();
     int operator () (const BoardBase&, int sideToMove) const __attribute__((noinline));
+    int operator () (const BoardBase&, int sideToMove, int&, int&) const __attribute__((noinline));
     template<Colors C> Move evalMate(const BoardBase&) const __attribute__((noinline));
     CompoundScore getPS(int8_t piece, uint8_t square) const {
         ASSERT(square < nSquares);

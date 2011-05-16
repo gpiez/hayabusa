@@ -36,8 +36,9 @@ SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, Move m, unsigned int de
 template<Colors C, typename A, typename B, typename T>
 void SearchJob<C,A,B,T>::job() {
     rb.clone(b, rep, ply);
-    bool dummy;
-    rb.search<C, trunk>(b, m, depth, alpha, beta, ply, ExtNot, dummy
+    bool dummy __attribute__((unused));
+    int dummy2 __attribute__((unused));
+    rb.search<C, trunk>(b, m, depth, alpha, beta, ply, ExtNot, dummy, dummy2
 #ifdef QT_GUI_LIB
                        , node
 #endif
