@@ -26,6 +26,7 @@
 #include "score.tcc"
 #include "repetition.tcc"
 #include "transpositiontable.tcc"
+#include "book.h"
 
 unsigned RootBoard::dMaxCapture = 12;
 // odd extensions tend to blow up the tree. Average tree size over 2600 positions:
@@ -48,7 +49,7 @@ unsigned RootBoard::dMaxExt = 8 + RootBoard::dMaxCapture;
 unsigned RootBoard::dMinDualExt = 4 + RootBoard::dMaxCapture;
 
 void RootBoard::stopTimer(milliseconds hardlimit) {
-#ifdef __WIN32__    
+#if defined(__WIN32__) || defined(POSIX_TIME_HPP___)
     UniqueLock<TimedMutex> lock(stopTimerMutex, boost::posix_time::millisec(hardlimit.count()));
 #else    
     UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
@@ -75,7 +76,7 @@ std::string RootBoard::commonStatus() const {
 void RootBoard::infoTimer(milliseconds repeat) {
     static int lastCurrentMoveIndex = 0;
     while(!infoTimerMutex.try_lock()) {
-#ifdef __WIN32__    
+#if defined(__WIN32__) || defined(POSIX_TIME_HPP___)
         UniqueLock<TimedMutex> lock(infoTimerMutex, boost::posix_time::millisec(repeat.count()));
 #else        
         UniqueLock<TimedMutex> lock(infoTimerMutex, repeat);
@@ -84,9 +85,12 @@ void RootBoard::infoTimer(milliseconds repeat) {
         uint64_t ntemp = tempStats.node;
         uint64_t t = duration_cast<milliseconds>(system_clock::now()-start).count();
         std::stringstream g;
-        if (!Options::humanreadable && !Options::quiet && currentMoveIndex != lastCurrentMoveIndex ) {
+        if (!Options::humanreadable && !Options::quiet && (currentMoveIndex != lastCurrentMoveIndex)) {
             g << "info currmove " << currentMove.algebraic() << " currmovenumber " << currentMoveIndex << std::endl;
             lastCurrentMoveIndex = currentMoveIndex;
+        }
+        if (Options::currline) {
+            g << "info currline " << getLine() << std::endl;
         }
         if (Options::humanreadable) {
             g << commonStatus() 
@@ -162,9 +166,11 @@ std::string RootBoard::status(system_clock::time_point now, int score)
 void RootBoard::clearEE() {
     for (int p=-nPieces; p<=(int)nPieces; ++p)
         for (unsigned int sq1=0; sq1<nSquares; ++sq1) for (unsigned int sq=0; sq<nSquares; ++sq) {
-            delta[p+nPieces][sq1][sq] = 0;
-            avgE[p+nPieces][sq1][sq] = 0.0;
-            avgN[p+nPieces][sq1][sq] = 0.001;
+            PositionalError& pe = this->pe[p+nPieces][sq1][sq];
+            pe.v = 0;
+            pe.n = 0.0;
+            pe.e = 0.0;
+            pe.e2 = 0.0;
         }
 }
 
@@ -227,6 +233,8 @@ const BoardBase& RootBoard::setup(const std::string& str) {
     //clearEE();
 
     unsigned int p,x,y;
+    int wp = 0, wn = 0, wb = 0, wr = 0, wq = 0, wk = 0;
+    int bp = 0, bn = 0, bb = 0, br = 0, bq = 0, bk = 0;
     for ( p=0, x=0, y=7; p<(unsigned int)piecePlacement.length(); p++, x++ ) {
         unsigned int square = x + 8*y;
         switch ( piecePlacement[p] ) {
@@ -235,39 +243,57 @@ const BoardBase& RootBoard::setup(const std::string& str) {
             break;
         case 'k':
             board.setPiece<Black>( King, square, eval);
+            bk++;
             break;
         case 'p':
+            if (y==0 || y==7) {
+                std::cerr << "Illegal pawn position" << std::endl;
+            }
             board.setPiece<Black>( Pawn, square, eval);
+            bp++;
             break;
         case 'b':
             board.setPiece<Black>( Bishop, square, eval);
+            bb++;
             break;
         case 'n':
             board.setPiece<Black>( Knight, square, eval);
+            bn++;
             break;
         case 'r':
             board.setPiece<Black>( Rook, square, eval);
+            br++;
             break;
         case 'q':
             board.setPiece<Black>( Queen, square, eval);
+            bq++;
             break;
         case 'K':
             board.setPiece<White>( King, square, eval);
+            wk++;
             break;
         case 'P':
+            if (y==0 || y==7) {
+                std::cerr << "Illegal pawn position" << std::endl;
+            }
             board.setPiece<White>( Pawn, square, eval);
+            wp++;
             break;
         case 'B':
             board.setPiece<White>( Bishop, square, eval);
+            wb++;
             break;
         case 'N':
             board.setPiece<White>( Knight, square, eval);
+            wn++;
             break;
         case 'R':
             board.setPiece<White>( Rook, square, eval);
+            wr++;
             break;
         case 'Q':
             board.setPiece<White>( Queen, square, eval);
+            wq++;
             break;
         case '/':
             x = -1;
@@ -283,18 +309,26 @@ const BoardBase& RootBoard::setup(const std::string& str) {
         case 'Q':
             if (board.getPieces<White, King>() & 1ULL<<e1 && board.getPieces<White, Rook>() & 1ULL<<a1)
                 board.cep.castling.color[0].q = true;
+            else
+                std::cerr << "Illegal white castling" << std::endl;
             break;
         case 'K':
             if (board.getPieces<White, King>() & 1ULL<<e1 && board.getPieces<White, Rook>() & 1ULL<<h1)
                 board.cep.castling.color[0].k = true;
+            else
+                std::cerr << "Illegal white castling" << std::endl;
             break;
         case 'q':
             if (board.getPieces<Black, King>() & 1ULL<<e8 && board.getPieces<Black, Rook>() & 1ULL<<a8)
                 board.cep.castling.color[1].q = true;
+            else
+                std::cerr << "Illegal black castling" << std::endl;
             break;
         case 'k':
             if (board.getPieces<Black, King>() & 1ULL<<e8 && board.getPieces<Black, Rook>() & 1ULL<<h8)
                 board.cep.castling.color[1].k = true;
+            else
+                std::cerr << "Illegal black castling" << std::endl;
             break;
         }
 
@@ -304,6 +338,23 @@ const BoardBase& RootBoard::setup(const std::string& str) {
         std::cerr << "error importing e. p. move " << enPassant << std::endl;
 
     board.buildAttacks();
+    if (board.inCheck<White>() && color == Black)
+        std::cerr << "White king in check and black to move" << std::endl;
+    if (board.inCheck<Black>() && color == White)
+        std::cerr << "White king in check and black to move" << std::endl;
+
+    if (wp > 8 || bp > 8)
+        std::cerr << "To many pawns" << std::endl;
+
+    if (!wk || !bk)
+        std::cerr << "No King" << std::endl;
+
+    if (std::max(wq,1)-1 + std::max(wr,2)-2 + std::max(wb,2)-2 + std::max(wn,2)-2 + wp > 8)
+        std::cerr << "To many promoted white pieces" << std::endl;
+    
+    if (std::max(bq,1)-1 + std::max(br,2)-2 + std::max(bb,2)-2 + std::max(bn,2)-2 + bp > 8)
+        std::cerr << "To many promoted black pieces" << std::endl;
+        
     if (tl.find("bm") != tl.end()) {
         Move m = findMove(tl["bm"].front());
         if (m.data) {
@@ -463,4 +514,16 @@ void RootBoard::clearHash()
     eval.ptClear();
     history.init();
     clearEE();
+}
+
+void RootBoard::openBook(std::string bstr)
+{
+    book.read(bstr);
+}
+
+void RootBoard::resetBook(std::string bstr)
+{
+    book.read(bstr);
+    book.resetWeights();
+    book.write(bstr);
 }
