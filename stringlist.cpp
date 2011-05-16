@@ -91,3 +91,15 @@ std::map<std::string, StringList> StringList::parse(const StringList& tokens) co
     }
     return tokenValues;
 }
+
+template<>
+bool convert<bool>(std::string str) 
+{
+    str = toLower(str);
+    if (str == "true" || str == "1" || str == "on" || str == "enabled")
+        return true;
+    if (str == "false" || str == "0" || str == "off" || str == "disabled")
+        return false;
+    std::cerr << "unexpected boolean value " << str << std::endl;
+    return false;
+}

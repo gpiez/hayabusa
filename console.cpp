@@ -42,7 +42,7 @@ namespace Options {
     bool                reduction = true;
     bool                pruning = true;
     unsigned            debug = 0;
-    bool                currline = true;
+    bool                currline = false;
 #ifdef QT_NETWORK_LIB    
     bool                server = false;
 #endif    
@@ -291,10 +291,10 @@ void Console::setoption(StringList cmds) {
         std::string data = toLower(o["value"].join(" "));
         if (name == "splitdepth") {
             Options::splitDepth = convert(data);
-        } else if (name == "UCI_ShowCurrLine") {
+        } else if (name == "uci_showcurrline") {
             Options::currline = convert<bool>(data);
         } else if (name == "humanreadable") {
-            Options::humanreadable = convert(data);
+            Options::humanreadable = convert<bool>(data);
         } else if (name == "book") {
             board->openBook(data);
         } else if (name == "bookreset") {
@@ -390,6 +390,7 @@ void Console::ordering(StringList cmds) {
     board->infinite = true;
     if (cmds.size() > 1 && cmds[1] == "init") {
         for (unsigned int i = 0; testPositions[i]; ++i) {
+            if (i<71*26+20) continue;
             stats.node=0;
             board->maxSearchNodes = 1000000;
             board->setup(testPositions[i]);
@@ -402,7 +403,7 @@ void Console::ordering(StringList cmds) {
             if (stats.node < 1000000)
                 std::cerr << " 0,";
             else
-                std::cerr << std::setw(2) << board->depth - (12 + 13 + 1) << ",";
+                std::cerr << std::setw(2) << board->depth - (20 + 1) << ",";
         }
         std::cerr << "0" << std::endl;
     } else {
