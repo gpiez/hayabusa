@@ -24,7 +24,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
 SET(common_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp testpositions.cpp
-    move.cpp testgame.cpp stringlist.cpp history.cpp)
+    move.cpp testgame.cpp stringlist.cpp history.cpp book.cpp)
 
 SET(USE_QTGUI FALSE CACHE BOOL "Build the QT interface")
 SET(USE_QTNETWORK FALSE CACHE BOOL "Build the server")
