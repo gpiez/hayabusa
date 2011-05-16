@@ -34,6 +34,9 @@
 #endif
 #include "stringlist.h"
 #include "repetition.h"
+#include "book.h"
+
+#define CALCULATE_MEAN_POSITIONAL_ERROR
 
 using namespace std::chrono;
 
@@ -44,6 +47,14 @@ template<class T> class Result;
 
 enum Extension { ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4, ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32, ExtFork = 64 };
 
+struct PositionalError {
+    RawScore v;
+#ifdef CALCULATE_MEAN_POSITIONAL_ERROR    
+    float n;
+    float e;
+    float e2;
+#endif    
+};
 /* Board representing a position with history, color to move, castling and en
  * passant status. Has an associated Eval object and holds multiple worker
  * threads. Contains information about the time budget.
@@ -105,6 +116,7 @@ private:
     volatile bool stopSearch;
     TimedMutex infoTimerMutex;
     TimedMutex stopTimerMutex;
+    Book book;
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
@@ -121,10 +133,7 @@ public:
     bool infinite;
     uint64_t maxSearchNodes;
 
-    RawScore delta[nPieces*2+1][nSquares][nSquares];
-    double avgE[nPieces*2+1][nSquares][nSquares];
-    double avgE2[nPieces*2+1][nSquares][nSquares];
-    double avgN[nPieces*2+1][nSquares][nSquares];
+    PositionalError pe[nPieces*2+1][nSquares][nSquares];
 
     RootBoard(Console*);
     void clearEE();
@@ -136,7 +145,7 @@ public:
     const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
     template<Colors C, Phase P, typename A, typename B, typename T>
-    bool search(const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, Extension ext, bool& nextMaxDepth
+    bool search(const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, Extension ext, bool& nextMaxDepth, int& attack
 #ifdef QT_GUI_LIB
         , NodeItem*
 #endif
@@ -161,5 +170,7 @@ public:
     void ageHash();
     template<Colors C> int calcReduction(const ColoredBoard<C>& b, int movenr, Move m, int depth);
     std::string commonStatus() const;
+    void openBook(std::string);
+    void resetBook(std::string);
 };
 #endif
