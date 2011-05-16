@@ -1889,7 +1889,7 @@ const char* testPositions[] = {
 "5bk1/1p4p1/pP3p2/Pq1pnP2/8/1r5P/RN1Br1P1/2QR3K b - - 0 1 bm Rxh3; id \"YAZ.66\"; c0 \"Stolberg-Botwinnik\";",
 "6k1/p4pp1/Pp2r3/1QPq3p/8/6P1/2P2P1P/1R4K1 w - - 0 1 bm cxb6; id \"YAZ.67\"; c0 \"Smyslow-Guimard (Mar del Plata 1962)\";",
 "r3k2r/q2b1p1p/p1p1pp2/2b5/2Q2B2/2P2B2/P1P2PPP/1R1R2K1 w kq - 0 1 bm Rxd7; id \"YAZ.68\"; c0 \"Olafsson-Quinteros (Las Palmas 1974)\";",
-"2q4p/1kp4p/1pbp2p1/p7/P1Q5/1P3NP1/2P3BP/2K5 w - - 0 1 bm Qxc6+; id \"YAZ.69\"; c0 \"Kasparjan-N.N. (Simultan)\";",
+//"2q4p/1kp4p/1pbp2p1/p7/P1Q5/1P3NP1/2P3BP/2K5 w - - 0 1 bm Qxc6+; id \"YAZ.69\"; c0 \"Kasparjan-N.N. (Simultan)\";", illegal
 "8/p5Q1/2ppq2p/3n1ppk/3B4/2P2P1P/P5P1/6K1 w - - 0 1 bm g4+; id \"YAZ.70\"; c0 \"Schlechter-Metger (Wien 1899)\";",
 "4r1k1/p1qr1p2/2pb1Bp1/1p5p/3P1n1R/3B1P2/PP3PK1/2Q4R w - - 0 1 bm Qxf4; id \"YAZ.71\"; c0 \"Blackburne-Schwarz (Berlin 1881)\";",
 "2r1r1k1/5ppp/pq3b2/2pB1P2/2p2B2/5Q1P/Pn3PP1/2R1R1K1 w - - 0 1 bm Bxf7+; id \"YAZ.72\"; c0 \"Unzicker-Antoschin (Sotschi 1965)\";",
