@@ -41,7 +41,7 @@ template<Colors C> struct ScoreBase
     bool operator <= (int a) const __attribute__((__always_inline__));
     bool operator > (int a) const __attribute__((__always_inline__));
     bool operator < (int a) const __attribute__((__always_inline__));
-    void max(const int b) __attribute__((__always_inline__));
+    bool max(const int b) __attribute__((__always_inline__));
     
     static std::string str(int v);
 };
@@ -108,8 +108,12 @@ public:
     {
     }
 
+    const Score<C>& unshared() const {
+        return *this;
+    }
+    
     Score<C>& unshared() {
-        return *(Score<C>*)this;
+        return *this;
     }
 
     void join();

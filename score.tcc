@@ -38,9 +38,12 @@ template<Colors C> bool ScoreBase<C>::operator < (int a) const {
     if ( C==White ) return v<a;
     else            return v>a;
 }
-template<Colors C> void ScoreBase<C>::max(const int b) {
-    if (*this < b)
+template<Colors C> bool ScoreBase<C>::max(const int b) {
+    if (*this < b) {
         v = b;
+        return true;
+    } 
+    return false;
 }
 template<Colors C> std::string ScoreBase<C>::str(int v) {
     if (v == 0)
