@@ -36,44 +36,44 @@
 
 #define lazy1 1
 #define lazy2 0
-#define lazyError 0
 
 template<Colors C>
 int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int depth) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     depth -= dMaxExt;
-    if (Options::reduction && movenr >= 1 && depth > 2 ) {
+    if (Options::reduction && movenr >= 3 && depth > 5) {
         bool check = (!m.isSpecial() && (  (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
                                         || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
                                         )
                      )
                      || (BoardBase::knightAttacks[m.to()] & b.template getPieces<-C,King>() && m.piece() == Knight);
+/*        return 2;
+        check = false;*/
         int red = bitr(2*movenr + depth)/2;
+        red = 1;
         if (m.isSpecial() && (m.piece() == Rook || m.piece() == Knight || m.piece() == Bishop))
             red += 2;
         if (check && depth<9)
             red=0;
-        if (red >= depth-1)
-            red = depth-2;
         if (red<0) red=0;
-        return red & ~1;
+        return red/* & ~1*/;
     }
     return 0;
 }
-
 /*
  * Search with color C to move, executing a -C colored move m from a board prev.
  * beta is the return value, it is updated at the end
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
 template<Colors C, Phase P, typename A, typename B, typename T>
-bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const A& alpha, B& beta, const unsigned ply, Extension extend, bool& nextMaxDepth  //FIXME nextMaxDepth is only relevant for leaf search
-                                                                                                                                                #ifdef QT_GUI_LIB
-                                                                                                                                                , NodeItem* parent
-                                                                                                                                                #endif
-                                                                                                                                                ) {
+bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const A& alpha, B& beta,
+                       const unsigned ply, Extension extend, bool& nextMaxDepth, int& attack  //FIXME nextMaxDepth is only relevant for leaf search
+#ifdef QT_GUI_LIB
+, NodeItem* parent
+#endif
+) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-    stats.node++;
+/*    stats.node++;*/
     KeyScore estimate;
     estimate.vector = prev.estimatedEval(m, eval);
 #ifdef QT_GUI_LIB
@@ -111,14 +111,23 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
     if (stopSearch) return false;
 
     //FIXME merge rooks/bishops/knights
-    RawScore& delta1 = prev.CI == 0 ? delta[nPieces + (m.piece()&7)][m.from()][m.to()] : delta[nPieces - (m.piece()&7)][m.from()][m.to()];
+    PositionalError& diff = prev.CI == 0 ? pe[nPieces + (m.piece()&7)][m.from()][m.to()] : pe[nPieces - (m.piece()&7)][m.from()][m.to()];
     // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     // FIXME connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
     A current(alpha);
-    RawScore estimatedScore = estimate.score.calc(prev.material) + prev.positionalScore + delta1; //FIXME move score() into ColorBoard ctor
+    RawScore estimatedScore = estimate.score.calc(prev.material) + prev.positionalScore + diff.v; //FIXME move score() into ColorBoard ctor
+#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
+    if (diff.n > 0.0) {
+        float invn = 1.0/diff.n;
+        double v = diff.e2*invn - (diff.e*invn)*(diff.e*invn);
+        v = sqrt(v);
+        estimatedScore -= C*v;
+    }
+#endif    
     if (P==vein && lazy1) {
         current.max(estimatedScore);
-        if (current >= beta.v + C*lazyError) {
+        if (current >= beta.v) {
+            attack = 0;
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = beta.v;
             if (node) node->nodeType = NodePrecut1;
@@ -128,20 +137,22 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         }
     }
     const ColoredBoard<C> b(prev, m, estimate.vector);
+    bool betaChange = false;
     if (m.capture()) {
         int upperbound, lowerbound;
         eval.draw<C>(b, upperbound, lowerbound);
         current.max(lowerbound);
-        beta.max(upperbound);
-        if (current > beta.v) {
+        betaChange = beta.max(upperbound, m);
+        if (current >= beta.v) {
+            attack = 0;
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = beta.v;
             if (node) node->nodeType = NodeEndgameEval;
 #endif
-            return false;
+            return betaChange;
         }
     }
-    
+
     Key z;
     /*
      * Extensions in leaf search
@@ -194,7 +205,8 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
             if (node) node->nodeType = NodePrecut2;
 #endif
             stats.leafcut++;
-            return false;
+            attack = 0;
+            return betaChange;
         }
     }
 
@@ -216,7 +228,8 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
             if (node) node->bestEval = beta.v;
             if (node) node->nodeType = NodeIllegal;
 #endif
-            return false;
+            attack = 0;
+            return betaChange;
         }
     } else {
         ASSERT(!b.template inCheck<(Colors)-C>());
@@ -235,7 +248,8 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
             if (node) node->bestEval = 0;
             if (node) node->nodeType = NodeRepetition;
 #endif
-            return beta.max(0, m);
+            attack = 0;
+            return betaChange | beta.max(0, m);
         }
         st = tt->getSubTable(z);
         if (tt->retrieve(st, z, subentry)) {
@@ -252,17 +266,17 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                     stats.ttalpha++;
                     current.max(ttScore.v);
                 }
-                bool isBetaUpdated = false;
                 if (subentry.hiBound) {
                     stats.ttbeta++;
-                    isBetaUpdated = beta.max(ttScore.v, m);
+                    betaChange |= beta.max(ttScore.v, m);
                 }
                 if (current >= beta.v) {
 #ifdef QT_GUI_LIB
                     if (node) node->bestEval = ttScore.v;
                     if (node) node->nodeType = NodeTT;
 #endif
-                    return isBetaUpdated;
+                    attack = 0;  //TODO store attack in tt?
+                    return betaChange;
                 }
             } else {
                 if (subentry.loBound && ttScore >= beta.v) {
@@ -276,6 +290,7 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         }
     }
 
+    stats.node++;
     do {
         if (P==tree && Options::pruning && !threatened && !extend) {
             if (depth == dMaxExt + 1) {
@@ -286,7 +301,10 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                 if (node) node->nodeType = NodeFutile1;
 #endif
 
-                if (fScore >= beta.v) return false;
+                if (fScore >= beta.v) {
+                    attack = 0;
+                    return betaChange;
+                }
             }
             if (depth == dMaxExt + 2) {
                 ScoreBase<C> fScore;
@@ -295,7 +313,10 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
                 if (node) node->bestEval = fScore.v;
                 if (node) node->nodeType = NodeFutile2;
 #endif
-                if (fScore >= beta.v) return false;
+                if (fScore >= beta.v) {
+                    attack = 0;
+                    return betaChange;
+                }
             }
 /*            if (depth == dMaxCapture + dMaxThreat + 3) {
                 ScoreBase<C> fScore;
@@ -309,21 +330,43 @@ bool RootBoard::search(const T& prev, const Move m, const unsigned depth, const 
         }
 
         RawScore realScore;
+        int oldattack;
         if (0 && prev.isExact) {
             realScore = estimatedScore;
-            b.positionalScore = prev.positionalScore + delta1;
+            b.positionalScore = prev.positionalScore + diff.v;
             b.isExact = false;
         } else {
-            stats.eval++;       
-            b.positionalScore = eval(b, C);
+            stats.eval++;
+            int wattack, battack;
+            b.positionalScore = eval(b, C, wattack, battack);
+            if (prev.CI==0) {
+                attack = wattack;
+            } else {
+                attack = battack;
+            }
+            if (C==White) {
+                oldattack = wattack;
+            } else {
+                oldattack = battack;
+            }
             b.isExact = true;
             realScore = estimate.score.calc(prev.material) + b.positionalScore;
             if (isMain) {
-                ScoreBase<C> delta2;
-                delta2.v = b.positionalScore - prev.positionalScore;
-                ASSERT(realScore == estimatedScore - delta1 + delta2.v);
-                if (delta2 < delta1) delta1 = delta2.v;
-                else delta1 += C;
+                ScoreBase<C> diff2;
+                diff2.v = b.positionalScore - prev.positionalScore;
+#ifdef CALCULATE_MEAN_POSITIONAL_ERROR                
+                diff.n++;
+                double err = diff2.v - diff.v;
+                diff.e  += err;
+                diff.e2 += err*err;
+                if (diff.n > 0)
+                ASSERT( diff.e2/diff.n - diff.e*diff.e/(diff.n*diff.n) >= 0 );
+#else                
+                ASSERT(realScore == estimatedScore - diff.v + diff2.v);
+#endif                
+                diff.v = (diff2.v + diff.v)/2;
+//                 if (diff2 < diff.v) diff.v = diff2.v;
+//                 else diff.v += C;
             }
         }
         
@@ -459,8 +502,11 @@ nosort:
         for (unsigned int d = (depth+1)%2 + 1 + dMaxExt; d < depth; d+=2) {
 //      if (depth > 2 + dMaxCapture + dMaxThreat && depth > ttDepth+2) {
 //          unsigned d = depth-2;
-            typename A::Base preCurrent(current);
             if (d<=ttDepth) continue;
+            Score<C> alpha0(current);
+            Score<(Colors)-C> beta0(beta);
+//             if (alpha0 > -0x400*C) alpha0.v -= 5*C;
+//             if (beta0 > 0x400*C) beta0.v += 5*C;
             for (Move* i = good; i<bad; ++i) {
 /*                NodeType nextNodeType;
                 if (nodeType == NodeFailHigh)
@@ -474,13 +520,14 @@ nosort:
 //              if (!i->data) continue;
                 ASSERT(d>0);
                 int red = calcReduction(b, i-good, *i, d);
-                bool dummy;
-                if (d-red <= 1 + dMaxExt ? search<(Colors)-C, leaf>(b, *i, d -red - 1, beta.unshared(), preCurrent, ply+1, ExtNot, dummy NODE) :
+                bool dummy __attribute__((unused));
+                int dummy2 __attribute__((unused));
+                if (d-red <= 1 + dMaxExt ? search<(Colors)-C, leaf>(b, *i, d -red - 1, beta0, alpha0, ply+1, ExtNot, dummy, dummy2 NODE) :
     //                d == depth-4 ? search<(Colors)-C, tree, B, A>(b, *i, d-1, B(C*infinity), current) :
-                                   search<(Colors)-C, tree>(b, *i, d-red-1, beta.unshared(), preCurrent, ply+1, ExtNot, dummy NODE)) {
+                                   search<(Colors)-C, tree>(b, *i, d-red-1, beta0, alpha0, ply+1, ExtNot, dummy, dummy2 NODE)) {
                     ASSERT(preCurrent.m.data == i->data);
                     Move first = good[0];
-                    good[0] = preCurrent.m;
+                    good[0] = alpha0.m;
                     for (Move* j = good+1; j<i; ++j) {
                         Move second = *j;
                         *j = first;
@@ -488,14 +535,14 @@ nosort:
                     }
                     *i = first;
                 }
-                if (preCurrent >= beta.v) {
+                if (alpha0 >= beta0.v) {
                     if (d+2 >= depth) {
                         /*betaNode = true;*/
                     }
                     break;
                 }
             }
-            if (preCurrent >= infinity*C) break;
+            if (alpha0 >= infinity*C) break;
         }
 
         if (bad > good) current.m = *good;
@@ -511,84 +558,97 @@ nosort:
  * The inner move loop
  */
         for (Move* i = good; i<bad && current < beta.v; ++i) {
+            int nattack;
             if ( ( P == leaf && ((i>=captures && i<threats) || i>=nonCaptures)
                              && !threatened
                              && !(extend & (ExtDualReply|ExtSingleReply))
                              /*&& ~ply & 1*/)
                 || P == vein) {
                 if (!i->capture() && !i->isSpecial()) continue;
-/*                estimate.vector = b.estimatedEval(*i, eval);
-                RawScore delta3 = b.CI == 0 ? delta[nPieces + ((*i).piece()&7)][(*i).from()][(*i).to()] : delta[nPieces - ((*i).piece()&7)][(*i).from()][(*i).to()];
-                RawScore estimatedScore = estimate.score.calc(b.material) + b.positionalScore + delta3;
-                if (current >= estimatedScore) {
-                    stats.node++;
-                    stats.leafcut++;
-                    continue;
-                }                                 */
                 bool unused __attribute__((unused));
-                search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, ExtNot, unused NODE);
+                search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, ExtNot, unused, nattack NODE);
             } else if ( P == leaf  && (   depth <= dMaxCapture + 1
                                    || (depth <= dMinDualExt + 1 && extend & ExtDualReply))) {
-/*                estimate.vector = b.estimatedEval(*i, eval);
-                RawScore delta3 = b.CI == 0 ? delta[nPieces + ((*i).piece()&7)][(*i).from()][(*i).to()] : delta[nPieces - ((*i).piece()&7)][(*i).from()][(*i).to()];
-                RawScore estimatedScore = estimate.score.calc(b.material) + b.positionalScore + delta3;
-                if (current >= estimatedScore) {
-                    stats.node++;
-                    stats.leafcut++;
-                    continue;
-                }*/
                 bool unused __attribute__((unused));
-                search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, ExtNot, unused NODE);
+                search<(Colors)-C, vein>(b, *i, 0, beta.unshared(), current.unshared(), ply+1, ExtNot, unused, nattack NODE);
                 hasMaxDepth = true;
             }
-            else if ( P == leaf || /*~ply & 1 && */depth <= dMaxExt + 1) {
-                search<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), current.unshared(), ply+1, leafExt, hasMaxDepth NODE);
+            else if ( P == leaf || depth <= dMaxExt + 1) {
+                search<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), current.unshared(), ply+1, leafExt, hasMaxDepth, nattack NODE);
             } else { // possible null search in tree or trunk
                 int reduction = calcReduction(b, i-good, *i, depth);
                 bool pruneNull = false;
-                if (depth > 2 + dMaxExt + reduction
+                if (depth > 2 + dMaxExt
                     && current.v != -infinity*C //FIXME compare to alpha0.v of rootsearch
                     && (i != good || alphaNode)
                     && bad-good > maxMovesNull
-                    && b.material)
-                {
-                    typename B::Base null;
-                    null.v = current.v + C;
-                    if (depth >= nullReduction + Options::splitDepth + dMaxExt)
-                        search<C, P>(b, *i, depth-(nullReduction+1+reduction), current.unshared(), null, ply+2, ExtNot, hasMaxDepth NODE);
-                    else if (depth > nullReduction+1+reduction + dMaxExt)
-                        search<C, tree>(b, *i, depth-(nullReduction+1+reduction), current.unshared(), null, ply+2, ExtNot, hasMaxDepth NODE);
+                    && b.material) {
+                    /*
+                     * Verify nullmove search. If it is >alpha, dont't bother with nullmove
+                     */
+                    Score<C> alpha0(current);
+                    Score<(Colors)-C> alpha1(current.v + C);
+                    unsigned newDepth = depth-(nullReduction+2);
+                    ASSERT(depth > nullReduction+2);
+                    if (newDepth > dMaxExt)
+                        pruneNull = !search<(Colors)-C, P>(b, *i, newDepth, alpha1, alpha0, ply+1, ExtNot, hasMaxDepth, nattack NODE);
                     else
-                        search<C, leaf>(b, *i, depth-(nullReduction+1+reduction), current.unshared(), null, ply+2, leafExt, hasMaxDepth NODE);
-                    pruneNull = current >= null.v;
+                        pruneNull = !search<(Colors)-C, leaf>(b, *i, newDepth, alpha1, alpha0, ply+1, ExtNot, hasMaxDepth, nattack NODE);
+                    ASSERT(pruneNull == (current >= alpha0.v));
+                    /*
+                     * The actual null move search. Search returns true if the
+                     * result in alpha1 comes down to alpha0, in that case prune
+                     */
                     if (pruneNull) {
-                        typename A::Base nalpha(current);
-                        null.v = current.v + C;
-                        if (depth > 2*nullReduction+reduction + dMaxExt) {
-                            search<(Colors)-C, tree>(b, *i, depth-2*nullReduction-reduction, null, nalpha, ply+1, ExtNot, hasMaxDepth NODE);
-                            pruneNull = current >= nalpha.v;
-                        }
-
-//                            else
-                            //search<(Colors)-C, leaf>(b, *i, depth-2*nullReduction, beta, nalpha, ply+1, node);
-
-                    }
+                        newDepth = depth-(nullReduction+1);
+                        ASSERT(depth > nullReduction+1);
+                        ASSERT(current.v == alpha0.v);
+                        if (newDepth > dMaxExt)
+                            pruneNull = search<C, P>(b, *i, newDepth, alpha0, alpha1, ply+2, ExtNot, hasMaxDepth, nattack NODE);
+                        else
+                            pruneNull = search<C, leaf>(b, *i, newDepth, alpha0, alpha1, ply+2, leafExt, hasMaxDepth, nattack NODE);
+                        ASSERT(pruneNull == (current >= alpha1.v));
+                    } 
                 }
                 if (!pruneNull) {
                     if (P == tree || alpha.isNotShared || depth < Options::splitDepth + dMaxExt) {
                         bool research = true;
-                        if (reduction) {
-//                              reduction += (bitr(depth) + bitr(i-good))/4;
-                            typename A::Base nalpha(current);
-                            if (depth <= dMaxExt + 1 + reduction/*|| (depth <= 2 && abs(b.keyScore.score) >= 400)*/)
-                                search<(Colors)-C, leaf>(b, *i, depth-reduction-1, beta.unshared(), nalpha, ply+1, leafExt, hasMaxDepth NODE);
+                        if (   (current.v != -infinity*C //FIXME compare to alpha0.v, reuse condition
+                            && (i != good || alphaNode))
+                            && reduction) {
+                            Score<C> alpha0(current);
+                            const Score<(Colors)-C> alpha1(current.v + C);
+//                             const Score<(Colors)-C> alpha1(beta);
+                            unsigned newDepth = depth-(reduction+1);
+                            ASSERT(depth > (unsigned)reduction+1);
+                            if (newDepth > dMaxExt)
+                                research = search<(Colors)-C, P>(b, *i, newDepth, alpha1, alpha0, ply+1, ExtNot, hasMaxDepth, nattack NODE);
                             else
-                                search<(Colors)-C, tree>(b, *i, depth-reduction-1, beta.unshared(), nalpha, ply+1, ExtNot, hasMaxDepth NODE);
-                            research = current < nalpha.v;
+                                research = search<(Colors)-C, leaf>(b, *i, newDepth, alpha1, alpha0, ply+1, leafExt, hasMaxDepth, nattack NODE);
+                            ASSERT(research == (current < alpha0.v));
+                            ASSERT(research != (current >= alpha0.v));
                         }
-                        if (research) {
-                            search<(Colors)-C, tree>(b, *i, depth-1, beta.unshared(), current, ply+1, ExtNot, hasMaxDepth NODE);
+                        if (research || (nattack > oldattack && nattack > 20*((signed)depth-(signed)dMaxExt) + 80)) {
+                            ASSERT(research || reduction);
+                            reduction = 0;
+/*                                if (!research && nattack > 30*((signed)depth-(signed)dMaxExt) + 50)
+                                reduction = -1;*/
+                            unsigned newDepth = depth-reduction-1;
+                            ASSERT(depth > reduction+1+dMaxExt);
+                            const Score<(Colors)-C> alpha1(current.v + C);
+                            if (i == good || alpha1.v == beta.v
+                                || current.v <= -0x400 || current.v >= 0x400
+                                || newDepth < 3+dMaxExt
+                                || search<(Colors)-C, P>(b, *i, newDepth, alpha1, current, ply+1, ExtNot, hasMaxDepth, nattack NODE))
+                                search<(Colors)-C, P>(b, *i, newDepth, beta, current, ply+1, ExtNot, hasMaxDepth, nattack NODE);
                         }
+                        /*} else {
+                            bool research = search<(Colors)-C, tree>(b, *i, newDepth, beta, current, ply+1, ExtNot, hasMaxDepth, nattack NODE);
+                            if (0 && !research && reduction == 0 && nattack > 30*((signed)depth-(signed)dMaxExt) + 50) {
+                                reduction = -1;
+                                search<(Colors)-C, tree>(b, *i, depth-reduction-1, beta, current, ply+1, ExtNot, hasMaxDepth, nattack NODE);
+                            }
+                        }*/
                     // Multi threaded search: After the first move try to find a free thread, otherwise do a normal
                     // search but stay in trunk. To avoid multithreading search at cut off nodes
                     // where it would be useless.
@@ -597,13 +657,13 @@ nosort:
                             if (i > good && WorkThread::canQueued(threadId, current.isNotReady())) {
                                 WorkThread::queueJob(threadId, new SearchJob<(Colors)-C, typename B::Base, A, ColoredBoard<C> >(*this, b, *i, depth-1, beta.unshared(), current, ply+1, threadId, keys NODE));
                             } else {
-                                search<(Colors)-C, P>(b, *i, depth-1, beta.unshared(), current, ply+1, ExtNot, hasMaxDepth NODE);
+                                search<(Colors)-C, P>(b, *i, depth-1, beta.unshared(), current, ply+1, ExtNot, hasMaxDepth, nattack NODE);
                             }
                         } else {
                             if (i > good && WorkThread::canQueued(threadId, current.isNotReady())) {
                                 WorkThread::queueJob(threadId, new SearchJob<(Colors)-C,B,A, ColoredBoard<C> >(*this, b, *i, depth-1, beta, current, ply+1, threadId, keys NODE));
                             } else {
-                                search<(Colors)-C, P>(b, *i, depth-1, beta, current, ply+1, ExtNot, hasMaxDepth NODE);
+                                search<(Colors)-C, P>(b, *i, depth-1, beta, current, ply+1, ExtNot, hasMaxDepth, nattack NODE);
                             }
                         }
                         // alpha is shared here, it may have increased
@@ -652,8 +712,8 @@ nosort:
     }
 #endif
     if (stopSearch)
-        return false;
+        return betaChange;
     else
-        return beta.max(current.v, m);
+        return betaChange | beta.max(current.v, m);
 }
 #endif
