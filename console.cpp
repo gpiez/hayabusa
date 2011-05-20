@@ -390,7 +390,6 @@ void Console::ordering(StringList cmds) {
     board->infinite = true;
     if (cmds.size() > 1 && cmds[1] == "init") {
         for (unsigned int i = 0; testPositions[i]; ++i) {
-            if (i<71*26+20) continue;
             stats.node=0;
             board->maxSearchNodes = 1000000;
             board->setup(testPositions[i]);
@@ -417,9 +416,9 @@ void Console::ordering(StringList cmds) {
             board->setup(testPositions[i]);
             board->clearHash();
             if (board->color == White)
-                board->rootSearch<White>(testDepths[i]);
+                board->rootSearch<White>(testDepths[i]-1);
             else
-                board->rootSearch<Black>(testDepths[i]);
+                board->rootSearch<Black>(testDepths[i]-1);
             std::cout << std::setw(4) << i << "(" << std::setw(2) << testDepths[i]  << "):" << std::setw(10) << stats.node << std::endl;
             sum += log(stats.node);
         }

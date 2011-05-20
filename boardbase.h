@@ -159,6 +159,11 @@ struct BoardBase {
         }
 //         return dpins[CI].d[((dir & 1) << 1) + ((dir & 2) >> 1)];
     }
+    template<int C>
+    uint64_t getPins() const {
+        enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+           return pins[CI];
+    }
     template<Colors C>
     bool inCheck() const {
         return getPieces<C,King>() & getAttacks<-C,All>();
