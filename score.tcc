@@ -19,9 +19,8 @@
 #include "score.h"
 #include "workthread.h"
 
-template<Colors C> ScoreBase<C>::ScoreBase (const ScoreBase& a) {
-    v = a.v;
-};
+template<Colors C> ScoreBase<C>::ScoreBase (const ScoreBase& a) { v = a.v; }
+template<Colors C> ScoreBase<C>::ScoreBase (int a) { v = a; }
 template<Colors C> bool ScoreBase<C>::operator >= (int a) const {
     if ( C==White ) return v>=a;
     else            return v<=a;
@@ -75,12 +74,9 @@ template<Colors C> Score<C>::Score (const Score& a):
     ScoreBase<C>(a) {
     m.data = 0;
 }
-template<Colors C> Score<C>& Score<C>::unshared() {
-    return *this;
-}
-template<Colors C> unsigned int Score<C>::isNotReady() const {
-    return 0;
-}
+template<Colors C> Score<C>& Score<C>::unshared() { return *this; }
+template<Colors C> const Score<C>& Score<C>::unshared() const { return *this; }
+template<Colors C> unsigned int Score<C>::isNotReady() const { return 0; }
 template<Colors C> bool Score<C>::max(const int b, const Move n) {
     if (*this < b) {
         v = b;
