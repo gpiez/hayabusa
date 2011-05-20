@@ -36,13 +36,14 @@ template<Colors C> struct ScoreBase
     enum { isNotShared = true };
 
     ScoreBase() {};
+    /* No implicit int conversion operator and constructor, they allow wrong comparisons */
+    explicit ScoreBase (int a) __attribute__((__always_inline__));
     explicit ScoreBase (const ScoreBase& a) __attribute__((__always_inline__));
     bool operator >= (int a) const __attribute__((__always_inline__));
     bool operator <= (int a) const __attribute__((__always_inline__));
     bool operator > (int a) const __attribute__((__always_inline__));
     bool operator < (int a) const __attribute__((__always_inline__));
     bool max(const int b) __attribute__((__always_inline__));
-    
     static std::string str(int v);
 };
 
@@ -56,9 +57,11 @@ template<Colors C> struct Score: ScoreBase<C>
     typedef Score<C> Base;
 
     Score() {};
+    /* No implicit int conversion operator and constructor, they allow wrong comparisons */
     explicit Score (int a) __attribute__((__always_inline__));
     explicit Score (const Score& a) __attribute__((__always_inline__));
     Score<C>& unshared() __attribute__((__always_inline__));
+    const Score<C>& unshared() const __attribute__((__always_inline__));
     unsigned int isNotReady() const __attribute__((__always_inline__));
     bool max(const int b, const Move n) __attribute__((__always_inline__));
     
