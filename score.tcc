@@ -19,32 +19,39 @@
 #include "score.h"
 #include "workthread.h"
 
-template<Colors C> ScoreBase<C>::ScoreBase (const ScoreBase& a) { v = a.v; }
-template<Colors C> ScoreBase<C>::ScoreBase (int a) { v = a; }
-template<Colors C> bool ScoreBase<C>::operator >= (int a) const {
+template<Colors C> Score<C>::Score (const Score& a) { v = a.v; }
+
+template<Colors C> Score<C>::Score (int a) { v = a; }
+
+template<Colors C> bool Score<C>::operator >= (int a) const {
     if ( C==White ) return v>=a;
     else            return v<=a;
 }
-template<Colors C> bool ScoreBase<C>::operator <= (int a) const {
+
+template<Colors C> bool Score<C>::operator <= (int a) const {
     if ( C==White ) return v<=a;
     else            return v>=a;
 }
-template<Colors C> bool ScoreBase<C>::operator > (int a) const {
+
+template<Colors C> bool Score<C>::operator > (int a) const {
     if ( C==White ) return v>a;
     else            return v<a;
 }
-template<Colors C> bool ScoreBase<C>::operator < (int a) const {
+
+template<Colors C> bool Score<C>::operator < (int a) const {
     if ( C==White ) return v<a;
     else            return v>a;
 }
-template<Colors C> bool ScoreBase<C>::max(const int b) {
+
+template<Colors C> bool Score<C>::max(const int b) {
     if (*this < b) {
         v = b;
         return true;
     } 
     return false;
 }
-template<Colors C> std::string ScoreBase<C>::str(int v) {
+
+template<Colors C> std::string Score<C>::str(int v) {
     if (v == 0)
         return " = 0";
 
@@ -66,25 +73,11 @@ template<Colors C> std::string ScoreBase<C>::str(int v) {
     return s.str();
 }
 
-template<Colors C> Score<C>::Score (int a) {
-    v = a;
-    m.data = 0;
-}
-template<Colors C> Score<C>::Score (const Score& a):
-    ScoreBase<C>(a) {
-    m.data = 0;
-}
 template<Colors C> Score<C>& Score<C>::unshared() { return *this; }
+
 template<Colors C> const Score<C>& Score<C>::unshared() const { return *this; }
+
 template<Colors C> unsigned int Score<C>::isNotReady() const { return 0; }
-template<Colors C> bool Score<C>::max(const int b, const Move n) {
-    if (*this < b) {
-        v = b;
-        m = n;
-        return true;
-    }
-    return false;
-}
 
 template<Colors C>
 void SharedScore<C>::join() {

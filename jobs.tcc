@@ -43,7 +43,7 @@ void SearchJob<C,A,B,T>::job() {
                        , node
 #endif
                        );
-    beta.max(ret, m);
+    beta.max(ret);      //FIXME set bestmove
     beta.setReady();
 }
 #endif

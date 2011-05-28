@@ -157,7 +157,7 @@ public:
     template<Colors C, Phase P, typename A, typename B, typename T>
     int search4(const T& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, bool& nextMaxDepth, int& attack
+                unsigned ply, Extension ext, int& attack
 #ifdef QT_GUI_LIB
         , NodeItem*
 #endif

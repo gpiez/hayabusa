@@ -79,15 +79,14 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 
     SharedScore<C> alpha0; alpha0.v = -infinity*C;
     SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
-    bool maxDepth = false;
     uint64_t subnode = stats.node;
     int dummy __attribute__((unused));
-    alpha0.v = search3<(Colors)-C, tree>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, maxDepth, dummy NODE);
+    alpha0.v = search4<(Colors)-C, tree>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
     ml.nodesCount(stats.node - subnode);
     for (++ml; ml.isValid() && !stopSearch; ++ml) {
         uint64_t subnode = stats.node;
-        ScoreBase<C> value;
-        value.v = search3<(Colors)-C, tree>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, maxDepth, dummy NODE);
+        Score<C> value;
+        value.v = search4<(Colors)-C, tree>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
         if (value > alpha0.v) {
             alpha0.v = value.v;
             bestMove = *ml;
@@ -129,7 +128,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         SharedScore<        C>  alpha; alpha.v = -infinity*C;
         SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
         SharedScore<(Colors)-C> beta2;
-        ScoreBase<C>            value;
+        Score<C>            value;
         uint64_t subnode = stats.node;
         system_clock::time_point now;
         if (alpha0.v != -infinity*C && abs(alpha0.v) < 1024) {
@@ -137,7 +136,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             alpha.v = alpha0.v;
             alpha2.v = alpha.v - eval.aspiration0*C;
             beta2.v  = alpha.v + eval.aspiration1*C;
-            value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha2, ply+1, ExtNot, maxDepth, dummy NODE);
+            value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha2, ply+1, ExtNot, dummy NODE);
             if (stopSearch) break;
             if (value <= alpha2.v) {
                 // Fail-Low at first root, research with low bound = alpha and high bound = old low bound
@@ -146,7 +145,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 console->send(status(now, value.v) + " upperbound");
                 beta2.v = value.v;
                 alpha.v = value.v;
-                value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, SharedScore<C>(-infinity*C), ply+1, ExtNot, maxDepth, dummy NODE);
+                value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, SharedScore<C>(-infinity*C), ply+1, ExtNot, dummy NODE);
                 if (stopSearch) break;
                 alpha.v = value.v;
             } else if (value >= beta2.v) {
@@ -155,14 +154,14 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 console->send(status(now, value.v) + " lowerbound");
                 alpha.v = value.v;
                 if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
-                value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, maxDepth, dummy NODE);
+                value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, dummy NODE);
                 if (stopSearch) break;
                 alpha.v = value.v;
             } else {
                 alpha.v = value.v;
             }
         } else {
-            value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, maxDepth, dummy NODE);
+            value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, dummy NODE);
             if (stopSearch) break;
             alpha.v = value.v;
         }
@@ -191,16 +190,16 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 SharedScore<(Colors)-C> null;
                 SharedScore<C> nalpha(alpha);
                 null.v = alpha.v + C;
-                null.v = search4<C, trunk>(b, *ml, depth-(nullReduction[depth]+1), nalpha, null, ply+2, ExtNot, maxDepth, dummy NODE);
+                null.v = search4<C, trunk>(b, *ml, depth-(nullReduction[depth]+1), nalpha, null, ply+2, ExtNot, dummy NODE);
                 pruneNull = alpha >= null.v;
                 if (!stopSearch && pruneNull) {
                     null.v = alpha.v + C;
-                    nalpha.v = search4<(Colors)-C, trunk>(b, *ml, depth-(nullReduction[depth]+2), null, nalpha, ply+1, ExtNot, maxDepth, dummy NODE);
+                    nalpha.v = search4<(Colors)-C, trunk>(b, *ml, depth-(nullReduction[depth]+2), null, nalpha, ply+1, ExtNot, dummy NODE);
                     pruneNull = alpha >= nalpha.v;
                 }
             }
             if (!pruneNull && !stopSearch) {
-                value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, ExtNot, maxDepth, dummy NODE);
+                value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, ExtNot, dummy NODE);
                 if (stopSearch || value <= alpha.v) continue;
                 alpha.v = value.v;
                 if (ml.current >= bestMovesLimit) bestMovesLimit++;
@@ -208,7 +207,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 if (alpha >= beta2.v && !stopSearch) {
                     now = system_clock::now();
                     console->send(status(now, alpha.v) + " lowerbound");
-                    value.v = search4<(Colors)-C, trunk>(b, bestMove, depth-1, beta, alpha, ply+1, ExtNot, maxDepth, dummy NODE);
+                    value.v = search4<(Colors)-C, trunk>(b, bestMove, depth-1, beta, alpha, ply+1, ExtNot, dummy NODE);
                     if (stopSearch) break;
                     alpha.v = value.v;
                 }

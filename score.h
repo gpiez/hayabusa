@@ -29,43 +29,27 @@
 typedef int16_t RawScore;
 class BoardBase;
 
-template<Colors C> struct ScoreBase
+template<Colors C> struct Score
 {
     int v; //Absolute score. Less is good for black, more is good for white.
 
     enum { isNotShared = true };
-
-    ScoreBase() {};
-    /* No implicit int conversion operator and constructor, they allow wrong comparisons */
-    explicit ScoreBase (int a) __attribute__((__always_inline__));
-    explicit ScoreBase (const ScoreBase& a) __attribute__((__always_inline__));
-    bool operator >= (int a) const __attribute__((__always_inline__));
-    bool operator <= (int a) const __attribute__((__always_inline__));
-    bool operator > (int a) const __attribute__((__always_inline__));
-    bool operator < (int a) const __attribute__((__always_inline__));
-    bool max(const int b) __attribute__((__always_inline__));
-    static std::string str(int v);
-};
-
-template<Colors C> struct Score: ScoreBase<C>
-{
-    using ScoreBase<C>::v;
-    Move m;
-
-    enum { isNotShared = true };
-
     typedef Score<C> Base;
 
     Score() {};
     /* No implicit int conversion operator and constructor, they allow wrong comparisons */
     explicit Score (int a) __attribute__((__always_inline__));
     explicit Score (const Score& a) __attribute__((__always_inline__));
+    bool operator >= (int a) const __attribute__((__always_inline__));
+    bool operator <= (int a) const __attribute__((__always_inline__));
+    bool operator > (int a) const __attribute__((__always_inline__));
+    bool operator < (int a) const __attribute__((__always_inline__));
+    bool max(const int b) __attribute__((__always_inline__));
+    static std::string str(int v);
+
     Score<C>& unshared() __attribute__((__always_inline__));
     const Score<C>& unshared() const __attribute__((__always_inline__));
     unsigned int isNotReady() const __attribute__((__always_inline__));
-    bool max(const int b, const Move n) __attribute__((__always_inline__));
-    
-    using ScoreBase<C>::max;
     void join() const {};
     void setReady() {};
     void setNotReady() {};
@@ -74,7 +58,6 @@ template<Colors C> struct Score: ScoreBase<C>
 template<Colors C> struct SharedScore: public Score<C>
 {
     using Score<C>::v;
-    using Score<C>::m;
 
     typedef Score<C> Base;
 
@@ -133,15 +116,15 @@ public:
         }
         return false;
     }
-    bool max(const int b, const Move n)         {
-        LockGuard<RecursiveMutex> lock(valueMutex);
-        if (*this < b) {
-            v = b;
-            m = n;
-            return true;
-        }
-        return false;
-    }
+//     bool max(const int b, const Move n)         {
+//         LockGuard<RecursiveMutex> lock(valueMutex);
+//         if (*this < b) {
+//             v = b;
+//             m = n;
+//             return true;
+//         }
+//         return false;
+//     }
 
     void setReady() {
         {
