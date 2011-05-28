@@ -258,7 +258,7 @@ void Console::divide(StringList cmds) {
 }
 
 void Console::uci(StringList /*cmds*/) {
-    send("id name hayabusa 0.11.5");
+    send("id name hayabusa 0.11.7");
     send("id author Gunther Piez");
     std::stringstream str;
     str << " 32768"; //TranspositionTable::maxSize;
@@ -416,9 +416,9 @@ void Console::ordering(StringList cmds) {
             board->setup(testPositions[i]);
             board->clearHash();
             if (board->color == White)
-                board->rootSearch<White>(testDepths[i]-1);
+                board->rootSearch<White>(testDepths[i]-1+20);
             else
-                board->rootSearch<Black>(testDepths[i]-1);
+                board->rootSearch<Black>(testDepths[i]-1+20);
             std::cout << std::setw(4) << i << "(" << std::setw(2) << testDepths[i]  << "):" << std::setw(10) << stats.node << std::endl;
             sum += log(stats.node);
         }

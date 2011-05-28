@@ -45,7 +45,9 @@ class Console;
 template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
 
-enum Extension { ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4, ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32, ExtFork = 64 };
+enum Extension {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
+                ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32,
+                ExtFork = 64, ExtTestMate = 128 };
 
 struct PositionalError {
     RawScore v;
@@ -86,7 +88,7 @@ public:
     };
 private:
     WBBoard boards[nMaxGameLength];
-
+    unsigned nullReduction[maxDepth+1];
     static unsigned dMaxCapture;
     static unsigned dMaxExt;
     static unsigned dMinDualExt;
@@ -145,7 +147,17 @@ public:
     const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
     template<Colors C, Phase P, typename A, typename B, typename T>
-    bool search(const T& prev, Move m, unsigned depth, const A& alpha, B& beta, unsigned ply, Extension ext, bool& nextMaxDepth, int& attack
+    int search3(const T& prev, Move m, unsigned depth,
+                const A& alpha, const B& beta,
+                unsigned ply, Extension ext, bool& nextMaxDepth, int& attack
+#ifdef QT_GUI_LIB
+        , NodeItem*
+#endif
+        );
+    template<Colors C, Phase P, typename A, typename B, typename T>
+    int search4(const T& prev, Move m, unsigned depth,
+                const A& alpha, const B& beta,
+                unsigned ply, Extension ext, bool& nextMaxDepth, int& attack
 #ifdef QT_GUI_LIB
         , NodeItem*
 #endif

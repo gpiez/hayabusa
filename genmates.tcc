@@ -20,11 +20,15 @@
 #define GENMATES_TCC_
 
 #include "coloredboard.h"
+#include "emmintrin.h"
+
+static const __m128i zero = _mm_set1_epi64x(0);
 
 template<Colors C>
 uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, uint64_t king, unsigned k) const {
     uint64_t rescape = getAttacks<-C,King>() & ~(occupied[EI] | blockedEscapes);
     rescape = ror(rescape, k-9);
+#if 0    
     uint64_t rmate = 0;
     if (!(rescape & 0x30003))
         rmate |= king << 1 & ~file<'a'>();
@@ -35,6 +39,22 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
     if (!(rescape & 0x50500))
         rmate |= king >> 8;
     rmate &= checkingMoves & undefended;
+#else
+    uint64_t rmate = checkingMoves & undefended & getAttacks<-C,King>();
+#ifdef MYDEBUG
+        mobStat[CI][Pawn][0][popcount(rmate)]++;
+#endif
+    if (rmate) {
+        if (rescape & 0x30003)
+            rmate &= ~(king<<1);
+        if (rescape & 0x00505)
+            rmate &= ~(king<<8);
+        if (rescape & 0x60006)
+            rmate &= ~(king>>1);
+        if (rescape & 0x50500)
+            rmate &= ~(king>>8);
+    }
+#endif
 
     if (!(rescape & 0x70007))
     if (uint64_t p = kingIncoming[EI].d0 & checkingMoves & ~getAttacks<-C,All>()) {
@@ -81,7 +101,6 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
 template<Colors C>
 template<bool AbortOnFirst, typename R>
 R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) const {
-    const __v2di zero = _mm_set1_epi64x(0);
     uint64_t king = getPieces<-C,King>();
     unsigned k = bit(king);
     uint64_t attNotEnemyKing = getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Queen>() | getAttacks<-C,Pawn>();
@@ -168,7 +187,24 @@ haveMate:
                                 & ~occupied[CI]
                                 & (kingIncoming[EI].d0 | kingIncoming[EI].d1 | kingIncoming[EI].d2 | kingIncoming[EI].d3)) {
         uint64_t attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
+        uint64_t xprot=0;
         if (getAttacks<C,Queen>()) {
+            uint64_t erook1 = getPieces<-C,Rook>() & (getPieces<-C,Rook>()-1);
+            uint64_t ebishop1 = getPieces<-C,Bishop>() & (getPieces<-C,Bishop>()-1);
+            uint64_t erook0 = getPieces<-C,Rook>() & ~erook1;
+            uint64_t ebishop0 = getPieces<-C,Bishop>() & ~ebishop1;
+            __v2di isQER1Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(erook1), zero);
+            __v2di isQEB1Connected = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(ebishop1), zero);
+            __v2di isQER0Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(erook0), zero);
+            __v2di isQEB0Connected = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(ebishop0), zero);
+            __v2di isQEQConnected02  = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(getPieces<-C,Queen>()), zero);
+            __v2di isQEQConnected13  = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(getPieces<-C,Queen>()), zero);
+            xprot = fold( (isQER1Connected & qsingle[CI][0].d02)
+                                | (isQER0Connected & qsingle[CI][0].d02)
+                                | (isQEQConnected02 & qsingle[CI][0].d02)
+                                | (isQEB1Connected & qsingle[CI][0].d13)
+                                | (isQEB0Connected & qsingle[CI][0].d13)
+                                | (isQEQConnected13 & qsingle[CI][0].d13));
             uint64_t rook1 = getPieces<C,Rook>() & (getPieces<C,Rook>()-1);
             uint64_t bishop1 = getPieces<C,Bishop>() & (getPieces<C,Bishop>()-1);
             uint64_t rook0 = getPieces<C,Rook>() & ~rook1;
@@ -185,35 +221,107 @@ haveMate:
         }
         uint64_t qescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
         qescape = ror(qescape, k-9);
-        uint64_t qmate = 0;
+        uint64_t qmate = checkingMoves & attNotQueen & ~(attNotEnemyKing | xprot) & getAttacks<-C,King>();
+#ifdef MYDEBUG
+        mobStat[CI][King][0][popcount(qmate)]++;
+#endif
+        if (qmate) {
+            // emptiness of near king squares in even directions
+            // this is needed for the mate patterns, where the queen mates on an
+            // adjacent diagonal square. if the rays to the other diagonal squares
+            // are blocked, we need to test these squares too, otherwise
+            // the queen will cover them
 
-        // emptiness of near king squares in even directions
-        // this is needed for the mate patterns, where the queen mates on an
-        // adjacent diagonal square. if the rays to the other diagonal squares
-        // are blocked, we need to test these squares too, otherwise
-        // the queen will cover them
-        uint64_t k0 = ror((king << 1) & ~occupied1 & ~file<'a'>(), k-9);
-        uint64_t k2 = ror((king << 8) & ~occupied1, k-9);
-        uint64_t k4 = ror((king >> 1) & ~occupied1 & ~file<'h'>(), k-9);
-        uint64_t k6 = ror((king >> 8) & ~occupied1, k-9);
+            uint64_t qsingle = 0;
 
-        if (!(qescape & 0x10106 & ~(k2>>1) & ~(k0>>8)))
-            qmate |= king << 9 & ~file<'a'>();
-        if (!(qescape & 0x40403 & ~(k2<<1) & ~(k4>>8)))
-            qmate |= king << 7 & ~file<'h'>();
-        if (!(qescape & 0x30404 & ~(k6<<1) & ~(k4<<8)))
-            qmate |= king >> 9 & ~file<'h'>();
-        if (!(qescape & 0x60101 & ~(k6>>1) & ~(k0<<8)))
-            qmate |= king >> 7 & ~file<'a'>();
-        if (!(qescape & 0x10001))
-            qmate |= king << 1 & ~file<'a'>();
-        if (!(qescape & 0x00005))
-            qmate |= king << 8;
-        if (!(qescape & 0x40004))
-            qmate |= king >> 1 & ~file<'h'>();
-        if (!(qescape & 0x50000))
-            qmate |= king >> 8;
-        qmate &= checkingMoves & attNotQueen & ~attNotEnemyKing;
+            if (qmate & king<<9) {
+                uint64_t k0 = ror((king << 1) & ~occupied1, k-9);
+                uint64_t k2 = ror((king << 8) & ~occupied1, k-9);
+                uint64_t qe1 = qescape & 0x10106 & ~(k2>>1) & ~(k0>>8);
+                if (qe1)
+                    qmate &= ~(king<<9);
+                else {
+                    uint64_t qse1 = qe1 & -qe1;
+                    if (qse1 == qe1) qsingle |= qe1;
+                }
+            }
+
+            if (qmate & king<<7) {
+                uint64_t k2 = ror((king << 8) & ~occupied1, k-9);
+                uint64_t k4 = ror((king >> 1) & ~occupied1, k-9);
+                uint64_t qe3 = qescape & 0x40403 & ~(k2<<1) & ~(k4>>8);
+                if (qe3)
+                    qmate &= ~(king<<7);
+                else {
+                    uint64_t qse3 = qe3 & -qe3;
+                    if (qse3 == qe3) qsingle |= qe3;
+                }
+            }
+
+            if (qmate & king>>9) {
+                uint64_t k4 = ror((king >> 1) & ~occupied1, k-9);
+                uint64_t k6 = ror((king >> 8) & ~occupied1, k-9);
+                uint64_t qe5 = qescape & 0x30404 & ~(k6<<1) & ~(k4<<8);
+                if (qe5)
+                    qmate &= ~(king>>9);
+                else {
+                    uint64_t qse5 = qe5 & -qe5;
+                    if (qse5 == qe5) qsingle |= qe5;
+                }
+            }
+
+            if (qmate & king>>7) {
+                uint64_t k0 = ror((king << 1) & ~occupied1, k-9);
+                uint64_t k6 = ror((king >> 8) & ~occupied1, k-9);
+                uint64_t qe7 = qescape & 0x60101 & ~(k6>>1) & ~(k0<<8);
+                if (qe7)
+                    qmate &= ~(king>>7);
+                else {
+                    uint64_t qse7 = qe7 & -qe7;
+                    if (qse7 == qe7) qsingle |= qe7;
+                }
+            }
+
+            if (qmate & king<<1) {
+                uint64_t qe0 = qescape & 0x10001;
+                if (qe0)
+                    qmate &= ~(king<<1);
+                else {
+                    uint64_t qse0 = qe0 & -qe0;
+                    if (qse0 == qe0) qsingle |= qe0;
+                }
+            }
+
+            if (qmate & king<<8) {
+                uint64_t qe2 = qescape & 0x00005;
+                if (qe2)
+                    qmate &= ~(king<<8);
+                else {
+                    uint64_t qse2 = qe2 & -qe2;
+                    if (qse2 == qe2) qsingle |= qe2;
+                }
+            }
+
+            if (qmate & king>>1) {
+                uint64_t qe4 = qescape & 0x40004;
+                if (qe4)
+                    qmate &= ~(king>>1);
+                else {
+                    uint64_t qse4 = qe4 & -qe4;
+                    if (qse4 == qe4) qsingle |= qe4;
+                }
+            }
+
+            if (qmate & king>>8) {
+                uint64_t qe6 = qescape & 0x50000;
+                if (qe6)
+                    qmate &= ~(king>>8);
+                else {
+                    uint64_t qse6 = qe6 & -qe6;
+                    if (qse6 == qe6) qsingle |= qe6;
+                }
+            }
+        }
 
         uint64_t qmate2 = 0;
         if (!(qescape & 0x30003))
@@ -224,11 +332,11 @@ haveMate:
             qmate2 |= king >> 2 & ~attNotEnemyKing>>1 & ~file<'h'>() & ~file<'g'>();
         if (!(qescape & 0x50500))
             qmate2 |= king >> 16 & ~attNotEnemyKing>>8;
-        qmate2 &= checkingMoves & (kingIncoming[EI].d0 | kingIncoming[EI].d2) & ~getAttacks<-C,All>();
+        qmate2 &= checkingMoves & (kingIncoming[EI].d0 | kingIncoming[EI].d2) & ~(getAttacks<-C,All>()|xprot);
         qmate |= qmate2;
 
         if (!(qescape & 0x70007))
-        if (uint64_t p=kingIncoming[EI].d0 & checkingMoves & ~getAttacks<-C,All>()) {
+        if (uint64_t p=kingIncoming[EI].d0 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
             uint64_t d04 = kingIncoming[EI].d0
                 &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
                     | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
@@ -248,7 +356,7 @@ haveMate:
             qmate |= p & ~d0 & ~d4;
         }
         if (!(qescape & 0x50505))
-        if (uint64_t p=kingIncoming[EI].d2 & checkingMoves & ~getAttacks<-C,All>()) {
+        if (uint64_t p=kingIncoming[EI].d2 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
             uint64_t d26 = kingIncoming[EI].d2
                 &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
                     | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
@@ -362,17 +470,26 @@ haveMate:
             uint64_t attNotBishop = getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
             uint64_t bescape1357 = getAttacks<-C,King>() & ~(occupied[EI] | attNotBishop);
             bescape1357 = ror(bescape1357, k-9);
-            uint64_t bmate = 0;
+            uint64_t bmate = checkingMoves & attNotBishop & ~attNotEnemyKing & getAttacks<-C,King>();
+            if (bescape1357 & 0x10004) {
+                bmate &= ~kingIncoming[EI].d1;
+            }
+            if (bescape1357 & 0x40001) {
+                bmate &= ~kingIncoming[EI].d3;
+            }
+#ifdef MYDEBUG
+            uint64_t bmate2 = 0;
             if (!(bescape1357 & 0x10004)) {
                 uint64_t b1 = kingIncoming[EI].d1 & getAttacks<-C,King>();
-                bmate = b1;
+                bmate2 = b1;
             }
             if (!(bescape1357 & 0x40001)) {
                 uint64_t b1 = kingIncoming[EI].d3 & getAttacks<-C,King>();
-                bmate |= b1;
+                bmate2 |= b1;
             }
-            bmate &= checkingMoves & attNotBishop & ~attNotEnemyKing;
-
+            bmate2 &= checkingMoves & attNotBishop & ~attNotEnemyKing;
+            ASSERT(bmate == bmate2);
+#endif
             if (!(bescape1357 & 0x10004))
             if (uint64_t p=kingIncoming[EI].d1 & checkingMoves & ~getAttacks<-C,All>()) {
                 uint64_t d15 = kingIncoming[EI].d1
@@ -497,5 +614,36 @@ uint64_t ColoredBoard<C>::generateKnightMates(uint64_t block, uint64_t king, uns
     }
     return nmate;
 }
+
+#if 0
+                    /*
+                     * Bad pruning test
+                     */
+/*                    {
+                        const B beta0(current.v - 149*C);
+                        const A alpha0(current.v - 150*C);
+                        unsigned newDepth = depth-4;
+                        ASSERT(depth > 4);
+                        value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, alpha0, ply+1, ExtNot, hasMaxDepth, nattack NODE);
+                        if (value <= alpha0.v) continue;
+                    }*/
+                }
+                /*
+                 * Reduced search
+                 */
+                if (Options::reduction
+                    && i-good > 3
+                    && depth > 3
+                    && nattack <= oldattack
+                    && (*i).capture() == 0
+                    && current.v != -infinity*C) {
+
+                    const B beta0(current.v + C);
+                    unsigned newDepth = depth-(reduction+1);
+                    ASSERT(depth > (unsigned)reduction+1);
+                    value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, current, ply+1, ExtNot, hasMaxDepth, nattack NODE);
+                    if (value <= current.v) continue; //TODO second part could be earlier
+                }
+#endif
 
 #endif

@@ -22,7 +22,6 @@
 #include "boardbase.h"
 #include "options.h"
 #include "transpositiontable.tcc"
-//#include <cstdio>
 
 static const __v2di zero = {0};
 static const __v2di mask01 = { 0x0101010101010101, 0x0202020202020202 };
@@ -732,9 +731,8 @@ template<Colors C, GamePhase P> // TODO use overload for P == Endgame, where att
 inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int score = 0;
-    if (P != Endgame) {
-        attackingPieces = defendingPieces = 0;
-    }
+    attackingPieces = 0;
+    if (P != Endgame) defendingPieces = 0;
     int king = bit(b.getPieces<-C,King>());
     const uint64_t oppking = b.kAttacked[king];
 //     const uint64_t oppking2 = b.kAttacked2[king];

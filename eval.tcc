@@ -21,18 +21,16 @@
 #endif
 
 #include "eval.h"
-/* called after a capture move of opponent */
+/*
+ * called after a capture move of opponent
+ * returns true if the score returned is an exact score
+ */
 template<Colors C>
-void Eval::draw(const BoardBase& b, int& upperbound, int& lowerbound) const {
+bool Eval::draw(const BoardBase& b, int& upperbound) const {
     upperbound =  C*infinity;
-    lowerbound = -C*infinity;
-    uint64_t RQP = b.getPieces<C, Rook>() + b.getPieces<C, Queen>() + b.getPieces<C, Pawn>();
-    if (!RQP) {
-        if (popcount(b.getPieces<C, Bishop>() + b.getPieces<C, Knight>()) <= 1)
-            upperbound = 0;
-    }
+    if (b.getPieces<White, Pawn>() | b.getPieces<Black, Pawn>()) return false;
+#if 0    
     if (b.getPieces<White, Pawn>() | b.getPieces<Black, Pawn>()) {
-        return;
         if (b.material) return;
         if (popcount(b.getPieces<White, Pawn>() | b.getPieces<Black, Pawn>()) != 1) return;
         uint64_t p = b.getPieces<White, Pawn>() | b.getPieces<Black, Pawn>();
@@ -45,20 +43,29 @@ void Eval::draw(const BoardBase& b, int& upperbound, int& lowerbound) const {
             int klose = bit(lose);
             int pwin = bit(p);
             if ((pwin & 070) > (klose & 070) + 010) {
-                lowerbound = upperbound = value;
+                upperbound = value;
+                return true;
             }
         }
     }
+#endif
     switch (b.material) {
     case 0:
     case 3:
-        upperbound = lowerbound = 0;
-        break;
+        upperbound = 0;
+        return true;
     case 6:
         if (b.getPieces<White,Bishop>() | b.getPieces<White,Knight>()
             && b.getPieces<Black,Bishop>() | b.getPieces<Black,Knight>()) {
-            upperbound = lowerbound = 0;
+            upperbound = 0;
+            return true;
         }
         break;
     }
+    uint64_t RQP = b.getPieces<C, Rook>() + b.getPieces<C, Queen>() + b.getPieces<C, Pawn>();
+    if (!RQP) {
+        if (popcount(b.getPieces<C, Bishop>() + b.getPieces<C, Knight>()) <= 1)
+            upperbound = 0;
+    }
+    return false;
 }

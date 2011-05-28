@@ -45,7 +45,7 @@ unsigned RootBoard::dMaxCapture = 12;
 //  2   462k
 //  1   539k
 //  0   427k
-unsigned RootBoard::dMaxExt = 8 + RootBoard::dMaxCapture;
+unsigned RootBoard::dMaxExt = 10 + RootBoard::dMaxCapture;
 unsigned RootBoard::dMinDualExt = 4 + RootBoard::dMaxCapture;
 
 void RootBoard::stopTimer(milliseconds hardlimit) {
@@ -132,6 +132,13 @@ RootBoard::RootBoard(Console *c):
     console(c),
     color(White)
 {
+    for (unsigned i=0; i<=maxDepth; ++i) {
+        nullReduction[i] = std::trunc(std::max(0.0, sqrt(0.25 + 2.0*i - 2.0*dMaxExt) + 0.51));
+//         nullReduction[i] = std::trunc(std::max(0.0, ((int)i-(int)dMaxExt-1)/5.0) + 3.0);
+#ifdef MYDEBUG        
+        if (i>dMaxExt) std::cout << std::setw(2) << i-dMaxExt << ": " << nullReduction[i] << std::endl;
+#endif        
+    }
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
     clearEE();
     boards[0].wb.init();

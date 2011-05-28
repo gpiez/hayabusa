@@ -38,11 +38,12 @@ void SearchJob<C,A,B,T>::job() {
     rb.clone(b, rep, ply);
     bool dummy __attribute__((unused));
     int dummy2 __attribute__((unused));
-    rb.search<C, trunk>(b, m, depth, alpha, beta, ply, ExtNot, dummy, dummy2
+    int ret = rb.search3<C,trunk>(b, m, depth, alpha, beta, ply, ExtNot, dummy, dummy2
 #ifdef QT_GUI_LIB
                        , node
 #endif
                        );
+    beta.max(ret, m);
     beta.setReady();
 }
 #endif

@@ -50,7 +50,7 @@ std::string Move::algebraic() const
 {
     std::string temp;
     if (!data) {
-        return "null";
+        return "0000";
     }
     temp += (from() & 7) + 'a';
     temp += (from() >> 3) + '1';

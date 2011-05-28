@@ -73,12 +73,12 @@ struct CompoundScore {
 };
 
 union KeyScore {
+    __v8hi vector;
     struct {
         CompoundScore  score;
         PawnKey        pawnKey;
         Key            key;
     };
-    __v8hi vector;
 };
 
 template<typename T>
@@ -219,7 +219,7 @@ public:
         return zobristPieceSquare[piece+nPieces][square].pawnKey;
     }
     template<Colors C>
-    void draw(const BoardBase& b, int& upperbound, int& lowerbound) const;
+    bool draw(const BoardBase& b, int& upperbound) const;
     void ptClear();
 } ALIGN_XMM ;
 
