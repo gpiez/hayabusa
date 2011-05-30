@@ -1047,7 +1047,7 @@ int Eval::king(const BoardBase& b) const {
 }
 
 template<Colors C>
-int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int sideToMove) const {
+int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int /*sideToMove*/) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     
     int score = 0;
