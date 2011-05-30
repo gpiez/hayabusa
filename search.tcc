@@ -65,8 +65,8 @@ int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int
  * beta is the return value, it is updated at the end
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
-template<Colors C, Phase P, typename A, typename B, typename T>
-int RootBoard::search4(const T& prev, const Move m, const unsigned depth,
+template<Colors C, Phase P, class A, class B, Colors PREVC>
+int RootBoard::search4(const ColoredBoard<PREVC>& prev, const Move m, const unsigned depth,
                        const A& a, const B& b,
                        const unsigned ply, Extension extend, int& attack  //FIXME nextMaxDepth is only relevant for leaf search
 #ifdef QT_GUI_LIB
@@ -82,32 +82,19 @@ int RootBoard::search4(const T& prev, const Move m, const unsigned depth,
     ASSERT(P==trunk);
     return search3<C,trunk>(prev,m,depth,a,b,ply,extend,unused,attack NODE);
 }
-
-/*template<Colors C, Phase P, typename A, typename B, typename T>
-bool RootBoard::search2(const T& prev, const Move m, const unsigned depth,
-                       const A& alpha, B& beta,
-                       const unsigned ply, Extension extend, bool& nextMaxDepth, int& attack  //FIXME nextMaxDepth is only relevant for leaf search
-#ifdef QT_GUI_LIB
-, NodeItem* node
-#endif
-) {
-    int ret = search3<C,P>(prev, m, depth, alpha, beta, ply, extend, nextMaxDepth, attack NODE);
-    return beta.max(ret, m);
-}*/
 /*
  * Search with color C to move, executing a -C colored move m from a board prev.
  * beta is the return value, it is updated at the end
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
-template<Colors C, Phase P, typename A, typename B, typename T>
-int RootBoard::search3(const T& prev, const Move m, const unsigned depth,
+template<Colors C, Phase P, class A, class B, Colors PREVC>
+int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsigned depth,
                        const A& origAlpha, const B& origBeta,
                        const unsigned ply, Extension extend, bool& nextMaxDepth, int& attack
 #ifdef QT_GUI_LIB
 , NodeItem* parent
 #endif
 ) {
-//     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
 /*    stats.node++;*/
     KeyScore estimate;
     estimate.vector = prev.estimatedEval(m, eval);
@@ -143,9 +130,11 @@ int RootBoard::search3(const T& prev, const Move m, const unsigned depth,
     if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
 
     if (stopSearch) return 0;
-
+    
+    unsigned iPiece = (unsigned[7]) { 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+4*PREVC, 6+5*PREVC, 6+6*PREVC } [ m.piece() & 7 ];
+    PositionalError& diff = pe[iPiece][m.from()][m.to()];
     //TODO merge rooks/bishops/knights
-    PositionalError& diff = prev.CI == 0 ? pe[nPieces + (m.piece()&7)][m.from()][m.to()] : pe[nPieces - (m.piece()&7)][m.from()][m.to()];
+//     PositionalError& diff = PREVC == White ? pe[nPieces + (m.piece()&7)][m.from()][m.to()] : pe[nPieces - (m.piece()&7)][m.from()][m.to()];
     // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     // TODO connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
 //     current.v = -infinity*C;
@@ -412,7 +401,7 @@ int RootBoard::search3(const T& prev, const Move m, const unsigned depth,
 #ifdef QT_GUI_LIB
             if (node) node->nodeType = NodePrecut3;
 #endif
-            bestMove.data = 0;
+//             bestMove.data = 0;
             goto storeAndExit;
         }
 /*            Move* j;
@@ -440,7 +429,7 @@ int RootBoard::search3(const T& prev, const Move m, const unsigned depth,
                 if (node) node->bestEval = -infinity*C;
 #endif
                 current.v = -infinity*C;
-                ASSERT(bestMove.piece() || !bestMove.fromto());
+                ASSERT(!bestMove.data);
                 goto storeAndExit;
             }
             if (P==vein && threatened) {
@@ -464,12 +453,10 @@ int RootBoard::search3(const T& prev, const Move m, const unsigned depth,
                         *j++ = *i;
                 bad = j;
                 if (bad == good) {
-                    bestMove.data = 0;
 #ifdef QT_GUI_LIB
                     if (node) node->nodeType = NodeStandpat;
                     if (node) node->bestEval = current.v;
 #endif
-                    ASSERT(bestMove.data == 0);
                     goto storeAndExit;
                 }
                 goto nosort;
@@ -499,7 +486,6 @@ int RootBoard::search3(const T& prev, const Move m, const unsigned depth,
                     if (node) node->nodeType = NodeStandpat;
                     if (node) node->bestEval = current.v;
 #endif
-                    bestMove.data = 0;
                     goto storeAndExit;
                 }
                 goto nosort;
@@ -511,14 +497,12 @@ int RootBoard::search3(const T& prev, const Move m, const unsigned depth,
                 b.template generateCaptureMoves<AllMoves>(good, bad);
                 captures = good;
                 if (bad == good) {
-                    ASSERT(bestMove.data == 0);
+                    ASSERT(!bestMove.data);
 #ifdef QT_GUI_LIB
                     if (node) node->nodeType = NodeMate;
                     if (node) node->bestEval = 0;
 #endif
                     current.v = 0;
-                    ASSERT(bestMove.piece() || !bestMove.fromto());
-                    bestMove.data = 0;
                     goto storeAndExit;
                 }
                 // FIXME not thread safe
@@ -567,8 +551,8 @@ int RootBoard::search3(const T& prev, const Move m, const unsigned depth,
             }
         }
         ASSERT(good<bad);
-        bestMove = *good;
-        ASSERT(bestMove.piece() || !bestMove.fromto());
+        if (!bestMove.fromto()) bestMove = *good;
+//         ASSERT(bestMove.piece() || !bestMove.fromto());
 
         bool unused __attribute__((unused));
         if (P != vein && P != leaf && !alphaNode)
@@ -775,10 +759,12 @@ storeAndExit:
         stored.upperKey |= z >> stored.upperShift;
         stored.score |= score2tt(current.v);
         stored.loBound |= current > origAlpha.v;
-        if (current > origAlpha.v && bestMove.capture() == 0 && bestMove.data)
+        if (current > origAlpha.v && bestMove.capture() == 0 && bestMove.piece()) {
+            ASSERT(bestMove.fromto());
             history.good<C>(bestMove, ply + rootPly);
+        }
         stored.hiBound |= current < origBeta.v;
-        stored.from |= bestMove.from(); //TODO store a best move even if all moves are fail low
+        stored.from |= bestMove.from();
         stored.to |= bestMove.to();
         tt->store(st, stored);
     }

@@ -24,7 +24,6 @@
 #endif
 
 #include "constants.h"
-#include "move.h"
 
 typedef int16_t RawScore;
 class BoardBase;
