@@ -146,16 +146,16 @@ public:
     void stop(bool);
     const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
-    template<Colors C, Phase P, typename A, typename B, typename T>
-    int search3(const T& prev, Move m, unsigned depth,
+    template<Colors C, Phase P, class A, class B, Colors PREVC>
+    int search3(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
                 unsigned ply, Extension ext, bool& nextMaxDepth, int& attack
 #ifdef QT_GUI_LIB
         , NodeItem*
 #endif
         );
-    template<Colors C, Phase P, typename A, typename B, typename T>
-    int search4(const T& prev, Move m, unsigned depth,
+    template<Colors C, Phase P, class A, class B, Colors PREVC>
+    int search4(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
                 unsigned ply, Extension ext, int& attack
 #ifdef QT_GUI_LIB

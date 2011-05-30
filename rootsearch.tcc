@@ -20,6 +20,7 @@
 
 #include "search.tcc"
 #include "sortedmovelist.h"
+#include <setjmp.h>
 
 template<Colors C>
 Move RootBoard::rootSearch(unsigned int endDepth) {
@@ -81,7 +82,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
     uint64_t subnode = stats.node;
     int dummy __attribute__((unused));
-    alpha0.v = search4<(Colors)-C, tree>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
+    alpha0.v = search4<(Colors)-C, tree, SharedScore<(Colors)-C>, SharedScore<C>, C>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
     ml.nodesCount(stats.node - subnode);
     for (++ml; ml.isValid() && !stopSearch; ++ml) {
         uint64_t subnode = stats.node;
@@ -100,6 +101,9 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     }
 #endif
 
+    jmp_buf context;    
+    if (!setjmp(context)) {
+        
     unsigned bestMovesLimit = 1;
     for (depth=dMaxExt+2; depth<=endDepth && stats.node < maxSearchNodes && !stopSearch; depth++) {
         ml.begin();
@@ -236,6 +240,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         if (alpha >= infinity*C) break;
         if (alpha <= -infinity*C) break;
         alpha0.v = alpha.v;
+    }
     }
     
     infoTimerMutex.unlock();
