@@ -416,9 +416,9 @@ void Console::ordering(StringList cmds) {
             board->setup(testPositions[i]);
             board->clearHash();
             if (board->color == White)
-                board->rootSearch<White>(testDepths[i]-1+20);
+                board->rootSearch<White>(testDepths[i]+22);
             else
-                board->rootSearch<Black>(testDepths[i]-1+20);
+                board->rootSearch<Black>(testDepths[i]+22);
             std::cout << std::setw(4) << i << "(" << std::setw(2) << testDepths[i]  << "):" << std::setw(10) << stats.node << std::endl;
             sum += log(stats.node);
         }

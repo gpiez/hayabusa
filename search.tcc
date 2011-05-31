@@ -131,7 +131,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 
     if (stopSearch) return 0;
     
-    unsigned iPiece = (unsigned[7]) { 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+4*PREVC, 6+5*PREVC, 6+6*PREVC } [ m.piece() & 7 ];
+    unsigned iPiece = (unsigned[7]) { 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+1*PREVC, 6+5*PREVC, 6+6*PREVC } [ m.piece() & 7 ];
     PositionalError& diff = pe[iPiece][m.from()][m.to()];
     //TODO merge rooks/bishops/knights
 //     PositionalError& diff = PREVC == White ? pe[nPieces + (m.piece()&7)][m.from()][m.to()] : pe[nPieces - (m.piece()&7)][m.from()][m.to()];
@@ -140,12 +140,16 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 //     current.v = -infinity*C;
     RawScore estimatedScore = estimate.score.calc(prev.material) + prev.positionalScore + diff.v; //TODO move score() into ColorBoard ctor
 #ifdef CALCULATE_MEAN_POSITIONAL_ERROR
-    if (diff.n > 0.0) {
+    if (diff.n > 1.0) {
         float invn = 1.0/diff.n;
-        double v = diff.e2*invn - (diff.e*invn)*(diff.e*invn);
+        float v = diff.e2*invn - (diff.e*invn)*(diff.e*invn);
         v = sqrt(v);
         estimatedScore -= C*v;
+    } else {
+        estimatedScore -= 150*C;
     }
+#else
+    estimatedScore -= 100*C;
 #endif
     A alpha(origAlpha);
     A current(-infinity*C);
@@ -374,7 +378,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         }
         b.isExact = true;
         realScore = estimate.score.calc(prev.material) + b.positionalScore;
-        if (isMain) {
+        if (isMain & !m.isSpecial()) {
             Score<C> diff2;
             diff2.v = b.positionalScore - prev.positionalScore;
 #ifdef CALCULATE_MEAN_POSITIONAL_ERROR
@@ -383,7 +387,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             diff.e  += err;
             diff.e2 += err*err;
             if (diff.n > 0)
-            ASSERT( diff.e2/diff.n - diff.e*diff.e/(diff.n*diff.n) >= 0 );
+                ASSERT( diff.e2/diff.n - diff.e*diff.e/(diff.n*diff.n) >= 0 );
 #else
             ASSERT(realScore == estimatedScore - diff.v + diff2.v);
 #endif
@@ -531,7 +535,11 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         }
         if (badCaptures > nonCaptures+1) {
             ASSERT(badCaptures <= bad);
-            history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply + rootPly);
+            history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply + rootPly
+#ifdef USE_DIFF_FOR_SORT
+                , pe
+#endif                
+            );
         }
         ASSERT(good<bad);
 
@@ -759,7 +767,7 @@ storeAndExit:
         stored.upperKey |= z >> stored.upperShift;
         stored.score |= score2tt(current.v);
         stored.loBound |= current > origAlpha.v;
-        if (current > origAlpha.v && bestMove.capture() == 0 && bestMove.piece()) {
+        if (current > origAlpha.v && bestMove.capture() == 0 && bestMove.piece() && !bestMove.isSpecial()) {
             ASSERT(bestMove.fromto());
             history.good<C>(bestMove, ply + rootPly);
         }

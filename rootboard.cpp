@@ -171,13 +171,16 @@ std::string RootBoard::status(system_clock::time_point now, int score)
 }
 
 void RootBoard::clearEE() {
-    for (int p=-nPieces; p<=(int)nPieces; ++p)
-        for (unsigned int sq1=0; sq1<nSquares; ++sq1) for (unsigned int sq=0; sq<nSquares; ++sq) {
+    for (int p=-(int)nPieces; p<=(int)nPieces; ++p)
+        for (unsigned int sq1=0; sq1<nSquares; ++sq1)
+        for (unsigned int sq=0; sq<nSquares; ++sq) {
             PositionalError& pe = this->pe[p+nPieces][sq1][sq];
             pe.v = 0;
+#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
             pe.n = 0.0;
             pe.e = 0.0;
             pe.e2 = 0.0;
+#endif            
         }
 }
 

@@ -62,7 +62,7 @@ StatWidget::StatWidget(const RootBoard& rb):
     bestLine->setFont(fixed);
 
     for (int i=0; i<256; i++) {
-        pal[i] = QColor::fromHsvF(i/300.0, 1.0, 1.0);
+        pal[i] = QColor::fromHsvF(std::fmod(1.3-i/300.0, 1.0), 1.0, 1.0);
     }
 
     minipm[0][Rook] = ww1;
@@ -212,11 +212,11 @@ void StatWidget::updateBoard()
     }
 
     if (radioButtonPSQ->isChecked()) {
+#if defined(MYDEBUG) && defined(CALCULATE_MEAN_POSITIONAL_ERROR)
         size = (qMin(ww1->height(), ww1->width()))/8;
         QPixmap pm(size*8, size*8);
         QPainter pa( &pm );
         for (int c=-1; c<=1; c+=2)
-#ifdef MYDEBUG
             for (int p=Rook; p<=King; ++p) {
                 pm.fill(QColor(192, 192, 192, 255));
                 pa.setPen(Qt::NoPen);

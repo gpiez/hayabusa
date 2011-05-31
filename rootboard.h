@@ -23,6 +23,9 @@
 #include <pch.h>
 #endif
 
+#define CALCULATE_MEAN_POSITIONAL_ERROR
+#define USE_DIFF_FOR_SORT
+
 #include "eval.h"
 #include "coloredboard.h"
 #include "result.h"
@@ -36,7 +39,6 @@
 #include "repetition.h"
 #include "book.h"
 
-#define CALCULATE_MEAN_POSITIONAL_ERROR
 
 using namespace std::chrono;
 
@@ -49,14 +51,6 @@ enum Extension {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
                 ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32,
                 ExtFork = 64, ExtTestMate = 128 };
 
-struct PositionalError {
-    RawScore v;
-#ifdef CALCULATE_MEAN_POSITIONAL_ERROR    
-    float n;
-    float e;
-    float e2;
-#endif    
-};
 /* Board representing a position with history, color to move, castling and en
  * passant status. Has an associated Eval object and holds multiple worker
  * threads. Contains information about the time budget.
