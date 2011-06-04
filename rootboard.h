@@ -23,9 +23,6 @@
 #include <pch.h>
 #endif
 
-#define CALCULATE_MEAN_POSITIONAL_ERROR
-#define USE_DIFF_FOR_SORT
-
 #include "eval.h"
 #include "coloredboard.h"
 #include "result.h"
@@ -50,6 +47,8 @@ template<class T> class Result;
 enum Extension {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
                 ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32,
                 ExtFork = 64, ExtTestMate = 128 };
+
+enum Status { Running, Stopping, Stopped };
 
 /* Board representing a position with history, color to move, castling and en
  * passant status. Has an associated Eval object and holds multiple worker
@@ -109,7 +108,10 @@ private:
     int mate;
     int movetime;
     Move bm;
-    volatile bool stopSearch;
+    volatile Status stopSearch;
+    Mutex stopSearchMutex;
+    Condition stoppedCond;
+    
     TimedMutex infoTimerMutex;
     TimedMutex stopTimerMutex;
     Book book;
@@ -137,7 +139,7 @@ public:
     template<Colors C> ColoredBoard<(Colors)-C>& nextBoard();
     const BoardBase& currentBoard() const;
     void go(const std::map<std::string, StringList>&);
-    void stop(bool);
+    void stop();
     const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
     template<Colors C, Phase P, class A, class B, Colors PREVC>

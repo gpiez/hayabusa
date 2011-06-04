@@ -129,7 +129,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 */
     if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
 
-    if (stopSearch) return 0;
+    if (stopSearch != Running) return 0;
     
     unsigned iPiece = (unsigned[7]) { 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+1*PREVC, 6+5*PREVC, 6+6*PREVC } [ m.piece() & 7 ];
     PositionalError& diff = pe[iPiece][m.from()][m.to()];
@@ -146,7 +146,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         v = sqrt(v);
         estimatedScore -= C*v;
     } else {
-        estimatedScore -= 150*C;
+        estimatedScore -= 100*C;
     }
 #else
     estimatedScore -= 100*C;
@@ -656,10 +656,8 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                 if (current.max(value.v)) bestMove = *i;
             } else { // possible null search in tree or trunk
                 ASSERT(P != leaf);
-                int reduction = calcReduction(b, i-good, *i, depth);
                 if (depth > 2 + dMaxExt
                     && current.v != -infinity*C //TODO compare to alpha0.v of rootsearch
-                    && (i != good || alphaNode)
                     && bad-good > maxMovesNull
                     && b.material) {
                     /*
@@ -678,10 +676,14 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                         newDepth = depth-(nullReduction[depth]+1);
                         ASSERT(depth > nullReduction[depth]+1);
                         Score<C> nullvalue(search4<C, P>(b, *i, newDepth, alpha, beta0, ply+2, ExtNot, nattack NODE));
-                        if (nullvalue <= alpha.v) continue;
+                        if (nullvalue <= alpha.v) {
+                            current.max(value.v);
+                            continue;
+                        }
                     }
                 }
-                if (   current.v != -infinity*C //FIXME compare to alpha0.v, reuse condition
+                int reduction = calcReduction(b, i-good, *i, depth);
+                if (current.v != -infinity*C //FIXME compare to alpha0.v, reuse condition
                     && (i != good || alphaNode)
                     && reduction) {
                     const B beta0(alpha.v + C);
@@ -749,7 +751,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         current.join();
     }
 storeAndExit:
-    if (P != vein && !stopSearch) {
+    if (P != vein && stopSearch == Running) {
         TTEntry stored;
         stored.zero();
         if (P == leaf) ASSERT(depth <= dMaxExt);
@@ -767,7 +769,7 @@ storeAndExit:
         stored.upperKey |= z >> stored.upperShift;
         stored.score |= score2tt(current.v);
         stored.loBound |= current > origAlpha.v;
-        if (current > origAlpha.v && bestMove.capture() == 0 && bestMove.piece() && !bestMove.isSpecial()) {
+        if (current > origAlpha.v && bestMove.capture() == 0 && bestMove.piece()/* && !bestMove.isSpecial()*/) {
             ASSERT(bestMove.fromto());
             history.good<C>(bestMove, ply + rootPly);
         }

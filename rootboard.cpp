@@ -60,7 +60,7 @@ void RootBoard::stopTimer(milliseconds hardlimit) {
     timespec ts = { hardlimit.count()/1000, (hardlimit.count()%1000)*1000000 };
     nanosleep(&ts, NULL);
 #endif    */
-    stopSearch = true;
+    stopSearch = Stopping;
 }
 
 std::string RootBoard::commonStatus() const {
@@ -128,7 +128,7 @@ RootBoard::RootBoard(Console *c):
     winc(5000),
     binc(5000),
     movestogo(0),
-    stopSearch(false),
+    stopSearch(Stopped),
     console(c),
     color(White)
 {
@@ -436,8 +436,11 @@ void RootBoard::go(const std::map<std::string, StringList>& param )
     WorkThread::findFree()->queueJob(0U, job);
 }
 
-void RootBoard::stop(bool flag) {
-    stopSearch = flag;
+void RootBoard::stop() {
+    UniqueLock<Mutex> l(stopSearchMutex);
+    if (stopSearch == Running) stopSearch = Stopping;
+    while (stopSearch != Stopped)
+        stoppedCond.wait(l);
 }
 
 void RootBoard::perft(unsigned int depth) {

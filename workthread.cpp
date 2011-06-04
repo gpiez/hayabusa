@@ -212,6 +212,7 @@ void WorkThread::idle(int n) {
 
 void WorkThread::stop() {
     UniqueLock<Mutex> lock(stoppedMutex);
+    if (job) job->stop();
     while (!isStopped) {
         doStop = true;
         stopped.wait(lock);    //waits until the end of the run loop is reached.
@@ -223,8 +224,8 @@ void WorkThread::stopAll() {
     for(auto j=jobs.begin(); j!=jobs.end(); ++j)
         delete (*j).second;
     jobs.clear();
-    for (auto th = threads.begin(); th !=threads.end(); ++th)
-        (*th)->doStop = true;
+//     for (auto th = threads.begin(); th !=threads.end(); ++th)
+//         (*th)->doStop = true;
     runningMutex.unlock();
     for (auto th = threads.begin(); th !=threads.end(); ++th)
         (*th)->stop();

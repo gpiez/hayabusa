@@ -24,6 +24,7 @@
 
 template<Colors C>
 Move RootBoard::rootSearch(unsigned int endDepth) {
+    stopSearch = Running;
     start = system_clock::now();
     
 #ifdef QT_GUI_LIB
@@ -63,7 +64,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     nMoves = ml.count();
     ml.begin();
     bestMove = *ml;
-    if (nMoves == 1) stopSearch = true;
+    if (nMoves == 1) stopSearch = Stopping;
     #ifdef QT_GUI_LIB
         NodeData data;
         data.move.data = 0;
@@ -84,7 +85,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     int dummy __attribute__((unused));
     alpha0.v = search4<(Colors)-C, tree, SharedScore<(Colors)-C>, SharedScore<C>, C>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
     ml.nodesCount(stats.node - subnode);
-    for (++ml; ml.isValid() && !stopSearch; ++ml) {
+    for (++ml; ml.isValid() && stopSearch == Running; ++ml) {
         uint64_t subnode = stats.node;
         Score<C> value;
         value.v = search4<(Colors)-C, tree>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
@@ -105,7 +106,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     if (!setjmp(context)) {
         
     unsigned bestMovesLimit = 1;
-    for (depth=dMaxExt+2; depth<=endDepth && stats.node < maxSearchNodes && !stopSearch; depth++) {
+    for (depth=dMaxExt+2; depth<=endDepth && stats.node < maxSearchNodes && stopSearch == Running; depth++) {
         ml.begin();
         ml.sort(bestMovesLimit);
         bestMove = currentMove = *ml;
@@ -181,7 +182,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         else
             beta2.v = infinity*C;
         
-        for (++ml; ml.isValid() && !stopSearch; ++ml) {
+        for (++ml; ml.isValid() && stopSearch == Running; ++ml) {
             currentMoveIndex++;
             currentMove = *ml;
             uint64_t subnode = stats.node;
@@ -189,26 +190,26 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             if (alpha.v != -infinity*C
                 && depth > dMaxExt+2
                 && ml.count() > maxMovesNull
-                && !stopSearch)
+                && stopSearch == Running)
             {
                 SharedScore<(Colors)-C> null;
                 SharedScore<C> nalpha(alpha);
                 null.v = alpha.v + C;
                 null.v = search4<C, trunk>(b, *ml, depth-(nullReduction[depth]+1), nalpha, null, ply+2, ExtNot, dummy NODE);
                 pruneNull = alpha >= null.v;
-                if (!stopSearch && pruneNull) {
+                if (stopSearch == Running && pruneNull) {
                     null.v = alpha.v + C;
                     nalpha.v = search4<(Colors)-C, trunk>(b, *ml, depth-(nullReduction[depth]+2), null, nalpha, ply+1, ExtNot, dummy NODE);
                     pruneNull = alpha >= nalpha.v;
                 }
             }
-            if (!pruneNull && !stopSearch) {
+            if (!pruneNull && stopSearch == Running) {
                 value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, ExtNot, dummy NODE);
                 if (stopSearch || value <= alpha.v) continue;
                 alpha.v = value.v;
                 if (ml.current >= bestMovesLimit) bestMovesLimit++;
                 bestMove = *ml;
-                if (alpha >= beta2.v && !stopSearch) {
+                if (alpha >= beta2.v && stopSearch == Running) {
                     now = system_clock::now();
                     console->send(status(now, alpha.v) + " lowerbound");
                     value.v = search4<(Colors)-C, trunk>(b, bestMove, depth-1, beta, alpha, ply+1, ExtNot, dummy NODE);
@@ -226,7 +227,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             if (alpha >= infinity*C) break;
             if (!infinite) {
                 system_clock::time_point now = system_clock::now();
-                if (now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) stopSearch = true;
+                if (now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) stopSearch = Stopping;
             }
         }
 //         now = system_clock::now();
@@ -251,8 +252,10 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     if (stopTimerThread) stopTimerThread->join();
     delete stopTimerThread;
     
-    stopSearch = false;
     console->send("bestmove "+bestMove.algebraic());
+    UniqueLock<Mutex> l(stopSearchMutex);
+    stopSearch = Stopped;
+    stoppedCond.notify_one();
     return bestMove;
 }
 #endif

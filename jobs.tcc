@@ -57,3 +57,8 @@ void RootSearchJob<C>::job() {
     rb.clone<C>(rb.currentBoard<C>(), rep, 0);
     rb.rootSearch<C>(depth);
 }
+
+template<Colors C>
+void RootSearchJob<C>::stop() {
+    rb.stop();
+}

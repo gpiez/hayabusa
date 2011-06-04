@@ -369,9 +369,7 @@ void Console::go(StringList cmds) {
 }
 
 void Console::stop(StringList /*cmds*/) {
-    board->stop(true);
     WorkThread::stopAll();
-    board->stop(false);
 }
 
 void Console::ponderhit(StringList /*cmds*/) {
@@ -409,6 +407,7 @@ void Console::ordering(StringList cmds) {
         double sum=0.0;
         double tested=0.0;
         for (int i = 0; testPositions[i]; ++i) {
+            if (testDepths[i] < 0) break;
             if (testDepths[i] <= 0) continue;
             board->maxSearchNodes = ~0;
             tested++;

@@ -38,6 +38,7 @@
 struct Job {
     virtual ~Job() {};            // the for calling destructor of QObject in signalJob
     virtual void job() = 0;
+    virtual void stop() {};
 };
 
 template<Colors C, typename A, typename B, typename T>
@@ -72,6 +73,7 @@ class RootSearchJob: public Job {
 public:
     RootSearchJob(RootBoard& rb, const RepetitionKeys& rep, unsigned depth);
     void job();
+    void stop();
 };
 
 template<Colors C, typename T>
