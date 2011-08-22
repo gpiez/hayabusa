@@ -540,3 +540,11 @@ void RootBoard::resetBook(std::string bstr)
     book.resetWeights();
     book.write(bstr);
 }
+
+int score2tt(int s) {
+    return inline_score2tt(s);
+}
+
+int tt2Score(int s) {
+    return inline_tt2Score(s);
+}

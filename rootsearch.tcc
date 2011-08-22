@@ -20,7 +20,6 @@
 
 #include "search.tcc"
 #include "sortedmovelist.h"
-#include <setjmp.h>
 
 template<Colors C>
 Move RootBoard::rootSearch(unsigned int endDepth) {
@@ -102,9 +101,6 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     }
 #endif
 
-    jmp_buf context;    
-    if (!setjmp(context)) {
-        
     unsigned bestMovesLimit = 1;
     for (depth=dMaxExt+2; depth<=endDepth && stats.node < maxSearchNodes && stopSearch == Running; depth++) {
         ml.begin();
@@ -186,24 +182,25 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             currentMoveIndex++;
             currentMove = *ml;
             uint64_t subnode = stats.node;
-            bool pruneNull = false;
             if (alpha.v != -infinity*C
                 && depth > dMaxExt+2
                 && ml.count() > maxMovesNull
+                && b.material
                 && stopSearch == Running)
             {
-                SharedScore<(Colors)-C> null;
-                SharedScore<C> nalpha(alpha);
-                null.v = alpha.v + C;
-                null.v = search4<C, trunk>(b, *ml, depth-(nullReduction[depth]+1), nalpha, null, ply+2, ExtNot, dummy NODE);
-                pruneNull = alpha >= null.v;
-                if (stopSearch == Running && pruneNull) {
-                    null.v = alpha.v + C;
-                    nalpha.v = search4<(Colors)-C, trunk>(b, *ml, depth-(nullReduction[depth]+2), null, nalpha, ply+1, ExtNot, dummy NODE);
-                    pruneNull = alpha >= nalpha.v;
+                const SharedScore<(Colors)-C> beta0(alpha.v + C);
+                unsigned newDepth = depth-(nullReduction[depth]);
+                value.v = search4<(Colors)-C, trunk>(b, *ml, newDepth, beta0, alpha, ply+1, ExtNot, dummy NODE);
+                if (value <= -infinity*C) continue;
+
+                if (value <= alpha.v && stopSearch == Running) {
+                    newDepth = depth-(nullReduction[depth]+1);
+                    Score<C> nullvalue(search4<C, trunk>(b, *ml, newDepth, alpha, beta0, ply+2, ExtNot, dummy NODE));
+                    if (nullvalue <= alpha.v) continue;
                 }
+
             }
-            if (!pruneNull && stopSearch == Running) {
+            if (stopSearch == Running) {
                 value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, ExtNot, dummy NODE);
                 if (stopSearch || value <= alpha.v) continue;
                 alpha.v = value.v;
@@ -241,7 +238,6 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         if (alpha >= infinity*C) break;
         if (alpha <= -infinity*C) break;
         alpha0.v = alpha.v;
-    }
     }
     
     infoTimerMutex.unlock();
