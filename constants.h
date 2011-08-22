@@ -23,6 +23,9 @@
 #include <pch.h>
 #endif
 
+#define CALCULATE_MEAN_POSITIONAL_ERROR
+#define USE_DIFF_FOR_SORT
+
 //#define static_assert(x) char __y[(x) ? 1 : -1 ] __attribute__((unused));
 
 #ifndef NDEBUG
@@ -38,7 +41,7 @@
 #endif
 
 #define print_debug(mask, fmt, ...) \
-            do { if(TRACE_DEBUG) if (mask & Options::debug) fprintf(stderr, fmt, __VA_ARGS__); } while (0)
+            do { if(TRACE_DEBUG) if (mask & Options::debug) std::fprintf(stderr, fmt, __VA_ARGS__); } while (0)
 
 #undef foreach
 
