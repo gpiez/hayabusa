@@ -22,17 +22,26 @@
 #include "boardbase.h"
 #include "rootboard.h"
 
+//bit reflected low and high nibbles
+static const __v16qi swap16h = _mm_set_epi8( 0x0f, 0x07, 0x0b, 0x03, 0x0d, 0x05, 0x09, 0x01, 0x0e, 0x06, 0x0a, 0x02, 0x0c, 0x04, 0x08, 0x00 );
+static const __v16qi swap16l = _mm_set_epi8( 0xf0, 0x70, 0xb0, 0x30, 0xd0, 0x50, 0x90, 0x10, 0xe0, 0x60, 0xa0, 0x20, 0xc0, 0x40, 0x80, 0x00 );
+
+// mask lower nibble
+static const __v2di nibmask= _mm_set1_epi8( 0xf );
+
+//byte swap upper and lower 64 bit words
+static const __v16qi swap16 = _mm_set_epi8( 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7 );
+
 inline __v2di BoardBase::build13Attack(const unsigned sq) const {
 #ifdef __SSSE3__    
-    const __v16qi swap16 = { 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8 };
 
-    __v2di maskedDirs = _mm_set1_epi64x(occupied1) & mask13x[sq];
+    __v2di maskedDirs = _mm_set1_epi64x(occupied1) & bits[sq].mask13;
     __v2di reverse = _mm_shuffle_epi8(maskedDirs, swap16);
-    maskedDirs -= doublebits[sq];
-    reverse -= doublereverse[sq];
+    maskedDirs -= bits[sq].doublebits;
+    reverse -= bits[sq].doublereverse;
     reverse = _mm_shuffle_epi8(reverse, swap16);
     maskedDirs ^= reverse;
-    maskedDirs &= mask13x[sq];
+    maskedDirs &= bits[sq].mask13;
     return maskedDirs;
 #else
     uint64_t flood1 = 1ULL << sq;
@@ -195,10 +204,24 @@ inline __v2di BoardBase::build13Attack(__v2di flood1) const {
 }
 
 inline __v2di BoardBase::build02Attack(const unsigned sq) const {
-/*    const __v2di b02 = _mm_set_epi64x(0xff, 0x0101010101010101); // border
-    __v2di _maskedDir02 = (_mm_set1_epi64x(occupied1)|b02) & mask02[sq].b;
-    uint64_t d0 = _mm_cvtsi128_si64x(maskedDir02);
-    uint64_t d2 = _mm_cvtsi128_si64x(_mm_unpackhi_epi64(maskedDir02,maskedDir02));*/
+#ifdef __SSSE3__
+    __v2di maskedDirs = _mm_set1_epi64x(occupied1) & bits[sq].mask02;
+    __v2di nibh = _mm_srli_epi16(maskedDirs, 4) & nibmask;
+    __v2di nibl = maskedDirs & nibmask;
+    __v2di reverseh = _mm_shuffle_epi8(swap16h, nibh);
+    __v2di reversel = _mm_shuffle_epi8(swap16l, nibl);
+    __v2di reverse = _mm_shuffle_epi8(reverseh | reversel, swap16);
+    maskedDirs -= bits[sq].doublebits;
+    reverse -= bits[sq].doublereverse2;
+    nibh = _mm_srli_epi16(reverse, 4) & nibmask;
+    nibl = reverse & nibmask;
+    reverseh = _mm_shuffle_epi8(swap16h, nibh);
+    reversel = _mm_shuffle_epi8(swap16l, nibl);
+    reverse = _mm_shuffle_epi8(reverseh | reversel, swap16);
+    maskedDirs ^= reverse;
+    maskedDirs &= bits[sq].mask02;
+    return maskedDirs;
+#else    
     uint64_t d0 = (occupied1 | 0x0101010101010101) & mask02[sq].d0;
     uint64_t d2 = (occupied1 | 0xff) & mask02[sq].d2;
     __v2di maskedDir02 = _mm_set_epi64x(d2, d0);
@@ -209,7 +232,7 @@ inline __v2di BoardBase::build02Attack(const unsigned sq) const {
     maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
     maskedDir02 &= mask02[sq].x;
     return maskedDir02;
-//    return _mm_set1_epi64x(att0Tab[attLen0[sq]][sq], att2Tab[attLen2[sq]][sq]);
+#endif    
 }
 
 inline uint64_t BoardBase::build02Attack(uint64_t flood0) const {
@@ -417,30 +440,6 @@ void BoardBase::buildPins() {
     __v2di pins2 = dpins[CI].d02 & dpins[CI].d13;
     pins[CI] = _mm_cvtsi128_si64(_mm_unpackhi_epi64(pins2, pins2))
          & _mm_cvtsi128_si64(pins2);
-}
-
-inline unsigned BoardBase::getPieceFromBit(uint64_t bit) const {
-    ASSERT( !((getPieces<White,King>() | getPieces<Black,King>()) & bit) );
-#ifdef __SSE4_1__
-    __v2di piece = _mm_set_epi64x(bit, bit);
-    __v2di zero = _mm_set_epi64x(0, 0);
-    __v2di r = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Rook  >(), piece), zero) & _mm_set_epi64x(Rook, Rook);
-    __v2di b = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Bishop>(), piece), zero) & _mm_set_epi64x(Bishop, Bishop);
-    __v2di q = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Queen >(), piece), zero) & _mm_set_epi64x(Queen, Queen);
-    __v2di n = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Knight>(), piece), zero) & _mm_set_epi64x(Knight, Knight);
-    __v2di p = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Pawn  >(), piece), zero) & _mm_set_epi64x(Pawn, Pawn);
-//        __v2di k = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<King  >(), piece), zero) & _mm_set_epi64x(King, King);
-    return fold(r|b|q|n|p);
-#else
-    return
-//            (getPieces<White,King>() | getPieces<Black,King>()) & bit ? King:
-        (getPieces<White,Pawn>() | getPieces<Black,Pawn>()) & bit ? Pawn:
-        (getPieces<White,Knight>() | getPieces<Black,Knight>()) & bit ? Knight:
-        (getPieces<White,Queen>() | getPieces<Black,Queen>()) & bit ? Queen:
-        (getPieces<White,Bishop>() | getPieces<Black,Bishop>()) & bit ? Bishop:
-        (getPieces<White,Rook>() | getPieces<Black,Rook>()) & bit ? Rook:
-        NoPiece;
-#endif
 }
 
 #endif
