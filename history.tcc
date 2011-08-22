@@ -36,47 +36,21 @@ void History::good(Move m, unsigned ply) {
             }
         }
     }
-#ifndef USE_DIFF_FOR_SORT    
-    {
-        uint8_t& h  = v2[ply+2][C*(m.piece() & 7) + nPieces][m.from()];
-        int& m  = max2[CI][ply+2];
-        /*
-         * Only if the last move target changed, the history table will be
-         * updated. As long as the current max stays below the allowed absolute
-         * max, just update the entry for the move, otherwise subtract the half
-         * of the allowed max from all entries, saturating to zero.
-         */
-        if (m != h) {
-
-            if (++m < maxHistory) h = m;
-
-            else {
-                m = maxHistory/2;
-                __v16qi mh2 = _mm_set1_epi8(maxHistory/2);
-                for (unsigned p=1; p<=nPieces; ++p)
-                    for (unsigned sq=0; sq<nSquares; sq += 16) {
-                        __v16qi* v16 = (__v16qi*)&v2[ply+2][C*p + nPieces][sq];
-                        *v16 = _mm_subs_epu8(*v16, mh2);
-                    }
-                h = maxHistory/2;
-            }
-        }
-    }
-#endif    
 }
 
 template<Colors C>
 int History::get(Move m, unsigned ply) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-    int value = v[ply+2][C*(m.piece() & 7) + nPieces][m.to()];
-#ifndef USE_DIFF_FOR_SORT    
-    if (!value) value = v2[ply+2][C*(m.piece() & 7) + nPieces][m.from()] - max2[CI][ply+2];
-
-    if (!value) value = v[ply][C*(m.piece() & 7) + nPieces][m.to()] - max[CI][ply];
-#endif
-//    if (!value) value = (m.to() ^ (C == Black ? 070:0)) - 077;
-
-    return std::max(value - max[CI][ply+2] + (signed)maxHistory - 1, 0);
+    int value = v[ply+2][C*(m.piece() & 7) + nPieces][m.to()] - max[CI][ply+2];
+    if (value < -16) {
+        int value3 = v[ply][C*(m.piece() & 7) + nPieces][m.to()] - max[CI][ply];
+        int value4 = ply >= 2 ? v[ply-2][C*(m.piece() & 7) + nPieces][m.to()] - max[CI][ply-2] : -maxHistory/2;
+        value = std::max(value, value3-16);
+        value = std::max(value, value4-16);
+    }
+    value += maxHistory-1;
+    ASSERT(value >= 0);
+    return value;
 }
 
 template<Colors C>
@@ -110,10 +84,11 @@ void History::sort(Move* list, unsigned n, unsigned ply
         mList0[i].m = list[i];
         int score = get<C>(list[i], ply);
 #ifdef USE_DIFF_FOR_SORT
-        if (score < maxHistory - BESTKILLER) {
+        if (score <= maxHistory - BESTKILLER) {
             unsigned iPiece = (unsigned[7]) { 0, 6+1*C, 6+1*C, 6+3*C, 6+1*C, 6+5*C, 6+6*C } [ list[i].piece() & 7 ];
-            int diff = pe[iPiece][list[i].from()][list[i].to()].v*C + (maxHistory - BESTKILLER)/2;
-            score = std::min(std::max(diff, 0), maxHistory - BESTKILLER - 1);
+            int diff = pe[iPiece][list[i].from()][list[i].to()].v;
+            if (diff >= 0)
+                score = std::min(std::max(diff*C/2 + (maxHistory - BESTKILLER)/2, 0), maxHistory - BESTKILLER);
         }
 #endif
         unsigned nibble0 = score & 0xf;
