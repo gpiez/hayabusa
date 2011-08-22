@@ -16,7 +16,7 @@
 #include "move.h"
 #include "score.h"
 
-#define BESTKILLER 32
+#define BESTKILLER 64
 
 struct PositionalError {
     RawScore v;
@@ -29,11 +29,7 @@ struct PositionalError {
 
 class History {
     uint8_t v[nMaxGameLength+4][16][nSquares] ALIGN_XMM;
-#ifndef USE_DIFF_FOR_SORT    
-    uint8_t v2[nMaxGameLength+4][16][nSquares] ALIGN_XMM;
-#endif    
     int max[nColors][nMaxGameLength+4];
-    int max2[nColors][nMaxGameLength+4];
     static const __v16qi uinctab[16];
     static const __v16qi sinctab[16];
 

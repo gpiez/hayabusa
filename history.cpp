@@ -56,10 +56,11 @@ History::History()
 
 void History::init() {
     for (unsigned d=0; d<nMaxGameLength+4; ++d) {
-        max[0][d] = max[1][d] = 1;
-        max2[0][d] = max2[1][d] = 1;
-        for (unsigned p=0; p<2*nPieces+1; ++p)
-                for (unsigned sq=0; sq<nSquares; ++sq) 
-                    v[d][p][sq] = v2[d][p][sq] = 0;
+        max[0][d] = max[1][d] = maxHistory/2;   // initialize with this, to
+                                                // avoid unused pos with a high
+        for (unsigned p=0; p<2*nPieces+1; ++p)  // secondary sort rating
+                for (unsigned sq=0; sq<nSquares; ++sq) {
+                    v[d][p][sq] = 0;
+                }
     }
 }
