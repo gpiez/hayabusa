@@ -64,6 +64,17 @@ typedef boost::timed_mutex TimedMutex;
 #define UniqueLock boost::unique_lock
 #else
 #include <x86intrin.h>
+#ifdef __SSSE3__
+#include <tmmintrin.h>
+#endif
+#if defined (__SSE4_2__) || defined (__SSE4_1__)
+#include <smmintrin.h>
+#endif
+#if defined (__AES__) || defined (__PCLMUL__)
+#include <wmmintrin.h>
+#endif
+#include <immintrin.h>
+
 /*#include <boost/thread/mutex.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
