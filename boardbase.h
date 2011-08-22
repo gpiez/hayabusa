@@ -88,24 +88,21 @@ struct BoardBase {
     mutable RawScore positionalScore;
     mutable bool isExact;
 
-    struct XB {
-        __v2di x;
-        union {
-            __v2di b;
-            struct {
-                uint64_t d0;
-                uint64_t d2;
-            };
-        };
+    struct Bits {
+        __v2di mask02;
+        __v2di mask13; // 1 KByte  antidiag : diagonal, excluding square
+        __v2di doublebits; // 1 KByte    1<<sq  : 1<<sq
+        __v2di doublereverse; // 1 KByte    1<<sq  : 1<<sq
+        uint64_t knightAttacks; // don't use it, addressing mode is to slow
+        uint64_t kAttacked1; // don't use it, addressing mode is to slow
+        __v2di doublereverse2; // 1 KByte    1<<sq  : 1<<sq
+        char fill[32];
     };
-    static const XB mask02[nSquares];
-    static const __v2di mask13x[nSquares]; // 1 KByte  antidiag : diagonal, excluding square
-    static const __v2di doublebits[nSquares]; // 1 KByte    1<<sq  : 1<<sq
-    static const __v2di doublereverse[nSquares]; // 1 KByte    1<<sq  : 1<<sq
-    static const uint64_t knightAttacks[nSquares];
-    static const uint64_t kAttacked1[nSquares];
-    static const uint64_t kAttacked2[nSquares];
-    static const uint64_t kAttacked[nSquares];
+    static const Bits bits[nSquares];
+    static const uint64_t knightAttacks[nSquares+2];
+    static const uint64_t kAttacked1[nSquares+2];
+    static const uint64_t kAttacked2[nSquares+2];
+    static const uint64_t kAttacked[nSquares+2];
     static uint64_t kingAttacks[16][nSquares];
     static uint64_t epTab[nPieces+1][nSquares];
 
