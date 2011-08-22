@@ -100,4 +100,7 @@ public:
     bool retrieve(Sub<PawnEntry, assoc>* subTable, Key k, PawnEntry& entry);
 };
 
+int score2tt(int s);
+int tt2Score(int s);
+
 #endif /* TRANSPOSITIONTABLE_H_ */

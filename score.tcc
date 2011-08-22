@@ -89,3 +89,13 @@ void SharedScore<C>::join() {
         WorkThread::idle(-1);
     }
 }
+
+template<Colors C>
+bool  SharedScore<C>::max(const int b)         {
+    LockGuard<RecursiveMutex> lock(valueMutex);
+    if (*this < b) {
+        v = b;
+        return true;
+    }
+    return false;
+}

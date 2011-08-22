@@ -107,14 +107,15 @@ public:
         return notReady;
     }
 
-    bool max(const int b)         {
+    bool max(const int b);
+/*    {
         LockGuard<RecursiveMutex> lock(valueMutex);
         if (*this < b) {
             v = b;
             return true;
         }
         return false;
-    }
+    }*/
 //     bool max(const int b, const Move n)         {
 //         LockGuard<RecursiveMutex> lock(valueMutex);
 //         if (*this < b) {

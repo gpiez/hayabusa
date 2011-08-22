@@ -307,7 +307,7 @@ std::string Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
 }
 
 namespace {
-inline int tt2Score(int s) {
+inline int inline_tt2Score(int s) {
     if (s < 0x400 && s > -0x400)
         return s;
     if (s > 0) {
@@ -325,7 +325,7 @@ inline int tt2Score(int s) {
     }
 }
 
-inline int score2tt(int s) {
+inline int inline_score2tt(int s) {
     if (s < 0x400 && s > -0x400)
         return s;
     if (s > 0) {
