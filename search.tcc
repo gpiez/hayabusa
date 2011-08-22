@@ -42,8 +42,8 @@ int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     depth -= dMaxExt;
     if (Options::reduction && movenr >= 3 && depth > 5) {
-        bool check = (!m.isSpecial() && (  (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
-                                        || (fold(b.doublebits[m.to()] & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
+        bool check = (!m.isSpecial() && (  (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
+                                        || (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
                                         )
                      )
                      || (BoardBase::knightAttacks[m.to()] & b.template getPieces<-C,King>() && m.piece() == Knight);
@@ -95,7 +95,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 , NodeItem* parent
 #endif
 ) {
-/*    stats.node++;*/
+//     stats.node++;
     KeyScore estimate;
     estimate.vector = prev.estimatedEval(m, eval);
 #ifdef QT_GUI_LIB
@@ -279,7 +279,10 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             stats.tthit++;
             ttDepth = subentry.depth;
             Score<C> ttScore;
-            ttScore.v = tt2Score(subentry.score);
+            if (P == leaf)
+                ttScore.v = inline_tt2Score(subentry.score);
+            else
+                ttScore.v = tt2Score(subentry.score);
             if (ttDepth >= depth || (ttScore>=infinity*C && subentry.loBound) || (ttScore<=-infinity*C && subentry.hiBound)) {
                 if (P == leaf && depth < dMaxExt) {
                     nextMaxDepth = true;
@@ -312,17 +315,15 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             bestMove = Move(subentry.from, subentry.to, 0);
         }
     }
-
-//     if (stats.node == 30153) asm("int3");
     stats.node++;
-    
+//     if (stats.node == 30153) asm("int3");
     bool leafMaxDepth;
     if (P == leaf) leafMaxDepth=false;
 
     if (P==tree && Options::pruning && !threatened && !extend) {
         if (depth == dMaxExt + 1) {
             Score<C> fScore;
-            fScore.v = estimatedScore - C*100;
+            fScore.v = estimatedScore/* - C*100*/;
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile1;
@@ -622,6 +623,10 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
          * The inner move loop
          */
         for (Move* i = good; i<bad && current < beta.v; ++i) {
+            if (P != vein && i == good+1) {
+                if (current.v > 0)
+                    leafExt = (Extension) (leafExt & ~ExtDualReply);
+            }
             int nattack=0;
             Score<C> value;
             if (    P == vein
@@ -658,16 +663,52 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                 ASSERT(P != leaf);
                 if (depth > 2 + dMaxExt
                     && current.v != -infinity*C //TODO compare to alpha0.v of rootsearch
-                    && bad-good > maxMovesNull
+//                     && bad-good > maxMovesNull
                     && b.material) {
+#if 0                        
+                    bool badmove = false;
+                    for (int newDepth = dMaxExt; newDepth <= depth-2; newDepth++) {
+                        /*
+                         * Verify nullmove search. If it is >alpha, dont't bother with nullmove
+                         */
+                        const A alpha0(alpha.v -((int)depth-newDepth-1)*50*C);
+                        const B beta0(alpha0.v + C);
+//                         unsigned newDepth = depth-(nullReduction[depth]+8);
+                        value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, alpha0, ply+1, ExtNot, nattack NODE);
+                        if (value <= -infinity*C || value <= alpha0.v) {
+                            badmove = true;
+                            break;
+                        }
+#if 0                        
+                        /*
+                         * The actual null move search. Search returns true if the
+                         * result in alpha1 comes down to alpha0, in that case prune
+                         */
+                        if (value <= alpha0.v) {
+//                             newDepth = depth-(nullReduction[depth]+7);
+                            Score<C> nullvalue(search4<C, P>(b, *i, newDepth, alpha0, beta0, ply+2, ExtNot, nattack NODE));
+                            if (nullvalue <= alpha0.v) {
+                                current.max(value.v);
+                                badmove = true;
+                                break;
+                            }
+                        }
+#endif
+                    }
+                    if (badmove) continue;
+#endif                    
+#if 1                   
                     /*
                      * Verify nullmove search. If it is >alpha, dont't bother with nullmove
                      */
                     const B beta0(alpha.v + C);
-                    unsigned newDepth = depth-(nullReduction[depth]+2);
-                    ASSERT(depth > nullReduction[depth]+2);
+                    unsigned newDepth = depth-(nullReduction[depth]);
+                    ASSERT(depth > nullReduction[depth]);
+/*                    if (notverified) {
+                        notverified = false;*/
                     value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, alpha, ply+1, ExtNot, nattack NODE);
                     if (value <= -infinity*C) continue;
+//                     }
                     /*
                      * The actual null move search. Search returns true if the
                      * result in alpha1 comes down to alpha0, in that case prune
@@ -681,6 +722,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                             continue;
                         }
                     }
+#endif
                 }
                 int reduction = calcReduction(b, i-good, *i, depth);
                 if (current.v != -infinity*C //FIXME compare to alpha0.v, reuse condition
@@ -767,7 +809,11 @@ storeAndExit:
         
 
         stored.upperKey |= z >> stored.upperShift;
-        stored.score |= score2tt(current.v);
+        if (P == leaf)
+            stored.score |= inline_score2tt(current.v);
+        else
+            stored.score |= score2tt(current.v);
+        
         stored.loBound |= current > origAlpha.v;
         if (current > origAlpha.v && bestMove.capture() == 0 && bestMove.piece()/* && !bestMove.isSpecial()*/) {
             ASSERT(bestMove.fromto());
