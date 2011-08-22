@@ -22,6 +22,7 @@
 #include "boardbase.h"
 #include "options.h"
 #include "transpositiontable.tcc"
+#include <cstdio>
 
 static const __v2di zero = {0};
 static const __v2di mask01 = { 0x0101010101010101, 0x0202020202020202 };
@@ -171,9 +172,9 @@ Eval::Eval()
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
 //    pt->setSize(0x100000000);
     pawn = 80;
-    knight = 300;   
-    bishop = 300;   
-    rook = 500;
+    knight = 280;
+    bishop = 295;
+    rook = 480;
     queen = 900;
     /*
      * These parameters decide the weight of the attack function
@@ -219,26 +220,6 @@ Eval::Eval()
     sigmoid( pawnConnPasser, 0, 50, 6, 1.0 );
     pawnUnstoppable = 700;
 
-//     attack1b1 = 4;        //direct attack of ring around king
-//     attack2b1 = 2;        //direct attack of 2nd ring around king
-//     attack1b2 = 2;        //indirect attack of ring around king
-//     attack2b2 = 1;        //indirect attack of 2nd ring around king
-//     attack1n1 = 4;
-//     attack2n1 = 2;
-//     attack1n2 = 2;
-//     attack2n2 = 1;
-//     attack1r1 = 6;
-//     attack2r1 = 2;
-//     attack1r2 = 3;
-//     attack2r2 = 1;
-//     attack1q1 = 8;
-//     attack2q1 = 4;
-//     attack1q2 = 4;
-//     attack2q2 = 2;
-//     attack1k1 = 3;        //king is not able to deliver mate
-//     attack2k1 = 1;
-//     attack1p1 = 4;
-//     attack2p1 = 1;
     sigmoid(attackR1, 55, 80, 3.0, 3.0, 1); // max bits set = 21
     sigmoid(attackR2, 55, 80, 6.0, 6.0, 1); // max bits set = 21
     sigmoid(attackB1, 40, 60, 2.5, 2.5, 1); // max bits set = 21
@@ -332,26 +313,37 @@ Eval::Eval()
 
 void Eval::initPS() {
 
+    typedef int I4[4];
+    
     for (unsigned int sq = 0; sq<nSquares; ++sq)
         getPS( 0, sq) = CompoundScore{ 0, 0 };
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Pawn, sq) = Eval::pawn;/* + CompoundScore{ pawn[Opening][sq ^ 0x38], pawn[Endgame][sq ^ 0x38] };*/
+        getPS( Pawn, sq) = Eval::pawn;
         getPS(-Pawn, sq ^ 070) = -getPS( Pawn, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Rook, sq)  = Eval::rook;/* + CompoundScore{ rook[Opening][sq ^ 0x38], rook[Endgame][sq ^ 0x38] };*/
+        unsigned xh = (sq & 7);
+        if (xh>3) xh ^= 7;
+        getPS( Rook, sq) = Eval::rook + (I4) { 0, 2, 4, 6 } [xh];
         getPS(-Rook, sq ^ 070) = -getPS( Rook, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Bishop, sq) = Eval::bishop;/* + CompoundScore{ bishop[Opening][sq ^ 0x38], bishop[Endgame][sq ^ 0x38] };*/
+        unsigned xh = (sq & 7);
+        unsigned yh = sq >> 3;
+        if (xh>3) xh ^= 7;
+        if (yh>3) yh ^= 7;
+        getPS( Bishop, sq) = Eval::bishop + (I4) { 0, 5, 8, 10 } [xh] + (I4) { 0, 5, 8, 10 } [yh];
         getPS(-Bishop, sq ^ 070) = -getPS( Bishop, sq);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Knight, sq) = Eval::knight;/* + CompoundScore{ knight[Opening][sq ^ 0x38], knight[Endgame][sq ^ 0x38] };*/
+        unsigned xh = (sq & 7);
+        unsigned yh = sq >> 3;
+        if (xh>3) xh ^= 7;
+        getPS( Knight, sq) = Eval::knight + (I4) { 0, 10, 16, 20 } [xh] + (int[8]) { 0, 6, 11, 15, 18, 20, 18, 15 } [yh];
         getPS(-Knight, sq ^ 070) = -getPS( Knight, sq);
     }
 
@@ -939,10 +931,10 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         unsigned q=bit(b.getPieces<C,Queen>());
         __v2di connectedBR = ~ pcmpeqq(b.qsingle[CI][0].d13 & _mm_set1_epi64x(b.getPieces<C,Bishop>()), zero)
             & allBishopAttacks
-            & b.mask13x[q];
+            & b.bits[q].mask13;
         connectedBR |= ~ pcmpeqq(b.qsingle[CI][0].d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero)
             & allRookAttacks
-            & b.mask02[q].x;
+            & b.bits[q].mask02;
         uint64_t qxray = fold(connectedBR); //TODO optimize for queenless positions
         qmob1 |= qxray & ~b.getOcc<C>() & restrictions;
         qmob2 |= qxray & ~b.getOcc<C>() & restrictions;

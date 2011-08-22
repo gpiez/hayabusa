@@ -150,28 +150,20 @@ class Eval {
     int oppKingOwnPasser[8];
     int ownKingOwnPasser[8];
 
-/*    int attack1b1;
-    int attack2b1;
-    int attack1b2;
-    int attack2b2;
-    int attack1n1;
-    int attack2n1;
-    int attack1n2;
-    int attack2n2;
-    int attack1r1;
-    int attack2r1;
-    int attack1r2;
-    int attack2r2;
-    int attack1q1;
-    int attack2q1;
-    int attack1q2;
-    int attack2q2;
-    int attack1p1;
-    int attack2p1;
-    int attack1k1;
-    int attack2k1;*/
-    
     int endgameMaterial;
+
+    int psqRX[2][8];
+    int psqRY[2][8];
+    int psqBX[2][8];
+    int psqBY[2][8];
+    int psqQX[2][8];
+    int psqQY[2][8];
+    int psqNX[2][8];
+    int psqNY[2][8];
+    int psqPX[2][8];
+    int psqPY[2][8];
+    int psqKX[2][8];
+    int psqKY[2][8];
     
     void initPS();
     void initZobrist();
