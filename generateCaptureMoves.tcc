@@ -56,7 +56,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
         Move m = bs->move;
         ASSERT(m.data);
         do {
-            __v2di from2 = doublebits[m.from()];
+            __v2di from2 = bits[m.from()].doublebits;
             __v2di pin13 = from2 & dpins[CI].d13;
             pin13 = pcmpeqq(pin13, zero);
             pin13 = ~pin13 & d2 & a13;
@@ -92,7 +92,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
         Move m = rs->move;
         ASSERT (m.data);
         do {
-            __v2di from2 = doublebits[m.from()];
+            __v2di from2 = bits[m.from()].doublebits;
             __v2di pin02 = from2 & dpins[CI].d02;
             pin02 = pcmpeqq(pin02, zero);
             pin02 = ~pin02 & d2 & a02;
@@ -126,7 +126,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
         do {
             __v2di a02 = qs->d02;
             __v2di a13 = qs->d13;
-            __v2di from2 = doublebits[m.from()];
+            __v2di from2 = bits[m.from()].doublebits;
             __v2di pin02 = from2 & dpins[CI].d02;
             __v2di pin13 = from2 & dpins[CI].d13;
             pin02 = pcmpeqq(pin02, zero);
@@ -291,13 +291,13 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
 
     if (uint64_t forks = getAttacks<C,Rook>() & getAttacks<-C,Queen>()) {
         if(kingIncoming[EI].d0 & getPieces<-C,Queen>()) {
-            forks &= (((const uint64_t*)&mask02[k].x)[0]
+            forks &= (((const uint64_t*)&bits[k].mask02)[0]
                 & ~occupied[CI]
                 & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
                 & (getAttacks<C,Bishop>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
                 );
         } else if (kingIncoming[EI].d2 & getPieces<-C,Queen>()) {
-            forks &= (((const uint64_t*)&mask02[k].x)[1]
+            forks &= (((const uint64_t*)&bits[k].mask02)[1]
                 & ~occupied[CI]
                 & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
                 & (getAttacks<C,Bishop>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
@@ -307,7 +307,7 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
         if (forks) {
             for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
                 __v2di a02 = rs->d02;
-                __v2di from2 = doublebits[rs->move.from()];
+                __v2di from2 = bits[rs->move.from()].doublebits;
                 __v2di pin02 = from2 & dpins[CI].d02;
                 pin02 = pcmpeqq(pin02, zero);
                 pin02 = ~pin02 & a02 /*& xray02*/;
@@ -328,13 +328,13 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
      */
     if (uint64_t skewers = getAttacks<C,Bishop>() & getAttacks<-C,Queen>()) {
         if (kingIncoming[EI].d1 & getPieces<-C,Queen>()) {
-            skewers &= (((const uint64_t*)&mask13x[k])[0]
+            skewers &= (((const uint64_t*)&bits[k].mask13)[0] //TODO use unions
                 & ~occupied[CI]
                 & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
                 & (getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
                 );
         } else if (kingIncoming[EI].d3 & getPieces<-C,Queen>()) {
-            skewers &= (((const uint64_t*)&mask13x[k])[1]
+            skewers &= (((const uint64_t*)&bits[k].mask13)[1]
                 & ~occupied[CI]
                 & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
                 & (getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
@@ -344,7 +344,7 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
         if (skewers) {
             for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
                 __v2di a13 = bs->d13;
-                __v2di from2 = doublebits[bs->move.from()];
+                __v2di from2 = bits[bs->move.from()].doublebits;
                 __v2di pin13 = from2 & dpins[CI].d13;
                 pin13 = pcmpeqq(pin13, zero);
                 pin13 = ~pin13 & a13;

@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-#include <pch.h>
+#include "pch.h"
 
 #include "boardbase.h"
 
@@ -308,6 +308,18 @@ int main(int, char** argv) {
                     std::cout << " ";
             }
         std::cout << "}," << std::endl;
+    } else if (argv[1] && std::string("doublereverse2") == argv[1]) {
+        std::cout << "{";
+        for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
+             {
+                uint64_t bits= 1ULL << (63-x-y*8);
+                std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ", 0x" << std::setw(16) << bits << " }, ";
+                if (x == 7)
+                    std::cout << std::endl;
+                else
+                    std::cout << " ";
+            }
+        std::cout << "}," << std::endl;
     } else if (argv[1] && std::string("masks") == argv[1]) {
         for (int y = 0; y < (signed)nRows; ++y)
         for (int x = 0; x < (signed)nFiles; ++x) {
@@ -418,6 +430,82 @@ int main(int, char** argv) {
                 }
             std::cout << "}," << std::endl;
         }
+
+///////////////////////////////////////////
+
+    } else if (argv[1] && std::string("bits") == argv[1]) {
+        for (int y = 0; y < (signed)nRows; ++y)
+        for (int x = 0; x < (signed)nFiles; ++x) {
+            uint64_t p=0;
+            int dx=1, dy=0;
+            for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+                    p |= 1ULL << (x0+y0*nRows);
+            dx=-1;
+            for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+                    p |= 1ULL << (x0+y0*nRows);
+            uint64_t dir0x = p;
+
+            p=0; dx=0; dy=1;
+            for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+                    p |= 1ULL << (x0+y0*nRows);
+            dy=-1;
+            for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+                    p |= 1ULL << (x0+y0*nRows);
+            uint64_t dir2x = p;
+
+            p=0; dx=1; dy=1;
+            for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+                p |= 1ULL << (x0+y0*nRows);
+            dx=-1; dy=-1;
+            for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+                p |= 1ULL << (x0+y0*nRows);
+            uint64_t dir1x = p;
+            
+            p=0; dx=1; dy=-1;
+            for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+                p |= 1ULL << (x0+y0*nRows);
+            dx=-1; dy=1;
+            for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
+                p |= 1ULL << (x0+y0*nRows);
+            uint64_t dir3x = p;
+
+            uint64_t bits= 1ULL << (x+y*8);
+
+            uint64_t rbits= 1ULL << (x+(7-y)*8);
+
+            uint64_t rbits2= 1ULL << (63-x-y*8);
+
+            uint64_t nbits=0;
+            for (int u=-2; u<=2; ++u)
+                for (int v=-2; v<=2; ++v)
+                    if (abs(u*v)==2)
+                        if (x+u >= 0 && x+u<8 && y+v>=0 && y+v<8)
+                            nbits |= 1ULL << (x+u+(y+v)*8);
+
+            uint64_t kbits=0;
+            for (int u=-2; u<=2; ++u)
+                for (int v=-2; v<=2; ++v)
+                    if (abs(u)!=2 || abs(v)!=2)
+                        if (x+u >= 0 && x+u<8 && y+v>=0 && y+v<8)
+                            kbits |= 1ULL << (x+u+(y+v)*8);
+                        
+            std::cout << "{{ 0x" << std::hex << std::setw(16) << std::setfill('0') << dir0x << ", 0x" << std::setw(16) << dir2x << " }, ";
+            std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << dir1x << ", 0x" << std::setw(16) << dir3x << " }, ";
+            std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ", 0x" << std::setw(16) << bits << " }, ";
+            std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << rbits << ", 0x" << std::setw(16) << rbits << " }, ";
+            std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << nbits << ", ";
+            std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << kbits << ", ";
+            std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << rbits2 << ", 0x" << std::setw(16) << rbits2 << " }}, ";
+
+            if (x == 7)
+                    std::cout << std::endl;
+            else
+                    std::cout << " ";
+
+//                      mask02x[x+y*nRows] = _mm_set_epi64x(dir2, dir0);
+//                      mask02b[x+y*nRows] = _mm_set_epi64x(dir2x, dir0x);
+//                      mask13x[x+y*nRows] = _mm_set_epi64x(dir3, dir1);
+            }
     }
 
     return 0;

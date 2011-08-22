@@ -156,7 +156,7 @@ R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) cons
 haveMate:
         for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
             __v2di a02 = rs->d02;
-            __v2di from2 = doublebits[rs->move.from()];
+            __v2di from2 = bits[rs->move.from()].doublebits;
             __v2di pin02 = from2 & dpins[CI].d02;
             pin02 = pcmpeqq(pin02, zero);
             pin02 = ~pin02 & a02 /*& xray02*/;
@@ -421,7 +421,7 @@ haveMate:
             for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
                 __v2di a02 = qs->d02;
                 __v2di a13 = qs->d13;
-                __v2di from2 = doublebits[qs->move.from()];
+                __v2di from2 = bits[qs->move.from()].doublebits;
                 __v2di pin02 = from2 & dpins[CI].d02;
                 __v2di pin13 = from2 & dpins[CI].d13;
                 pin02 = pcmpeqq(pin02, zero);
@@ -532,7 +532,7 @@ haveMate:
 
             for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
                 __v2di a13 = bs->d13;
-                __v2di from2 = doublebits[bs->move.from()];
+                __v2di from2 = bits[bs->move.from()].doublebits;
                 __v2di pin13 = from2 & dpins[CI].d13;
                 __v2di xray13 = a13 & datt[EI].d13;     //TODO capture mate moves are wrongly recognized as moves on a x-ray protected square
                 pin13 = pcmpeqq(pin13, zero);
@@ -560,8 +560,8 @@ haveMate:
         unsigned n1 = bitr(getPieces<C,Knight>());
         uint64_t attNotKnight = getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Bishop>() |  getAttacks<C,Pawn>() | getAttacks<C,King>();
         if (n1 != n0) {
-            uint64_t n0attacks = BoardBase::knightAttacks[n0];
-            uint64_t n1attacks = BoardBase::knightAttacks[n1];
+            uint64_t n0attacks = knightAttacks[n0];
+            uint64_t n1attacks = knightAttacks[n1];
             uint64_t checkN0Moves = n0attacks & checkingMoves;
             uint64_t checkN1Moves = n1attacks & checkingMoves;
             if (checkN0Moves) mate = checkN0Moves & generateKnightMates(attNotKnight | n1attacks, king, k);

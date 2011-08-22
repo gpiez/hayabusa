@@ -56,7 +56,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
         const MoveTemplateB* bs = bsingle[CI];
         Move m = bs->move;
         do {
-            __v2di from2 = doublebits[m.from()];
+            __v2di from2 = bits[m.from()].doublebits;
             __v2di pin13 = from2 & dpins[CI].d13;
             pin13 = pcmpeqq(pin13, zero);
             pin13 = ~pin13 & bs->d13;
@@ -73,7 +73,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
         const MoveTemplateR* rs = rsingle[CI];
         Move m = rs->move;
         do {
-            __v2di from2 = doublebits[m.from()];
+            __v2di from2 = bits[m.from()].doublebits;
             __v2di pin02 = from2 & dpins[CI].d02;
             pin02 = pcmpeqq(pin02, zero);
             pin02 = ~pin02 & rs->d02;
@@ -90,7 +90,7 @@ void ColoredBoard<C>::generateTargetMove(Move* &/*good*/, Move* &bad, uint64_t t
         const MoveTemplateQ* qs = qsingle[CI];        
         Move m = qs->move;
         do {
-            __v2di from2 = doublebits[m.from()];
+            __v2di from2 = bits[m.from()].doublebits;
             __v2di pin02 = from2 & dpins[CI].d02;
             __v2di pin13 = from2 & dpins[CI].d13;
             pin02 = pcmpeqq(pin02, zero);
@@ -257,7 +257,7 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
         if (!m.data) break;
         __v2di a02 = qs->d02;
         __v2di a13 = qs->d13;
-        __v2di from2 = doublebits[m.from()];
+        __v2di from2 = bits[m.from()].doublebits;
         __v2di pin02 = from2 & dpins[CI].d02;
         __v2di pin13 = from2 & dpins[CI].d13;
         pin02 = pcmpeqq(pin02, zero);
@@ -289,7 +289,7 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
         Move m = rs->move;
         if (!m.data) break;
         __v2di a02 = rs->d02;
-        __v2di from2 = doublebits[m.from()];
+        __v2di from2 = bits[m.from()].doublebits;
         __v2di pin02 = from2 & dpins[CI].d02;
         pin02 = pcmpeqq(pin02, zero);
         pin02 = ~pin02 & a02;
@@ -310,7 +310,7 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
         Move m = bs->move;
         if (!m.data) break;
         __v2di a13 = bs->d13;
-        __v2di from2 = doublebits[m.from()];
+        __v2di from2 = bits[m.from()].doublebits;
         __v2di pin13 = from2 & dpins[CI].d13;
         pin13 = pcmpeqq(pin13, zero);
         pin13 = ~pin13 & a13;
