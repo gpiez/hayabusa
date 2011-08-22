@@ -36,7 +36,9 @@ void TestRootBoard::initTestCase() {
     qRegisterMetaType<std::string>("std::string");
     BoardBase::initTables();
     StringList args;
-    static char* argv[] = { "UnitTest", NULL };
+    char* unittest = new char[9];
+    strcpy(unittest, "unittest");
+    static char* argv[] = { unittest, NULL };
     static int argc = 1;
     c = new Console(argc, argv);
     b = c->board;
