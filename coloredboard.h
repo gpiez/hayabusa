@@ -41,11 +41,13 @@ class ColoredBoard: public BoardBase {
 public:
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     static const uint8_t pov = CI*56;    //for xoring square values to the other side
+    static unsigned errorPieceIndex[7];
 
     ColoredBoard() = default;
     template<typename T>
     inline ColoredBoard(const T& prev, Move m, __v8hi est);
-    inline __v8hi estimatedEval(const Move m, const Eval& rb) const;
+    inline __v8hi inline_estimatedEval(const Move m, const Eval& rb) const;
+    __v8hi estimatedEval(const Move m, const Eval& rb) const __attribute__((noinline));
     static void initTables();
     template<MoveType>
     void generateCaptureMoves(Move* &list, Move* &bad) const __attribute__((noinline));
@@ -55,7 +57,7 @@ public:
     bool generateSkewers( Move** good) const __attribute__((noinline));
     bool generateForks( Move** good) const __attribute__((noinline));
     void generateNonCap(Move*& good, Move*& bad) const __attribute__((noinline));
-    void doMove(BoardBase* next, Move m) const;
+    inline void doMove(BoardBase* next, Move m) const;
     bool isForked() const __attribute__((noinline));
     inline Key getZobrist() const;
 private:

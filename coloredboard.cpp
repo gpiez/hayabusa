@@ -46,4 +46,3 @@ void ColoredBoard<C>::initTables() {
 */
     }
 }
-

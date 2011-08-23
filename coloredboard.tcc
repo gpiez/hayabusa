@@ -23,6 +23,10 @@
 #include "boardbase.tcc"
 #include "rootboard.h"
 
+template<Colors PREVC>
+unsigned ColoredBoard<PREVC>::errorPieceIndex[7] =
+  { 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+1*PREVC, 6+5*PREVC, 6+6*PREVC };
+
 /*
  * Construct a board with color C to move
  * with executing move m from a given position prev
@@ -30,6 +34,7 @@
 template<Colors C>
 template<typename T>
 ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
+    prev.copyPieces(*this);
     prev.doMove(this, m);
     if (prev.CI == (unsigned)CI)
         fiftyMoves = 0;
@@ -45,19 +50,6 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
     uint64_t from = 1ULL << m.from();
     uint64_t to = 1ULL << m.to();
     ASSERT(m.piece());
-    
-    __m128i xmm1 = _mm_load_si128((__m128i*)pieces+1);
-    __m128i xmm2 = _mm_load_si128((__m128i*)pieces+2);
-    __m128i xmm3 = _mm_load_si128((__m128i*)pieces+3);
-    _mm_store_si128((__m128i*)next->pieces+1, xmm1);
-    _mm_store_si128((__m128i*)next->pieces+2, xmm2);
-    _mm_store_si128((__m128i*)next->pieces+3, xmm3);
-    xmm1 = _mm_load_si128((__m128i*)pieces+4);
-    xmm2 = _mm_load_si128((__m128i*)pieces+5);
-    xmm3 = _mm_load_si128((__m128i*)pieces+6);
-    _mm_store_si128((__m128i*)next->pieces+4, xmm1);
-    _mm_store_si128((__m128i*)next->pieces+5, xmm2);
-    _mm_store_si128((__m128i*)next->pieces+6, xmm3);
 
     next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
 
@@ -114,6 +106,10 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
 
 template<Colors C>
 __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
+    return inline_estimatedEval(m, eval);
+}
+template<Colors C>
+__v8hi ColoredBoard<C>::inline_estimatedEval(const Move m, const Eval& eval) const {
     ASSERT(m.piece());
     if (m.isSpecial()) {
         unsigned piece = m.piece() & 7;

@@ -1091,6 +1091,15 @@ int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int /*sideToMove*/) c
     return score;
 }
 
+template<GamePhase P>
+int Eval::mobilityDiff(const BoardBase& b, int& wap, int& bap, int& wdp, int& bdp) const {
+    return mobility<White, P>(b, wap, wdp) - mobility<Black, P>(b, bap, bdp);
+}
+
+int Eval::attackDiff(const BoardBase& b, const PawnEntry& pe, int wap, int bap, int wdp, int bdp) const {
+    return attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);
+}
+            
 int Eval::operator () (const BoardBase& b, int stm ) const {
     int wap, bap;
     return operator()(b, stm, wap, bap);
@@ -1126,18 +1135,18 @@ int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
         m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
         a = attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);*/
         if (openingScale >= endgameTransitionSlope) {
-            m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
-            a = attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);
+            m = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
+            a = attackDiff(b, pe, wap, bap, wdp, bdp);
             e = 0;
             pa = pe.score + pe.centerOpen;
         } else if (openingScale <= 0) {
-            m = mobility<White, Endgame>(b, wap, wdp) - mobility<Black, Endgame>(b, bap, bdp);
+            m = mobilityDiff<Endgame>(b, wap, bap, wdp, bdp);
             a = 0;
             e = endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm);
             pa = pe.score + pe.centerEnd;
         } else {
-            m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
-            a = (openingScale*(attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp))) >> logEndgameTransitionSlope;
+            m = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
+            a = (openingScale*attackDiff(b, pe, wap, bap, wdp, bdp)) >> logEndgameTransitionSlope;
             e = ((endgameTransitionSlope-openingScale)*(endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm))) >> logEndgameTransitionSlope;
             pa = pe.score + ((openingScale*pe.centerOpen + (endgameTransitionSlope-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope);
             
@@ -1154,7 +1163,7 @@ int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
     } else {     // pawnless endgame
         int mat = b.keyScore.score.calc(b.material);
         int wap, bap, wdp, bdp; //FIXME not needed here
-        int m = mobility<White, Endgame>(b, wap, wdp) - mobility<Black, Endgame>(b, bap, bdp);
+        int m = mobilityDiff<Endgame>(b, wap, bap, wdp, bdp);
         int p = (mat>0 ? 1:4)*king<White>(b) - (mat<0 ? 1:4)*king<Black>(b);
         return m + p;        
     }
