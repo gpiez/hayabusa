@@ -97,7 +97,10 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 ) {
 //     stats.node++;
     KeyScore estimate;
-    estimate.vector = prev.estimatedEval(m, eval);
+    if (P == leaf || P == vein)
+        estimate.vector = prev.inline_estimatedEval(m, eval);
+    else
+        estimate.vector = prev.estimatedEval(m, eval);
 #ifdef QT_GUI_LIB
     uint64_t startnode = stats.node;
     NodeItem* node = 0;
@@ -131,7 +134,8 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 
     if (stopSearch != Running) return 0;
     
-    unsigned iPiece = (unsigned[7]) { 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+1*PREVC, 6+5*PREVC, 6+6*PREVC } [ m.piece() & 7 ];
+//     unsigned iPiece = (unsigned[7]) { 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+1*PREVC, 6+5*PREVC, 6+6*PREVC } [ m.piece() & 7 ];
+    unsigned iPiece = prev.errorPieceIndex[ m.piece() & 7 ]; // TODO really useful?
     PositionalError& diff = pe[iPiece][m.from()][m.to()];
     //TODO merge rooks/bishops/knights
 //     PositionalError& diff = PREVC == White ? pe[nPieces + (m.piece()&7)][m.from()][m.to()] : pe[nPieces - (m.piece()&7)][m.from()][m.to()];
@@ -378,7 +382,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             oldattack = battack;
         }
         b.isExact = true;
-        realScore = estimate.score.calc(prev.material) + b.positionalScore;
+        realScore = b.keyScore.score.calc(prev.material) + b.positionalScore;
         if (isMain & !m.isSpecial()) {
             Score<C> diff2;
             diff2.v = b.positionalScore - prev.positionalScore;
