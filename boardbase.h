@@ -51,8 +51,8 @@ struct BoardBase {
     uint64_t occupied1;
     uint64_t fill;
     uint64_t pins[nColors];                        // +16
-    uint64_t attacks[nPieces+1][nColors];        // +32
-    uint64_t pieces[nPieces+1][nColors];        // +144
+    uint64_t attacks[nPieces+2][nColors];        // include 16 byte filler
+    uint64_t pieces[nPieces+1][nColors];        // +160
     union {
         struct {
         __v2di d02;
@@ -190,10 +190,9 @@ struct BoardBase {
     static Castling castlingMask[nSquares];
     void init();
     void print() const;
-    int getPiece(unsigned pos) const;
     unsigned getPieceFromBit(uint64_t bit) const;
     static void initTables();
-
+    void copyPieces(BoardBase& next) const;
 } ALIGN_CACHE;                                    //sum:        3C0
 
 #endif /* BOARDBASE_H_ */

@@ -145,23 +145,6 @@ void BoardBase::init() {
     keyScore.pawnKey = 0x12345678;
 }
 
-int BoardBase::getPiece(unsigned pos) const {
-    uint64_t p = 1ULL << pos;
-    return
-    getPieces<White,King>() & p ? King:
-    getPieces<White,Pawn>() & p ? Pawn:
-    getPieces<White,Knight>() & p ? Knight:
-    getPieces<White,Queen>() & p ? Queen:
-    getPieces<White,Bishop>() & p ? Bishop:
-    getPieces<White,Rook>() & p ? Rook:
-    getPieces<Black,King>() & p ? -King:
-    getPieces<Black,Pawn>() & p ? -Pawn:
-    getPieces<Black,Knight>() & p ? -Knight:
-    getPieces<Black,Queen>() & p ? -Queen:
-    getPieces<Black,Bishop>() & p ? -Bishop:
-    getPieces<Black,Rook>() & p ? -Rook:0;
-}
-
 void BoardBase::print() const {
     static const char chessPieces[nTotalPieces] =
 //        { L'♚', L'♟', L'♞', L'♛', L'♝', L'♜', ' ', L'♖', L'♗', L'♕', L'♘', L'♙', L'♔' };
@@ -170,7 +153,7 @@ void BoardBase::print() const {
     std::cout << "--------------------------------" << std::endl;
     for (unsigned int y = 0; y < nRows; ++y) {
         for (unsigned int x = 0; x < nFiles; ++x) {
-            std::cout << "| " << chessPieces[6 + getPiece((7-y)*8+x)] << ' ';
+            std::cout << "| " << chessPieces[6 + getPieceFromBit(1ULL << ((7-y)*8+x))] << ' ';
         }
         std::cout << std::endl << "--------------------------------" << std::endl;
     }
@@ -199,3 +182,35 @@ unsigned BoardBase::getPieceFromBit(uint64_t bit) const {
         NoPiece;
 #endif
 }
+
+void BoardBase::copyPieces(BoardBase& next) const
+{
+#if defined(__AVX__)
+    __m256i ymm1 = _mm256_loadu_si256((__m256i*)pieces[1]);
+    __m256i ymm2 = _mm256_loadu_si256((__m256i*)pieces[3]);
+    __m256i ymm3 = _mm256_loadu_si256((__m256i*)pieces[5]);
+    _mm256_storeu_si256((__m256i*)next.pieces[1], ymm1);
+    _mm256_storeu_si256((__m256i*)next.pieces[3], ymm2);
+    _mm256_storeu_si256((__m256i*)next.pieces[5], ymm3);
+#else
+#if defined(__SSE2__)
+    __m128i xmm1 = _mm_load_si128((__m128i*)pieces+1);
+    __m128i xmm2 = _mm_load_si128((__m128i*)pieces+2);
+    __m128i xmm3 = _mm_load_si128((__m128i*)pieces+3);
+    _mm_store_si128((__m128i*)next.pieces+1, xmm1);
+    _mm_store_si128((__m128i*)next.pieces+2, xmm2);
+    _mm_store_si128((__m128i*)next.pieces+3, xmm3);
+    xmm1 = _mm_load_si128((__m128i*)pieces+4);
+    xmm2 = _mm_load_si128((__m128i*)pieces+5);
+    xmm3 = _mm_load_si128((__m128i*)pieces+6);
+    _mm_store_si128((__m128i*)next.pieces+4, xmm1);
+    _mm_store_si128((__m128i*)next.pieces+5, xmm2);
+    _mm_store_si128((__m128i*)next.pieces+6, xmm3);
+#else
+    memcpy(next.pieces[1], pieces[1], nPieces*nColors*sizeof(uint64_t));
+#endif
+#endif    
+}
+
+
+
