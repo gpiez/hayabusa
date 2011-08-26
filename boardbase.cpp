@@ -160,7 +160,6 @@ void BoardBase::print() const {
 }
 
 unsigned BoardBase::getPieceFromBit(uint64_t bit) const {
-    ASSERT( !((getPieces<White,King>() | getPieces<Black,King>()) & bit) );
 #ifdef __SSE4_1__
     __v2di piece = _mm_set_epi64x(bit, bit);
     const __v2di zero = _mm_set_epi64x(0, 0);
