@@ -95,7 +95,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 , NodeItem* parent
 #endif
 ) {
-//     stats.node++;
+    stats.node++;
     KeyScore estimate;
     if (P == leaf || P == vein)
         estimate.vector = prev.inline_estimatedEval(m, eval);
@@ -144,14 +144,16 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 //     current.v = -infinity*C;
     RawScore estimatedScore = estimate.score.calc(prev.material) + prev.positionalScore + diff.v; //TODO move score() into ColorBoard ctor
 #ifdef CALCULATE_MEAN_POSITIONAL_ERROR
-    if (diff.n > 1.0) {
+/*    if (diff.n > 1.0) {
         float invn = 1.0/diff.n;
         float v = diff.e2*invn - (diff.e*invn)*(diff.e*invn);
         v = sqrt(v);
-        estimatedScore -= C*v;
+        ASSERT(v == diff.error);
+        estimatedScore -= C*diff.error;
     } else {
+        ASSERT(100 == diff.error);
         estimatedScore -= 100*C;
-    }
+    }*/
 #else
     estimatedScore -= 100*C;
 #endif
@@ -319,7 +321,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             bestMove = Move(subentry.from, subentry.to, 0);
         }
     }
-    stats.node++;
+//     stats.node++;
 //     if (stats.node == 30153) asm("int3");
     bool leafMaxDepth;
     if (P == leaf) leafMaxDepth=false;
@@ -388,11 +390,18 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             diff2.v = b.positionalScore - prev.positionalScore;
 #ifdef CALCULATE_MEAN_POSITIONAL_ERROR
             diff.n++;
-            double err = diff2.v - diff.v;
-            diff.e  += err;
-            diff.e2 += err*err;
-            if (diff.n > 0)
-                ASSERT( diff.e2/diff.n - diff.e*diff.e/(diff.n*diff.n) >= 0 );
+            diff.e  += diff2.v;
+            diff.e2 += diff2.v*diff2.v;
+            if (diff.n >= 1024) {
+                diff.n *= 0.5;
+                diff.e *= 0.5;
+                diff.e2 *= 0.5;
+            }
+            float invn = 1.0/diff.n;
+            float avg = diff.e*invn;
+            float v = diff.e2*invn - avg*avg;
+            v = sqrt(v);
+            diff.v = avg - C*2.0*v;
 #else
             ASSERT(realScore == estimatedScore - diff.v + diff2.v);
 #endif

@@ -175,7 +175,7 @@ void RootBoard::clearEE() {
         for (unsigned int sq1=0; sq1<nSquares; ++sq1)
         for (unsigned int sq=0; sq<nSquares; ++sq) {
             PositionalError& pe = this->pe[p+nPieces][sq1][sq];
-            pe.v = 0;
+            pe.v = 100;
 #ifdef CALCULATE_MEAN_POSITIONAL_ERROR
             pe.n = 0.0;
             pe.e = 0.0;
