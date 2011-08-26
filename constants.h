@@ -151,22 +151,26 @@ static inline uint64_t rol(uint64_t x, unsigned k) {
     return __rolq(x, k);
 }
 
-static inline unsigned int bit(uint64_t x) __attribute__((__always_inline__));
-static inline unsigned int bit(uint64_t x) {
-    return __bsfq(x);
+static inline uint64_t bit(uint64_t x) __attribute__((__always_inline__));
+static inline uint64_t bit(uint64_t x) {
+    uint64_t result;
+    asm(" bsfq %1, %0 \n"
+        : "=r"(result)
+        : "r"(x)
+    );
+    return result;
+//     return __bsfq(x);
 }
 
 static inline unsigned int bitr(uint64_t x) __attribute__((__always_inline__));
 static inline unsigned int bitr(uint64_t x) {
-#ifdef DRAGONEGG
-    uint8_t result;
+    uint64_t result;
     asm(" bsrq %1, %0 \n"
 	: "=r"(result)
 	: "r"(x)
     );
-#else
-    return __bsrq(x);
-#endif    
+    return result;
+//     return __bsrq(x);
 }
 
 static inline uint64_t btr(uint64_t x, uint64_t b) __attribute__((__always_inline__));
