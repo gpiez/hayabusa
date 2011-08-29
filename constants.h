@@ -112,7 +112,14 @@ static const unsigned int nSquares = nFiles*nRows;
 static const int dirOffsets[8] = { 1, 9, 8, 7, -1, -9, -8, -7 };
 static const int xOffsets[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 static const int yOffsets[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
-static const int materialTab[nPieces+1] = { 0, 5, 2,10, 2, 0, 0 };
+
+static const int materialRook = 5;
+static const int materialBishop = 2;
+static const int materialQueen = 10;
+static const int materialKnight = 2;
+static const int materialPawn = 0;
+static const int materialTab[nPieces+1] = { 0, materialRook, materialBishop, materialQueen, materialKnight, materialPawn, 0 };
+
 static inline int popcount(uint64_t x) {
 #ifdef __SSE4_2__
     return _popcnt64(x);

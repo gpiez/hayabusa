@@ -51,10 +51,10 @@ bool Eval::draw(const BoardBase& b, int& upperbound) const {
 #endif
     switch (b.material) {
     case 0:
-    case 3:
+    case materialBishop:
         upperbound = 0;
         return true;
-    case 6:
+    case 2*materialBishop:
         if (b.getPieces<White,Bishop>() | b.getPieces<White,Knight>()
             && b.getPieces<Black,Bishop>() | b.getPieces<Black,Knight>()) {
             upperbound = 0;
@@ -64,7 +64,7 @@ bool Eval::draw(const BoardBase& b, int& upperbound) const {
     }
     uint64_t RQP = b.getPieces<C, Rook>() + b.getPieces<C, Queen>() + b.getPieces<C, Pawn>();
     if (!RQP) {
-        if (popcount(b.getPieces<C, Bishop>() + b.getPieces<C, Knight>()) <= 1)
+        if (popcount(b.getPieces<C, Bishop>() + b.getPieces<C, Knight>()) <= 1) //FIXME something wrong here, see tournament 37 game 154
             upperbound = 0;
     }
     return false;

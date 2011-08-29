@@ -186,7 +186,7 @@ Eval::Eval()
      */
     maxAttack = baseAttack + 250;
     maxDefense = baseDefense - 75;
-    const int totalMaterial = 4*(materialTab[Rook]+materialTab[Bishop]+materialTab[Knight]) + 2*materialTab[Queen];
+    const int totalMaterial = 4*(materialRook+materialBishop+materialKnight) + 2*materialQueen + 16*materialPawn;
     ASSERT(totalMaterial == 56);
     endgameMaterial = 27;       // +/- 16 ->  16 (Q) ... 48 (QRRB or QRBBN)
 
