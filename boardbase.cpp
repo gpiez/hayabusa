@@ -153,13 +153,31 @@ void BoardBase::print() const {
     std::cout << "--------------------------------" << std::endl;
     for (unsigned int y = 0; y < nRows; ++y) {
         for (unsigned int x = 0; x < nFiles; ++x) {
-            std::cout << "| " << chessPieces[6 + getPieceFromBit(1ULL << ((7-y)*8+x))] << ' ';
+            std::cout << "| " << chessPieces[6 + getPiece(1ULL << ((7-y)*8+x))] << ' ';
         }
         std::cout << std::endl << "--------------------------------" << std::endl;
     }
 }
 
-unsigned BoardBase::getPieceFromBit(uint64_t bit) const {
+int BoardBase::getPiece(unsigned pos) const {
+    uint64_t bit = 1ULL << pos;
+    if (getPieces<White,King>() & bit) return King;
+    if (getPieces<Black,King>() & bit) return -King;
+    if (getPieces<White,Queen>() & bit) return Queen;
+    if (getPieces<Black,Queen>() & bit) return -Queen;
+    if (getPieces<White,Rook>() & bit) return Rook;
+    if (getPieces<Black,Rook>() & bit) return -Rook;
+    if (getPieces<White,Bishop>() & bit) return Bishop;
+    if (getPieces<Black,Bishop>() & bit) return -Bishop;
+    if (getPieces<White,Knight>() & bit) return Knight;
+    if (getPieces<Black,Knight>() & bit) return -Knight;
+    if (getPieces<White,Pawn>() & bit) return Pawn;
+    if (getPieces<Black,Pawn>() & bit) return -Pawn;
+    return NoPiece;
+}
+
+unsigned BoardBase::getPieceKind(uint64_t bit) const {
+    ASSERT( !((getPieces<White, King>() | getPieces<Black, King>()) & bit) );
 #ifdef __SSE4_1__
     __v2di piece = _mm_set_epi64x(bit, bit);
     const __v2di zero = _mm_set_epi64x(0, 0);
@@ -168,11 +186,8 @@ unsigned BoardBase::getPieceFromBit(uint64_t bit) const {
     __v2di q = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Queen >(), piece), zero) & _mm_set_epi64x(Queen, Queen);
     __v2di n = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Knight>(), piece), zero) & _mm_set_epi64x(Knight, Knight);
     __v2di p = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Pawn  >(), piece), zero) & _mm_set_epi64x(Pawn, Pawn);
-//        __v2di k = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<King  >(), piece), zero) & _mm_set_epi64x(King, King);
     return fold(r|b|q|n|p);
 #else
-    return
-//            (getPieces<White,King>() | getPieces<Black,King>()) & bit ? King:
         (getPieces<White,Pawn>() | getPieces<Black,Pawn>()) & bit ? Pawn:
         (getPieces<White,Knight>() | getPieces<Black,Knight>()) & bit ? Knight:
         (getPieces<White,Queen>() | getPieces<Black,Queen>()) & bit ? Queen:

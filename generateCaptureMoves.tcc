@@ -313,7 +313,7 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
                 pin02 = ~pin02 & a02 /*& xray02*/;
                 for (uint64_t a=fold(pin02) & forks; a; a&=a-1) {
                     Move n;
-                    n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                    n.data = rs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                     if (good) {
                         *--*good = n;
                         found = true;
@@ -350,7 +350,7 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
                 pin13 = ~pin13 & a13;
                 for (uint64_t a=fold(pin13) & skewers; a; a&=a-1) {
                     Move n;
-                    n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                    n.data = bs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                     if (good) {
                         *--*good = n;
                         found = true;

@@ -190,7 +190,8 @@ struct BoardBase {
     static Castling castlingMask[nSquares];
     void init();
     void print() const;
-    unsigned getPieceFromBit(uint64_t bit) const;
+    unsigned getPieceKind(uint64_t bit) const;
+    int getPiece(unsigned pos) const;
     static void initTables();
     void copyPieces(BoardBase& next) const;
 } ALIGN_CACHE;                                    //sum:        3C0

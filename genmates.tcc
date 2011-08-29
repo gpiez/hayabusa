@@ -163,13 +163,13 @@ haveMate:
             for (uint64_t a=fold(pin02) & mate; a; a&=a-1) {
                 if (AbortOnFirst) return (R)true;
                 Move n;
-                n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                n.data = rs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                 *--*good = n;
             }
             if (!AbortOnFirst) for (uint64_t a = fold(pin02) & checkingMoves & ~mate & ~attNotEnemyKing
                                                & ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotRook)); a; a&=a-1) {
                 Move n;
-                n.data = rs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                n.data = rs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                 *(*bad)++ = n;
             }
         }
@@ -432,14 +432,14 @@ haveMate:
                     if (AbortOnFirst) return (R)true;
                     Move n;
                     ASSERT((a ^ (a & (a-1))) == (a & -a));
-                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                     *--*good = n;
                 }
                 if (!AbortOnFirst) for (uint64_t a = fold(pin02|pin13) & checkingMoves & ~qmate & ~attNotEnemyKing
                                                    & ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotQueen)); a; a&=a-1) {
                     Move n;
                     ASSERT((a ^ (a & (a-1))) == (a & -a));
-                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                     *(*bad)++ = n;
                 }
             }
@@ -453,10 +453,10 @@ haveMate:
             } else {
                 ASSERT(p & -p & occupied[EI]);
                 if (getPieces<C,Pawn>() & shift<-C*8-1>(p & -p) & ~file<'h'>() & pins[CI]) {
-                    *--*good = Move(to-C*8-1, to, Queen, getPieceFromBit(p & -p), true);
+                    *--*good = Move(to-C*8-1, to, Queen, getPieceKind(p & -p), true);
                 }
                 if (getPieces<C,Pawn>() & shift<-C*8+1>(p & -p) & ~file<'a'>() & pins[CI]) {
-                    *--*good = Move(to-C*8+1, to, Queen, getPieceFromBit(p & -p), true);
+                    *--*good = Move(to-C*8+1, to, Queen, getPieceKind(p & -p), true);
                 }
             }
         }
@@ -541,13 +541,13 @@ haveMate:
                 for (uint64_t a=fold(pin13) & bmate; a; a&=a-1) {
                     if (AbortOnFirst) return (R)true;
                     Move n;
-                    n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                    n.data = bs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                     *--*good = n;
                 }
                 if (!AbortOnFirst) for (uint64_t a = fold(pin13) & checkingMoves & ~bmate & ~attNotEnemyKing &
                                                    ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotBishop)); a; a&=a-1) {
                     Move n;
-                    n.data = bs->move.data + Move(0, bit(a), 0, getPieceFromBit(a & -a)).data;
+                    n.data = bs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                     *(*bad)++ = n;
                 }
 
@@ -574,7 +574,7 @@ haveMate:
                 unsigned to = bit(mate);
                 for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1) {
                     if (AbortOnFirst) return (R)true;
-                    *--*good = Move(bit(f), to, Knight, getPieceFromBit(1ULL << to));
+                    *--*good = Move(bit(f), to, Knight, getPieceKind(1ULL << to));
                 }
         }
     }
