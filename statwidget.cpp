@@ -199,7 +199,7 @@ void StatWidget::updateBoard()
 
         for ( int x=0; x<8; x++ )
             for ( int y=0; y<8; y++ ) {
-                int type = rb.currentBoard().getPieceFromBit(1ULL << (x+(7-y)*8));
+                int type = rb.currentBoard().getPiece(x+(7-y)*8);
                 pa.setBrush(QBrush((x^y)&1 ? QColor(128,128,128):QColor(192,192,192) ));
                 pa.drawRect(x*size, y*size, size, size);
                 if ( type > 0 )
