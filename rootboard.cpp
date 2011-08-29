@@ -503,6 +503,7 @@ bool RootBoard::doMove(Move m) {
                 const ColoredBoard<C>& cb = currentBoard<C>();
                 store(cb.getZobrist(), 0);
                 ColoredBoard<(Colors)-C>* next = &nextBoard<C>();
+                cb.copyPieces(*next);
                 cb.doMove(next, *ml);
                 next->keyScore.vector = cb.estimatedEval(*ml, eval);
                 next->buildAttacks();
