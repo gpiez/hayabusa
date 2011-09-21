@@ -36,11 +36,12 @@
 #include "repetition.h"
 #include "book.h"
 
+class Parameters;
+class WorkThread;
+class Console;
 
 using namespace std::chrono;
 
-class WorkThread;
-class Console;
 template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
 
@@ -99,6 +100,7 @@ private:
     History history;        // FIXME probably needs to be thread local
     std::string info;
     system_clock::time_point start;
+    uint64_t stopTime;
     int wtime;
     int btime;
     int winc;
@@ -115,6 +117,9 @@ private:
     TimedMutex infoTimerMutex;
     TimedMutex stopTimerMutex;
     Book book;
+#ifdef USE_GENETIC    
+    RawScore bestScore;
+#endif    
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
@@ -134,11 +139,18 @@ public:
     PositionalError pe[nPieces*2+1][nSquares][nSquares];
 
     RootBoard(Console*);
+    RootBoard(Console* c, const Parameters& p, uint64_t, uint64_t);
+#ifdef QT_GUI_LIB
+    virtual
+#endif    
+    ~RootBoard();
     void clearEE();
     template<Colors C> const ColoredBoard<C>& currentBoard() const;
     template<Colors C> ColoredBoard<(Colors)-C>& nextBoard();
     const BoardBase& currentBoard() const;
     void go(const std::map<std::string, StringList>&);
+    void goReadParam(const std::map<std::string, StringList>&);
+    void goExecute();
     void stop();
     const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
@@ -180,5 +192,10 @@ public:
     std::string commonStatus() const;
     void openBook(std::string);
     void resetBook(std::string);
+    void setTime(uint64_t wnanoseconds, uint64_t bnanoseconds);
+    int getScore() const { return bestScore; }
+    void goWait();
+    template<Colors C> bool isDraw(const ColoredBoard<C>& b) const;
+    unsigned getRootPly() const { return rootPly; }
 };
 #endif

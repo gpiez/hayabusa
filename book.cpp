@@ -31,9 +31,15 @@ template<typename T> void bswap(T& x) {
     x = res;
 }
 
-Book::Book()
+Book::Book():
+    book(NULL)
 {
     endianess.a = 1;
+}
+
+Book::~Book()
+{
+    delete book;
 }
 
 void Book::read(std::string fname) {
@@ -42,6 +48,7 @@ void Book::read(std::string fname) {
     size_t fsize = f.tellg();
     f.seekg( std::ios_base::beg );
     size = fsize / sizeof(BookEntry);
+    delete book;
     book = new BookEntry[size];
     
     f.read((char*)book, size*sizeof(BookEntry));

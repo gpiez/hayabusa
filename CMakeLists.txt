@@ -15,7 +15,7 @@ PROJECT (hayabusa)
  #   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 #endif(NOT CMAKE_BUILD_TYPE)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
+#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 #enable_language(ASM-FASM)
 
 #FIND_PACKAGE(PrecompiledHeaders)
@@ -23,11 +23,12 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
-SET(common_SRCS rootboard.cpp boardbase.cpp console.cpp workthread.cpp eval.cpp testpositions.cpp
+SET(common_SRCS console.cpp evolution.cpp parameters.cpp selfgame.cpp rootboard.cpp boardbase.cpp workthread.cpp eval.cpp testpositions.cpp
     move.cpp testgame.cpp stringlist.cpp history.cpp book.cpp)
 
 SET(USE_QTGUI FALSE CACHE BOOL "Build the QT interface")
 SET(USE_QTNETWORK FALSE CACHE BOOL "Build the server")
+SET(USE_GENETIC FALSE CACHE BOOL "Use genetic training algorithms")
 
 if (USE_QTNETWORK)
     set(packages ${packages} QtNetwork)
@@ -78,12 +79,11 @@ IF (USE_QTGUI OR USE_QTNETWORK)
     set_source_files_properties(test.cpp PROPERTIES COMPILE_FLAGS "-DQT_TEST")
     TARGET_LINK_LIBRARIES (hayabusa ${QT_LIBRARIES})
     TARGET_LINK_LIBRARIES (test ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
-#    target_link_libraries(offsets ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
 ELSE(USE_QTGUI OR USE_QTNETWORK)
     ADD_EXECUTABLE(hayabusa ${common_SRCS} ${hayabusa_SRCS})
     IF (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-        FIND_PACKAGE(Boost COMPONENTS Thread)
-        TARGET_LINK_LIBRARIES (hayabusa -lboost_thread )
+        FIND_PACKAGE(Boost COMPONENTS thread)
+        TARGET_LINK_LIBRARIES (hayabusa ${Boost_THREAD_LIBRARY} )
     ELSE(CMAKE_SYSTEM_NAME STREQUAL "Windows")
         FIND_PACKAGE(Threads REQUIRED)
 #       disable static linking for now        
@@ -92,6 +92,14 @@ ELSE(USE_QTGUI OR USE_QTNETWORK)
         TARGET_LINK_LIBRARIES (hayabusa ${CMAKE_THREAD_LIBS_INIT})
     ENDIF(CMAKE_SYSTEM_NAME STREQUAL "Windows")    
 ENDIF(USE_QTGUI OR USE_QTNETWORK)
+
+IF (USE_GENETIC)
+    FIND_PACKAGE(Boost COMPONENTS system chrono)
+    TARGET_LINK_LIBRARIES(hayabusa
+            ${Boost_CHRONO_LIBRARY}
+            ${Boost_SYSTEM_LIBRARY})
+    ADD_DEFINITIONS(-DUSE_GENETIC)
+ENDIF (USE_GENETIC)
 
 #if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
 #  add_precompiled_header(hayabusa pch.h)

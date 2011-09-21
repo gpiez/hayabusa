@@ -36,6 +36,7 @@ class History {
 public:
     History();
     void init();
+    void init64(uint8_t v[nSquares]);
     template<Colors C> void good(Move, unsigned ply);
     template<Colors C> int get(Move, unsigned ply);
     template<Colors C> void sort(Move* begin, unsigned n, unsigned ply

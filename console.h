@@ -65,6 +65,8 @@ class Console
     void ordering(StringList);
     void parse(std::string);
     void eval(StringList);
+    void selfgame(StringList);
+    void parmtest(StringList);
 private
 #if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
     slots

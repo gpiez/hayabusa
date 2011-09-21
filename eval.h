@@ -40,6 +40,10 @@
  * squareValue = attack_king(dist_king) + attack_piece(dist_piece) + attack_pawn(dist_pawn) + const
  */
 
+class Parameters;
+class PieceList;
+class BoardBase;
+
 struct CompoundScore {
     RawScore    opening;
     RawScore    endgame;
@@ -84,8 +88,6 @@ union KeyScore {
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986, unsigned istart=0 );
 
-class PieceList;
-class BoardBase;
 class Eval {
     KeyScore zobristPieceSquare[nTotalPieces][nSquares];
     int8_t wpawnOpen[64], wpawnEnd[64];         // TODO use psq instead
@@ -190,6 +192,9 @@ public:
     mutable uint64_t qmob1, qmob2, qmob3, qmobn;
 #endif
     Eval();
+    Eval(uint64_t);
+    ~Eval();
+    void init();
     int operator () (const BoardBase&, int sideToMove) const __attribute__((noinline));
     int operator () (const BoardBase&, int sideToMove, int&, int&) const __attribute__((noinline));
     template<Colors C> Move evalMate(const BoardBase&) const __attribute__((noinline));
@@ -217,6 +222,7 @@ public:
     template<Colors C>
     bool draw(const BoardBase& b, int& upperbound) const;
     void ptClear();
+    void setParameters(const Parameters&);
 } ALIGN_XMM ;
 
 template<typename T>

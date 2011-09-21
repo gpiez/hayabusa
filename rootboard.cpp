@@ -24,7 +24,6 @@
 #include "boardbase.tcc"
 #include "jobs.tcc"
 #include "score.tcc"
-#include "repetition.tcc"
 #include "transpositiontable.tcc"
 #include "book.h"
 
@@ -135,17 +134,51 @@ RootBoard::RootBoard(Console *c):
     for (unsigned i=0; i<=maxDepth; ++i) {
         nullReduction[i] = std::trunc(std::max(0.0, sqrt(0.25 + 2.0*i - 2.0*dMaxExt) + 0.51));
 //         nullReduction[i] = std::trunc(std::max(0.0, ((int)i-(int)dMaxExt-1)/5.0) + 3.0);
-#ifdef MYDEBUG        
-        if (i>dMaxExt) std::cout << std::setw(2) << i-dMaxExt << ": " << nullReduction[i] << std::endl;
-#endif        
+        if (Options::debug & DebugFlags::debugSearch) {        
+            if (i>dMaxExt) std::cout << std::setw(2) << i-dMaxExt << ": " << nullReduction[i] << std::endl;
+        }
     }
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
     clearEE();
     boards[0].wb.init();
-    #ifdef QT_GUI_LIB
+#ifdef QT_GUI_LIB
     statWidget = new StatWidget(*this);
     statWidget->show();
-    #endif
+#endif
+}
+
+RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_t phashSize):
+    iMove(0),
+    currentPly(0),
+    wtime(300000),
+    btime(300000),
+    winc(5000),
+    binc(5000),
+    movestogo(0),
+    stopSearch(Stopped),
+    console(c),
+    color(White),
+    eval(phashSize)
+{
+    eval.setParameters(p);
+    for (unsigned i=0; i<=maxDepth; ++i) {
+        nullReduction[i] = std::trunc(std::max(0.0, sqrt(0.25 + 2.0*i - 2.0*dMaxExt) + 0.51));
+//         nullReduction[i] = std::trunc(std::max(0.0, ((int)i-(int)dMaxExt-1)/5.0) + 3.0);
+        if (Options::debug & DebugFlags::debugSearch) {
+            if (i>dMaxExt) std::cout << std::setw(2) << i-dMaxExt << ": " << nullReduction[i] << std::endl;
+        }
+    }
+    tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>(hashSize);
+    clearEE();
+    boards[0].wb.init();
+#ifdef QT_GUI_LIB
+    statWidget = new StatWidget(*this);
+    statWidget->show();
+#endif
+}
+
+RootBoard::~RootBoard() {
+    delete tt;
 }
 
 std::string RootBoard::status(system_clock::time_point now, int score)
@@ -387,7 +420,14 @@ Move RootBoard::findMove(const std::string& ) const {
     return Move(0,0,0);
 }
 
+
 void RootBoard::go(const std::map<std::string, StringList>& param )
+{
+    goReadParam(param);
+    goExecute();
+}
+
+void RootBoard::goReadParam(const std::map<std::string, StringList>& param )
 {
     infinite = param.count("infinite");
 
@@ -427,7 +467,10 @@ void RootBoard::go(const std::map<std::string, StringList>& param )
         movetime = convert((*param.find("movetime")).second.front());
     else
         movetime = 0;
+}
 
+void RootBoard::goExecute()
+{
     Job* job;
     if (color == White)
         job = new RootSearchJob<White>(*this, keys, maxSearchDepth);
@@ -548,4 +591,21 @@ int score2tt(int s) {
 
 int tt2Score(int s) {
     return inline_tt2Score(s);
+}
+
+void RootBoard::setTime(uint64_t w, uint64_t b)
+{
+    wtime = w / 1000000;
+    btime = b / 1000000;
+}
+
+void RootBoard::goWait()
+{
+    Job* job;
+    if (color == White)
+        job = new RootSearchJob<White>(*this, keys, maxSearchDepth);
+    else
+        job = new RootSearchJob<Black>(*this, keys, maxSearchDepth);
+    job->job();
+    delete job;
 }

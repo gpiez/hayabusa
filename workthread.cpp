@@ -66,7 +66,10 @@ void WorkThread::run() {
     workThread = this;
 
     UniqueLock <Mutex> lock(runningMutex);
-    isStopped = true;
+    {
+        LockGuard<Mutex> stoplock(stoppedMutex);
+        isStopped = true;
+    }
     stopped.notify_one();
 #ifdef __linux__
     std::stringstream name;
@@ -295,4 +298,8 @@ const std::vector< WorkThread* >& WorkThread::getThreads() {
     return threads;
 }
 
+/*
 extern "C" void __throw_bad_alloc() { asm("int3"); }
+extern "C" void __throw_out_of_range() { asm("int3"); }
+extern "C" void __cxa_throw(void*, void*, void(*)(void*))  { asm("int3"); }
+*/

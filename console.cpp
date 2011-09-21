@@ -30,6 +30,8 @@
 #include "rootboard.tcc"
 #include "rootsearch.tcc"
 #include "stringlist.h"
+#include "selfgame.h"
+#include "evolution.h"
 // #include <fstream>
 namespace Options {
     unsigned int        splitDepth = 1000;
@@ -43,6 +45,7 @@ namespace Options {
     bool                pruning = true;
     unsigned            debug = 0;
     bool                currline = false;
+    bool                cpuTime = false;
 #ifdef QT_NETWORK_LIB    
     bool                server = false;
 #endif    
@@ -83,6 +86,9 @@ Console::Console(int& argc, char** argv)
     dispatcher["divide"] = &Console::divide;
     dispatcher["ordering"] = &Console::ordering;
     dispatcher["eval"] = &Console::eval;
+    dispatcher["selfgame"] = &Console::selfgame;
+    dispatcher["parmtest"] = &Console::parmtest;
+    
 
 #if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
     connect(this, SIGNAL(signalSend(std::string)), this, SLOT(privateSend(std::string)));
@@ -428,4 +434,27 @@ void Console::ordering(StringList cmds) {
 void Console::eval(StringList)
 {
     board->eval(board->currentBoard(), board->color);
+}
+
+void Console::selfgame(StringList )
+{
+//     Options::cpuTime = true;
+    Evolution e(this);
+    e.init();
+    e.evolve();
+//     Parameters a;
+// 
+//     SelfGame sf(this, a, a);
+//     sf.tournament();
+}
+
+void Console::parmtest(StringList cmds)
+{
+    Evolution e(this);
+    if (cmds.size() == 5) 
+        e.parmTest(cmds[1], convert(cmds[2]), convert(cmds[3]), convert(cmds[4]));
+    else if (cmds.size() == 9) 
+        e.parmTest(cmds[1], convert(cmds[2]), convert(cmds[3]), convert(cmds[4]), cmds[5], convert(cmds[6]), convert(cmds[7]), convert(cmds[8]));
+    else
+        std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> [n]\"" << std::endl;
 }

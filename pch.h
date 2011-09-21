@@ -21,7 +21,6 @@
 
 #define BITBOARD
 
-extern "C" void __throw_bad_alloc();
 #include <iostream>
 #include <sstream>
 #include <locale>

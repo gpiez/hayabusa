@@ -33,6 +33,7 @@ namespace Options {
     extern bool pruning;
     extern unsigned debug;
     extern bool currline;
+    extern bool cpuTime;
 #ifdef QT_NETWORK_LIB    
     extern bool server;
 #endif    

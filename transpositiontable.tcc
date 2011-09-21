@@ -240,12 +240,14 @@ void Table<Entry, assoc, Key>::resetStats() {
 template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::clear() {
     resetStats();
+//     std::cerr << "clear " << size << std::endl;
     memset(table, 0, size);
 }
 
 template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::agex() {
     resetStats();
+//     std::cerr << "clear " << size << std::endl;
     for (size_t i=0; i<nEntries; ++i) {
         for (size_t j=0; j<assoc; ++j) {
             table[i].entries[j].aged |= 1;

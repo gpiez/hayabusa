@@ -17,32 +17,32 @@
 */
 
 
-#ifndef BOOK_H
-#define BOOK_H
+#ifndef SELFGAME_H
+#define SELFGAME_H
 
 #include <pch.h>
-struct BookEntry {
-    uint64_t key;
-    uint16_t move;
-    uint16_t weight;
-    uint32_t learn;
-};
+#include <boost/chrono/process_cpu_clocks.hpp>
+#include "rootboard.h"
+#include "parameters.h"
 
-class Book
+class SelfGame
 {
-    BookEntry*  book;
-    size_t      size;
-    union {
-        uint16_t a;
-        uint8_t little;
-    } endianess;
-
+    uint64_t wtime;
+    uint64_t btime;
+    int decisiveScore;
+    int decisiveScoreMoves;
+    int nDecisive;
+    int result;
 public:
-    Book();
-    ~Book();
-    void read(std::string);
-    void write(std::string);
-    void resetWeights();
+    RootBoard   *wrb, *brb;
+    boost::chrono::process_cpu_clock::time_point start;
+    SelfGame(Console* c, const Parameters&, const Parameters&);
+    ~SelfGame();
+    int doGame(RootBoard*, RootBoard*);
+    template<Colors C> bool checkResult(const RootBoard&);
+    void setupRootBoard(RootBoard* );
+    uint64_t cpuTime();
+    int tournament();
 };
 
-#endif // BOOK_H
+#endif // SELFGAME_H

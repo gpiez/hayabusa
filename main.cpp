@@ -27,6 +27,6 @@ int main(int argc, char *argv[]) {
     qRegisterMetaType<std::string>("std::string");
 #endif
     Console console(argc, argv);
-
+    
     return console.exec();
 }

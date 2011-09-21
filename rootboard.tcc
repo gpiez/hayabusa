@@ -42,6 +42,7 @@
 #include "transpositiontable.tcc"
 #include "movelist.h"
 #include "options.h"
+#include "repetition.tcc"
 
 template<Colors C>
 uint64_t RootBoard::rootDivide(unsigned int depth) {
@@ -158,6 +159,12 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
         perft<(Colors)-C, trunk>(n, b, *i, depth-1);
     }
     return n;
+}
+
+template<Colors C>
+bool RootBoard::isDraw(const ColoredBoard<C>& b) const
+{
+    return find(b, b.keyScore.key, 0) || b.fiftyMoves >= 100;
 }
 
 #endif

@@ -18,12 +18,12 @@
 #ifndef SEARCH_TCC_
 #define SEARCH_TCC_
 
+// #include <boost/chrono.hpp>
 #include "rootboard.h"
 #include "options.h"
 #include "transpositiontable.tcc"
 #include "jobs.tcc"
 #include "score.tcc"
-#include "repetition.tcc"
 #include "eval.tcc"
 #include "history.tcc"
 #include "genmates.tcc"
@@ -96,6 +96,10 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 #endif
 ) {
     stats.node++;
+    if (stats.node > maxSearchNodes) {
+        stopSearch = Stopping;
+        return 0;
+    }
     KeyScore estimate;
     if (P == leaf || P == vein)
         estimate.vector = prev.inline_estimatedEval(m, eval);
@@ -132,16 +136,20 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 */
     if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
 
-    if (stopSearch != Running) return 0;
+    if (P != vein && P != leaf) {
+//         if (Options::cpuTime) {
+//             boost::chrono::duration<boost::chrono::process_cpu_clock::times, boost::nano> t = boost::chrono::process_cpu_clock::now();
+//             if (t.count().system+t.count().user > stopTime)
+//                 stopSearch = Stopping;
+//         }
+        if (stopSearch != Running) return 0;
+    }
     
-//     unsigned iPiece = (unsigned[7]) { 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+1*PREVC, 6+5*PREVC, 6+6*PREVC } [ m.piece() & 7 ];
     unsigned iPiece = prev.errorPieceIndex[ m.piece() & 7 ]; // TODO really useful?
     PositionalError& diff = pe[iPiece][m.from()][m.to()];
-    //TODO merge rooks/bishops/knights
-//     PositionalError& diff = PREVC == White ? pe[nPieces + (m.piece()&7)][m.from()][m.to()] : pe[nPieces - (m.piece()&7)][m.from()][m.to()];
     // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     // TODO connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
-//     current.v = -infinity*C;
+    //     current.v = -infinity*C;
     RawScore estimatedScore = estimate.score.calc(prev.material) + prev.positionalScore + diff.v; //TODO move score() into ColorBoard ctor
 #ifdef CALCULATE_MEAN_POSITIONAL_ERROR
 /*    if (diff.n > 1.0) {

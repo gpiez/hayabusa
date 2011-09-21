@@ -30,8 +30,9 @@
 #define SORTEDMOVELIST_H
 
 #include <cstring>
-
 #include "movelist.h"
+
+static const int rows[] = {111, 41, 13, 4, 1};
 
 class SortedMoveList : public MoveList
 {
@@ -59,7 +60,6 @@ public:
         return;
         ASSERT(bm >= 1 && bm <= last);
 //         bm = 1;
-        int rows[] = {111, 41, 13, 4, 1};
 
         for (unsigned k=0; k<5; k++)
         {

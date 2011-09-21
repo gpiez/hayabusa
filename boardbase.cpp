@@ -153,7 +153,7 @@ void BoardBase::print() const {
     std::cout << "--------------------------------" << std::endl;
     for (unsigned int y = 0; y < nRows; ++y) {
         for (unsigned int x = 0; x < nFiles; ++x) {
-            std::cout << "| " << chessPieces[6 + getPiece(1ULL << ((7-y)*8+x))] << ' ';
+            std::cout << "| " << chessPieces[6 + getPiece((7-y)*8+x)] << ' ';
         }
         std::cout << std::endl << "--------------------------------" << std::endl;
     }
