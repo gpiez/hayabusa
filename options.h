@@ -24,7 +24,8 @@
 namespace Options {
     extern unsigned int splitDepth;
     extern int humanreadable;
-    extern int hash;
+    extern uint64_t hash;
+    extern uint64_t pHash;
     extern bool quiet;
     extern bool preCutIfNotThreatened;
     extern unsigned veinDepth;

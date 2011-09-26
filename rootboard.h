@@ -138,7 +138,7 @@ public:
 
     PositionalError pe[nPieces*2+1][nSquares][nSquares];
 
-    RootBoard(Console*);
+// //     RootBoard(Console*);
     RootBoard(Console* c, const Parameters& p, uint64_t, uint64_t);
 #ifdef QT_GUI_LIB
     virtual

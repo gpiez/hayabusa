@@ -103,7 +103,7 @@ void SelfGame::setupRootBoard(RootBoard* rb) {
 //     p["winc"] = StringList() << "10";
 //     p["binc"] = StringList() << "10";
     p["infinity"] = StringList();
-    p["nodes"] = StringList() << "80000";
+    p["nodes"] = StringList() << "5000";
     rb->goReadParam(p);
 }
 

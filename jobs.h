@@ -28,6 +28,7 @@
 #include "boardbase.h"
 #include "workthread.h"
 #include "nodeitem.h"
+#include "options.h"
 
 // Abstract base class for functions called to be executed by a different thread
 // To execute a function in a different thread, create a ***Job object with the
@@ -101,7 +102,7 @@ class RootPerftJob: public Job {
 public:
     RootPerftJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
     void job() {
-        rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
+        rb.pt = new TranspositionTable<PerftEntry, 1, Key>(Options::hash);
         uint64_t n=rb.rootPerft<C>(depth);
         std::ostringstream temp;
         temp << n;
@@ -118,7 +119,7 @@ class RootDivideJob: public Job {
 public:
     RootDivideJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
     void job() {
-        rb.pt = new TranspositionTable<PerftEntry, 1, Key>;
+        rb.pt = new TranspositionTable<PerftEntry, 1, Key>(Options::hash);
         uint64_t n=rb.rootDivide<C>(depth);
         std::ostringstream temp;
         temp << n;

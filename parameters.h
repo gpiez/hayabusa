@@ -65,6 +65,7 @@ class Parameters
     
 public:
     Parameters();
+    Parameters(const Parameters&);
     static void init();
     static std::map< std::string, unsigned > index;
     static std::vector<float> base;
@@ -96,5 +97,7 @@ public:
     void mutate();
     Parameters combine(const Parameters& father) const;
 };
+
+extern Parameters defaultParameters;
 
 #endif // PARAMETERS_H

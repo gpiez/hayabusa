@@ -36,7 +36,8 @@
 namespace Options {
     unsigned int        splitDepth = 1000;
     int                 humanreadable = 0;
-    int                 hash = 0x1000000;
+    uint64_t            hash = 0x1000000;
+    uint64_t            pHash = 0x1000000;
     bool                quiet = false;
     bool                preCutIfNotThreatened = false;
     unsigned            veinDepth = 20;
@@ -64,10 +65,17 @@ Console::Console(int& argc, char** argv)
 {
     args.resize(argc);
     std::copy(argv+1, argv+argc, args.begin());
-
+    if (args[0] == "debug") {
+        StringList debugParm;
+        for (int i=1; i<argc; ++i)
+            debugParm << args[i].c_str();
+        debug(debugParm);
+    }
     BoardBase::initTables();
     WorkThread::init();
-    board = new RootBoard(this);
+    Parameters::init();
+
+    board = new RootBoard(this, defaultParameters, Options::hash, Options::pHash);
     board->setup();
 
     dispatcher["uci"] = &Console::uci;

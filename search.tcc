@@ -150,7 +150,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
     // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     // TODO connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
     //     current.v = -infinity*C;
-    RawScore estimatedScore = estimate.score.calc(prev.material) + prev.positionalScore + diff.v; //TODO move score() into ColorBoard ctor
+    RawScore estimatedScore = estimate.score.calc(prev.material, eval) + prev.positionalScore + diff.v; //TODO move score() into ColorBoard ctor
 #ifdef CALCULATE_MEAN_POSITIONAL_ERROR
 /*    if (diff.n > 1.0) {
         float invn = 1.0/diff.n;
@@ -258,7 +258,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         currentPly = ply;
     }
 
-    ASSERT(b.keyScore.score.calc(prev.material) == estimate.score.calc(prev.material));
+    ASSERT(b.keyScore.score.calc(prev.material, eval) == estimate.score.calc(prev.material, eval));
     ASSERT(P == vein || z == b.getZobrist());
     if ((int)prev.CI == (int)b.CI) {
         if (b.template inCheck<(Colors)-C>()) {
@@ -392,7 +392,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             oldattack = battack;
         }
         b.isExact = true;
-        realScore = b.keyScore.score.calc(prev.material) + b.positionalScore;
+        realScore = b.keyScore.score.calc(prev.material, eval) + b.positionalScore;
         if (isMain & !m.isSpecial()) {
             Score<C> diff2;
             diff2.v = b.positionalScore - prev.positionalScore;
@@ -728,18 +728,18 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 /*                    if (notverified) {
                         notverified = false;*/
                     value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, alpha, ply+1, ExtNot, nattack NODE);
-                    if (value <= -infinity*C) continue;
 //                     }
                     /*
                      * The actual null move search. Search returns true if the
                      * result in alpha1 comes down to alpha0, in that case prune
                      */
                     if (value <= alpha.v) {
+                        if (value <= -infinity*C) continue;
                         newDepth = depth-(nullReduction[depth]+1);
                         ASSERT(depth > nullReduction[depth]+1);
                         Score<C> nullvalue(search4<C, P>(b, *i, newDepth, alpha, beta0, ply+2, ExtNot, nattack NODE));
                         if (nullvalue <= alpha.v) {
-                            current.max(value.v);
+                            current.max(value.v);       //TODO should not be needed?
                             continue;
                         }
                     }

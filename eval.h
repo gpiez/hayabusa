@@ -40,14 +40,17 @@
  * squareValue = attack_king(dist_king) + attack_piece(dist_piece) + attack_pawn(dist_pawn) + const
  */
 
+static const int logEndgameTransitionSlope = 5;
+static const int endgameTransitionSlope = 1<<logEndgameTransitionSlope; //16 pieces material between full endgame and full opening
+
 class Parameters;
 class PieceList;
 class BoardBase;
 
-struct CompoundScore {
+class CompoundScore {
     RawScore    opening;
     RawScore    endgame;
-
+public:
     CompoundScore operator + (const CompoundScore& x) const {
         CompoundScore temp;
         temp.opening = x.opening + opening;
@@ -64,12 +67,7 @@ struct CompoundScore {
         opening /= x;
         endgame /= x;
     }
-    int calc(unsigned /*material*/) const {
-        return opening;
-        //        return material >= endgameMaterial ? opening : endgame;
-//        int compound = *(int*)this;
-//        return material >= endgameMaterial ? (int16_t)compound : compound >> 16;
-    }
+    int calc(int material, const Eval& eval) const;
     void operator = (int x) {
         opening = x;
         endgame = x;
@@ -119,6 +117,7 @@ class Eval {
     int pawnIsolatedOpen;
     int pawnConnPasser[6];
     int pawnPasser[6];
+    float pawnPasser2, pawnPasser7, pawnPasserSlope;
     int pawnFileOpen[4], pawnFileEnd[4];
     int pawnRankOpen[6], pawnRankEnd[6];
 
@@ -144,6 +143,9 @@ class Eval {
 
     int mobB1[64], mobB2[64];
     int mobN1[64], mobN2[64];
+    float mobN1value, mobN1slope;
+    float mobN2value, mobN2slope;
+    
     int mobR1[64], mobR2[64];
     int mobQ1[64], mobQ2[64];
 
@@ -152,6 +154,7 @@ class Eval {
     int oppKingOwnPasser[8];
     int ownKingOwnPasser[8];
 
+    friend int CompoundScore::calc(int, const Eval&) const;
     int endgameMaterial;
 
     int psqRX[2][8];
@@ -191,8 +194,7 @@ public:
     mutable uint64_t rmob1, rmob2, rmob3, rmobn;
     mutable uint64_t qmob1, qmob2, qmob3, qmobn;
 #endif
-    Eval();
-    Eval(uint64_t);
+    Eval(uint64_t, const Parameters&);
     ~Eval();
     void init();
     int operator () (const BoardBase&, int sideToMove) const __attribute__((noinline));
@@ -223,6 +225,11 @@ public:
     bool draw(const BoardBase& b, int& upperbound) const;
     void ptClear();
     void setParameters(const Parameters&);
+    template<Colors C>
+    __v8hi estimate(const Move m, const KeyScore keyScore) const;
+    template<Colors C>
+    __v8hi inline_estimate(const Move m, const KeyScore keyScore) const __attribute__((always_inline)) ;
+
 } ALIGN_XMM ;
 
 template<typename T>

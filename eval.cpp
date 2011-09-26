@@ -30,8 +30,6 @@ static const __v2di mask01 = { 0x0101010101010101, 0x0202020202020202 };
 static const __v2di mask23 = { 0x0404040404040404, 0x0808080808080808 };
 static const __v2di mask45 = { 0x1010101010101010, 0x2020202020202020 };
 static const __v2di mask67 = { 0x4040404040404040, 0x8080808080808080 };
-static const int logEndgameTransitionSlope = 5;
-static const int endgameTransitionSlope = 1<<logEndgameTransitionSlope; //16 pieces material between full endgame and full opening
 static const int baseAttack = 1024;
 static const int baseDefense = -256;
 
@@ -168,16 +166,11 @@ static inline int weightedPopcount(const uint64_t bb, const int8_t weights[64]) 
     return _mm_extract_epi16(s,0) + _mm_extract_epi16(s,4);
 }
 
-Eval::Eval(uint64_t pHashSize)
+Eval::Eval(uint64_t pHashSize, const Parameters& p)
 {
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>(pHashSize);
 //     std::cerr << "Eval::Eval " << pHashSize << std::endl;
-    init();
-}
-
-Eval::Eval()
-{
-    pt = new TranspositionTable<PawnEntry, 4, PawnKey>;
+    setParameters(p);
     init();
 }
 
@@ -187,59 +180,13 @@ Eval::~Eval() {
 
 void Eval::init() {
 
-    pawn = 80;
-    knight = 280;
-    bishop = 290;
-    rook = 480;
-    queen = 900;
-    /*
-     * These parameters decide the weight of the attack function
-     * For very shallow ply searches the attack functions is actually
-     * a disadvantage, relative ELO based on 4k games +/-9
-     * ply/att  3       4       5       6       7
-     * 150      2001    2022    1991    1980    1988
-     * 200      1999    1978    2009    2020    2012
-     */
-    maxAttack = baseAttack + 190;
-    //attack Q                          = 230 = 14
-    //attack Q + N                      = 330 = 20.5
-    //attack Q + R + N = 200 + 80 + 110 = 475 = 30
-    sigmoid(attackTable, baseAttack, maxAttack, 30, 7);
-
-    maxDefense = baseDefense - 75;
-    sigmoid(defenseTable, baseDefense, maxDefense, 8, 4);
-
     const int totalMaterial = 4*(materialRook+materialBishop+materialKnight) + 2*materialQueen + 16*materialPawn;
     ASSERT(totalMaterial == 56);
-    endgameMaterial = 32;       // +/- 16 ->  16 (Q) ... 48 (QRRB or QRBBN)
 
-    bishopPair = 30;
-    bishopBlockPasser = 20;
-    bishopAlone = -100;
-
-    knightAlone = -125;
-    knightBlockPasser = 30;
-
-    rookTrapped = -50;
-    rookOpen = 8;
-    rookHalfOpen = 4;
-    rookWeakPawn = 16;
-
-    pawnBackward = -4;
-    pawnBackwardOpen = -8;
-    pawnIsolatedCenter = -4;
-    pawnIsolatedEdge = -2;// - Eval::pawnBackwardOpen;
-    pawnIsolatedOpen = -8;// - Eval::pawnBackwardOpen;
-//     pawnEdge = -12;
-//     pawnCenter = 10;
-    pawnDouble = -18;
-    pawnShoulder = 4;
-//     pawnHole = -4;
     sigmoid( oppKingOwnPawn, -12,  12, 1, 10);  // only 1..7 used
     sigmoid( ownKingOwnPawn,   6,  -6, 1, 10);
     sigmoid( oppKingOwnPasser, -32,  32, 1, 10);  // only 1..7 used
     sigmoid( ownKingOwnPasser,  16, -16, 1, 10);
-    sigmoid( pawnPasser, 25, 100, 6, 1.0 );
     sigmoid( pawnConnPasser, 0, 50, 6, 1.0 );
     pawnUnstoppable = 700;
 
@@ -254,13 +201,9 @@ void Eval::init() {
     sigmoid(attackP, 40, 95, 2.5, 0.5, 1); // max bits set = 21
     sigmoid(attackK, 40, 50, 2.0, 1.5, 1); // max bits set = 21
 
-
     aspiration0 = 40;
     aspiration1 = 5;
     evalHardBudget = -20;
-
-    sigmoid(mobN1, -25, 25, 0, 2.0);
-    sigmoid(mobN2, -25, 25, 0, 8.0);
 
     sigmoid(mobB1, -20, 20, 0, 3.25);
     sigmoid(mobB2, -20, 20, 0,13.0);
@@ -283,7 +226,6 @@ void Eval::init() {
             bpawnEnd [(7-x)*8 + 7-y] = bpawnEnd [    x*8 + 7-y] = wpawnEnd [(7-x)*8 + y] = wpawnEnd [    x*8 + y]
             = (pawn + pawnFileEnd[x])*(pawn + pawnRankEnd[y-1]) / pawn - pawn;
         }
-    initPS();
     initZobrist();
     initTables();
 
@@ -333,7 +275,7 @@ void Eval::initPS() {
     typedef int I4[4];
     
     for (unsigned int sq = 0; sq<nSquares; ++sq)
-        getPS( 0, sq) = CompoundScore{ 0, 0 };
+        getPS( 0, sq) = 0;
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
         getPS( Pawn, sq) = Eval::pawn;
@@ -396,6 +338,24 @@ void Eval::initZobrist() {
             else
                 zobristPieceSquare[p+nPieces][i].pawnKey = 0;
         }
+
+    int collision=0;
+    for (int p = -nPieces; p <= (signed int)nPieces; p++) 
+    if (p)
+    for (unsigned int s = 0; s < nSquares; ++s) 
+    for (unsigned int d = 0; d < nSquares; ++d) 
+    if (d!=s) {
+        KeyScore z1, z2;
+        z1.vector = zobristPieceSquare[p+nPieces][d].vector - zobristPieceSquare[p+nPieces][s].vector;
+        z2.vector = zobristPieceSquare[p+nPieces][s].vector - zobristPieceSquare[p+nPieces][d].vector;
+        for (int cp = -nPieces; cp <= (signed int)nPieces; cp++)
+        if (cp)
+        for (unsigned int c = 0; c < nSquares; ++c) 
+        if (zobristPieceSquare[cp+nPieces][c].key == z1.key || zobristPieceSquare[p+nPieces][c].key == z2.key) 
+            ++collision;
+    }
+    if (collision)
+        std::cerr << collision << " Zobrist collisions" << std::endl;
 }
 
 void Eval::initTables() {
@@ -1061,18 +1021,18 @@ int Eval::operator () (const BoardBase& b, int stm ) const {
 
 int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
 #if defined(MYDEBUG)
-    int cmp = b.keyScore.score.calc(b.material);
+    int cmp = b.keyScore.score.calc(b.material, *this);
     int value = 0;
     for (int p=Rook; p<=King; ++p) {
         for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
             unsigned sq=bit(x);
-            print_debug(debugEval, "materialw%d     %d\n", p, getPS( p, sq).calc(b.material));                
-            value += getPS( p, sq).calc(b.material);
+            print_debug(debugEval, "materialw%d     %d\n", p, getPS( p, sq).calc(b.material, *this));
+            value += getPS( p, sq).calc(b.material, *this);
         }
         for (uint64_t x=b.getPieces<Black>(p); x; x&=x-1) {
             unsigned sq=bit(x);
-            print_debug(debugEval, "materialb%d     %d\n", p, getPS(-p, sq).calc(b.material));                
-            value += getPS(-p, sq).calc(b.material);
+            print_debug(debugEval, "materialb%d     %d\n", p, getPS(-p, sq).calc(b.material, *this));
+            value += getPS(-p, sq).calc(b.material, *this);
         }
     }
     if (value != cmp) asm("int3");
@@ -1115,7 +1075,7 @@ int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
 
         return e + m + pa + a + pi;
     } else {     // pawnless endgame
-        int mat = b.keyScore.score.calc(b.material);
+        int mat = b.keyScore.score.calc(b.material, *this);
         int wap, bap, wdp, bdp; //FIXME not needed here
         int m = mobilityDiff<Endgame>(b, wap, bap, wdp, bdp);
         int p = (mat>0 ? 1:4)*king<White>(b) - (mat<0 ? 1:4)*king<Black>(b);
@@ -1126,6 +1086,8 @@ int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
 void Eval::ptClear() {
     pt->clear();
 }
+
+#define SETPARM(x) x = p[ #x ].value;
 
 void Eval::setParameters(const Parameters& p)
 {
@@ -1158,10 +1120,43 @@ void Eval::setParameters(const Parameters& p)
     pawnDouble = p["pawnDouble"].value;
     pawnShoulder = p["pawnShoulder"].value;
 
+    //attack Q                          = 230 = 14
+    //attack Q + N                      = 330 = 20.5
+    //attack Q + R + N = 200 + 80 + 110 = 475 = 30
     maxAttack = baseAttack + p["deltaAttack"].value;
     sigmoid(attackTable, baseAttack, maxAttack, 30, 7);
 
     maxDefense = baseDefense + p["deltaDefense"].value;
     sigmoid(defenseTable, baseDefense, maxDefense, 8, 4);
-    
+
+    SETPARM(pawnPasser2);
+    SETPARM(pawnPasser7);
+    SETPARM(pawnPasserSlope);
+    sigmoid( pawnPasser, pawnPasser2, pawnPasser7, 6, pawnPasserSlope );
+
+    SETPARM(mobN1value);
+    SETPARM(mobN1slope);
+    sigmoid(mobN1, -mobN1value, mobN1value, 0, mobN1slope);
+
+    SETPARM(mobN2value);
+    SETPARM(mobN2slope);
+    sigmoid(mobN2, -mobN2value, mobN2value, 0, mobN2slope);
+}
+
+int CompoundScore::calc(int material, const Eval& eval) const
+{
+        return opening;
+        int openingScale = material - eval.endgameMaterial + endgameTransitionSlope/2;
+        if (openingScale > endgameTransitionSlope)
+            openingScale = endgameTransitionSlope;
+        else if (openingScale <= 0)
+            openingScale = 0;
+
+        int op = (openingScale*opening) >> logEndgameTransitionSlope;
+        int en = ((endgameTransitionSlope-openingScale)*endgame) >> logEndgameTransitionSlope;
+        return op+en;
+
+        //        return material >= endgameMaterial ? opening : endgame;
+//        int compound = *(int*)this;
+//        return material >= endgameMaterial ? (int16_t)compound : compound >> 16;
 }

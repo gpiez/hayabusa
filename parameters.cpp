@@ -26,6 +26,8 @@ std::mt19937 mt;
 std::map< std::string, unsigned > Parameters::index;
 std::vector<float> Parameters::base;
 
+Parameters defaultParameters;
+
 void Parameters::mutate()
 {
     float mutationRate = 0.05;
@@ -48,20 +50,26 @@ Parameters Parameters::combine(const Parameters& father) const
     return ret;
 }
 
-Parameters::Parameters()
+Parameters::Parameters() {}
+
+Parameters::Parameters(const Parameters& p)
 {
-    parms.resize(maxIndex);
+#ifdef MYDEBUG
     parmsLocked = true;
+#endif
+    parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) {
-        parms[i] = Parm<float>(base[i]);
+        parms[i] = p.parms[i];
     }
 }
 
 void Parameters::add(const std::string s, float value)
 {
+#ifdef MYDEBUG    
     if (parmsLocked) {
         std::cerr << "Parameter list modified after created" << std::endl;
     }
+#endif    
     if (index.find(s) == index.end()) {
         index[s] = maxIndex++;
         base.resize(maxIndex);
@@ -72,7 +80,7 @@ void Parameters::add(const std::string s, float value)
 void Parameters::init()
 {
     Parameters::add("PawnValue", 80);
-    Parameters::add("KnightValue", 280);
+    Parameters::add("KnightValue", 270);
     Parameters::add("BishopValue", 290);
     Parameters::add("RookValue", 480);
     Parameters::add("QueenValue", 900);
@@ -87,7 +95,7 @@ void Parameters::init()
     Parameters::add("knightBlockPasser", 30);
 
     Parameters::add("rookTrapped", -50);
-    Parameters::add("rookOpen", 8);
+    Parameters::add("rookOpen", 16);
     Parameters::add("rookHalfOpen", 4);
     Parameters::add("rookWeakPawn", 16);
 
@@ -101,4 +109,18 @@ void Parameters::init()
 
     Parameters::add("deltaAttack", 190);
     Parameters::add("deltaDefense", -75);
+
+    Parameters::add("pawnPasser2", 25);
+    Parameters::add("pawnPasser7", 100);
+    Parameters::add("pawnPasserSlope", 1.0);
+
+    Parameters::add("mobN1value", 10);
+    Parameters::add("mobN1slope", 3.0);
+
+    Parameters::add("mobN2value", 25);
+    Parameters::add("mobN2slope", 8.0);
+
+    defaultParameters.parms.resize(maxIndex);
+    for (unsigned i=0; i<maxIndex; ++i) 
+        defaultParameters.parms[i] = Parm<float>(base[i]);
 }

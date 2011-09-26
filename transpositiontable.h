@@ -52,7 +52,7 @@ private:
     bool usesHugePages;
 
 public:
-    Table(uint64_t size = hashDefaultSize*0x100000ULL);
+    Table(uint64_t size);
     ~Table();
 
     void setSize(size_t s);
@@ -91,14 +91,14 @@ public:
 template<typename Entry, unsigned assoc, typename Key>
 class TranspositionTable: public Table<Entry, assoc, Key> {
 public:
-    TranspositionTable() {};
+//     TranspositionTable() {};
     TranspositionTable(uint64_t size): Table<Entry, assoc, Key>(size) {};
 };
 
 template<unsigned assoc, typename Key>
 class TranspositionTable<PawnEntry, assoc, Key>: public Table<PawnEntry, assoc, Key> {
 public:
-    TranspositionTable() {};
+//     TranspositionTable() {};
     TranspositionTable(uint64_t size): Table<PawnEntry, assoc, Key>(size) {};
     void store(Sub<PawnEntry, assoc>* subTable, PawnEntry entry);
     bool retrieve(Sub<PawnEntry, assoc>* subTable, Key k, PawnEntry& entry);

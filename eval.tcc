@@ -69,3 +69,44 @@ bool Eval::draw(const BoardBase& b, int& upperbound) const {
     }
     return false;
 }
+
+template<Colors C>
+__v8hi Eval::estimate(const Move m, const KeyScore k) const {
+    return inline_estimate<C>(m, k);
+}
+
+template<Colors C>
+__v8hi Eval::inline_estimate(const Move m, const KeyScore keyScore) const {
+    enum { pov = C == White ? 0:070 };
+    ASSERT(m.piece());
+    if (m.isSpecial()) {
+        unsigned piece = m.piece() & 7;
+        if (piece == King) {
+            ASSERT(m.capture() == 0);
+            __v8hi estKing = keyScore.vector
+                - getKSVector(C*King, m.from())
+                + getKSVector(C*King, m.to());
+            if (m.to() == (pov^g1)) {
+                return estKing - getKSVector(C*Rook, pov^h1)
+                               + getKSVector(C*Rook, pov^f1);
+            } else {
+                return estKing - getKSVector(C*Rook, pov^a1)
+                               + getKSVector(C*Rook, pov^d1);
+            }
+        } else if (piece == Pawn) {
+            return keyScore.vector - getKSVector(C*Pawn, m.from())
+                                   + getKSVector(C*Pawn, m.to())
+                                   - getKSVector(-C*Pawn, m.to()-C*8);
+
+        } else {
+            return keyScore.vector - getKSVector(C*Pawn, m.from())
+                                   + getKSVector(C*piece, m.to())
+                                   - getKSVector(-C*m.capture(), m.to());
+        }
+    } else {
+        return keyScore.vector
+            - getKSVector(C*m.piece(), m.from())
+            + getKSVector(C*m.piece(), m.to())
+            - getKSVector(-C*m.capture(), m.to());
+    }
+}

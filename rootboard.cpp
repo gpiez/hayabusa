@@ -119,34 +119,6 @@ void RootBoard::infoTimer(milliseconds repeat) {
     infoTimerMutex.unlock();
 }
 
-RootBoard::RootBoard(Console *c):
-    iMove(0),
-    currentPly(0),
-    wtime(300000),
-    btime(300000),
-    winc(5000),
-    binc(5000),
-    movestogo(0),
-    stopSearch(Stopped),
-    console(c),
-    color(White)
-{
-    for (unsigned i=0; i<=maxDepth; ++i) {
-        nullReduction[i] = std::trunc(std::max(0.0, sqrt(0.25 + 2.0*i - 2.0*dMaxExt) + 0.51));
-//         nullReduction[i] = std::trunc(std::max(0.0, ((int)i-(int)dMaxExt-1)/5.0) + 3.0);
-        if (Options::debug & DebugFlags::debugSearch) {        
-            if (i>dMaxExt) std::cout << std::setw(2) << i-dMaxExt << ": " << nullReduction[i] << std::endl;
-        }
-    }
-    tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>;
-    clearEE();
-    boards[0].wb.init();
-#ifdef QT_GUI_LIB
-    statWidget = new StatWidget(*this);
-    statWidget->show();
-#endif
-}
-
 RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_t phashSize):
     iMove(0),
     currentPly(0),
@@ -158,9 +130,9 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
     stopSearch(Stopped),
     console(c),
     color(White),
-    eval(phashSize)
+    eval(phashSize, p)
 {
-    eval.setParameters(p);
+//     eval.setParameters(p);
     for (unsigned i=0; i<=maxDepth; ++i) {
         nullReduction[i] = std::trunc(std::max(0.0, sqrt(0.25 + 2.0*i - 2.0*dMaxExt) + 0.51));
 //         nullReduction[i] = std::trunc(std::max(0.0, ((int)i-(int)dMaxExt-1)/5.0) + 3.0);

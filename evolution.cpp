@@ -33,7 +33,6 @@ std::condition_variable Evolution::nThreadCond;
 Evolution::Evolution(Console* c):
     console(c)
 {
-    Parameters::init();
 }
 
 void Evolution::init()
@@ -60,7 +59,7 @@ void Evolution::parmTest(std::string pname, float min, float max, int n) {
     nThread = 0;
     maxThread = 8;
     Options::quiet = true;
-    Parameters adam;
+    Parameters adam(defaultParameters);
     nIndi = n;
     for (int i=0; i<nIndi; ++i) {
         adam[pname] = (max-min)*i/(n-1.0) + min;
@@ -81,7 +80,7 @@ void Evolution::parmTest(std::string pname, float min, float max, int n, std::st
     nThread = 0;
     maxThread = 8;
     Options::quiet = true;
-    Parameters adam;
+    Parameters adam(defaultParameters);
     nIndi = n*n2;
     for (int i=0; i<n; ++i) {
         adam[pname] = (max-min)*i/(n-1.0) + min;
@@ -128,9 +127,8 @@ void Evolution::tournament() {
         for (unsigned j=i+1; j<results[i].size(); ++j) {
             {
                 unique_lock<mutex> lock(nThreadMutex);
-                while (nThread >= maxThread) {
+                while (nThread >= maxThread)
                     nThreadCond.wait(lock);
-                }
                 ++nThread;
             }
 //             lock_guard<mutex> lock(resultsMutex);
