@@ -71,6 +71,7 @@ Console::Console(int& argc, char** argv)
             debugParm << args[i].c_str();
         debug(debugParm);
     }
+//     Options::debug = debugEval;
     BoardBase::initTables();
     WorkThread::init();
     Parameters::init();
@@ -367,9 +368,9 @@ void Console::position(StringList cmds) {
 
     if (pos.count("moves")) {
         StringList moves = pos["moves"];
-        for (auto imove = moves.begin(); imove != moves.end(); ++imove) {
+        for (auto imove = moves.begin(); imove != moves.end(); ++imove) 
             tryMove(*imove);
-        }
+        
     }
 }
 
@@ -462,7 +463,7 @@ void Console::parmtest(StringList cmds)
     if (cmds.size() == 5) 
         e.parmTest(cmds[1], convert(cmds[2]), convert(cmds[3]), convert(cmds[4]));
     else if (cmds.size() == 9) 
-        e.parmTest(cmds[1], convert(cmds[2]), convert(cmds[3]), convert(cmds[4]), cmds[5], convert(cmds[6]), convert(cmds[7]), convert(cmds[8]));
+        e.parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]));
     else
         std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> [n]\"" << std::endl;
 }

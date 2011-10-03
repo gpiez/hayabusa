@@ -103,7 +103,7 @@ void SelfGame::setupRootBoard(RootBoard* rb) {
 //     p["winc"] = StringList() << "10";
 //     p["binc"] = StringList() << "10";
     p["infinity"] = StringList();
-    p["nodes"] = StringList() << "5000";
+    p["nodes"] = StringList() << "1000";
     rb->goReadParam(p);
 }
 
@@ -192,7 +192,9 @@ bool SelfGame::checkResult(const RootBoard& rb)
 int SelfGame::tournament()
 {
     int sum = 0;
+//     Options::quiet = false;
     for (unsigned i=0; i<testPosition.size(); ++i) {
+//         std::cerr << "Game " << i << std::endl;
         wrb->setup(testPosition[i]);
         brb->setup(testPosition[i]);
         wrb->clearHash();

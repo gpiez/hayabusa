@@ -85,8 +85,6 @@ struct PawnEntry {
     uint64_t passers[nColors];  // 16
     uint16_t upperKey;          //  2
     int16_t score;              //  2
-    int16_t centerOpen;         //  2
-    int16_t centerEnd;          //  2
     uint8_t openFiles[nColors]; //  2
     uint8_t weak[nColors];      //  2
     uint8_t center[nColors];    //  2

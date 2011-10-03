@@ -63,6 +63,10 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     infoTimerMutex.lock();
     Thread* infoTimerThread = NULL;
     if (!Options::quiet) infoTimerThread = new Thread(&RootBoard::infoTimer, this, milliseconds(1000));
+
+    print_debug(debugSearch, "dMaxExt %d\n", eval.dMaxExt);
+    print_debug(debugSearch, "dMaxCapture %d\n", eval.dMaxCapture);
+    print_debug(debugSearch, "dMinDualExt %d\n", eval.dMinDualExt);
     
     nMoves = ml.count();
     if (nMoves == 0) {
@@ -90,12 +94,12 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
         uint64_t subnode = stats.node;
         int dummy __attribute__((unused));
-        alpha0.v = search4<(Colors)-C, tree, SharedScore<(Colors)-C>, SharedScore<C>, C>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
+        alpha0.v = search4<(Colors)-C, tree, SharedScore<(Colors)-C>, SharedScore<C>, C>(b, *ml, eval.dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
         ml.nodesCount(stats.node - subnode);
         for (++ml; ml.isValid() && stopSearch == Running; ++ml) {
             uint64_t subnode = stats.node;
             Score<C> value;
-            value.v = search4<(Colors)-C, tree>(b, *ml, dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
+            value.v = search4<(Colors)-C, tree>(b, *ml, eval.dMaxExt, beta, alpha0, ply+1, ExtNot, dummy NODE);
             if (value > alpha0.v) {
                 alpha0.v = value.v;
                 bestMove = *ml;
@@ -111,14 +115,14 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     #endif
 
         unsigned bestMovesLimit = 1;
-        for (depth=dMaxExt+2; depth<=endDepth && stats.node < maxSearchNodes && stopSearch == Running; depth++) {
+        for (depth=eval.dMaxExt+2; depth<=endDepth && stats.node < maxSearchNodes && stopSearch == Running; depth++) {
             ml.begin();
             ml.sort(bestMovesLimit);
             bestMove = currentMove = *ml;
             currentMoveIndex = 1;
             if (!Options::humanreadable && !Options::quiet) {
                 std::stringstream g;
-                g << "info depth " << depth-dMaxExt;
+                g << "info depth " << depth-eval.dMaxExt;
                 console->send(g.str());
             }
         #ifdef QT_GUI_LIB
@@ -194,7 +198,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 currentMove = *ml;
                 uint64_t subnode = stats.node;
                 if (alpha.v != -infinity*C
-                    && depth > dMaxExt+2
+                    && depth > eval.dMaxExt+2
                     && ml.count() > maxMovesNull
                     && b.material
                     && stopSearch == Running)

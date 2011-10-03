@@ -83,11 +83,6 @@ public:
 private:
     WBBoard boards[nMaxGameLength];
     unsigned nullReduction[maxDepth+1];
-    static unsigned dMaxCapture;
-    static unsigned dMaxExt;
-    static unsigned dMinDualExt;
-    static unsigned dMinSingleExt;
-    static unsigned dMinMateExt;
     
     unsigned int iMove;                // current half move index of game
 

@@ -78,7 +78,7 @@ void Evolution::parmTest(std::string pname, float min, float max, int n) {
 
 void Evolution::parmTest(std::string pname, float min, float max, int n, std::string pname2, float min2, float max2, int n2) {
     nThread = 0;
-    maxThread = 8;
+    maxThread = 4;
     Options::quiet = true;
     Parameters adam(defaultParameters);
     nIndi = n*n2;

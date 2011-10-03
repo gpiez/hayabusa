@@ -27,6 +27,7 @@
 #include "score.h"
 #include "ttentry.h"
 #include "transpositiontable.h"
+#include "parameters.h"
 /*
  * A square attacked by a piece is higher evaluated if it inhibits moves from
  * enemy pieces to this square. For this to happen it must be either less
@@ -47,10 +48,10 @@ class Parameters;
 class PieceList;
 class BoardBase;
 
-class CompoundScore {
+struct CompoundScore {
     RawScore    opening;
     RawScore    endgame;
-public:
+
     CompoundScore operator + (const CompoundScore& x) const {
         CompoundScore temp;
         temp.opening = x.opening + opening;
@@ -86,30 +87,107 @@ union KeyScore {
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986, unsigned istart=0 );
 
+void sigmoid(int n, int p[], double start, double end, double dcenter, double width = 1.5986);
+    
 class Eval {
     KeyScore zobristPieceSquare[nTotalPieces][nSquares];
-    int8_t wpawnOpen[64], wpawnEnd[64];         // TODO use psq instead
-    int8_t bpawnOpen[64], bpawnEnd[64];
 
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
 
-    int pawn, knight, bishop, rook, queen;
-
     int maxAttack;
     int maxDefense;
-    
+
+    Parameters::Piece rook, bishop, queen, knight, pawn;
+    int queenOpening;
+    int queenEndgame;
+    float queenHValue;
+    float queenHInfl;
+    int queenH[4];
+    float queenVValue;
+    float queenVInfl;
+    int queenV[8];
+    float queenHEValue;
+    float queenHEInfl;
+    int queenHE[4];
+    float queenVEValue;
+    float queenVEInfl;
+    int queenVE[8];
+    float queenCenter;
+
+    int bishopOpening;
+    int bishopEndgame;
+    float bishopHValue;
+    float bishopHInfl;
+    int bishopH[4];
+    float bishopVValue;
+    float bishopVInfl;
+    int bishopV[8];
+    float bishopHEValue;
+    float bishopHEInfl;
+    int bishopHE[4];
+    float bishopVEValue;
+    float bishopVEInfl;
+    int bishopVE[8];
+    float bishopCenter;
+
     int bishopPair;
     int bishopBlockPasser;
     int bishopAlone;
+
+    int knightOpening;
+    int knightEndgame;
+    float knightHValue;
+    float knightHInfl;
+    int knightH[4];
+    float knightVValue;
+    float knightVInfl;
+    int knightV[8];
+    float knightHEValue;
+    float knightHEInfl;
+    int knightHE[4];
+    float knightVEValue;
+    float knightVEInfl;
+    int knightVE[8];
+    float knightCenter;
     
     int knightAlone;
     int knightBlockPasser;
+
+    int rookOpening;
+    int rookEndgame;
+    float rookHValue;
+    float rookHInfl;
+    int rookH[4];
+    float rookVValue;
+    float rookVInfl;
+    int rookV[8];
+    float rookHEValue;
+    float rookHEInfl;
+    int rookHE[4];
+    float rookVEValue;
+    float rookVEInfl;
+    int rookVE[8];
+    float rookCenter;
 
     int rookTrapped;
     int rookOpen;
     int rookHalfOpen;
     int rookWeakPawn;
-    
+
+    int pawnOpening;
+    int pawnEndgame;
+    float pawnHValue;
+    float pawnHInfl;
+    int pawnH[4];
+    float pawnVValue;
+    float pawnVInfl;
+    int pawnV[8];
+    float pawnHEValue;
+    float pawnHEInfl;
+    int pawnHE[4];
+    float pawnVEValue;
+    float pawnVEInfl;
+    int pawnVE[8];
     int pawnBackward;
     int pawnBackwardOpen;
     int pawnIsolatedCenter;
@@ -120,6 +198,7 @@ class Eval {
     float pawnPasser2, pawnPasser7, pawnPasserSlope;
     int pawnFileOpen[4], pawnFileEnd[4];
     int pawnRankOpen[6], pawnRankEnd[6];
+    float pawnCenter;
 
 //     int pawnEdge;
 //     int pawnCenter;
@@ -127,6 +206,20 @@ class Eval {
     int pawnShoulder;
 //     int pawnHole;
     int pawnUnstoppable;
+
+    float kingHValue;
+    float kingHInfl;
+    int kingH[4];
+    float kingVValue;
+    float kingVInfl;
+    int kingV[8];
+    float kingHEValue;
+    float kingHEInfl;
+    int kingHE[4];
+    float kingVEValue;
+    float kingVEInfl;
+    int kingVE[8];
+    float kingCenter;
 
     int attackR1[21];
     int attackR2[21];
@@ -141,13 +234,17 @@ class Eval {
 
     int attackTable[256], defenseTable[256];
 
-    int mobB1[64], mobB2[64];
-    int mobN1[64], mobN2[64];
+    int mobB1[14], mobB2[33];
+    int mobN1[9], mobN2[33];
+    int mobR1[15], mobR2[65];
+    int mobQ1[28], mobQ2[65];
     float mobN1value, mobN1slope;
     float mobN2value, mobN2slope;
+    float mobB1value, mobB1slope;
+    float mobB2value, mobB2slope;
+    float mobR1value, mobR1slope;
+    float mobR2value, mobR2slope;
     
-    int mobR1[64], mobR2[64];
-    int mobQ1[64], mobQ2[64];
 
     int oppKingOwnPawn[8];
     int ownKingOwnPawn[8];
@@ -185,6 +282,12 @@ class Eval {
     template<Colors C> int king(const BoardBase& b) const;
     template<Colors C> int endgame(const BoardBase& b, const PawnEntry&, int sideToMoves) const;
 public:
+    unsigned dMaxCapture;
+    unsigned dMaxExt;
+    unsigned dMinDualExt;
+    int dEvenAlpha;
+//     unsigned dMinSingleExt;
+//     unsigned dMinMateExt;
     int aspiration0;
     int aspiration1;
     int evalHardBudget;

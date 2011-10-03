@@ -27,26 +27,6 @@
 #include "transpositiontable.tcc"
 #include "book.h"
 
-unsigned RootBoard::dMaxCapture = 12;
-// odd extensions tend to blow up the tree. Average tree size over 2600 positions:
-// ext  size, error margin ~5k
-// 13   660k
-// 12   541k
-// 11   635k
-// 10   522k
-//  9   616k
-//  8   505k
-//  7   598k
-//  6   490k
-//  5   582k
-//  4   475k
-//  3   562k
-//  2   462k
-//  1   539k
-//  0   427k
-unsigned RootBoard::dMaxExt = 10 + RootBoard::dMaxCapture;
-unsigned RootBoard::dMinDualExt = 4 + RootBoard::dMaxCapture;
-
 void RootBoard::stopTimer(milliseconds hardlimit) {
 #if defined(__WIN32__) || defined(POSIX_TIME_HPP___)
     UniqueLock<TimedMutex> lock(stopTimerMutex, boost::posix_time::millisec(hardlimit.count()));
@@ -65,7 +45,7 @@ void RootBoard::stopTimer(milliseconds hardlimit) {
 std::string RootBoard::commonStatus() const {
     std::stringstream g;
     g.imbue(std::locale("de_DE"));
-    g << "D" << std::setfill('0') << std::setw(2) << depth-(dMaxExt)
+    g << "D" << std::setfill('0') << std::setw(2) << depth-(eval.dMaxExt)
         << " " << std::setfill(' ') << std::fixed << std::setprecision(1) << std::showpoint << std::setw(9) << duration_cast<milliseconds>(system_clock::now()-start).count()/1000.0
         << "s " << std::setw(13) << getStats().node
         << " ";
@@ -128,16 +108,16 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
     binc(5000),
     movestogo(0),
     stopSearch(Stopped),
+    eval(phashSize, p),
     console(c),
-    color(White),
-    eval(phashSize, p)
+    color(White)
 {
 //     eval.setParameters(p);
     for (unsigned i=0; i<=maxDepth; ++i) {
-        nullReduction[i] = std::trunc(std::max(0.0, sqrt(0.25 + 2.0*i - 2.0*dMaxExt) + 0.51));
+        nullReduction[i] = std::trunc(std::max(0.0, sqrt(0.25 + 2.0*i - 2.0*eval.dMaxExt) + 0.51));
 //         nullReduction[i] = std::trunc(std::max(0.0, ((int)i-(int)dMaxExt-1)/5.0) + 3.0);
         if (Options::debug & DebugFlags::debugSearch) {
-            if (i>dMaxExt) std::cout << std::setw(2) << i-dMaxExt << ": " << nullReduction[i] << std::endl;
+            if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i] << std::endl;
         }
     }
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>(hashSize);
@@ -155,7 +135,7 @@ RootBoard::~RootBoard() {
 
 std::string RootBoard::status(system_clock::time_point now, int score)
 {
-    unsigned d = depth - dMaxExt;
+    unsigned d = depth - eval.dMaxExt;
     std::stringstream g;
     milliseconds t = duration_cast<milliseconds>(now-start);
     if (Options::humanreadable) {
@@ -520,7 +500,7 @@ bool RootBoard::doMove(Move m) {
                 ColoredBoard<(Colors)-C>* next = &nextBoard<C>();
                 cb.copyPieces(*next);
                 cb.doMove(next, *ml);
-                next->keyScore.vector = cb.estimatedEval(*ml, eval);
+                next->keyScore.vector = eval.estimate<C>(*ml, cb.keyScore);
                 next->buildAttacks();
 
                 if (C == Black) iMove++;

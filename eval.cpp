@@ -205,27 +205,16 @@ void Eval::init() {
     aspiration1 = 5;
     evalHardBudget = -20;
 
-    sigmoid(mobB1, -20, 20, 0, 3.25);
-    sigmoid(mobB2, -20, 20, 0,13.0);
+    sigmoid(mobQ1, 0, 0, 0, 7.25);
+    sigmoid(mobQ2, 0, 0, 0,29.0);
 
-    sigmoid(mobR1, -15, 15, 0, 4.0);
-    sigmoid(mobR2, -15, 15, 0,16.0);
-
-    sigmoid(mobQ1, -10, 10, 0, 7.25);
-    sigmoid(mobQ2, -10, 10, 0,29.0);
-
-    sigmoid(pawnFileOpen, 0, 20, 2);
-    sigmoid(pawnFileEnd, 30, 0, 1);
-    sigmoid(pawnRankOpen, 0, 20, 6);
-    sigmoid(pawnRankEnd, 0, 30, 6);
-
-    for (unsigned x=0; x<4; ++x)
-        for (unsigned y=1; y<7; ++y) {
-            bpawnOpen[(7-x)*8 + 7-y] = bpawnOpen[    x*8 + 7-y] = wpawnOpen[(7-x)*8 + y] = wpawnOpen[    x*8 + y]
-            = (pawn + pawnFileOpen[x])*(pawn + pawnRankOpen[y-1]) / pawn - pawn;
-            bpawnEnd [(7-x)*8 + 7-y] = bpawnEnd [    x*8 + 7-y] = wpawnEnd [(7-x)*8 + y] = wpawnEnd [    x*8 + y]
-            = (pawn + pawnFileEnd[x])*(pawn + pawnRankEnd[y-1]) / pawn - pawn;
-        }
+//     for (unsigned x=0; x<4; ++x)
+//         for (unsigned y=1; y<7; ++y) {
+//             bpawnOpen[(7-x)*8 + 7-y] = bpawnOpen[    x*8 + 7-y] = wpawnOpen[(7-x)*8 + y] = wpawnOpen[    x*8 + y]
+//             = (pawnOpening + pawnFileOpen[x])*(pawnOpening + pawnRankOpen[y-1]) / pawnOpening - pawnOpening;
+//             bpawnEnd [(7-x)*8 + 7-y] = bpawnEnd [    x*8 + 7-y] = wpawnEnd [(7-x)*8 + y] = wpawnEnd [    x*8 + y]
+//             = (pawnEndgame + pawnFileEnd[x])*(pawnEndgame + pawnRankEnd[y-1]) / pawnEndgame - pawnEndgame;
+//         }
     initZobrist();
     initTables();
 
@@ -251,22 +240,6 @@ void Eval::init() {
         printSigmoid(ownKingOwnPawn, "mKp");
         printSigmoid(pawnFileOpen, "pfo");
         printSigmoid(pawnFileEnd, "pfe");
-        for (unsigned y=0; y<8; ++y) {
-            for (unsigned x=0; x<8; ++x)
-                std::cerr << std::setw(3) << (int)wpawnOpen[x*8+y];
-            std::cerr << "       ";
-            for (unsigned x=0; x<8; ++x)
-                std::cerr << std::setw(3) << (int)bpawnOpen[x*8+y];
-            std::cerr << std::endl;
-        }
-        for (unsigned y=0; y<8; ++y) {
-            for (unsigned x=0; x<8; ++x)
-                std::cerr << std::setw(3) << (int)wpawnEnd[x*8+y];
-            std::cerr << "       ";
-            for (unsigned x=0; x<8; ++x)
-                std::cerr << std::setw(3) << (int)bpawnEnd[x*8+y];
-            std::cerr << std::endl;
-        }
     }
 }
 
@@ -278,42 +251,69 @@ void Eval::initPS() {
         getPS( 0, sq) = 0;
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Pawn, sq) = Eval::pawn;
-        getPS(-Pawn, sq ^ 070) = -getPS( Pawn, sq);
-    }
-
-    for (unsigned int sq = 0; sq<nSquares; ++sq) {
         unsigned xh = (sq & 7);
+        unsigned yh = sq >> 3;
         if (xh>3) xh ^= 7;
-        getPS( Rook, sq) = Eval::rook + (I4) { 0, 2, 4, 6 } [xh];
+        if (yh>rookCenter) yh = 2*rookCenter - yh;
+        getPS( Rook, sq) = { (short) (rookOpening + rookH[xh] + rookV[yh]), (short) (rookEndgame + rookHE[xh] + rookVE[yh]) };
         getPS(-Rook, sq ^ 070) = -getPS( Rook, sq);
+        print_debug(debugEval, "%4d %4d  ", getPS(Rook, sq).opening, getPS(Rook, sq).endgame);
+        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
         unsigned xh = (sq & 7);
         unsigned yh = sq >> 3;
         if (xh>3) xh ^= 7;
-        if (yh>3) yh ^= 7;
-        getPS( Bishop, sq) = Eval::bishop + (I4) { 0, 5, 8, 10 } [xh] + (I4) { 0, 5, 8, 10 } [yh];
+        if (yh>bishopCenter) yh = 2*bishopCenter - yh;
+        getPS( Bishop, sq) = { (short) (bishopOpening + bishopH[xh] +  bishopV[yh]), (short) (bishopEndgame + bishopHE[xh] + bishopVE[yh]) };
         getPS(-Bishop, sq ^ 070) = -getPS( Bishop, sq);
+        print_debug(debugEval, "%4d %4d  ", getPS(Bishop, sq).opening, getPS(Bishop, sq).endgame);
+        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
         unsigned xh = (sq & 7);
         unsigned yh = sq >> 3;
         if (xh>3) xh ^= 7;
-        getPS( Knight, sq) = Eval::knight + (I4) { 0, 10, 16, 20 } [xh] + (int[8]) { 0, 6, 11, 15, 18, 20, 18, 15 } [yh];
-        getPS(-Knight, sq ^ 070) = -getPS( Knight, sq);
-    }
-
-    for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( Queen, sq) = Eval::queen;/*+ CompoundScore{ queen[Opening][sq ^ 0x38], queen[Endgame][sq ^ 0x38] };*/
+        if (yh>queenCenter) yh = 2*queenCenter - yh;
+        getPS( Queen, sq) = { (short) (queenOpening + queenH[xh] +  queenV[yh]), (short) (queenEndgame + queenHE[xh] + queenVE[yh]) };
         getPS(-Queen, sq ^ 070) = -getPS( Queen, sq);
+        print_debug(debugEval, "%4d %4d  ", getPS(Queen, sq).opening, getPS(Queen, sq).endgame);
+        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        getPS( King, sq) = 0;/*CompoundScore{ king[Opening][sq ^ 0x38], king[Endgame][sq ^ 0x38] };*/
+        unsigned xh = (sq & 7);
+        unsigned yh = sq >> 3;
+        if (xh>3) xh ^= 7;
+        if (yh>knightCenter) yh = 2*knightCenter - yh;
+        getPS( Knight, sq) =  { (short) (knightOpening + knightH[xh] +  knightV[yh]), (short) (knightEndgame + knightHE[xh] + knightVE[yh]) };
+        getPS(-Knight, sq ^ 070) = -getPS( Knight, sq);
+        print_debug(debugEval, "%4d %4d  ", getPS(Knight, sq).opening, getPS(Knight, sq).endgame);
+        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
+    }
+
+    for (unsigned int sq = a2; sq<a8; ++sq) {
+        unsigned xh = (sq & 7);
+        if (xh>3) xh ^= 7;
+        unsigned yh = sq >> 3;
+        if (yh>pawnCenter) yh = 2*pawnCenter - yh;
+        getPS( Pawn, sq) = { (short) (pawnOpening + pawnH[xh] +  pawnV[yh]), (short) (pawnEndgame + pawnHE[xh] + pawnVE[yh]) };
+        getPS(-Pawn, sq ^ 070) = -getPS( Pawn, sq);
+        print_debug(debugEval, "%4d %4d  ", getPS(Pawn, sq).opening, getPS(Pawn, sq).endgame);
+        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
+    }
+
+    for (unsigned int sq = 0; sq<nSquares; ++sq) {
+        unsigned xh = (sq & 7);
+        unsigned yh = sq >> 3;
+        if (xh>3) xh ^= 7;
+        if (yh>kingCenter) yh = 2*kingCenter - yh;
+        getPS( King, sq) = { (short) (kingH[xh] +  kingV[yh]), (short) (kingHE[xh] + kingVE[yh]) };
         getPS(-King, sq ^ 070) = -getPS( King, sq);
+        print_debug(debugEval, "%4d %4d  ", getPS(King, sq).opening, getPS(King, sq).endgame);
+        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
     }
 }
 
@@ -400,7 +400,7 @@ int Eval::pieces(const BoardBase& b, const PawnEntry& p) const {
                 || (b.getPieces<C, King>() & file<'c'>() & rank<C,1>() && b.getPieces<C, Pawn>() & file<'b'>() & (rank<C,2>() | rank<C,3>())))))
             value += rookTrapped;
             
-    uint64_t own = p.openFiles[CI];
+    uint64_t own = p.openFiles[CI]; //TODO use lookuptable (2k) instead
     own += own << 010;
     own += own << 020;
     own += own << 040;
@@ -473,15 +473,15 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         uint64_t wpawn = b.getPieces<White,Pawn>();
         uint64_t bpawn = b.getPieces<Black,Pawn>();
 
-        int w0 = weightedPopcount(wpawn, wpawnOpen);
-        int b0 = weightedPopcount(bpawn, bpawnOpen);
-        pawnEntry.centerOpen = w0-b0;
-        print_debug(debugEval, "pawnCenterOpen:%3d/%3d\n", w0, b0);
+//         int w0 = weightedPopcount(wpawn, wpawnOpen);
+//         int b0 = weightedPopcount(bpawn, bpawnOpen);
+//         pawnEntry.centerOpen = w0-b0;
+//         print_debug(debugEval, "pawnCenterOpen:%3d/%3d\n", w0, b0);
         
-        w0 = weightedPopcount(wpawn, wpawnEnd);
-        b0 = weightedPopcount(bpawn, bpawnEnd);
-        pawnEntry.centerEnd = w0-b0;
-        print_debug(debugEval, "pawnCenterEnd:%3d/%3d\n", w0, b0);
+//         w0 = weightedPopcount(wpawn, wpawnEnd);
+//         b0 = weightedPopcount(bpawn, bpawnEnd);
+//         pawnEntry.centerEnd = w0-b0;
+//         print_debug(debugEval, "pawnCenterEnd:%3d/%3d\n", w0, b0);
 
         int wps = pawnShoulder * popcount15(wpawn & wpawn<<1 & ~file<'a'>());
         int bps = pawnShoulder * popcount15(bpawn & bpawn<<1 & ~file<'a'>());
@@ -702,7 +702,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
     int score = 0;
     attackingPieces = 0;
     if (P != Endgame) defendingPieces = 0;
-    int king = bit(b.getPieces<-C,King>());
+//     int king = bit(b.getPieces<-C,King>());
     const uint64_t oppking = /*b.kAttacked[king];*/ b.getAttacks<-C,King>();
     const uint64_t ownking = b.getAttacks< C,King>()/* | shift<C* 8>(b.getAttacks< C,King>())*/;
     const uint64_t noBlockedPawns = ~(b.getPieces<C,Pawn>() & shift<C*-8>(b.getPieces<-C,Pawn>()));      //only own pawns
@@ -1022,20 +1022,21 @@ int Eval::operator () (const BoardBase& b, int stm ) const {
 int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
 #if defined(MYDEBUG)
     int cmp = b.keyScore.score.calc(b.material, *this);
-    int value = 0;
+    CompoundScore value = { 0, 0 };
     for (int p=Rook; p<=King; ++p) {
         for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
             unsigned sq=bit(x);
             print_debug(debugEval, "materialw%d     %d\n", p, getPS( p, sq).calc(b.material, *this));
-            value += getPS( p, sq).calc(b.material, *this);
+            value = value + getPS( p, sq);
         }
         for (uint64_t x=b.getPieces<Black>(p); x; x&=x-1) {
             unsigned sq=bit(x);
             print_debug(debugEval, "materialb%d     %d\n", p, getPS(-p, sq).calc(b.material, *this));
-            value += getPS(-p, sq).calc(b.material, *this);
+            value = value + getPS(-p, sq);
         }
     }
-    if (value != cmp) asm("int3");
+    int v = value.calc(b.material, *this);
+    if (v != cmp) asm("int3");
 #endif
     if (b.getPieces<White,Pawn>() + b.getPieces<Black,Pawn>()) {
         PawnEntry pe = pawns(b);
@@ -1052,21 +1053,20 @@ int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
             m = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
             a = attackDiff(b, pe, wap, bap, wdp, bdp);
             e = 0;
-            pa = pe.score + pe.centerOpen;
+            pa = pe.score;
         } else if (openingScale <= 0) {
             m = mobilityDiff<Endgame>(b, wap, bap, wdp, bdp);
             a = 0;
             e = endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm);
-            pa = pe.score + pe.centerEnd;
+            pa = pe.score;
         } else {
             m = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
             a = (openingScale*attackDiff(b, pe, wap, bap, wdp, bdp)) >> logEndgameTransitionSlope;
             e = ((endgameTransitionSlope-openingScale)*(endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm))) >> logEndgameTransitionSlope;
-            pa = pe.score + ((openingScale*pe.centerOpen + (endgameTransitionSlope-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope);
+            pa = pe.score;
             
         }
         int pi = pieces<White>(b, pe) - pieces<Black>(b, pe);
-//         int pa = pe.score + ((openingScale*pe.centerOpen + (endgameTransitionSlope-openingScale)*pe.centerEnd) >> logEndgameTransitionSlope);
         print_debug(debugEval, "endgame:        %d\n", e);
         print_debug(debugEval, "mobility:       %d\n", m);
         print_debug(debugEval, "pawns:          %d\n", pa);
@@ -1091,34 +1091,128 @@ void Eval::ptClear() {
 
 void Eval::setParameters(const Parameters& p)
 {
-    pawn = p["PawnValue"].value;
-    knight = p["KnightValue"].value;
-    bishop = p["BishopValue"].value;
-    rook = p["RookValue"].value;
-    queen = p["QueenValue"].value;
+    SETPARM(pawnOpening);
+    SETPARM(pawnEndgame);
+    SETPARM(pawnHValue);
+    SETPARM(pawnHInfl);
+    SETPARM(pawnVValue);
+    SETPARM(pawnVInfl);
+    sigmoid(pawnH, -pawnHValue, pawnHValue, pawnHInfl );
+    sigmoid(pawnV, -pawnVValue, pawnVValue, pawnVInfl );
+    SETPARM(pawnHEValue);
+    SETPARM(pawnHEInfl);
+    SETPARM(pawnVEValue);
+    SETPARM(pawnVEInfl);
+    sigmoid(pawnHE, -pawnHEValue, pawnHEValue, pawnHEInfl );
+    sigmoid(pawnVE, -pawnVEValue, pawnVEValue, pawnVEInfl );
+    SETPARM(pawnCenter);
+    
+    SETPARM(knightOpening);
+    SETPARM(knightEndgame);
+    SETPARM(knightHValue);
+    SETPARM(knightHInfl);
+    SETPARM(knightVValue);
+    SETPARM(knightVInfl);
+    SETPARM(knightCenter);
+    sigmoid(knightH, -knightHValue, knightHValue, knightHInfl );
+    sigmoid(knightCenter, knightV, -knightVValue, knightVValue, knightVInfl );
+    SETPARM(knightHEValue);
+    SETPARM(knightHEInfl);
+    SETPARM(knightVEValue);
+    SETPARM(knightVEInfl);
+    sigmoid(knightHE, -knightHEValue, knightHEValue, knightHEInfl );
+    sigmoid(knightCenter, knightVE, -knightVEValue, knightVEValue, knightVEInfl );
+    
+    SETPARM(bishopOpening);
+    SETPARM(bishopEndgame);
+    SETPARM(bishopHValue);
+    SETPARM(bishopHInfl);
+    SETPARM(bishopVValue);
+    SETPARM(bishopVInfl);
+    SETPARM(bishopCenter);
+    sigmoid(bishopH, -bishopHValue, bishopHValue, bishopHInfl );
+    sigmoid(bishopCenter, bishopV, -bishopVValue, bishopVValue, bishopVInfl );
+    SETPARM(bishopHEValue);
+    SETPARM(bishopHEInfl);
+    SETPARM(bishopVEValue);
+    SETPARM(bishopVEInfl);
+    sigmoid(bishopHE, -bishopHEValue, bishopHEValue, bishopHEInfl );
+    sigmoid(bishopCenter, bishopVE, -bishopVEValue, bishopVEValue, bishopVEInfl );
+    
+    SETPARM(rookOpening);
+    SETPARM(rookEndgame);
+    SETPARM(rookHValue);
+    SETPARM(rookHInfl);
+    SETPARM(rookVValue);
+    SETPARM(rookVInfl);
+    SETPARM(rookCenter);
+    sigmoid(rookH, -rookHValue, rookHValue, rookHInfl );
+    sigmoid(rookCenter, rookV, -rookVValue, rookVValue, rookVInfl );
+    SETPARM(rookHEValue);
+    SETPARM(rookHEInfl);
+    SETPARM(rookVEValue);
+    SETPARM(rookVEInfl);
+    sigmoid(rookHE, -rookHEValue, rookHEValue, rookHEInfl );
+    sigmoid(rookCenter, rookVE, -rookVEValue, rookVEValue, rookVEInfl );
+    
+    SETPARM(queenOpening);
+    SETPARM(queenEndgame);
+    SETPARM(queenHValue);
+    SETPARM(queenHInfl);
+    SETPARM(queenVValue);
+    SETPARM(queenVInfl);
+    SETPARM(queenCenter);
+    sigmoid(queenH, -queenHValue, queenHValue, queenHInfl );
+    sigmoid(queenCenter, queenV, -queenVValue, queenVValue, queenVInfl );
+    SETPARM(queenHEValue);
+    SETPARM(queenHEInfl);
+    SETPARM(queenVEValue);
+    SETPARM(queenVEInfl);
+    sigmoid(queenHE, -queenHEValue, queenHEValue, queenHEInfl );
+    sigmoid(queenCenter, queenVE, -queenVEValue, queenVEValue, queenVEInfl );
+    
+    SETPARM(kingHValue);
+    SETPARM(kingHInfl);
+    SETPARM(kingVValue);
+    SETPARM(kingVInfl);
+    SETPARM(kingCenter);
+    sigmoid(kingH, -kingHValue, kingHValue, kingHInfl );
+    sigmoid(kingCenter, kingV, -kingVValue, kingVValue, kingVInfl );
+    SETPARM(kingHEValue);
+    SETPARM(kingHEInfl);
+    SETPARM(kingVEValue);
+    SETPARM(kingVEInfl);
+    sigmoid(kingHE, -kingHEValue, kingHEValue, kingHEInfl );
+    sigmoid(kingCenter, kingVE, -kingVEValue, kingVEValue, kingVEInfl );
+
+    sigmoid(pawnFileOpen, 0, 20, 2);
+    sigmoid(pawnFileEnd, 30, 0, 1);
+    sigmoid(pawnRankOpen, 0, 20, 6);
+    sigmoid(pawnRankEnd, 0, 30, 6);
+
     initPS();
     
-    endgameMaterial = p["endgameMaterial"].value;
+    SETPARM(endgameMaterial);
 
-    bishopPair = p["bishopPair"].value;
-    bishopBlockPasser = p["bishopBlockPasser"].value;
-    bishopAlone = p["bishopAlone"].value;
+    SETPARM(bishopPair);
+    SETPARM(bishopBlockPasser);
+    SETPARM(bishopAlone);
 
-    knightAlone = p["knightAlone"].value;
-    knightBlockPasser = p["knightBlockPasser"].value;
+    SETPARM(knightAlone);
+    SETPARM(knightBlockPasser);
 
-    rookTrapped = p["rookTrapped"].value;
-    rookOpen = p["rookOpen"].value;
-    rookHalfOpen = p["rookHalfOpen"].value;
-    rookWeakPawn = p["rookWeakPawn"].value;
+    SETPARM(rookTrapped);
+    SETPARM(rookOpen);
+    SETPARM(rookHalfOpen);
+    SETPARM(rookWeakPawn);
 
-    pawnBackward = p["pawnBackward"].value;
-    pawnBackwardOpen = p["pawnBackwardOpen"].value;
-    pawnIsolatedCenter = p["pawnIsolatedCenter"].value;
-    pawnIsolatedEdge = p["pawnIsolatedEdge"].value;
-    pawnIsolatedOpen = p["pawnIsolatedOpen"].value;
-    pawnDouble = p["pawnDouble"].value;
-    pawnShoulder = p["pawnShoulder"].value;
+    SETPARM(pawnBackward);
+    SETPARM(pawnBackwardOpen);
+    SETPARM(pawnIsolatedCenter);
+    SETPARM(pawnIsolatedEdge);
+    SETPARM(pawnIsolatedOpen);
+    SETPARM(pawnDouble);
+    SETPARM(pawnShoulder);
 
     //attack Q                          = 230 = 14
     //attack Q + N                      = 330 = 20.5
@@ -1141,22 +1235,56 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(mobN2value);
     SETPARM(mobN2slope);
     sigmoid(mobN2, -mobN2value, mobN2value, 0, mobN2slope);
+
+    SETPARM(mobB1value);
+    SETPARM(mobB1slope);
+    sigmoid(mobB1, -mobB1value, mobB1value, 0, mobB1slope);
+
+    SETPARM(mobB2value);
+    SETPARM(mobB2slope);
+    sigmoid(mobB2, -mobB2value, mobB2value, 0, mobB2slope);
+
+    SETPARM(mobR1value);
+    SETPARM(mobR1slope);
+    sigmoid(mobR1, -mobR1value, mobR1value, 0, mobR1slope);
+
+    SETPARM(mobR2value);
+    SETPARM(mobR2slope);
+    sigmoid(mobR2, -mobR2value, mobR2value, 0, mobR2slope);
+
+    SETPARM(dMaxCapture);
+    SETPARM(dMaxExt);
+    dMaxExt += dMaxCapture;
+    SETPARM(dMinDualExt);
+    dMinDualExt += dMaxCapture;
+
 }
 
 int CompoundScore::calc(int material, const Eval& eval) const
 {
-        return opening;
         int openingScale = material - eval.endgameMaterial + endgameTransitionSlope/2;
         if (openingScale > endgameTransitionSlope)
             openingScale = endgameTransitionSlope;
         else if (openingScale <= 0)
             openingScale = 0;
 
-        int op = (openingScale*opening) >> logEndgameTransitionSlope;
-        int en = ((endgameTransitionSlope-openingScale)*endgame) >> logEndgameTransitionSlope;
-        return op+en;
+        return (openingScale*opening + (endgameTransitionSlope-openingScale)*endgame) >> logEndgameTransitionSlope;
 
         //        return material >= endgameMaterial ? opening : endgame;
 //        int compound = *(int*)this;
 //        return material >= endgameMaterial ? (int16_t)compound : compound >> 16;
+}
+
+void sigmoid(int n, int p[], double start, double end, double dcenter, double width) {
+    double t0 = -dcenter;
+    double t1 = n-dcenter;
+    double l0 = 1/(1+exp(-t0/width));
+    double l1 = 1/(1+exp(-t1/width));
+
+    double r = (end - start)/(l1-l0);
+    double a = start - l0*r;
+    for (unsigned int i = 0; i <= n; ++i) {
+        double t = i - dcenter;
+        p[i] = lrint(a + r/(1.0 + exp(-t/width)));
+    }
 }

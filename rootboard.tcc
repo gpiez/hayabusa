@@ -43,6 +43,7 @@
 #include "movelist.h"
 #include "options.h"
 #include "repetition.tcc"
+#include "eval.tcc"
 
 template<Colors C>
 uint64_t RootBoard::rootDivide(unsigned int depth) {
@@ -92,7 +93,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
         return;
     }
 
-    __v8hi est = prev.estimatedEval(m, eval);
+    __v8hi est = eval.estimate<(Colors)-C>(m, prev.keyScore);
     const ColoredBoard<C> b(prev, m, est);
 
     Key z = b.getZobrist();

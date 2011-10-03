@@ -24,7 +24,6 @@
 #include "transpositiontable.tcc"
 #include "jobs.tcc"
 #include "score.tcc"
-#include "eval.tcc"
 #include "history.tcc"
 #include "genmates.tcc"
 
@@ -40,7 +39,7 @@
 template<Colors C>
 int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int depth) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-    depth -= dMaxExt;
+    depth -= eval.dMaxExt;
     if (Options::reduction && movenr >= 3 && depth > 5) {
         bool check = (!m.isSpecial() && (  (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
                                         || (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
@@ -75,9 +74,9 @@ int RootBoard::search4(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 ) {
     ASSERT(P!=leaf);
     bool unused;
-    if (P == leaf || depth <= dMaxExt)
+    if (P == leaf || depth <= eval.dMaxExt)
         return search3<C,leaf>(prev,m,depth,a.unshared(),b.unshared(),ply,extend,unused,attack NODE);
-    if (P == tree || depth <= Options::splitDepth + dMaxExt)
+    if (P == tree || depth <= Options::splitDepth + eval.dMaxExt)
         return search3<C,tree>(prev,m,depth,a.unshared(),b,ply,extend,unused,attack NODE);
     ASSERT(P==trunk);
     return search3<C,trunk>(prev,m,depth,a,b,ply,extend,unused,attack NODE);
@@ -102,9 +101,9 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
     }
     KeyScore estimate;
     if (P == leaf || P == vein)
-        estimate.vector = prev.inline_estimatedEval(m, eval);
+        estimate.vector = eval.inline_estimate<PREVC>(m, prev.keyScore);
     else
-        estimate.vector = prev.estimatedEval(m, eval);
+        estimate.vector = eval.estimate<PREVC>(m, prev.keyScore);
 #ifdef QT_GUI_LIB
     uint64_t startnode = stats.node;
     NodeItem* node = 0;
@@ -298,7 +297,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             else
                 ttScore.v = tt2Score(subentry.score);
             if (ttDepth >= depth || (ttScore>=infinity*C && subentry.loBound) || (ttScore<=-infinity*C && subentry.hiBound)) {
-                if (P == leaf && depth < dMaxExt) {
+                if (P == leaf && depth < eval.dMaxExt) {
                     nextMaxDepth = true;
                 }
                 if (subentry.loBound) {
@@ -335,7 +334,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
     if (P == leaf) leafMaxDepth=false;
 
     if (P==tree && Options::pruning && !threatened && !extend) {
-        if (depth == dMaxExt + 1) {
+        if (depth == eval.dMaxExt + 1) {
             Score<C> fScore;
             fScore.v = estimatedScore/* - C*100*/;
 #ifdef QT_GUI_LIB
@@ -348,7 +347,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                 return fScore.v;
             }
         }
-        if (depth == dMaxExt + 2) {
+        if (depth == eval.dMaxExt + 2) {
             Score<C> fScore;
             fScore.v = estimatedScore - C*1000;
 #ifdef QT_GUI_LIB
@@ -419,6 +418,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         }
     }
     if (P==vein) ASSERT(!(threatened & ~ExtCheck));
+    if (depth == 0) ASSERT(P==vein);
     if ((P==vein || P==leaf) && !threatened) {
         alpha.max(realScore);
         current.max(realScore);
@@ -438,8 +438,8 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         }
         bad = j;*/
     }
-
-    {
+    
+    if (P!=vein || depth) {
         Move moveList[256];
         Move* good = moveList+192;
         Move* bad = good;
@@ -586,7 +586,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 
         bool unused __attribute__((unused));
         if (P != vein && P != leaf && !alphaNode)
-        for (unsigned int d = (depth+1)%2 + 1 + dMaxExt; d < depth; d+=2) {
+        for (unsigned int d = (depth+1)%2 + 1 + eval.dMaxExt; d < depth; d+=2) {
     //      if (depth > 2 + dMaxCapture + dMaxThreat && depth > ttDepth+2) {
     //          unsigned d = depth-2;
             if (d<=ttDepth) continue;
@@ -634,7 +634,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         if (bad > good) bestMove = *good;
         Extension leafExt = threatened;
         if (P != vein && b.template inCheck<C>()) {
-            ASSERT ( depth > dMaxCapture );
+            ASSERT ( depth > eval.dMaxCapture );
             if (bad-good == 2)
                 leafExt = (Extension) (leafExt | ExtDualReply);
             else if (bad-good == 1)
@@ -650,24 +650,26 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             }
             int nattack=0;
             Score<C> value;
-            if (    P == vein
-                || (P == leaf && ((i>=captures && i<threats) || i>=nonCaptures)
+            if (P == vein)  {
+                ASSERT(depth <= eval.dMaxCapture);
+                value.v = search3<(Colors)-C, vein>(b, *i, depth-1, beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nattack NODE);
+            } else if (P == leaf && ((i>=captures && i<threats) || i>=nonCaptures)
                               && !threatened
                               && !(extend & (ExtDualReply|ExtSingleReply))
-                             /*&& ~ply & 1*/))
+                             /*&& ~ply & 1*/)
             {
                 if (!i->capture() && !i->isSpecial()) continue;
-                value.v = search3<(Colors)-C, vein>(b, *i, 0, beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nattack NODE);
-                alpha.max(value.v);
-                if (current.max(value.v)) bestMove = *i;
+                value.v = search3<(Colors)-C, vein>(b, *i, std::min(depth-1, eval.dMaxCapture), beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nattack NODE);
+//                 alpha.max(value.v);
+//                 if (current.max(value.v)) bestMove = *i;
             } else if (    P == leaf
-                       && (depth <= dMaxCapture + 1 || (depth <= dMinDualExt + 1 && extend & ExtDualReply))) {
+                       && (depth <= eval.dMaxCapture + 1 || (depth <= eval.dMinDualExt + 1 && extend & ExtDualReply))) {
                 leafExt = i<captures ? ExtTestMate : ExtNot;
-                value.v = search3<(Colors)-C, vein>(b, *i, 0, beta.unshared(), alpha.unshared(), ply+1, leafExt, unused, nattack NODE);
-                alpha.max(value.v);
-                if (current.max(value.v)) bestMove = *i;
+                value.v = search3<(Colors)-C, vein>(b, *i, eval.dMaxCapture, beta.unshared(), alpha.unshared(), ply+1, leafExt, unused, nattack NODE);
                 leafMaxDepth = true;
-            } else if ( P == leaf || depth <= dMaxExt + 1) {
+//                 alpha.max(value.v);
+//                 if (current.max(value.v)) bestMove = *i;
+            } else if ( P == leaf || depth <= eval.dMaxExt + 1) {
     //                 if (i<captures && i<threats) asm("int3");
     //                 uint64_t tnode = stats.node;
                 value.v = search3<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), alpha.unshared(), ply+1, leafExt, leafMaxDepth, nattack NODE);
@@ -678,11 +680,11 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                     std::cout << std::endl;
                 }
 #endif
-                alpha.max(value.v);
-                if (current.max(value.v)) bestMove = *i;
+//                 alpha.max(value.v);
+//                 if (current.max(value.v)) bestMove = *i;
             } else { // possible null search in tree or trunk
                 ASSERT(P != leaf);
-                if (depth > 2 + dMaxExt
+                if (depth > 2 + eval.dMaxExt
                     && current.v != -infinity*C //TODO compare to alpha0.v of rootsearch
 //                     && bad-good > maxMovesNull
                     && b.material) {
@@ -753,19 +755,19 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                     unsigned newDepth = depth-(reduction+1);
                     ASSERT(depth > (unsigned)reduction+1);
                     value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, alpha, ply+1, ExtNot, nattack NODE);
-                    if (value <= alpha.v && (nattack <= oldattack || nattack <= 20*((signed)depth-(signed)dMaxExt) + 80)) continue; //TODO second part could be earlier
+                    if (value <= alpha.v && (nattack <= oldattack || nattack <= 20*((signed)depth-(signed)eval.dMaxExt) + 80)) continue; //TODO second part could be earlier
                 }
-                if (P == tree || origAlpha.isNotShared || depth < Options::splitDepth + dMaxExt) {
+                if (P == tree || origAlpha.isNotShared || depth < Options::splitDepth + eval.dMaxExt) {
                     reduction = 0;
     /*                                if (!research && nattack > 30*((signed)depth-(signed)dMaxExt) + 50)
                         reduction = -1;*/
                     unsigned newDepth = depth-reduction-1;
-                    ASSERT(depth > reduction+1+dMaxExt);
+                    ASSERT(depth > reduction+1+eval.dMaxExt);
                     const B beta0(alpha.v + C);
                     if (0 && i != good
                         && beta0.v != beta.v
                         && current.v > -0x400 && current.v < 0x400
-                        && newDepth >= 3+dMaxExt)
+                        && newDepth >= 3+eval.dMaxExt)
                     {
                         value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, alpha, ply+1, ExtNot, nattack NODE);
                         if (current.max(value.v)) bestMove = *i;
@@ -773,36 +775,38 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                         alpha.v = value.v;
                     }
                     value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta, alpha, ply+1, ExtNot, nattack NODE);
-                    alpha.max(value.v);
-                    if (current.max(value.v)) bestMove = *i;
+//                     alpha.max(value.v);
+//                     if (current.max(value.v)) bestMove = *i;
                 // Multi threaded search: After the first move try to find a free thread, otherwise do a normal
                 // search but stay in trunk. To avoid multithreading search at cut off nodes
                 // where it would be useless.
                 } else {
-                    if (depth == Options::splitDepth + dMaxExt) {
+                    // alpha is shared here, it may have increased //TODO isn't current increase fail-hard?
+                    //                     if (origAlpha > current.v)
+//                         current.v = origAlpha.v;
+                    alpha.max(origAlpha.v);
+                    if (depth == Options::splitDepth + eval.dMaxExt) {
                         if (i > good && WorkThread::canQueued(threadId, current.isNotReady())) {
                             WorkThread::queueJob(threadId, new SearchJob<(Colors)-C, typename B::Base, A, ColoredBoard<C> >(*this, b, *i, depth-1, beta.unshared(), alpha, ply+1, threadId, keys NODE));
                         } else {
                             value.v = search4<(Colors)-C, P>(b, *i, depth-1, beta.unshared(), alpha, ply+1, ExtNot, nattack NODE);
-                            alpha.max(value.v);
-                            if (current.max(value.v)) bestMove = *i;
+//                             alpha.max(value.v);
+//                             if (current.max(value.v)) bestMove = *i;
                         }
                     } else {
                         if (i > good && WorkThread::canQueued(threadId, current.isNotReady())) {
                             WorkThread::queueJob(threadId, new SearchJob<(Colors)-C,B,A, ColoredBoard<C> >(*this, b, *i, depth-1, beta, alpha, ply+1, threadId, keys NODE));
                         } else {
                             value.v = search4<(Colors)-C, P>(b, *i, depth-1, beta, alpha, ply+1, ExtNot, nattack NODE);
-                            alpha.max(value.v);
-                            if (current.max(value.v)) bestMove = *i;
+//                             alpha.max(value.v);
+//                             if (current.max(value.v)) bestMove = *i;
                         }
                     }
-                    // alpha is shared here, it may have increased
-                    if (origAlpha > current.v)
-                        current.v = origAlpha.v;
-                    alpha.max(origAlpha.v);
                 }
             }
-        }
+            alpha.max(value.v);
+            if (current.max(value.v)) bestMove = *i;
+        }  // for Move*
 
         // if there are queued jobs started from _this_ node, do them first
         if (P == trunk) {
@@ -817,10 +821,10 @@ storeAndExit:
     if (P != vein && stopSearch == Running) {
         TTEntry stored;
         stored.zero();
-        if (P == leaf) ASSERT(depth <= dMaxExt);
+        if (P == leaf) ASSERT(depth <= eval.dMaxExt);
         if (P == leaf)
             if (!leafMaxDepth) //FIXME dMinDual does not update hashMaxDepth correctly
-                stored.depth |= dMaxExt;
+                stored.depth |= eval.dMaxExt;
             else {
                 stored.depth |= depth;
                 nextMaxDepth = true;

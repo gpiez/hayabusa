@@ -104,44 +104,44 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
     next->occupied1 = next->occupied[CI] | next->occupied[EI];
 }
 
-template<Colors C>
-__v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
-    return inline_estimatedEval(m, eval);
-}
-template<Colors C>
-__v8hi ColoredBoard<C>::inline_estimatedEval(const Move m, const Eval& eval) const {
-    ASSERT(m.piece());
-    if (m.isSpecial()) {
-        unsigned piece = m.piece() & 7;
-        if (piece == King) {
-            ASSERT(m.capture() == 0);
-            __v8hi estKing = keyScore.vector
-                - eval.getKSVector(C*King, m.from())
-                + eval.getKSVector(C*King, m.to());
-            if (m.to() == (pov^g1)) {
-                return estKing - eval.getKSVector(C*Rook, pov^h1)
-                               + eval.getKSVector(C*Rook, pov^f1);
-            } else {
-                return estKing - eval.getKSVector(C*Rook, pov^a1)
-                               + eval.getKSVector(C*Rook, pov^d1);
-            }
-        } else if (piece == Pawn) {
-            return keyScore.vector - eval.getKSVector(C*Pawn, m.from())
-                                   + eval.getKSVector(C*Pawn, m.to())
-                                   - eval.getKSVector(-C*Pawn, m.to()-C*8);
-
-        } else {
-            return keyScore.vector - eval.getKSVector(C*Pawn, m.from())
-                                   + eval.getKSVector(C*piece, m.to())
-                                   - eval.getKSVector(-C*m.capture(), m.to());
-        }
-    } else {
-        return keyScore.vector
-            - eval.getKSVector(C*m.piece(), m.from())
-            + eval.getKSVector(C*m.piece(), m.to())
-            - eval.getKSVector(-C*m.capture(), m.to());
-    }
-}
+// template<Colors C>
+// __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
+//     return inline_estimatedEval(m, eval);
+// }
+// template<Colors C>
+// __v8hi ColoredBoard<C>::inline_estimatedEval(const Move m, const Eval& eval) const {
+//     ASSERT(m.piece());
+//     if (m.isSpecial()) {
+//         unsigned piece = m.piece() & 7;
+//         if (piece == King) {
+//             ASSERT(m.capture() == 0);
+//             __v8hi estKing = keyScore.vector
+//                 - eval.getKSVector(C*King, m.from())
+//                 + eval.getKSVector(C*King, m.to());
+//             if (m.to() == (pov^g1)) {
+//                 return estKing - eval.getKSVector(C*Rook, pov^h1)
+//                                + eval.getKSVector(C*Rook, pov^f1);
+//             } else {
+//                 return estKing - eval.getKSVector(C*Rook, pov^a1)
+//                                + eval.getKSVector(C*Rook, pov^d1);
+//             }
+//         } else if (piece == Pawn) {
+//             return keyScore.vector - eval.getKSVector(C*Pawn, m.from())
+//                                    + eval.getKSVector(C*Pawn, m.to())
+//                                    - eval.getKSVector(-C*Pawn, m.to()-C*8);
+// 
+//         } else {
+//             return keyScore.vector - eval.getKSVector(C*Pawn, m.from())
+//                                    + eval.getKSVector(C*piece, m.to())
+//                                    - eval.getKSVector(-C*m.capture(), m.to());
+//         }
+//     } else {
+//         return keyScore.vector
+//             - eval.getKSVector(C*m.piece(), m.from())
+//             + eval.getKSVector(C*m.piece(), m.to())
+//             - eval.getKSVector(-C*m.capture(), m.to());
+//     }
+// }
 
 template<Colors C>
 Key ColoredBoard<C>::getZobrist() const {

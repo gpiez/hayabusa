@@ -79,11 +79,40 @@ void Parameters::add(const std::string s, float value)
 
 void Parameters::init()
 {
-    Parameters::add("PawnValue", 80);
-    Parameters::add("KnightValue", 270);
-    Parameters::add("BishopValue", 290);
-    Parameters::add("RookValue", 480);
-    Parameters::add("QueenValue", 900);
+    Parameters::add("pawnOpening", 96);
+    Parameters::add("pawnEndgame", 106);
+    Parameters::add("knightOpening", 304);
+    Parameters::add("knightEndgame", 296);
+    Parameters::add("bishopOpening", 296);
+    Parameters::add("bishopEndgame", 310);
+    Parameters::add("rookOpening", 480);
+    Parameters::add("rookEndgame", 480);
+    Parameters::add("queenOpening", 1000);
+    Parameters::add("queenEndgame", 890);
+    
+    Parameters::add("pawnHValue", 8);
+    Parameters::add("pawnVValue", 12);
+    Parameters::add("pawnHEValue", -8);
+    Parameters::add("pawnVEValue", 14);
+    Parameters::add("kingHValue", -20);
+    Parameters::add("kingVValue", -24);
+    Parameters::add("kingHEValue", -4);
+    Parameters::add("kingVEValue", 4);
+    Parameters::add("rookHValue", 14);
+    Parameters::add("rookVValue", 12);
+    Parameters::add("rookHEValue", 0);
+    Parameters::add("rookVEValue", 0);
+    Parameters::add("queenHValue", 7);
+    Parameters::add("queenVValue", 5);
+    Parameters::add("knightHValue", 10);
+    Parameters::add("knightVValue", 32);
+    Parameters::add("knightHEValue", 2);
+    Parameters::add("knightVEValue", 2);
+    Parameters::add("bishopHValue", 22);
+    Parameters::add("bishopVValue", 27);
+    Parameters::add("bishopHEValue", 0);
+    Parameters::add("bishopVEValue", 0);
+    Parameters::add("bishopCenter", 3.5);
 
     Parameters::add("endgameMaterial", 32);
 
@@ -96,29 +125,105 @@ void Parameters::init()
 
     Parameters::add("rookTrapped", -50);
     Parameters::add("rookOpen", 16);
-    Parameters::add("rookHalfOpen", 4);
-    Parameters::add("rookWeakPawn", 16);
+    Parameters::add("rookHalfOpen", 7);
+    Parameters::add("rookWeakPawn", 24);
 
-    Parameters::add("pawnBackward", -4);
-    Parameters::add("pawnBackwardOpen", -8);
-    Parameters::add("pawnIsolatedCenter", -4);
-    Parameters::add("pawnIsolatedEdge", -2);// - Eval::pawnBackwardOpen);
-    Parameters::add("pawnIsolatedOpen", -8);// - Eval::pawnBackwardOpen);
-    Parameters::add("pawnDouble", -18);
-    Parameters::add("pawnShoulder", 4);
+    Parameters::add("pawnBackward", -1);
+    Parameters::add("pawnBackwardOpen", -10);
+    Parameters::add("pawnIsolatedCenter", 0);
+    Parameters::add("pawnIsolatedEdge", 0);
+    Parameters::add("pawnIsolatedOpen", -6);
+    Parameters::add("pawnDouble", -12);
+    Parameters::add("pawnShoulder", 1);
 
     Parameters::add("deltaAttack", 190);
     Parameters::add("deltaDefense", -75);
 
-    Parameters::add("pawnPasser2", 25);
-    Parameters::add("pawnPasser7", 100);
+    Parameters::add("pawnPasser2", 0);
+    Parameters::add("pawnPasser7", 140);
     Parameters::add("pawnPasserSlope", 1.0);
 
-    Parameters::add("mobN1value", 10);
+    Parameters::add("mobN1value", 4);
     Parameters::add("mobN1slope", 3.0);
 
-    Parameters::add("mobN2value", 25);
+    Parameters::add("mobN2value", 0);
     Parameters::add("mobN2slope", 8.0);
+
+    Parameters::add("mobB1value", 4);
+    Parameters::add("mobB1slope", 3.0);
+
+    Parameters::add("mobB2value", 0);
+    Parameters::add("mobB2slope", 8.0);
+
+    Parameters::add("mobR1value", 4);
+    Parameters::add("mobR1slope", 3.0);
+
+    Parameters::add("mobR2value", 0);
+    Parameters::add("mobR2slope", 8.0);
+
+    Parameters::add("knightHInfl", 0.5);
+    Parameters::add("knightVInfl", 0.75);
+    Parameters::add("knightCenter", 4.0);
+
+    Parameters::add("bishopHInfl", 0.6875);
+    Parameters::add("bishopVInfl", 1.34375);
+
+    Parameters::add("rookHInfl", 1.5);
+    Parameters::add("rookVInfl", 1.5);
+    Parameters::add("rookCenter", 3.5);
+
+    Parameters::add("pawnHInfl", 1.5);
+    Parameters::add("pawnVInfl", 6);
+    Parameters::add("pawnCenter", 6);
+
+    Parameters::add("kingHInfl", 1.5);
+    Parameters::add("kingVInfl", 1.5);
+    Parameters::add("kingCenter", 3.5);
+
+    Parameters::add("queenHInfl", 1.5);
+    Parameters::add("queenVInfl", 1.5);
+    Parameters::add("queenCenter", 3.5);
+    
+    Parameters::add("knightHEInfl", 1.5);
+    Parameters::add("knightVEInfl", 1.5);
+
+    Parameters::add("bishopHEInfl", 1.5);
+    Parameters::add("bishopVEInfl", 1.5);
+
+    Parameters::add("rookHEInfl", 1.5);
+    Parameters::add("rookVEInfl", 1.5);
+
+    Parameters::add("pawnHEInfl", 1.5);
+    Parameters::add("pawnVEInfl", 1.5);
+
+    Parameters::add("kingHEInfl", 1.5);
+    Parameters::add("kingVEInfl", 1.5);
+
+    Parameters::add("queenHEValue", 5);
+    Parameters::add("queenHEInfl", 1.5);
+    Parameters::add("queenVEValue", 5);
+    Parameters::add("queenVEInfl", 1.5);
+
+    Parameters::add("dMaxCapture", 6);
+// odd extensions tend to blow up the tree. Average tree size over 2600 positions:
+// ext  size, error margin ~5k
+// 13   660k
+// 12   541k
+// 11   635k
+// 10   522k
+//  9   616k
+//  8   505k
+//  7   598k
+//  6   490k
+//  5   582k
+//  4   475k
+//  3   562k
+//  2   462k
+//  1   539k
+//  0   427k
+    Parameters::add("dMaxExt", 10);
+    Parameters::add("dMinDualExt", 4);
+    Parameters::add("dEvenAlpha", 1);
 
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) 

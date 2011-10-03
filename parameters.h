@@ -64,6 +64,21 @@ class Parameters
     static bool parmsLocked;
     
 public:
+    struct Piece {
+        struct Phase {
+            float opening;
+            float endgame;
+        };
+        struct Direction {
+            Phase val;
+            Phase infl;
+        };
+//         CompoundScore h[4];
+//         CompoundScore v[8];
+        Phase val;
+        Direction hor, vert;
+        float center;
+    };
     Parameters();
     Parameters(const Parameters&);
     static void init();

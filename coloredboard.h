@@ -46,8 +46,8 @@ public:
     ColoredBoard() = default;
     template<typename T>
     inline ColoredBoard(const T& prev, Move m, __v8hi est);
-    inline __v8hi inline_estimatedEval(const Move m, const Eval& rb) const;
-    __v8hi estimatedEval(const Move m, const Eval& rb) const __attribute__((noinline));
+//     inline __v8hi inline_estimatedEval(const Move m, const Eval& rb) const;
+//     __v8hi estimatedEval(const Move m, const Eval& rb) const __attribute__((noinline));
     static void initTables();
     template<MoveType>
     void generateCaptureMoves(Move* &list, Move* &bad) const __attribute__((noinline));
