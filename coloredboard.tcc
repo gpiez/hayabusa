@@ -45,53 +45,47 @@ ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
  * Execute a move and put result in next
  */
 template<Colors C>
-//template<typename T>
 void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
     uint64_t from = 1ULL << m.from();
     uint64_t to = 1ULL << m.to();
     ASSERT(m.piece());
 
+//     next->cep.castling.data4 = 0;
+// 
+//     if (m.isSpecial()) {
+//         ASSERT(m.piece() != Pawn);
+//         ASSERT(m.piece() != King);
+//         next->getPieces<C,Pawn>() -= from;
+//         next->getPieces<C>(m.piece()) += to;
+//         next->material = material - materialTab[m.capture()] + materialTab[m.piece()] - materialTab[Pawn];
+//     } else {
+//         // Do only fill in the enpPassant field, if there is really a pawn which
+//         // can capture besides the target square. This is because enpassant goes
+//         // into the zobrist key.
+//         ASSERT(occupied[CI] & from);
+//         ASSERT(~occupied[CI] & to);
+//         ASSERT(from != to);
+//         next->getPieces<C>(m.piece()) += to - from;
+//         next->material = material - materialTab[m.capture()];
+//     }
+//     next->fiftyMoves = 0;
+//     next->cep.enPassant = 0;
+//     next->getPieces<-C>(m.capture()) -= to;
+//     next->occupied[CI] = occupied[CI] - from + to;
+//     next->occupied[EI] = occupied[EI] & ~to;
+//     next->occupied1 = next->occupied[CI] | next->occupied[EI];
+
     next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
 
     if (m.isSpecial()) {
-        next->fiftyMoves = 0;
-        next->cep.enPassant = 0;
-        unsigned int piece = m.piece() & 7;
-        if (piece == King) {
-            ASSERT(m.capture() == 0);
-            next->getPieces<C,King>() ^= from + to;
-            next->occupied[EI] = occupied[EI];
-            next->material = material;
-            if (m.to() == (pov^g1)) {
-                // short castling
-                next->occupied[CI] = occupied[CI] ^ 0b1111ULL << m.from();
-                next->getPieces<C,Rook>() ^= (from + to) << 1;
-            } else {
-                // long castling
-                next->occupied[CI] = occupied[CI] ^ 0b11101ULL << (m.to() & 070);
-                next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4);
-            }
-            ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>()));
-        } else if (piece == Pawn) {
-            // en passant
-            next->occupied[CI] = occupied[CI] - from + to;
-            next->occupied[EI] = occupied[EI] - shift<-C*8>(to);
-            next->getPieces<C,Pawn>() += to - from;
-            next->getPieces<-C,Pawn>() -= shift<-C*8>(to);
-            next->material = material - materialTab[Pawn];
-        } else {
-            // promotion
-            next->occupied[CI] = occupied[CI] - from + to;
-            next->occupied[EI] = occupied[EI] & ~to;
-            next->getPieces<C,Pawn>() -= from;
-            next->getPieces<C>(piece) += to;
-            next->getPieces<-C>(m.capture()) -= to;
-            next->material = material - materialTab[m.capture()] + materialTab[piece] - materialTab[Pawn];
-        }
+        doSpecialMove(next, m, from, to);
     } else {
         // standard move, e. p. is handled by captureOffset
-        next->fiftyMoves = (m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
-        next->cep.enPassant = shift<C*16>(getPieces<C,Pawn>() & from) & to & (getPieces<-C,Pawn>() << 1 | getPieces<-C,Pawn>() >> 1);
+        next->fiftyMoves = (!m.capture() & (m.piece() != Pawn)) * (fiftyMoves+1); //(m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
+        // Do only fill in the enpPassant field, if there is really a pawn which
+        // can capture besides the target square. This is because enpassant goes
+        // into the zobrist key.
+        next->cep.enPassant = shift<C*16>(getPieces<C,Pawn>() & from) & to & shift<C*8>(getAttacks<-C,Pawn>());
 	ASSERT(occupied[CI] & from);
 	ASSERT(~occupied[CI] & to);
 	ASSERT(from != to);
@@ -102,6 +96,44 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
         next->material = material - materialTab[m.capture()];
     }
     next->occupied1 = next->occupied[CI] | next->occupied[EI];
+}
+
+template<Colors C>
+void ColoredBoard<C>::doSpecialMove(BoardBase* next, Move m, uint64_t from, uint64_t to) const {
+    next->fiftyMoves = 0;
+    next->cep.enPassant = 0;
+    unsigned int piece = m.piece() & 7;
+    if (piece == King) {
+        ASSERT(m.capture() == 0);
+        next->getPieces<C,King>() ^= from + to;
+        next->occupied[EI] = occupied[EI];
+        next->material = material;
+        if (m.to() == (pov^g1)) {
+            // short castling
+            next->occupied[CI] = occupied[CI] ^ 0b1111ULL << m.from();
+            next->getPieces<C,Rook>() ^= (from + to) << 1;
+        } else {
+            // long castling
+            next->occupied[CI] = occupied[CI] ^ 0b11101ULL << (m.to() & 070);
+            next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4);
+        }
+        ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>()));
+    } else if (piece == Pawn) {
+        // en passant
+        next->occupied[CI] = occupied[CI] - from + to;
+        next->occupied[EI] = occupied[EI] - shift<-C*8>(to);
+        next->getPieces<C,Pawn>() += to - from;
+        next->getPieces<-C,Pawn>() -= shift<-C*8>(to);
+        next->material = material - materialTab[Pawn];
+    } else {
+        // promotion
+        next->occupied[CI] = occupied[CI] - from + to;
+        next->occupied[EI] = occupied[EI] & ~to;
+        next->getPieces<C,Pawn>() -= from;
+        next->getPieces<C>(piece) += to;
+        next->getPieces<-C>(m.capture()) -= to;
+        next->material = material - materialTab[m.capture()] + materialTab[piece] - materialTab[Pawn];
+    }
 }
 
 // template<Colors C>

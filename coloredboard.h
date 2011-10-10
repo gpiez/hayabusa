@@ -57,7 +57,9 @@ public:
     bool generateSkewers( Move** good) const __attribute__((noinline));
     bool generateForks( Move** good) const __attribute__((noinline));
     void generateNonCap(Move*& good, Move*& bad) const __attribute__((noinline));
-    inline void doMove(BoardBase* next, Move m) const;
+    void doMove(BoardBase* next, Move m) const;
+    void doSpecialMove(BoardBase* next, Move m, uint64_t from, uint64_t to) const;
+
     bool isForked() const __attribute__((noinline));
     inline Key getZobrist() const;
 private:
