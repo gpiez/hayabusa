@@ -284,6 +284,11 @@ void Console::uci(StringList /*cmds*/) {
     send("option name Pruning type check default true");
     send("option name Clear Hash type button");
     send("option name UCI_ShowCurrLine type check default false");
+    for (auto i=Parameters::index.begin(); i!=Parameters::index.end(); ++i) {
+        std::stringstream ss;
+        ss << "option name " << i->first << "type spin default " << Parameters::base.at(i->second);
+        send(ss.str());
+    }
     send("uciok");
 }
 
@@ -332,6 +337,10 @@ void Console::setoption(StringList cmds) {
             server->listen(QHostAddress::Any, 7788);
             connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
 #endif
+        } else if (Parameters::index.count(name)) {
+            defaultParameters[name] = convert<float>(data);
+            board->eval.setParameters(defaultParameters);
+            board->eval.init();
         } else {
             std::cerr << "option " << name << " not understood";
         }
@@ -464,6 +473,11 @@ void Console::parmtest(StringList cmds)
         e.parmTest(cmds[1], convert(cmds[2]), convert(cmds[3]), convert(cmds[4]));
     else if (cmds.size() == 9) 
         e.parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]));
+    else if (cmds.size() == 13)
+        e.parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]),
+                   cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]),
+                   cmds[9], convert<float>(cmds[10]), convert<float>(cmds[11]), convert(cmds[12])
+                );
     else
         std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> [n]\"" << std::endl;
 }
