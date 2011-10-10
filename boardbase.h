@@ -100,6 +100,7 @@ struct BoardBase {
     };
     static const Bits bits[nSquares];
     static const uint64_t knightAttacks[nSquares+2];
+    static const uint64_t pawnAttacks[nColors][nSquares+2];
     static const uint64_t kAttacked1[nSquares+2];
     static const uint64_t kAttacked2[nSquares+2];
     static const uint64_t kAttacked[nSquares+2];

@@ -118,13 +118,7 @@ void ColoredBoard<C>::generateCheckEvasions(Move* &good, Move* &bad) const {
      * pieces if possible. Treat checks by pawns separatly, as there is only one
      * case of discovered check.
      */
-    if (king & getAttacks<-C, Pawn>()) {
-        uint64_t pawn = 0;
-        if (C == White)
-            pawn = (king << 7 & ~file<'h'>()) + (king << 9 & ~file<'a'>());
-        else
-            pawn = (king >> 9 & ~file<'h'>()) + (king >> 7 & ~file<'a'>());
-        pawn &= getPieces<-C, Pawn>();
+    if (uint64_t pawn = pawnAttacks[CI][kingSq] & getPieces<-C,Pawn>()) {
         ASSERT(popcount(pawn)==1);
         // only way for a pawn to give check and to discover check is with an
         // vertical attacking piece behind it.

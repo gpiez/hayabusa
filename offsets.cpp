@@ -83,6 +83,23 @@ int main(int, char** argv) {
                 else
                     std::cout << " ";
             }
+    } else if (argv[1] && std::string("pattack") == argv[1]) {
+        for (int c=0; c<2; ++c)
+        for (int y=0; y<8; ++y)
+        for (int x=0; x<8; ++x)
+             {
+                uint64_t bits=0;
+                for (int u=-1; u<=1; u+=2) {
+                    int shift = x+u + ((1-c*2 +y)*8);
+                    if (x+u >= 0 && x+u <8 && shift >=0 && shift < 64)
+                        bits |= 1ULL << shift;
+                }
+                std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ",";
+                if (x == 7)
+                    std::cout << std::endl;
+                else
+                    std::cout << " ";
+            }
     } else if (argv[1] && std::string("king1bits") == argv[1]) {
         for (int y=0; y<8; ++y)for (int x=0; x<8; ++x)
              {
