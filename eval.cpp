@@ -1256,7 +1256,17 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(dMaxExt);
     dMaxExt += dMaxCapture;
     SETPARM(dMinDualExt);
-    dMinDualExt += dMaxCapture;
+    dMinDualExt = dMaxExt-dMinDualExt;
+    SETPARM(dMinSingleExt);
+    dMinSingleExt = dMaxExt-dMinSingleExt;
+    SETPARM(dEvenAlpha);
+    SETPARM(dMinForkExt);
+    dMinForkExt = dMaxExt-dMinForkExt;
+    SETPARM(dMinMateExt);
+    dMinMateExt = dMaxExt-dMinMateExt;
+    SETPARM(dMinPawnExt);
+    dMinPawnExt = dMaxExt-dMinPawnExt;
+    
 
 }
 
@@ -1283,7 +1293,7 @@ void sigmoid(int n, int p[], double start, double end, double dcenter, double wi
 
     double r = (end - start)/(l1-l0);
     double a = start - l0*r;
-    for (unsigned int i = 0; i <= n; ++i) {
+    for (int i = 0; i <= n; ++i) {
         double t = i - dcenter;
         p[i] = lrint(a + r/(1.0 + exp(-t/width)));
     }

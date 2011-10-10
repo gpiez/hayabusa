@@ -284,7 +284,12 @@ class Eval {
 public:
     unsigned dMaxCapture;
     unsigned dMaxExt;
+    unsigned dMinSingleExt;
     unsigned dMinDualExt;
+    unsigned dMinForkExt;
+    unsigned dMinPawnExt;
+    unsigned dMinMateExt;
+    
     int dEvenAlpha;
 //     unsigned dMinSingleExt;
 //     unsigned dMinMateExt;

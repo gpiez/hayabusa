@@ -204,7 +204,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
 
     Extension threatened = b.template inCheck<C>() ? ExtCheck : ExtNot;  //This is needed here because we might be in vein with ExtTestMate
     if (P!=vein) {
-        if (!threatened) {
+        if (!threatened && depth > eval.dMinPawnExt) {
             uint64_t pMoves = b.template getPieces<-C,Pawn>() & b.template getPins<(Colors)-C>();
             pMoves = ( (  shift<-C*8  >(pMoves)               & ~b.occupied1)
                        | (shift<-C*8+1>(pMoves) & ~file<'a'>() &  b.template getOcc<C>())
@@ -213,11 +213,11 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             if (pMoves)
                 threatened = ExtPawnThreat;
         }
-        if (!threatened /*&& !(extend & ExtMateThreat)*/) {
+        if (!threatened && depth > eval.dMinMateExt) {
             if (((ColoredBoard<(Colors)-C>*)&b) -> template generateMateMoves<true, bool>())
                 threatened = ExtMateThreat;
         }
-        if (!threatened && !(extend & ExtForkThreat)) { //FIXME this does not make sense if a piece of us is hanging, as this makes the threat irrelevant
+        if (!threatened && depth > eval.dMinForkExt) { //FIXME this does not make sense if a piece of us is hanging, as this makes the threat irrelevant
             if (b.isForked())
                 threatened = ExtFork;
         }
@@ -634,42 +634,56 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         if (bad > good) bestMove = *good;
         Extension leafExt = threatened;
         if (P != vein && b.template inCheck<C>()) {
-            ASSERT ( depth > eval.dMaxCapture );
-            if (bad-good == 2)
-                leafExt = (Extension) (leafExt | ExtDualReply);
-            else if (bad-good == 1)
-                leafExt = (Extension) (leafExt | ExtSingleReply);
+            ASSERT ( depth >= eval.dMaxCapture );
+            if (bad-good == 2) {
+                if (depth > eval.dMinDualExt)
+                    leafExt = (Extension) (leafExt | ExtDualReply);
+            } else if (bad-good == 1)
+                if (depth > eval.dMinSingleExt)
+                    leafExt = (Extension) (leafExt | ExtSingleReply);
         }
         /*
          * The inner move loop
          */
         for (Move* i = good; i<bad && current < beta.v; ++i) {
-            if (P != vein && i == good+1) {
-                if (current.v > 0)
-                    leafExt = (Extension) (leafExt & ~ExtDualReply);
-            }
+//             if (P != vein && i == good+1) {
+//                 if (current.v > 0)
+//                     leafExt = (Extension) (leafExt & ~ExtDualReply);
+//             }
             int nattack=0;
             Score<C> value;
+            /*
+             * Quiescense search, only material changing moves, other moves
+             * aren't even generated
+             */
             if (P == vein)  {
                 ASSERT(depth <= eval.dMaxCapture);
                 value.v = search3<(Colors)-C, vein>(b, *i, depth-1, beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nattack NODE);
+            /*
+             * Transition from extended q search to pure q search for
+             * for non-tactical moves
+             */ 
             } else if (P == leaf && ((i>=captures && i<threats) || i>=nonCaptures)
                               && !threatened
-                              && !(extend & (ExtDualReply|ExtSingleReply))
+                              && !(extend & (ExtDualReply | ExtSingleReply)) //TODO replace by a condition "not checking move"
                              /*&& ~ply & 1*/)
             {
                 if (!i->capture() && !i->isSpecial()) continue;
                 value.v = search3<(Colors)-C, vein>(b, *i, std::min(depth-1, eval.dMaxCapture), beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nattack NODE);
 //                 alpha.max(value.v);
 //                 if (current.max(value.v)) bestMove = *i;
-            } else if (    P == leaf
-                       && (depth <= eval.dMaxCapture + 1 || (depth <= eval.dMinDualExt + 1 && extend & ExtDualReply))) {
+            /*
+             * Transition from extended q search to pure q search for tactical
+             * moves, if the move is a possible mate, don't do a lazy eval in
+             * the next iteration
+             */
+            } else if (P == leaf && depth <= eval.dMaxCapture) {
                 leafExt = i<captures ? ExtTestMate : ExtNot;
                 value.v = search3<(Colors)-C, vein>(b, *i, eval.dMaxCapture, beta.unshared(), alpha.unshared(), ply+1, leafExt, unused, nattack NODE);
                 leafMaxDepth = true;
 //                 alpha.max(value.v);
 //                 if (current.max(value.v)) bestMove = *i;
-            } else if ( P == leaf || depth <= eval.dMaxExt + 1) {
+            } else if ( P == leaf || depth <= eval.dMaxExt) {
     //                 if (i<captures && i<threats) asm("int3");
     //                 uint64_t tnode = stats.node;
                 value.v = search3<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), alpha.unshared(), ply+1, leafExt, leafMaxDepth, nattack NODE);
@@ -762,7 +776,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
     /*                                if (!research && nattack > 30*((signed)depth-(signed)dMaxExt) + 50)
                         reduction = -1;*/
                     unsigned newDepth = depth-reduction-1;
-                    ASSERT(depth > reduction+1+eval.dMaxExt);
+                    ASSERT(depth >= reduction+1+eval.dMaxExt);
                     const B beta0(alpha.v + C);
                     if (0 && i != good
                         && beta0.v != beta.v
