@@ -81,33 +81,15 @@ public:
     };
     Parameters();
     Parameters(const Parameters&);
+    ~Parameters();
     static void init();
     static std::map< std::string, unsigned > index;
     static std::vector<float> base;
 
     std::vector< Parm<float> > parms;
 
-    Parm<float> operator [] (const std::string s) const {
-        ASSERT(index.find(s) != index.end());
-        ASSERT(index.find(s)->second < maxIndex);
-        if (!index.count(s)) {
-            std::cerr << "unknown paramter " << s << std::endl;
-        }
-//         std::cerr << index.find(s)->second << std::endl;
-//         std::cerr << parms.size() << std::endl;
-//         std::cerr << maxIndex << std::endl;
-        return parms.at(index.find(s)->second);
-    }
-
-    Parm<float>& operator [] (const std::string s) {
-        
-        std::map< std::string, unsigned >::iterator i = index.find(s);
-        if (i == index.end()) {
-            std::cerr << "unknown parameter" << std::endl;
-        }
-        return parms[i->second];
-    }
-
+    Parm<float> operator [] (const std::string s) const;
+    Parm<float>& operator [] (const std::string s);
     static void add(const std::string s, float value);
     void mutate();
     Parameters combine(const Parameters& father) const;

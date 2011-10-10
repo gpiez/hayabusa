@@ -55,10 +55,25 @@ void Evolution::init()
 
 }
 
+void Evolution::initFixed(int n)
+{
+    nIndiFixed = n;
+    srand(1);
+    for (int i=0; i<nIndiFixed; ++i) {
+        Parameters adam(defaultParameters);
+        for (auto j=adam.parms.begin(); j != adam.parms.end(); ++j)
+            j->value = ((j->value+16)*(rand()*0.125 + RAND_MAX))/RAND_MAX-16;
+        indiFixed.push_back(adam);
+    }
+    
+}
+
 void Evolution::parmTest(std::string pname, float min, float max, int n) {
     nThread = 0;
     maxThread = 8;
     Options::quiet = true;
+    fixed = true;
+    initFixed(400);
     Parameters adam(defaultParameters);
     nIndi = n;
     for (int i=0; i<nIndi; ++i) {
@@ -66,11 +81,13 @@ void Evolution::parmTest(std::string pname, float min, float max, int n) {
         indi.push_back(adam);
     }
 
-    results.resize(indi.size());
-    for (unsigned i=0; i<results.size(); ++i)
-        results[i].resize(indi.size());
+    results.resize(nIndi);
+    for (unsigned i=0; i<nIndi; ++i)
+        results[i].resize(fixed ? nIndiFixed : nIndi);
 
     step();
+
+    cerr << pname << endl;
     for (int i=0; i<nIndi; ++i) {
         cerr << indi[i].parm[pname].value << "," << indi[i].score << endl;
     }
@@ -78,8 +95,9 @@ void Evolution::parmTest(std::string pname, float min, float max, int n) {
 
 void Evolution::parmTest(std::string pname, float min, float max, int n, std::string pname2, float min2, float max2, int n2) {
     nThread = 0;
-    maxThread = 4;
+    maxThread = 8;
     Options::quiet = true;
+    fixed = false;
     Parameters adam(defaultParameters);
     nIndi = n*n2;
     for (int i=0; i<n; ++i) {
@@ -108,6 +126,47 @@ void Evolution::parmTest(std::string pname, float min, float max, int n, std::st
     }
 }
 
+void Evolution::parmTest(std::string pname, float min, float max, int n, std::string pname2, float min2, float max2, int n2, std::string pname3, float min3, float max3, int n3) {
+    nThread = 0;
+    maxThread = 8;
+    fixed = false;
+    Options::quiet = true;
+    Parameters adam(defaultParameters);
+    nIndi = n*n2*n3;
+    for (int i=0; i<n; ++i) {
+        adam[pname] = (max-min)*i/(n-1.0) + min;
+        for (int j=0; j<n2; ++j) {
+            adam[pname2] = (max2-min2)*j/(n2-1.0) + min2;
+            for (int k=0; k<n3; ++k) {
+                adam[pname3] = (max3-min3)*k/(n3-1.0) + min3;
+                indi.push_back(adam);
+            }
+        }
+    }
+
+    results.resize(indi.size());
+    for (unsigned i=0; i<results.size(); ++i)
+        results[i].resize(indi.size());
+
+    step();
+   
+    for (int k=0; k<n3; ++k) {
+        cerr << pname3 << ": " << indi[k].parm[pname3].value << "  ";
+        cerr << pname2 << endl << "    ,";
+        for (int j=0; j<n2; ++j)
+            cerr << setw(3) << indi[j*n3].parm[pname2].value << ",";
+        cerr << endl << pname << endl;
+        for (int i=0; i<n; ++i) {
+            cerr << setw(3) << indi[i*n2*n3].parm[pname].value << ",";
+            for (int j=0; j<n2; ++j) {
+                cerr << setw(3) << indi[i*n2*n3+j*n3+k].score << ",";
+            }
+            cerr << endl;
+        }
+        cerr << "------------------" << endl;
+    }
+}
+
 int Evolution::game(const Evolution::Individual& a, const Evolution::Individual& b) const {
     int result;
     {
@@ -123,8 +182,8 @@ int Evolution::game(const Evolution::Individual& a, const Evolution::Individual&
 }
 
 void Evolution::tournament() {
-    for (unsigned i=0; i<results.size()-1; ++i)
-        for (unsigned j=i+1; j<results[i].size(); ++j) {
+    for (unsigned i=0; i<nIndi; ++i)
+        for (unsigned j=fixed?0:i+1; j<(fixed?nIndiFixed:nIndi); ++j) {
             {
                 unique_lock<mutex> lock(nThreadMutex);
                 while (nThread >= maxThread)
@@ -132,7 +191,7 @@ void Evolution::tournament() {
                 ++nThread;
             }
 //             lock_guard<mutex> lock(resultsMutex);
-            results[i][j] = async(launch::async,&Evolution::game, this, indi[i], indi[j]);
+            results[i][j] = async(launch::async,&Evolution::game, this, indi[i], fixed?indiFixed[j]:indi[j]);
         }    
 }
 
@@ -146,14 +205,15 @@ void Evolution::step()
     
     for (unsigned i=0; i<results.size(); ++i) {
         cerr << setw(4) << i << ": " << flush;
-        for (unsigned j=0; j<i+1; ++j) 
-            cerr << "    ";
+        if (!fixed)
+            for (unsigned j=0; j<i+1; ++j) 
+                cerr << "    ";
 //         resultsMutex.lock();
-        for (unsigned j=i+1; j<results[i].size(); ++j) {
+        for (unsigned j=fixed?0:i+1; j<(fixed?nIndiFixed:nIndi); ++j) {
             if (results[i][j].valid()) {
                 int result = results[i][j].get();
                 indi[i].score += result;
-                indi[j].score -= result;
+                if (!fixed) indi[j].score -= result;
                 cerr << setw(4) << result << flush;
             } else {
 //                 resultsMutex.unlock();
@@ -205,4 +265,9 @@ void Evolution::saveState(int g)
         file << endl;
     }
     file << endl;
+}
+
+Evolution::~Evolution()
+{
+
 }
