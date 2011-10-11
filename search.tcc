@@ -149,7 +149,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
     // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     // TODO connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
     //     current.v = -infinity*C;
-    RawScore estimatedScore = estimate.score.calc(prev.material, eval) + prev.positionalScore + diff.v; //TODO move score() into ColorBoard ctor
+    RawScore estimatedScore = estimate.score.calc(prev.material, eval) + prev.positionalScore + diff.v - C*diff.error; //TODO move score() into ColorBoard ctor
 #ifdef CALCULATE_MEAN_POSITIONAL_ERROR
 /*    if (diff.n > 1.0) {
         float invn = 1.0/diff.n;
@@ -162,7 +162,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         estimatedScore -= 100*C;
     }*/
 #else
-    estimatedScore -= 100*C;
+    estimatedScore -= eval.standardError *C;
 #endif
     A alpha(origAlpha);
     A current(-infinity*C);
@@ -408,7 +408,8 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             float avg = diff.e*invn;
             float v = diff.e2*invn - avg*avg;
             v = sqrt(v);
-            diff.v = avg - C*2.0*v;
+            diff.v = avg;
+            diff.error = eval.standardSigma*v;
 #else
             ASSERT(realScore == estimatedScore - diff.v + diff2.v);
 #endif

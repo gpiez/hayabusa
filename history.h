@@ -20,6 +20,7 @@
 
 struct PositionalError {
     RawScore v;
+    RawScore error;
 #ifdef CALCULATE_MEAN_POSITIONAL_ERROR
     float n;
     float e;
