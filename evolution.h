@@ -50,10 +50,10 @@ public:
     void step();
     void selection();
     void mutate();
-    void loadState();
     void saveState(int);
     void evolve();
     void tournament();
+    int findmax();
     void parmTest(std::string, float, float, int);
     void parmTest(std::string pname, float min, float max, int n, std::string pname2, float min2, float max2, int n2);
     void parmTest(std::string pname, float min, float max, int n, std::string pname2, float min2, float max2, int n2, std::string pname3, float min3, float max3, int n3);
@@ -62,7 +62,7 @@ public:
     int nIndi;
     int nIndiFixed;
 
-    bool fixed;
+    int currentNGames;
     
     std::vector< std::string > startPositions;
 
@@ -72,6 +72,10 @@ public:
     std::vector<Individual> indi;
     std::vector<Individual> indiFixed;
 
+    std::vector<int> firstGame;
+    std::vector<double> minElo;
+    std::vector<double> maxElo;
+    std::vector<bool> recalc;
 
 };
 

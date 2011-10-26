@@ -37,68 +37,56 @@ Evolution::Evolution(Console* c):
 
 void Evolution::init()
 {
-    nThread = 0;
-    maxThread = 8;
-    Options::quiet = true;
-    Parameters adam;
-    indi.push_back(adam);
-    nIndi = 16;
-    for (int i=1; i<nIndi; ++i) {
-        Parameters eva(adam);
-        eva.mutate();
-        indi.push_back(eva);
-    }
-
-    results.resize(indi.size());
-    for (unsigned i=0; i<results.size(); ++i)
-        results[i].resize(indi.size());
-
+    initFixed(1024);
 }
 
 void Evolution::initFixed(int n)
 {
+    nThread = 0;
+    maxThread = 8;
     nIndiFixed = n;
     srand(1);
+    recalc.resize(n);
+    minElo.resize(n);
+    maxElo.resize(n);
+    firstGame.resize(n);
     for (int i=0; i<nIndiFixed; ++i) {
         Parameters adam(defaultParameters);
-        for (auto j=adam.parms.begin(); j != adam.parms.end(); ++j)
-            j->value = ((j->value+16)*(rand()*0.125 + RAND_MAX))/RAND_MAX-16;
+        adam.mutate(0.5);
         indiFixed.push_back(adam);
     }
     
 }
 
 void Evolution::parmTest(std::string pname, float min, float max, int n) {
-    nThread = 0;
-    maxThread = 8;
-    Options::quiet = true;
-    fixed = true;
-    initFixed(400);
     Parameters adam(defaultParameters);
+    indi.clear();
     nIndi = n;
     for (int i=0; i<nIndi; ++i) {
-        adam[pname] = (max-min)*i/(n-1.0) + min;
+        recalc[i] = true;
+        adam[pname] = n == 1 ? min : (max-min)*i/(n-1.0) + min;
         indi.push_back(adam);
+        indi[i].score = 0;
     }
 
     results.resize(nIndi);
-    for (unsigned i=0; i<nIndi; ++i)
-        results[i].resize(fixed ? nIndiFixed : nIndi);
+    for (int i=0; i<nIndi; ++i)
+        results[i].resize(nIndiFixed);
 
-    step();
+    for (currentNGames=1; currentNGames<=nIndiFixed; currentNGames<<=1) {
+        step();
+        if (findmax() < 2) break;
+    }
 
     cerr << pname << endl;
     for (int i=0; i<nIndi; ++i) {
-        cerr << indi[i].parm[pname].value << "," << indi[i].score << endl;
+        cerr << setw(5) << indi[i].parm[pname].value << ": " << setw(5) << minElo[i] << "-" << setw(5) << maxElo[i] << endl;
     }
 }
 
 void Evolution::parmTest(std::string pname, float min, float max, int n, std::string pname2, float min2, float max2, int n2) {
-    nThread = 0;
-    maxThread = 8;
-    Options::quiet = true;
-    fixed = false;
     Parameters adam(defaultParameters);
+    indi.clear();
     nIndi = n*n2;
     for (int i=0; i<n; ++i) {
         adam[pname] = (max-min)*i/(n-1.0) + min;
@@ -127,11 +115,8 @@ void Evolution::parmTest(std::string pname, float min, float max, int n, std::st
 }
 
 void Evolution::parmTest(std::string pname, float min, float max, int n, std::string pname2, float min2, float max2, int n2, std::string pname3, float min3, float max3, int n3) {
-    nThread = 0;
-    maxThread = 8;
-    fixed = false;
-    Options::quiet = true;
     Parameters adam(defaultParameters);
+    indi.clear();
     nIndi = n*n2*n3;
     for (int i=0; i<n; ++i) {
         adam[pname] = (max-min)*i/(n-1.0) + min;
@@ -182,17 +167,17 @@ int Evolution::game(const Evolution::Individual& a, const Evolution::Individual&
 }
 
 void Evolution::tournament() {
-    for (unsigned i=0; i<nIndi; ++i)
-        for (unsigned j=fixed?0:i+1; j<(fixed?nIndiFixed:nIndi); ++j) {
-            {
-                unique_lock<mutex> lock(nThreadMutex);
-                while (nThread >= maxThread)
-                    nThreadCond.wait(lock);
-                ++nThread;
-            }
-//             lock_guard<mutex> lock(resultsMutex);
-            results[i][j] = async(launch::async,&Evolution::game, this, indi[i], fixed?indiFixed[j]:indi[j]);
-        }    
+    for (int i=0; i<nIndi; ++i)
+    if (recalc[i])
+    for (int j=firstGame[i]; j<currentNGames; ++j) {
+        {
+            unique_lock<mutex> lock(nThreadMutex);
+            while (nThread >= maxThread)
+                nThreadCond.wait(lock);
+            ++nThread;
+        }
+        results[i][j] = async(launch::async,&Evolution::game, this, indi[i], indiFixed[j]);
+    }
 }
 
 void Evolution::step()
@@ -200,31 +185,66 @@ void Evolution::step()
     thread th(&Evolution::tournament, this);
     th.detach();
     
-    for (unsigned i=0; i<results.size(); ++i)
-        indi[i].score = 0;
-    
-    for (unsigned i=0; i<results.size(); ++i) {
+    for (int i=0; i<nIndi; ++i)
+    if (recalc[i]) {
         cerr << setw(4) << i << ": " << flush;
-        if (!fixed)
-            for (unsigned j=0; j<i+1; ++j) 
-                cerr << "    ";
-//         resultsMutex.lock();
-        for (unsigned j=fixed?0:i+1; j<(fixed?nIndiFixed:nIndi); ++j) {
+        for (int j=firstGame[i]; j<currentNGames; ++j) {
             if (results[i][j].valid()) {
                 int result = results[i][j].get();
                 indi[i].score += result;
-                if (!fixed) indi[j].score -= result;
-                cerr << setw(4) << result << flush;
+                double n = j+1.0;
+                double nGames = 110.0;  // from SelfGame
+                double p = indi[i].score / (n*nGames*2.0) +0.5;
+                double v = sqrt(p*(1-p)*(n*nGames))*2.0 *3.0;
+                double pe = v / (n*nGames*2.0);
+                double elo = -log10(1.0/p - 1.0)*400.0;
+                double elol = -log10(1.0/(p-pe) - 1.0)*400.0;
+                minElo[i] = elol;
+                double eloh = -log10(1.0/(p+pe) - 1.0)*400.0;
+                maxElo[i] = eloh;
+                double eloe = (eloh - elol)/2;
+                cerr << setprecision(0) << std::fixed << "\015" << setw(4) << i << ": " << "Abs Score: " << setw(5) << indi[i].score << "/" << setw(5) << n << "  Rel Score: " << setprecision(4) << setw(6) << p << " ±" << setw(6) << pe << "  Elo: " <<  setprecision(1) << setw(5) << elo << " ±" << setw(5) << eloe << "      " << flush;
             } else {
-//                 resultsMutex.unlock();
                 --j;
-                usleep(10000);
-//                 resultsMutex.lock();
+                usleep(100000);
             }
         }
-//         resultsMutex.unlock();
-        cerr << setw(5) << indi[i].score << endl;
+        cerr << endl;
+        firstGame[i] = currentNGames;
+        recalc[i] = false;
+    } else {
+                double n = firstGame[i];
+                double nGames = 110.0;  // from SelfGame
+                double p = indi[i].score / (n*nGames*2.0) +0.5;
+                double v = sqrt(p*(1-p)*(n*nGames))*2.0 *3.0;
+                double pe = v / (n*nGames*2.0);
+                double elo = -log10(1.0/p - 1.0)*400.0;
+                double elol = -log10(1.0/(p-pe) - 1.0)*400.0;
+                double eloh = -log10(1.0/(p+pe) - 1.0)*400.0;
+                double eloe = (eloh - elol)/2;
+                cerr << setprecision(0) << std::fixed << setw(4) << i << ": " << "Abs Score: " << setw(5) << indi[i].score << "/" << setw(5) << n << "  Rel Score: " << setprecision(4) << setw(6) << p << " ±" << setw(6) << pe << "  Elo: " <<  setprecision(1) << setw(5) << elo << " ±" << setw(5) << eloe << "      " << endl;
+        
     }
+}
+
+int Evolution::findmax()
+{
+    double maxelo = -400.0;
+    int bestIndi;
+    for (int i=0; i<nIndi; ++i) {
+        if ((minElo[i]+maxElo[i])/2 > maxelo) {
+            maxelo = (minElo[i]+maxElo[i])/2;
+            bestIndi = i;
+        }
+    }
+    int nMax=0;
+    for (int i=0; i<nIndi; ++i) {
+        if (maxElo[i] > maxelo) {
+            recalc[i] = true;
+            nMax++;
+        }
+    }
+    return nMax;
 }
 
 void Evolution::selection()
@@ -259,9 +279,11 @@ void Evolution::saveState(int g)
     file << "Generation " << g << endl;
     for (unsigned i=0; i<indi.size(); ++i) {
         file << "Individual" << setw(4) << i << " Score" << setw(4) << indi[i].score << endl;
+#if 0        
         for (map< string, unsigned >::const_iterator j=Parameters::index.begin(); j!=Parameters::index.end(); ++j) {
             file << "Parameter[\"" << j->first << "\"] = " << indi[i].parm.parms[ j->second ].value << ";" << endl;
         }
+#endif        
         file << endl;
     }
     file << endl;
