@@ -59,7 +59,7 @@ History::History()
 void History::init() {
     for (unsigned d=0; d<nMaxGameLength/32+4; ++d) { //FIXME find some way to init this fast, clearing 5M which are 98% unsused is not good
         max[0][d] = max[1][d] = maxHistory/2;   // initialize with this, to// avoid unused pos with a high
-        for (int i=0; i<=2*nPieces; ++i)
+        for (unsigned i=0; i<=2*nPieces; ++i)
             init64(v[d][i]);      
     }
 }
