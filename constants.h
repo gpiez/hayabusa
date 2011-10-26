@@ -121,7 +121,7 @@ static const int materialPawn = 0;
 static const int materialTab[nPieces+1] = { 0, materialRook, materialBishop, materialQueen, materialKnight, materialPawn, 0 };
 
 static inline int popcount(uint64_t x) {
-#ifdef __SSE4_2__
+#if defined(__SSE4_2__) && defined(__x86_64__)
     return _popcnt64(x);
 #else
     x -=  x>>1 & 0x5555555555555555;
@@ -150,27 +150,40 @@ static __v2di inline pcmpeqq(__v2di a, __v2di b) {
 
 static inline uint64_t ror(uint64_t x, unsigned k) __attribute__((__always_inline__));
 static inline uint64_t ror(uint64_t x, unsigned k) {
+#if defined(__x86_64__)
     return __rorq(x, k);
+#else
+    return x >> k | x << 64-k;
+#endif    
 }
 
 static inline uint64_t rol(uint64_t x, unsigned k) __attribute__((__always_inline__));
 static inline uint64_t rol(uint64_t x, unsigned k) {
+#if defined(__x86_64__)
     return __rolq(x, k);
+#else
+    return x << k | x >> 64-k;
+#endif
 }
 
 static inline uint64_t bit(uint64_t x) __attribute__((__always_inline__));
 static inline uint64_t bit(uint64_t x) {
+#if defined(__x86_64__)    
     uint64_t result;
     asm(" bsfq %1, %0 \n"
         : "=r"(result)
         : "r"(x)
     );
     return result;
-//     return __bsfq(x);
+#else
+    return __builtin_ctzll(x);
+#endif
+//     return __bsfq(x);        //this causes an additional 32 to 64 bit zero extension being emitted
 }
 
 static inline unsigned int bitr(uint64_t x) __attribute__((__always_inline__));
 static inline unsigned int bitr(uint64_t x) {
+#if defined(__x86_64__)
     uint64_t result;
     asm(" bsrq %1, %0 \n"
 	: "=r"(result)
@@ -178,6 +191,9 @@ static inline unsigned int bitr(uint64_t x) {
     );
     return result;
 //     return __bsrq(x);
+#else
+    return 63-__builtin_clzll(x);
+#endif
 }
 
 static inline uint64_t btr(uint64_t x, uint64_t b) __attribute__((__always_inline__));
@@ -196,8 +212,13 @@ static inline unsigned int bit(unsigned int x) {
 
 static inline uint64_t fold(__v2di hilo) __attribute__((__always_inline__));
 static inline uint64_t fold(__v2di hilo) {
+#ifdef __x86_64__
     return _mm_cvtsi128_si64(_mm_unpackhi_epi64(hilo, hilo))
         | _mm_cvtsi128_si64(hilo);
+#else
+    __v2di folded = _mm_unpackhi_epi64(hilo, hilo) | hilo;
+    return *(uint64_t*) &folded;
+#endif
 }
 
 template<int N> uint64_t shift(uint64_t b) __attribute__((__always_inline__));

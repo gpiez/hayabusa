@@ -438,8 +438,14 @@ void BoardBase::buildPins() {
     dpins[CI].d02 = dir20 & dir13 & dir31;
     dpins[CI].d13 = dir31 & dir02 & dir20;
     __v2di pins2 = dpins[CI].d02 & dpins[CI].d13;
+#ifdef __x86_64__    
     pins[CI] = _mm_cvtsi128_si64(_mm_unpackhi_epi64(pins2, pins2))
          & _mm_cvtsi128_si64(pins2);
+#else         
+    __v2di folded = _mm_unpackhi_epi64(pins2, pins2) & pins2;
+    pins[CI] = *(uint64_t*) &folded;
+#endif    
+
 }
 
 #endif
