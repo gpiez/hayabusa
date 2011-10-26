@@ -83,6 +83,7 @@ public:
 private:
     WBBoard boards[nMaxGameLength];
     unsigned nullReduction[maxDepth+1];
+    unsigned verifyReduction[maxDepth+1];
     
     unsigned int iMove;                // current half move index of game
 
@@ -112,9 +113,7 @@ private:
     TimedMutex infoTimerMutex;
     TimedMutex stopTimerMutex;
     Book book;
-#ifdef USE_GENETIC    
     RawScore bestScore;
-#endif    
 
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);

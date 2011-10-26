@@ -18,7 +18,6 @@
 #ifndef SEARCH_TCC_
 #define SEARCH_TCC_
 
-// #include <boost/chrono.hpp>
 #include "rootboard.h"
 #include "options.h"
 #include "transpositiontable.tcc"
@@ -40,7 +39,7 @@ template<Colors C>
 int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int depth) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     depth -= eval.dMaxExt;
-    if (Options::reduction && movenr >= 3 && depth > 5) {
+    if (Options::reduction && movenr > eval.dRed[depth]) {
         bool check = (!m.isSpecial() && (  (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
                                         || (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
                                         )
@@ -144,26 +143,12 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         if (stopSearch != Running) return 0;
     }
     
-    unsigned iPiece = prev.errorPieceIndex[ m.piece() & 7 ]; // TODO really useful?
+    unsigned iPiece = prev.errorPieceIndex[ m.piece() & 7 ];
     PositionalError& diff = pe[iPiece][m.from()][m.to()];
     // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     // TODO connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
     //     current.v = -infinity*C;
     RawScore estimatedScore = estimate.score.calc(prev.material, eval) + prev.positionalScore + diff.v - C*diff.error; //TODO move score() into ColorBoard ctor
-#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
-/*    if (diff.n > 1.0) {
-        float invn = 1.0/diff.n;
-        float v = diff.e2*invn - (diff.e*invn)*(diff.e*invn);
-        v = sqrt(v);
-        ASSERT(v == diff.error);
-        estimatedScore -= C*diff.error;
-    } else {
-        ASSERT(100 == diff.error);
-        estimatedScore -= 100*C;
-    }*/
-#else
-    estimatedScore -= eval.standardError *C;
-#endif
     A alpha(origAlpha);
     A current(-infinity*C);
     if (P==vein && lazy1 && !extend) {
@@ -297,7 +282,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             else
                 ttScore.v = tt2Score(subentry.score);
             if (ttDepth >= depth || (ttScore>=infinity*C && subentry.loBound) || (ttScore<=-infinity*C && subentry.hiBound)) {
-                if (P == leaf && depth < eval.dMaxExt) {
+                if (P == leaf && depth <= eval.dMaxExt) {
                     nextMaxDepth = true;
                 }
                 if (subentry.loBound) {
@@ -333,10 +318,10 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
     bool leafMaxDepth;
     if (P == leaf) leafMaxDepth=false;
 
-    if (P==tree && Options::pruning && !threatened && !extend) {
+    if (P==tree && Options::pruning && !threatened) {
         if (depth == eval.dMaxExt + 1) {
             Score<C> fScore;
-            fScore.v = estimatedScore/* - C*100*/;
+            fScore.v = estimatedScore - C*eval.prune1 - !!m.capture()*C*eval.prune1c;
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile1;
@@ -349,7 +334,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         }
         if (depth == eval.dMaxExt + 2) {
             Score<C> fScore;
-            fScore.v = estimatedScore - C*1000;
+            fScore.v = estimatedScore - C*eval.prune2 - !!m.capture()*C*eval.prune2c;
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile2;
@@ -393,29 +378,27 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
         b.isExact = true;
         realScore = b.keyScore.score.calc(prev.material, eval) + b.positionalScore;
         if (isMain & !m.isSpecial()) {
-            Score<C> diff2;
-            diff2.v = b.positionalScore - prev.positionalScore;
-#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
-            diff.n++;
-            diff.e  += diff2.v;
-            diff.e2 += diff2.v*diff2.v;
-            if (diff.n >= 1024) {
-                diff.n *= 0.5;
-                diff.e *= 0.5;
-                diff.e2 *= 0.5;
-            }
-            float invn = 1.0/diff.n;
-            float avg = diff.e*invn;
-            float v = diff.e2*invn - avg*avg;
-            v = sqrt(v);
-            diff.v = avg;
-            diff.error = eval.standardSigma*v;
-#else
-            ASSERT(realScore == estimatedScore - diff.v + diff2.v);
-#endif
-            diff.v = (diff2.v + diff.v)/2;
-//                 if (diff2 < diff.v) diff.v = diff2.v;
-//                 else diff.v += C;
+            int diff2 = b.positionalScore - prev.positionalScore;
+            if (eval.calcMeanError) {
+                diff.n++;
+                diff.e  += diff2;
+                diff.e2 += diff2*diff2;
+                if (diff.n >= 256) {
+                    diff.n *= 0.5;
+                    diff.e *= 0.5;
+                    diff.e2 *= 0.5;
+                }
+                float invn = 1.0/diff.n;
+                float avg = diff.e*invn;
+                if (diff.n > 1) {
+                    float v = diff.e2*invn - avg*avg;
+                    v = sqrtf(v);
+                    diff.error = eval.standardSigma*v;
+                } else
+                    diff.error = eval.standardError*0.5;
+                diff.v = avg;
+            } else
+                diff.v = (diff2 + diff.v)/2;
         }
     }
     if (P==vein) ASSERT(!(threatened & ~ExtCheck));
@@ -671,20 +654,16 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
             {
                 if (!i->capture() && !i->isSpecial()) continue;
                 value.v = search3<(Colors)-C, vein>(b, *i, std::min(depth-1, eval.dMaxCapture), beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nattack NODE);
-//                 alpha.max(value.v);
-//                 if (current.max(value.v)) bestMove = *i;
             /*
              * Transition from extended q search to pure q search for tactical
              * moves, if the move is a possible mate, don't do a lazy eval in
              * the next iteration
              */
-            } else if (P == leaf && depth <= eval.dMaxCapture) {
+            } else if (P == leaf && depth <= eval.dMaxCapture+1) {
                 leafExt = i<captures ? ExtTestMate : ExtNot;
                 value.v = search3<(Colors)-C, vein>(b, *i, eval.dMaxCapture, beta.unshared(), alpha.unshared(), ply+1, leafExt, unused, nattack NODE);
                 leafMaxDepth = true;
-//                 alpha.max(value.v);
-//                 if (current.max(value.v)) bestMove = *i;
-            } else if ( P == leaf || depth <= eval.dMaxExt) {
+            } else if ( P == leaf || depth <= eval.dMaxExt+1) {
     //                 if (i<captures && i<threats) asm("int3");
     //                 uint64_t tnode = stats.node;
                 value.v = search3<(Colors)-C, leaf>(b, *i, depth-1, beta.unshared(), alpha.unshared(), ply+1, leafExt, leafMaxDepth, nattack NODE);
@@ -695,11 +674,9 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                     std::cout << std::endl;
                 }
 #endif
-//                 alpha.max(value.v);
-//                 if (current.max(value.v)) bestMove = *i;
             } else { // possible null search in tree or trunk
                 ASSERT(P != leaf);
-                if (depth > 2 + eval.dMaxExt
+                if (depth > eval.dMaxExt + eval.dMinReduction
                     && current.v != -infinity*C //TODO compare to alpha0.v of rootsearch
 //                     && bad-good > maxMovesNull
                     && b.material) {
@@ -735,28 +712,22 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                     }
                     if (badmove) continue;
 #endif                    
-#if 1                   
+#if 1
                     /*
                      * Verify nullmove search. If it is >alpha, dont't bother with nullmove
                      */
                     const B beta0(alpha.v + C);
-                    unsigned newDepth = depth-(nullReduction[depth]);
-                    ASSERT(depth > nullReduction[depth]);
-/*                    if (notverified) {
-                        notverified = false;*/
+                    unsigned newDepth = depth- verifyReduction[depth];
                     value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, alpha, ply+1, ExtNot, nattack NODE);
-//                     }
                     /*
                      * The actual null move search. Search returns true if the
                      * result in alpha1 comes down to alpha0, in that case prune
                      */
                     if (value <= alpha.v) {
                         if (value <= -infinity*C) continue;
-                        newDepth = depth-(nullReduction[depth]+1);
-                        ASSERT(depth > nullReduction[depth]+1);
+                        newDepth = depth-nullReduction[depth];
                         Score<C> nullvalue(search4<C, P>(b, *i, newDepth, alpha, beta0, ply+2, ExtNot, nattack NODE));
                         if (nullvalue <= alpha.v) {
-                            current.max(value.v);       //TODO should not be needed?
                             continue;
                         }
                     }
@@ -790,8 +761,6 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                         alpha.v = value.v;
                     }
                     value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta, alpha, ply+1, ExtNot, nattack NODE);
-//                     alpha.max(value.v);
-//                     if (current.max(value.v)) bestMove = *i;
                 // Multi threaded search: After the first move try to find a free thread, otherwise do a normal
                 // search but stay in trunk. To avoid multithreading search at cut off nodes
                 // where it would be useless.
@@ -805,16 +774,12 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, const unsi
                             WorkThread::queueJob(threadId, new SearchJob<(Colors)-C, typename B::Base, A, ColoredBoard<C> >(*this, b, *i, depth-1, beta.unshared(), alpha, ply+1, threadId, keys NODE));
                         } else {
                             value.v = search4<(Colors)-C, P>(b, *i, depth-1, beta.unshared(), alpha, ply+1, ExtNot, nattack NODE);
-//                             alpha.max(value.v);
-//                             if (current.max(value.v)) bestMove = *i;
                         }
                     } else {
                         if (i > good && WorkThread::canQueued(threadId, current.isNotReady())) {
                             WorkThread::queueJob(threadId, new SearchJob<(Colors)-C,B,A, ColoredBoard<C> >(*this, b, *i, depth-1, beta, alpha, ply+1, threadId, keys NODE));
                         } else {
                             value.v = search4<(Colors)-C, P>(b, *i, depth-1, beta, alpha, ply+1, ExtNot, nattack NODE);
-//                             alpha.max(value.v);
-//                             if (current.max(value.v)) bestMove = *i;
                         }
                     }
                 }

@@ -113,12 +113,27 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
     color(White)
 {
 //     eval.setParameters(p);
-    for (unsigned i=0; i<=maxDepth; ++i) {
-        nullReduction[i] = std::trunc(std::max(0.0, sqrt(0.25 + 2.0*i - 2.0*eval.dMaxExt) + 0.51));
-//         nullReduction[i] = std::trunc(std::max(0.0, ((int)i-(int)dMaxExt-1)/5.0) + 3.0);
-        if (Options::debug & DebugFlags::debugSearch) {
-            if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i] << std::endl;
+    int null = 2;
+    int verify = 2;
+    unsigned nullIncr = eval.dNullIncr;
+    unsigned verifyIncr = eval.dVerifyIncr;
+    for (unsigned i=eval.dMaxExt+2; i<=maxDepth; ++i) {
+        while (nullIncr & 1) {
+            null++;
+            nullIncr >>= 1;
         }
+        nullReduction[i] = null;
+        nullIncr >>= 1;
+        
+        while (verifyIncr & 1) {
+            verify++;
+            verifyIncr >>= 1;
+        }
+        verifyReduction[i] = verify;
+        verifyIncr >>= 1;
+#ifdef MYDEBUG
+        if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i] << std::endl;
+#endif
     }
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>(hashSize);
     clearEE();

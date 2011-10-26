@@ -54,7 +54,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     milliseconds hardBudget = std::min(time/2, (2*time + 2*inc*movestogo)/(movestogo+1));
     stopTimerMutex.lock();
     Thread* stopTimerThread = NULL;
-    if (!infinite && Options::cpuTime) stopTimerThread = new Thread(&RootBoard::stopTimer, this, hardBudget); //TODO resuse existing thread
+    if (!infinite/* && Options::cpuTime*/) stopTimerThread = new Thread(&RootBoard::stopTimer, this, hardBudget); //TODO resuse existing thread
 //     if (Options::cpuTime) {
 //         boost::chrono::time_point<boost::chrono::process_cpu_clock::times, boost::chrono::nanoseconds> t = boost::chrono::process_cpu_clock::now();
 //         stopTime = t.time_since_epoch().count() + hardBudget.count()*1000000;
@@ -103,7 +103,9 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             if (value > alpha0.v) {
                 alpha0.v = value.v;
                 bestMove = *ml;
+#ifdef USE_GENETIC                
                 if (!Options::quiet) bestScore = value.v;
+#endif                
                 ml.nodesCount(stats.node - subnode);
                 ml.currentToFront();
             }
@@ -117,7 +119,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         unsigned bestMovesLimit = 1;
         for (depth=eval.dMaxExt+2; depth<=endDepth && stats.node < maxSearchNodes && stopSearch == Running; depth++) {
             ml.begin();
-            ml.sort(bestMovesLimit);
+//             ml.sort(bestMovesLimit);
             bestMove = currentMove = *ml;
             currentMoveIndex = 1;
             if (!Options::humanreadable && !Options::quiet) {
@@ -176,7 +178,9 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 }
             } else {
                 value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, dummy NODE);
+#ifdef USE_GENETIC                
                 if (!Options::quiet) bestScore = value.v;
+#endif                
                 if (stopSearch) break;
                 alpha.v = value.v;
             }
@@ -184,8 +188,9 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 
             now = system_clock::now();
             if (!Options::quiet) console->send(status(now, alpha.v));
+#ifdef USE_GENETIC
             else bestScore = alpha.v;
-
+#endif
             if (alpha >= infinity*C) break;
             if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
             if (abs(alpha.v) <= 1024)
@@ -198,25 +203,27 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 currentMove = *ml;
                 uint64_t subnode = stats.node;
                 if (alpha.v != -infinity*C
-                    && depth > eval.dMaxExt+2
+                    && depth > eval.dMaxExt+eval.dMinReduction
                     && ml.count() > maxMovesNull
                     && b.material
                     && stopSearch == Running)
                 {
                     const SharedScore<(Colors)-C> beta0(alpha.v + C);
-                    unsigned newDepth = depth-(nullReduction[depth]);
+                    unsigned newDepth = depth-verifyReduction[depth];
                     value.v = search4<(Colors)-C, trunk>(b, *ml, newDepth, beta0, alpha, ply+1, ExtNot, dummy NODE);
                     if (value <= -infinity*C) continue;
 
                     if (value <= alpha.v && stopSearch == Running) {
-                        newDepth = depth-(nullReduction[depth]+1);
+                        newDepth = depth-nullReduction[depth];
                         Score<C> nullvalue(search4<C, trunk>(b, *ml, newDepth, alpha, beta0, ply+2, ExtNot, dummy NODE));
+                        ml.nodesCount(stats.node - subnode);
                         if (nullvalue <= alpha.v) continue;
                     }
 
                 }
                 if (stopSearch == Running) {
                     value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, ExtNot, dummy NODE);
+                    ml.nodesCount(stats.node - subnode);
                     if (stopSearch || value <= alpha.v) continue;
                     alpha.v = value.v;
                     if (ml.current >= bestMovesLimit) bestMovesLimit++;
@@ -233,16 +240,17 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                     beta2.v = alpha.v + eval.aspiration1*C;
                     now = system_clock::now();
                     if (!Options::quiet) console->send(status(now, alpha.v));
+#ifdef USE_GENETIC
                     else bestScore = alpha.v;
-                } else {
-                    ml.nodesCount(stats.node - subnode);
-                }
+#endif                    
+                } 
+
                 if (alpha >= infinity*C) break;
                 if (!infinite) {
                     system_clock::time_point now = system_clock::now();
                     if (now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) stopSearch = Stopping;
                 }
-            }
+            } // for ml
     //         now = system_clock::now();
     //         console->send(status(now, alpha.v) + " done");
 
