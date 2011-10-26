@@ -32,7 +32,7 @@ struct Parm {
     T max;
     T var;
 
-    Parm(T value, T var, T min, T max):
+    Parm(T value, T var, T max, T min=0.0):
         value(value),
         min(min),
         max(max),
@@ -50,7 +50,7 @@ struct Parm {
         value(value),
         min(0),
         max(2*value),
-        var(value/2)
+        var(value/8)
     {}
 
     Parm() {}
@@ -62,6 +62,8 @@ class Parameters
 {
     static unsigned maxIndex;
     static bool parmsLocked;
+    static std::map< std::string, unsigned > index;
+    static std::vector<Parm<float> > base;
     
 public:
     struct Piece {
@@ -70,28 +72,29 @@ public:
             float endgame;
         };
         struct Direction {
-            Phase val;
-            Phase infl;
+            Phase value;
+            Phase inflection;
         };
-//         CompoundScore h[4];
-//         CompoundScore v[8];
-        Phase val;
+        Phase value;
+        Phase corner;
         Direction hor, vert;
-        float center;
+        Phase vcenter;
+        Phase mobility;
+        Phase pair;
     };
     Parameters();
     Parameters(const Parameters&);
     ~Parameters();
     static void init();
-    static std::map< std::string, unsigned > index;
-    static std::vector<float> base;
 
     std::vector< Parm<float> > parms;
 
     Parm<float> operator [] (const std::string s) const;
     Parm<float>& operator [] (const std::string s);
+    static bool exists(const std::string s);
     static void add(const std::string s, float value);
-    void mutate();
+    static void add(const std::string s, float value, float var, float max, float min=0.0);
+    void mutate(float mutationRate = 0.05);
     Parameters combine(const Parameters& father) const;
 };
 

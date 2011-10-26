@@ -18,22 +18,22 @@
 
 #include <random>
 #include "parameters.h"
+#include "stringlist.h"
 
 unsigned Parameters::maxIndex = 0;
 bool Parameters::parmsLocked = false;
 std::mt19937 mt;
 
 std::map< std::string, unsigned > Parameters::index;
-std::vector<float> Parameters::base;
+std::vector<Parm<float> > Parameters::base;
 
 Parameters defaultParameters;
 
-void Parameters::mutate()
+void Parameters::mutate(float mutationRate)
 {
-    float mutationRate = 0.05;
     for(unsigned i = 0; i < maxIndex; ++i) {
         if (std::bernoulli_distribution(mutationRate)(mt)) {
-            std::normal_distribution<float> ndist(parms[i].value, parms[i].var/2);
+            std::normal_distribution<float> ndist(parms[i].value, parms[i].var);
             parms[i].value = ndist(mt);
             parms[i].value = std::min(parms[i].value, parms[i].max);
             parms[i].value = std::max(parms[i].value, parms[i].min);
@@ -63,9 +63,10 @@ Parameters::Parameters(const Parameters& p)
     }
 }
 
-void Parameters::add(const std::string s, float value)
+void Parameters::add(std::string s, float value)
 {
-#ifdef MYDEBUG    
+    s = toLower(s);
+#ifdef MYDEBUG
     if (parmsLocked) {
         std::cerr << "Parameter list modified after created" << std::endl;
     }
@@ -74,21 +75,80 @@ void Parameters::add(const std::string s, float value)
         index[s] = maxIndex++;
         base.resize(maxIndex);
     }
-    base[ index[s] ] = value;
+    base[ index[s] ] = Parm<float>(value);
+}
+
+void Parameters::add(std::string s, float value, float var, float max, float min)
+{
+    s = toLower(s);
+#ifdef MYDEBUG
+    if (parmsLocked) {
+        std::cerr << "Parameter list modified after created" << std::endl;
+    }
+#endif
+    if (index.find(s) == index.end()) {
+        index[s] = maxIndex++;
+        base.resize(maxIndex);
+    }
+    base[ index[s] ] = Parm<float>(value, var, max, min);
 }
 
 void Parameters::init()
 {
-    Parameters::add("pawnOpening", 96);
-    Parameters::add("pawnEndgame", 106);
-    Parameters::add("knightOpening", 304);
-    Parameters::add("knightEndgame", 296);
-    Parameters::add("bishopOpening", 292);
-    Parameters::add("bishopEndgame", 300);
-    Parameters::add("rookOpening", 480);
-    Parameters::add("rookEndgame", 480);
-    Parameters::add("queenOpening", 1000);
-    Parameters::add("queenEndgame", 890);
+    Parameters::add("knight.mobility.opening", 24);
+    Parameters::add("knight.mobility.endgame", 18);
+    Parameters::add("bishop.mobility.opening", 12);
+    Parameters::add("bishop.mobility.endgame", 0);
+    Parameters::add("rook.mobility.opening", 16);
+    Parameters::add("rook.mobility.endgame", 0);
+    Parameters::add("queen.mobility.endgame", 0);
+    Parameters::add("queen.mobility.opening", 0);
+
+    Parameters::add("pawn.corner.opening", -4);
+    Parameters::add("knight.corner.opening", 0);
+    Parameters::add("rook.corner.opening", 0);
+    Parameters::add("queen.corner.opening", 0);
+    Parameters::add("bishop.corner.opening", 0);
+    Parameters::add("king.corner.opening", 0);
+    Parameters::add("pawn.corner.endgame", 0);
+    Parameters::add("knight.corner.endgame", -16);
+    Parameters::add("rook.corner.endgame", 0);
+    Parameters::add("queen.corner.endgame", 0);
+    Parameters::add("bishop.corner.endgame", -8);
+    Parameters::add("king.corner.endgame", 0);
+
+    Parameters::add("pawn.value.opening", 96 , 10, 150);
+    Parameters::add("pawn.value.endgame", 106, 10, 150);
+    Parameters::add("pawn.horizontal.value.opening", 8);
+    Parameters::add("pawn.vertical.value.opening", 12);
+    Parameters::add("pawn.horizontal.value.endgame", -8);
+    Parameters::add("pawn.vertical.value.endgame", 14);
+
+    Parameters::add("knight.value.opening", 312, 20, 400);
+    Parameters::add("knight.value.endgame", 288, 20, 400);
+
+    Parameters::add("bishop.value.opening", 292, 20, 400);
+    Parameters::add("bishop.value.endgame", 300, 20, 400);
+    
+    Parameters::add("rook.value.opening", 480, 30, 600);
+    Parameters::add("rook.value.endgame", 480, 30, 600);
+    Parameters::add("rook.horizontal.value.opening", 14);
+    Parameters::add("rook.vertical.value.opening", 12);
+    Parameters::add("rook.horizontal.inflection.opening", 1.2);
+    Parameters::add("rook.vertical.inflection.opening", 1.2);
+    
+    Parameters::add("queen.value.opening", 1000, 100, 1200);
+    Parameters::add("queen.value.endgame", 890, 100, 1200);
+    Parameters::add("queen.horizontal.value.opening", 7);
+    Parameters::add("queen.vertical.value.opening", 5);
+    Parameters::add("queen.horizontal.inflection.opening", 1.0);
+    Parameters::add("queen.vertical.inflection.opening", 0.5);
+    Parameters::add("queen.mobility.endgame", 4);
+
+    Parameters::add("king.horizontal.value.opening", -20);
+    Parameters::add("king.vertical.value.opening", -24);
+    Parameters::add("king.horizontal.value.endgame", -4);
+    Parameters::add("king.vertical.value.endgame", 4);
     
     Parameters::add("pawnHValue", 8);
     Parameters::add("pawnVValue", 12);
@@ -98,27 +158,43 @@ void Parameters::init()
     Parameters::add("kingVValue", -24);
     Parameters::add("kingHEValue", -4);
     Parameters::add("kingVEValue", 4);
+    
     Parameters::add("rookHValue", 14);
     Parameters::add("rookVValue", 12);
+    Parameters::add("rookHInfl", 1.2);
+    Parameters::add("rookVInfl", 1.2);
     Parameters::add("rookHEValue", 0);
     Parameters::add("rookVEValue", 0);
+    Parameters::add("rookHEInfl", 1.5);
+    Parameters::add("rookVEInfl", 1.5);
+    Parameters::add("rookPair", 0);
+    
     Parameters::add("queenHValue", 7);
     Parameters::add("queenVValue", 5);
+    Parameters::add("queenHInfl", 1.0);
+    Parameters::add("queenVInfl", 0.5);
+    Parameters::add("queenPair", 0);
+    
     Parameters::add("knightHValue", 10);
     Parameters::add("knightVValue", 32);
     Parameters::add("knightHEValue", 2);
     Parameters::add("knightVEValue", 2);
+    Parameters::add("knightHEInfl", 0.5);
+    Parameters::add("knightVEInfl", 0);
+    Parameters::add("knightPair", -30);
     Parameters::add("bishopHValue", 12);
     Parameters::add("bishopVValue", 22);
     Parameters::add("bishopHEValue", 0);
     Parameters::add("bishopVEValue", 0);
     Parameters::add("bishopCenter", 3.5);
-    Parameters::add("mobB1value", 6.5);
-    Parameters::add("mobB1slope", 6.0);
-    Parameters::add("mobN1value", 2);
+    Parameters::add("mobB1value", 6);
+    Parameters::add("mobB1slope", 5.0);
+    Parameters::add("mobN1value", 10);
     Parameters::add("mobN1slope", 3.0);
-    Parameters::add("mobR1value", 2);
-    Parameters::add("mobR1slope", 3.0);
+    Parameters::add("mobR1value", 4);
+    Parameters::add("mobR1slope", 6.0);
+    Parameters::add("mobQ1value", 2);
+    Parameters::add("mobQ1slope", 10.0);
 
     Parameters::add("mobB2value", 1.5);
     Parameters::add("mobB2slope", 5.0);
@@ -133,13 +209,17 @@ void Parameters::init()
     Parameters::add("pawnPasserSlope", 1.0);
     Parameters::add("knightBlockPasser", 10);
     Parameters::add("bishopBlockPasser", 15);
+    Parameters::add("bishopPair", 28);
+    Parameters::add("kingHEInfl", 1.0);
+    Parameters::add("kingVEInfl", 1.5);
+    Parameters::add("kingHInfl", 2);
+    Parameters::add("kingVInfl", 1);
 
     Parameters::add("endgameMaterial", 32);
 
-    Parameters::add("bishopPair", 30);
-    Parameters::add("bishopAlone", -100);
+//     Parameters::add("bishopAlone", -100);
 
-    Parameters::add("knightAlone", -125);
+//     Parameters::add("knightAlone", -125);
 
     Parameters::add("rookTrapped", -50);
     Parameters::add("rookOpen", 16);
@@ -171,41 +251,29 @@ void Parameters::init()
     Parameters::add("bishopHInfl", 0.6875);
     Parameters::add("bishopVInfl", 1.34375);
 
-    Parameters::add("rookHInfl", 1.5);
-    Parameters::add("rookVInfl", 1.5);
     Parameters::add("rookCenter", 3.5);
 
     Parameters::add("pawnHInfl", 1.5);
     Parameters::add("pawnVInfl", 6);
     Parameters::add("pawnCenter", 6);
 
-    Parameters::add("kingHInfl", 1.5);
-    Parameters::add("kingVInfl", 1.5);
     Parameters::add("kingCenter", 3.5);
 
-    Parameters::add("queenHInfl", 1.5);
-    Parameters::add("queenVInfl", 1.5);
     Parameters::add("queenCenter", 3.5);
     
-    Parameters::add("knightHEInfl", 1.5);
-    Parameters::add("knightVEInfl", 1.5);
-
     Parameters::add("bishopHEInfl", 1.5);
     Parameters::add("bishopVEInfl", 1.5);
 
-    Parameters::add("rookHEInfl", 1.5);
-    Parameters::add("rookVEInfl", 1.5);
 
     Parameters::add("pawnHEInfl", 1.5);
     Parameters::add("pawnVEInfl", 1.5);
 
-    Parameters::add("kingHEInfl", 1.5);
-    Parameters::add("kingVEInfl", 1.5);
-
     Parameters::add("queenHEInfl", 1.5);
     Parameters::add("queenVEInfl", 1.5);
 
-    Parameters::add("dMaxCapture", 7);
+    Parameters::add("dMaxCapture", 8, 4, 20, 2);
+    Parameters::add("standardError", 30);
+    Parameters::add("standardSigma", 2.0);
 // odd extensions tend to blow up the tree. Average tree size over 2600 positions:
 // ext  size, error margin ~5k
 // 13   660k
@@ -222,20 +290,63 @@ void Parameters::init()
 //  2   462k
 //  1   539k
 //  0   427k
-    Parameters::add("dMaxExt", 4);
-    Parameters::add("dMinDualExt", 3);
-    Parameters::add("dMinSingleExt", 5);
-    Parameters::add("dMinForkExt", 3);
-    Parameters::add("dMinMateExt", 5);
-    Parameters::add("dMinPawnExt", 3);
-    Parameters::add("dEvenAlpha", 0);
+    Parameters::add("dMaxExt", 6);
+    Parameters::add("dMinDualExt", 0);
+    Parameters::add("dMinSingleExt", 4);
+    Parameters::add("dMinForkExt", 4);
+    Parameters::add("dMinMateExt", 4);
+    Parameters::add("dMinPawnExt", 4);
+    Parameters::add("dEvenAlpha", 3, 0, 3, 3);
 
+    Parameters::add("oppKingOwnPawnV", 14);  // only 1..7 used
+    Parameters::add("ownKingOwnPawnV", 8);
+    Parameters::add("oppKingOwnPasserV",  26);  // only 1..7 used
+    Parameters::add("ownKingOwnPasserV", 32);
+    Parameters::add("pawnConnPasserV", 36 );
+
+    Parameters::add("calcMeanError", 1);
+
+    Parameters::add("prune1", 10);
+    Parameters::add("prune2", 110);
+    Parameters::add("prune1c", 60);
+    Parameters::add("prune2c", 0);
+    Parameters::add("dNullIncr", 0xaa, 0, 255, 0);
+    Parameters::add("dVerifyIncr", 0xaa, 0, 255, 0);
+    Parameters::add("dMinReduction", 2, 0, 10, 1);
+
+    Parameters::add("pawnAttack", 112);
+    Parameters::add("bishopAttack", 144);
+    Parameters::add("knightAttack", 96);
+    Parameters::add("kingAttack", 96);
+    Parameters::add("rookAttack", 160);
+    Parameters::add("queenAttack", 192);
+
+    Parameters::add("attQMaMi", 200);
+    Parameters::add("attQMiMi", 180);
+    Parameters::add("attMaMiMi", 160);
+    Parameters::add("attQMa", 80);
+    Parameters::add("attQMi", 70);
+    Parameters::add("attMaMi", 40);
+    Parameters::add("attMiMi", 30);
+    Parameters::add("attQ", 20);
+    Parameters::add("attMa",15);
+    Parameters::add("attMi",12);
+
+    Parameters::add("dRed[7]", 2);
+    Parameters::add("dRed[6]", 2);
+    Parameters::add("dRed[5]", 2);
+    Parameters::add("dRed[4]", 3);
+    Parameters::add("dRed[3]", 6);
+    Parameters::add("dRed[2]", 255);
+    Parameters::add("dRed[1]", 255);
+    Parameters::add("dRed[0]", 255);
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) 
         defaultParameters.parms[i] = Parm<float>(base[i]);
 }
 
-Parm<float> Parameters::operator [] (const std::string s) const {
+Parm<float> Parameters::operator [] (std::string s) const {
+    s = toLower(s);
     ASSERT(index.find(s) != index.end());
     ASSERT(index.find(s)->second < maxIndex);
     if (!index.count(s)) {
@@ -247,13 +358,18 @@ Parm<float> Parameters::operator [] (const std::string s) const {
     return parms.at(index.find(s)->second);
 }
 
-Parm<float>& Parameters::operator [] (const std::string s) {
-
+Parm<float>& Parameters::operator [] (std::string s) {
+    s = toLower(s);
     std::map< std::string, unsigned >::iterator i = index.find(s);
     if (i == index.end()) {
         std::cerr << "unknown parameter" << std::endl;
     }
     return parms[i->second];
+}
+
+bool Parameters::exists(const std::string s)
+{
+    return index.find(s) != index.end();
 }
 
 Parameters::~Parameters()

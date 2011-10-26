@@ -97,9 +97,7 @@ class Eval {
     int maxAttack;
     int maxDefense;
 
-    Parameters::Piece rook, bishop, queen, knight, pawn;
-    int queenOpening;
-    int queenEndgame;
+    Parameters::Piece rook, bishop, queen, knight, pawn, king;
     float queenHValue;
     float queenHInfl;
     int queenH[4];
@@ -113,9 +111,9 @@ class Eval {
     float queenVEInfl;
     int queenVE[8];
     float queenCenter;
-
-    int bishopOpening;
-    int bishopEndgame;
+    int queenPair;
+    int queenAttack;
+    
     float bishopHValue;
     float bishopHInfl;
     int bishopH[4];
@@ -129,13 +127,12 @@ class Eval {
     float bishopVEInfl;
     int bishopVE[8];
     float bishopCenter;
-
+    int bishopAttack;
+    
     int bishopPair;
     int bishopBlockPasser;
-    int bishopAlone;
+//     int bishopAlone;
 
-    int knightOpening;
-    int knightEndgame;
     float knightHValue;
     float knightHInfl;
     int knightH[4];
@@ -149,12 +146,11 @@ class Eval {
     float knightVEInfl;
     int knightVE[8];
     float knightCenter;
-    
-    int knightAlone;
+    int knightPair;
+//     int knightAlone;
     int knightBlockPasser;
-
-    int rookOpening;
-    int rookEndgame;
+    int knightAttack;
+    
     float rookHValue;
     float rookHInfl;
     int rookH[4];
@@ -168,14 +164,14 @@ class Eval {
     float rookVEInfl;
     int rookVE[8];
     float rookCenter;
-
+    int rookPair;
+    
     int rookTrapped;
     int rookOpen;
     int rookHalfOpen;
     int rookWeakPawn;
-
-    int pawnOpening;
-    int pawnEndgame;
+    int rookAttack;
+    
     float pawnHValue;
     float pawnHInfl;
     int pawnH[4];
@@ -200,12 +196,9 @@ class Eval {
     int pawnRankOpen[6], pawnRankEnd[6];
     float pawnCenter;
 
-//     int pawnEdge;
-//     int pawnCenter;
     int pawnDouble;
     int pawnShoulder;
-//     int pawnHole;
-    int pawnUnstoppable;
+    int pawnAttack;
 
     float kingHValue;
     float kingHInfl;
@@ -220,6 +213,13 @@ class Eval {
     float kingVEInfl;
     int kingVE[8];
     float kingCenter;
+    int kingAttack;
+    
+    float oppKingOwnPawnV;  // only 1..7 used
+    float ownKingOwnPawnV;
+    float oppKingOwnPasserV;  // only 1..7 used
+    float ownKingOwnPasserV;
+    float pawnConnPasserV;
 
     int attackR1[21];
     int attackR2[21];
@@ -231,19 +231,41 @@ class Eval {
     int attackN2[21];
     int attackP[21];
     int attackK[21];
+    int attackQMaMi[13];
+    int attackQMiMi[13];
+    int attackMaMiMi[13];
+    int attackQMa[13];
+    int attackQMi[13];
+    int attackMaMi[13];
+    int attackMiMi[13];
+    int attackQ[13];
+    int attackMa[13];
+    int attackMi[13];
+    float attQMaMi;
+    float attQMiMi;
+    float attMaMiMi;
+    float attQMa;
+    float attQMi;
+    float attMaMi;
+    float attMiMi;
+    float attQ;
+    float attMa;
+    float attMi;
 
     int attackTable[256], defenseTable[256];
 
-    int mobB1[14], mobB2[33];
-    int mobN1[9], mobN2[33];
-    int mobR1[15], mobR2[65];
-    int mobQ1[28], mobQ2[65];
-    float mobN1value, mobN1slope;
-    float mobN2value, mobN2slope;
-    float mobB1value, mobB1slope;
-    float mobB2value, mobB2slope;
-    float mobR1value, mobR1slope;
-    float mobR2value, mobR2slope;
+    int mobB1[14];
+    int mobN1[9];
+    int mobR1[15];
+    int mobQ1[28];
+    int bmo[14], bme[14];
+    int nmo[9], nme[9];
+    int rmo[15], rme[15];
+    int qmo[28], qme[28];
+    float mobN1slope;
+    float mobB1slope;
+    float mobR1slope;
+    float mobQ1slope;
     
 
     int oppKingOwnPawn[8];
@@ -254,19 +276,6 @@ class Eval {
     friend int CompoundScore::calc(int, const Eval&) const;
     int endgameMaterial;
 
-    int psqRX[2][8];
-    int psqRY[2][8];
-    int psqBX[2][8];
-    int psqBY[2][8];
-    int psqQX[2][8];
-    int psqQY[2][8];
-    int psqNX[2][8];
-    int psqNY[2][8];
-    int psqPX[2][8];
-    int psqPY[2][8];
-    int psqKX[2][8];
-    int psqKY[2][8];
-    
     void initPS();
     void initZobrist();
     static void initTables();
@@ -279,7 +288,7 @@ class Eval {
     template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const __attribute__((__always_inline__));
     PawnEntry pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
-    template<Colors C> int king(const BoardBase& b) const;
+    template<Colors C> int kingSafety(const BoardBase& b) const;
     template<Colors C> int endgame(const BoardBase& b, const PawnEntry&, int sideToMoves) const;
 public:
     unsigned dMaxCapture;
@@ -289,14 +298,24 @@ public:
     unsigned dMinForkExt;
     unsigned dMinPawnExt;
     unsigned dMinMateExt;
-    
+    unsigned dNullIncr;
+    unsigned dVerifyIncr;
+    unsigned dMinReduction;
+    int standardError;
+    float standardSigma;
+    bool calcMeanError;
+
+    int dRed[maxDepth+1];
     int dEvenAlpha;
 //     unsigned dMinSingleExt;
 //     unsigned dMinMateExt;
     int aspiration0;
     int aspiration1;
     int evalHardBudget;
-    
+    int prune1;
+    int prune2;
+    int prune1c;
+    int prune2c;
 #ifdef MYDEBUG
     mutable uint64_t bmob1, bmob2, bmob3, bmobn;
     mutable uint64_t rmob1, rmob2, rmob3, rmobn;

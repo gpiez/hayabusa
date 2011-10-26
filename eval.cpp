@@ -183,12 +183,7 @@ void Eval::init() {
     const int totalMaterial = 4*(materialRook+materialBishop+materialKnight) + 2*materialQueen + 16*materialPawn;
     ASSERT(totalMaterial == 56);
 
-    sigmoid( oppKingOwnPawn, -12,  12, 1, 10);  // only 1..7 used
-    sigmoid( ownKingOwnPawn,   6,  -6, 1, 10);
-    sigmoid( oppKingOwnPasser, -32,  32, 1, 10);  // only 1..7 used
-    sigmoid( ownKingOwnPasser,  16, -16, 1, 10);
-    sigmoid( pawnConnPasser, 0, 50, 6, 1.0 );
-    pawnUnstoppable = 700;
+//     pawnUnstoppable = 700;
 
     sigmoid(attackR1, 55, 80, 3.0, 3.0, 1); // max bits set = 21
     sigmoid(attackR2, 55, 80, 6.0, 6.0, 1); // max bits set = 21
@@ -205,9 +200,6 @@ void Eval::init() {
     aspiration1 = 5;
     evalHardBudget = -20;
 
-    sigmoid(mobQ1, 0, 0, 0, 7.25);
-    sigmoid(mobQ2, 0, 0, 0,29.0);
-
 //     for (unsigned x=0; x<4; ++x)
 //         for (unsigned y=1; y<7; ++y) {
 //             bpawnOpen[(7-x)*8 + 7-y] = bpawnOpen[    x*8 + 7-y] = wpawnOpen[(7-x)*8 + y] = wpawnOpen[    x*8 + y]
@@ -220,7 +212,6 @@ void Eval::init() {
 
     if (Options::debug & DebugFlags::debugEval) {
         printSigmoid(mobN1, "mobN1");
-        printSigmoid(mobN2, "mobN2");
         printSigmoid(attackN1, "attN1");
         printSigmoid(attackN2, "attN2");
         printSigmoid(attackB1, "attB1");
@@ -245,75 +236,85 @@ void Eval::init() {
 
 void Eval::initPS() {
 
-    typedef int I4[4];
-    
     for (unsigned int sq = 0; sq<nSquares; ++sq)
         getPS( 0, sq) = 0;
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        unsigned xh = (sq & 7);
-        unsigned yh = sq >> 3;
+        int xh = (sq & 7);
+        int yh = sq >> 3;
+        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
         if (xh>3) xh ^= 7;
         if (yh>rookCenter) yh = 2*rookCenter - yh;
-        getPS( Rook, sq) = { (short) (rookOpening + rookH[xh] + rookV[yh]), (short) (rookEndgame + rookHE[xh] + rookVE[yh]) };
+        yh = std::max(0, std::min(7, yh));
+        getPS( Rook, sq) = { (short) (rook.value.opening + rookH[xh] + rookV[yh] + corner*rook.corner.opening), (short) (rook.value.endgame + rookHE[xh] + rookVE[yh] + corner*rook.corner.endgame) };
         getPS(-Rook, sq ^ 070) = -getPS( Rook, sq);
         print_debug(debugEval, "%4d %4d  ", getPS(Rook, sq).opening, getPS(Rook, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
+        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        unsigned xh = (sq & 7);
-        unsigned yh = sq >> 3;
+        int xh = (sq & 7);
+        int yh = sq >> 3;
+        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
         if (xh>3) xh ^= 7;
         if (yh>bishopCenter) yh = 2*bishopCenter - yh;
-        getPS( Bishop, sq) = { (short) (bishopOpening + bishopH[xh] +  bishopV[yh]), (short) (bishopEndgame + bishopHE[xh] + bishopVE[yh]) };
+        yh = std::max(0, std::min(7, yh));
+        getPS( Bishop, sq) = { (short) (bishop.value.opening + bishopH[xh] +  bishopV[yh] + corner*bishop.corner.opening), (short) (bishop.value.endgame + bishopHE[xh] + bishopVE[yh] + corner*bishop.corner.endgame) };
         getPS(-Bishop, sq ^ 070) = -getPS( Bishop, sq);
         print_debug(debugEval, "%4d %4d  ", getPS(Bishop, sq).opening, getPS(Bishop, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
+        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        unsigned xh = (sq & 7);
-        unsigned yh = sq >> 3;
+        int xh = (sq & 7);
+        int yh = sq >> 3;
+        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
         if (xh>3) xh ^= 7;
         if (yh>queenCenter) yh = 2*queenCenter - yh;
-        getPS( Queen, sq) = { (short) (queenOpening + queenH[xh] +  queenV[yh]), (short) (queenEndgame + queenHE[xh] + queenVE[yh]) };
+        yh = std::max(0, std::min(7, yh));
+        getPS( Queen, sq) = { (short) (queen.value.opening + queenH[xh] +  queenV[yh] + corner*queen.corner.opening), (short) (queen.value.endgame + queenHE[xh] + queenVE[yh] + corner*queen.corner.endgame) };
         getPS(-Queen, sq ^ 070) = -getPS( Queen, sq);
         print_debug(debugEval, "%4d %4d  ", getPS(Queen, sq).opening, getPS(Queen, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
+        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        unsigned xh = (sq & 7);
-        unsigned yh = sq >> 3;
+        int xh = (sq & 7);
+        int yh = sq >> 3;
+        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
         if (xh>3) xh ^= 7;
         if (yh>knightCenter) yh = 2*knightCenter - yh;
-        getPS( Knight, sq) =  { (short) (knightOpening + knightH[xh] +  knightV[yh]), (short) (knightEndgame + knightHE[xh] + knightVE[yh]) };
+        yh = std::max(0, std::min(7, yh));
+        getPS( Knight, sq) =  { (short) (knight.value.opening + knightH[xh] + knightV[yh] + corner*knight.corner.opening), (short) (knight.value.endgame + knightHE[xh] + knightVE[yh] + corner*knight.corner.endgame) };
         getPS(-Knight, sq ^ 070) = -getPS( Knight, sq);
         print_debug(debugEval, "%4d %4d  ", getPS(Knight, sq).opening, getPS(Knight, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
+        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
     }
 
     for (unsigned int sq = a2; sq<a8; ++sq) {
-        unsigned xh = (sq & 7);
+        int xh = (sq & 7);
+        int yh = sq >> 3;
+        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
         if (xh>3) xh ^= 7;
-        unsigned yh = sq >> 3;
         if (yh>pawnCenter) yh = 2*pawnCenter - yh;
-        getPS( Pawn, sq) = { (short) (pawnOpening + pawnH[xh] +  pawnV[yh]), (short) (pawnEndgame + pawnHE[xh] + pawnVE[yh]) };
+        yh = std::max(0, std::min(7, yh));
+        getPS( Pawn, sq) = { (short) (pawn.value.opening + pawnH[xh] + pawnV[yh] + corner*pawn.corner.opening), (short) (pawn.value.endgame + pawnHE[xh] + pawnVE[yh] + corner*pawn.corner.endgame) };
         getPS(-Pawn, sq ^ 070) = -getPS( Pawn, sq);
         print_debug(debugEval, "%4d %4d  ", getPS(Pawn, sq).opening, getPS(Pawn, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
+        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
     }
 
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        unsigned xh = (sq & 7);
-        unsigned yh = sq >> 3;
+        int xh = (sq & 7);
+        int yh = sq >> 3;
+        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
         if (xh>3) xh ^= 7;
         if (yh>kingCenter) yh = 2*kingCenter - yh;
-        getPS( King, sq) = { (short) (kingH[xh] +  kingV[yh]), (short) (kingHE[xh] + kingVE[yh]) };
+        yh = std::max(0, std::min(7, yh));
+        getPS( King, sq) = { (short) (kingH[xh] +  kingV[yh] + corner*king.corner.opening), (short) (kingHE[xh] + kingVE[yh] + corner*king.corner.endgame) };
         getPS(-King, sq ^ 070) = -getPS( King, sq);
         print_debug(debugEval, "%4d %4d  ", getPS(King, sq).opening, getPS(King, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "\n", 0);
+        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
     }
 }
 
@@ -389,6 +390,15 @@ int Eval::pieces(const BoardBase& b, const PawnEntry& p) const {
     int temp;
     if (popcount3(b.getPieces<C, Bishop>()) >= 2) {
         value += bishopPair;
+    }
+    if (popcount3(b.getPieces<C, Knight>()) >= 2) {
+        value += knightPair;
+    }
+    if (popcount3(b.getPieces<C, Rook>()) >= 2) {
+        value += rookPair;
+    }
+    if (popcount3(b.getPieces<C, Queen>()) >= 2) {
+        value += queenPair;
     }
     if  (   (  b.getPieces<C, Rook>() & (file<'h'>()|file<'g'>()) & (rank<C,1>()|rank<C,2>()) 
             && b.getPieces<C, Pawn>() & file<'h'>() & (rank<C,2>() | rank<C,3>())
@@ -700,6 +710,8 @@ template<Colors C, GamePhase P> // TODO use overload for P == Endgame, where att
 inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int score = 0;
+    int score_endgame = 0;
+    int score_opening = 0;
     attackingPieces = 0;
     if (P != Endgame) defendingPieces = 0;
 //     int king = bit(b.getPieces<-C,King>());
@@ -727,6 +739,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         uint64_t bmob2 = bmob1 & noBlockedPawns;
         // remove own pieces
         bmob1 &= ~b.getOcc<C>();
+        uint64_t bmob1x = bmob1;
         // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move
         uint64_t batt2 = b.build13Attack(bmob1);
         bmob2 |= batt2 & restrictions & ~b.getOcc<C>();
@@ -755,13 +768,14 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             print_debug(debugMobility, "b attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(batt1 & oppking), attackB1[popcount15(batt1 & oppking)], popcount15(batt2 & oppking), attackB2[popcount15(batt2 & oppking)]);
         }
 
-        score += mobB1[popcount(bmob1)] + mobB2[popcount(bmob2)] /*+ mobB3[popcount(rmob3)]*/;
+        unsigned m = popcount(bmob1x);
+        score_opening += bmo[m];
+        score_endgame += bme[m];
 #ifdef MYDEBUG
         mobStat[CI][Bishop][0][popcount(bmob1)]++;
         mobStat[CI][Bishop][1][popcount(bmob2)]++;
 #endif
-
-        print_debug(debugMobility, "b mobility%d: d%2d:%3d, i%2d:%3d\n", CI, popcount(bmob1), mobB1[popcount(bmob1)], popcount(bmob2), mobB2[popcount(bmob2)]/*, popcount(rmob3)*/);
+        print_debug(debugMobility, "b mobility%d: d%2d:%3d\n", CI, popcount(bmob1), mobB1[popcount(bmob1)]);
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(bmob1); printBit(bmob2); /*printBit(rmob3);*/ }
     }
     
@@ -771,6 +785,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         uint64_t nmob1 = natt1 & restrictions;
         uint64_t nmob2 = nmob1 & noBlockedPawns;
         nmob1 &= ~b.getOcc<C>();
+        uint64_t nmob1x = nmob1;
         uint64_t natt2 = b.buildNAttack(nmob1);
         nmob2 |= natt2 & restrictions & ~b.getOcc<C>();
         ASSERT((nmob2 & nmob1) == nmob1);
@@ -783,14 +798,16 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             print_debug(debugMobility, "n attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(natt1 & oppking), attackN1[popcount15(natt1 & oppking)], popcount15(natt2 & oppking), attackN2[popcount15(natt2 & oppking)]);
         }
 //         if (rmob3 & oppking) attackingPieces++;
-        score += mobN1[popcount(nmob1)] + mobN2[popcount(nmob2)] /*+ mobN3[popcount(rmob3)]*/;
-#ifdef MYDEBUG        
+        unsigned m = popcount(nmob1x);
+        score_opening += nmo[m];
+        score_endgame += nme[m];
+#ifdef MYDEBUG
         mobStat[CI][Knight][0][popcount(nmob1)]++;
         mobStat[CI][Knight][1][popcount(nmob2)]++;
-#endif        
-
-        print_debug(debugMobility, "n mobility%d: d%2d:%3d, i%2d:%3d\n", CI, popcount(nmob1), mobN1[popcount(nmob1)], popcount(nmob2), mobN2[popcount(nmob2)]/*, popcount(rmon3)*/);
+        print_debug(debugMobility, "n mobility%d: d%2d:%3d\n", CI, popcount(nmob1), mobN1[popcount(nmob1)]);
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(nmob1); printBit(nmob2); /*printBit(rmob3);*/ }
+#endif
+
     }
 
     restrictions &= ~(b.getAttacks<-C,Bishop>() | b.getAttacks<-C,Knight>());
@@ -804,10 +821,11 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         uint64_t rmob2 = rmob1 & noBlockedPawns;
         // remove own pieces
         rmob1 &= ~b.getOcc<C>();
+        uint64_t rmob1x = rmob1;
         // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move
         uint64_t ratt2 = b.build02Attack(rmob1);
         rmob2 |= ratt2 & restrictions & ~b.getOcc<C>();
-        
+
         __v2di connectedQR = ~pcmpeqq(rs->d02 & v2queen, zero) & b.qsingle[CI][0].d02;
         if (b.rsingle[CI][1].move.data)
             connectedQR |= ~ pcmpeqq(rs->d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02);
@@ -824,13 +842,14 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             if (ratt1 & ownking) defendingPieces++;
             print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
         }
-        score += mobR1[popcount(rmob1)] + mobR2[popcount(rmob2)] /*+ mobR3[popcount(rmob3)]*/;
+        unsigned m = popcount(rmob1x);
+        score_opening += rmo[m];
+        score_endgame += rme[m];
 #ifdef MYDEBUG
         mobStat[CI][Rook][0][popcount(rmob1)]++;
         mobStat[CI][Rook][1][popcount(rmob2)]++;
 #endif
-
-        print_debug(debugMobility, "r mobility%d: d%2d:%3d, i%2d:%3d\n", CI, popcount(rmob1), mobR1[popcount(rmob1)], popcount(rmob2), mobR2[popcount(rmob2)]/*, popcourt(rmor3)*/);
+        print_debug(debugMobility, "r mobility%d: d%2d:%3d\n", CI, popcount(rmob1), mobR1[popcount(rmob1)]);
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); /*printBit(rmob3);*/ }
     }
 
@@ -840,6 +859,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         uint64_t qmob1 = qatt1 & restrictions;
         uint64_t qmob2 = qmob1 & noBlockedPawns;
         qmob1 &= ~b.getOcc<C>();
+        uint64_t qmob1x = qmob1;
         uint64_t qatt2 = b.build02Attack(qmob1) | b.build13Attack(qmob1);
         qmob2 |= qatt2 & restrictions & ~b.getOcc<C>();
         unsigned q=bit(b.getPieces<C,Queen>());
@@ -862,21 +882,31 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             if (qatt1 & ownking) defendingPieces++;
             print_debug(debugMobility, "q attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(qatt1 & oppking), attackQ1[popcount15(qatt1 & oppking)], popcount15(qatt2 & oppking), attackQ2[popcount15(qatt2 & oppking)]);
         }
-        score += mobQ1[popcount(qmob1)] + mobQ2[popcount(qmob2)] /*+ mobQ3[popcount(rmob3)]*/;
+        unsigned m = popcount(qmob1x);
+        score_opening += qmo[m];
+        score_endgame += qme[m];
 #ifdef MYDEBUG
         mobStat[CI][Queen][0][popcount(qmob1)]++;
         mobStat[CI][Queen][1][popcount(qmob2)]++;
 #endif
-        
-        print_debug(debugMobility, "q mobility%d: d%2d:%3d, i%2d:%3d\n", CI, popcount(qmob1), mobQ1[popcount(qmob1)], popcount(qmob2), mobQ2[popcount(qmob2)]/*, popcourt(rmor3)*/);
+        print_debug(debugMobility, "q mobility%d: d%2d:%3d\n", CI, popcount(qmob1), mobQ1[popcount(qmob1)]/*, popcourt(rmor3)*/);
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(qmob1); printBit(qmob2); /*printBit(rmob3);*/ }
     }
         
     if (P != Endgame) {
-        attackingPieces += attackP[popcount15(b.getAttacks<C,Pawn>() & oppking)];
-        attackingPieces += attackK[popcount15(b.getAttacks<C,King>() & oppking)];
+        if (dEvenAlpha & 1) {
+            attackingPieces += attackP[popcount15(b.getAttacks<C,Pawn>() & oppking)];
+            attackingPieces += attackK[popcount15(b.getAttacks<C,King>() & oppking)];
+        } else {
+            if (b.getAttacks<C,Pawn>() & oppking) attackingPieces += pawnAttack;
+            if (b.getAttacks<C,King>() & oppking) attackingPieces += kingAttack;
+        }
     }
-    
+
+    int openingScale = b.material - endgameMaterial + endgameTransitionSlope/2;
+    openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
+    score += ((endgameTransitionSlope-openingScale)*score_endgame + openingScale*score_opening) >> logEndgameTransitionSlope;
+
     return score;
 }
 
@@ -941,7 +971,7 @@ int Eval::attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPiece
 }
 
 template<Colors C>
-int Eval::king(const BoardBase& b) const {
+int Eval::kingSafety(const BoardBase& b) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     unsigned kpos = bit(b.getPieces<C,King>());
     if (b.getPieces<-C,Bishop>() & !b.bsingle[EI][1].move.data) {
@@ -1078,7 +1108,7 @@ int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
         int mat = b.keyScore.score.calc(b.material, *this);
         int wap, bap, wdp, bdp; //FIXME not needed here
         int m = mobilityDiff<Endgame>(b, wap, bap, wdp, bdp);
-        int p = (mat>0 ? 1:4)*king<White>(b) - (mat<0 ? 1:4)*king<Black>(b);
+        int p = (mat>0 ? 1:4)*kingSafety<White>(b) - (mat<0 ? 1:4)*kingSafety<Black>(b);
         return m + p;        
     }
 }
@@ -1091,8 +1121,6 @@ void Eval::ptClear() {
 
 void Eval::setParameters(const Parameters& p)
 {
-    SETPARM(pawnOpening);
-    SETPARM(pawnEndgame);
     SETPARM(pawnHValue);
     SETPARM(pawnHInfl);
     SETPARM(pawnVValue);
@@ -1107,8 +1135,6 @@ void Eval::setParameters(const Parameters& p)
     sigmoid(pawnVE, -pawnVEValue, pawnVEValue, pawnVEInfl );
     SETPARM(pawnCenter);
     
-    SETPARM(knightOpening);
-    SETPARM(knightEndgame);
     SETPARM(knightHValue);
     SETPARM(knightHInfl);
     SETPARM(knightVValue);
@@ -1123,8 +1149,6 @@ void Eval::setParameters(const Parameters& p)
     sigmoid(knightHE, -knightHEValue, knightHEValue, knightHEInfl );
     sigmoid(knightCenter, knightVE, -knightVEValue, knightVEValue, knightVEInfl );
     
-    SETPARM(bishopOpening);
-    SETPARM(bishopEndgame);
     SETPARM(bishopHValue);
     SETPARM(bishopHInfl);
     SETPARM(bishopVValue);
@@ -1139,8 +1163,7 @@ void Eval::setParameters(const Parameters& p)
     sigmoid(bishopHE, -bishopHEValue, bishopHEValue, bishopHEInfl );
     sigmoid(bishopCenter, bishopVE, -bishopVEValue, bishopVEValue, bishopVEInfl );
     
-    SETPARM(rookOpening);
-    SETPARM(rookEndgame);
+    SETPARM(rookPair);
     SETPARM(rookHValue);
     SETPARM(rookHInfl);
     SETPARM(rookVValue);
@@ -1155,8 +1178,7 @@ void Eval::setParameters(const Parameters& p)
     sigmoid(rookHE, -rookHEValue, rookHEValue, rookHEInfl );
     sigmoid(rookCenter, rookVE, -rookVEValue, rookVEValue, rookVEInfl );
     
-    SETPARM(queenOpening);
-    SETPARM(queenEndgame);
+    SETPARM(queenPair);
     SETPARM(queenHValue);
     SETPARM(queenHInfl);
     SETPARM(queenVValue);
@@ -1189,16 +1211,13 @@ void Eval::setParameters(const Parameters& p)
     sigmoid(pawnFileEnd, 30, 0, 1);
     sigmoid(pawnRankOpen, 0, 20, 6);
     sigmoid(pawnRankEnd, 0, 30, 6);
-
-    initPS();
     
     SETPARM(endgameMaterial);
 
     SETPARM(bishopPair);
     SETPARM(bishopBlockPasser);
-    SETPARM(bishopAlone);
 
-    SETPARM(knightAlone);
+    SETPARM(knightPair);
     SETPARM(knightBlockPasser);
 
     SETPARM(rookTrapped);
@@ -1228,29 +1247,59 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(pawnPasserSlope);
     sigmoid( pawnPasser, pawnPasser2, pawnPasser7, 6, pawnPasserSlope );
 
-    SETPARM(mobN1value);
+    SETPARM(pawn.value.opening);
+    SETPARM(knight.value.opening);
+    SETPARM(rook.value.opening);
+    SETPARM(queen.value.opening);
+    SETPARM(bishop.value.opening);
+    SETPARM(pawn.value.endgame);
+    SETPARM(knight.value.endgame);
+    SETPARM(rook.value.endgame);
+    SETPARM(queen.value.endgame);
+    SETPARM(bishop.value.endgame);
+
+    SETPARM(pawn.corner.opening);
+    SETPARM(knight.corner.opening);
+    SETPARM(rook.corner.opening);
+    SETPARM(queen.corner.opening);
+    SETPARM(bishop.corner.opening);
+    SETPARM(king.corner.opening);
+    SETPARM(pawn.corner.endgame);
+    SETPARM(knight.corner.endgame);
+    SETPARM(rook.corner.endgame);
+    SETPARM(queen.corner.endgame);
+    SETPARM(bishop.corner.endgame);
+    SETPARM(king.corner.endgame);
+
+    SETPARM(knight.mobility.opening);
+    SETPARM(rook.mobility.opening);
+    SETPARM(queen.mobility.opening);
+    SETPARM(bishop.mobility.opening);
+    SETPARM(knight.mobility.endgame);
+    SETPARM(rook.mobility.endgame);
+    SETPARM(queen.mobility.endgame);
+    SETPARM(bishop.mobility.endgame);
+
     SETPARM(mobN1slope);
-    sigmoid(mobN1, -mobN1value, mobN1value, 0, mobN1slope);
-
-    SETPARM(mobN2value);
-    SETPARM(mobN2slope);
-    sigmoid(mobN2, -mobN2value, mobN2value, 0, mobN2slope);
-
-    SETPARM(mobB1value);
     SETPARM(mobB1slope);
-    sigmoid(mobB1, -mobB1value, mobB1value, 0, mobB1slope);
-
-    SETPARM(mobB2value);
-    SETPARM(mobB2slope);
-    sigmoid(mobB2, -mobB2value, mobB2value, 0, mobB2slope);
-
-    SETPARM(mobR1value);
     SETPARM(mobR1slope);
-    sigmoid(mobR1, -mobR1value, mobR1value, 0, mobR1slope);
+    SETPARM(mobQ1slope);
+    sigmoid(nmo, -knight.mobility.opening, knight.mobility.opening, 0, mobN1slope);
+    sigmoid(bmo, -bishop.mobility.opening, bishop.mobility.opening, 0, mobB1slope);
+    sigmoid(rmo, -rook.mobility.opening, rook.mobility.opening, 0, mobR1slope);
+    sigmoid(qmo, -queen.mobility.opening, queen.mobility.opening, 0, mobQ1slope);
+    sigmoid(nme, -knight.mobility.endgame, knight.mobility.endgame, 0, mobN1slope);
+    sigmoid(bme, -bishop.mobility.endgame, bishop.mobility.endgame, 0, mobB1slope);
+    sigmoid(rme, -rook.mobility.endgame, rook.mobility.endgame, 0, mobR1slope);
+    sigmoid(qme, -queen.mobility.endgame, queen.mobility.endgame, 0, mobQ1slope);
+    
+//TODO remove
+    sigmoid(mobN1, -knight.mobility.opening, knight.mobility.opening, 0, mobN1slope);
+    sigmoid(mobB1, -bishop.mobility.opening, bishop.mobility.opening, 0, mobB1slope);
+    sigmoid(mobR1, -rook.mobility.opening, rook.mobility.opening, 0, mobR1slope);
+    sigmoid(mobQ1, -queen.mobility.opening, queen.mobility.opening, 0, mobQ1slope);
 
-    SETPARM(mobR2value);
-    SETPARM(mobR2slope);
-    sigmoid(mobR2, -mobR2value, mobR2value, 0, mobR2slope);
+    initPS();
 
     SETPARM(dMaxCapture);
     SETPARM(dMaxExt);
@@ -1266,8 +1315,49 @@ void Eval::setParameters(const Parameters& p)
     dMinMateExt = dMaxExt-dMinMateExt;
     SETPARM(dMinPawnExt);
     dMinPawnExt = dMaxExt-dMinPawnExt;
-    
 
+    SETPARM(oppKingOwnPawnV);
+    SETPARM(ownKingOwnPawnV);
+    SETPARM(oppKingOwnPasserV);
+    SETPARM(ownKingOwnPasserV);
+    SETPARM(pawnConnPasserV);
+    sigmoid( oppKingOwnPawn,   -oppKingOwnPawnV,   oppKingOwnPawnV, 1, 10);  // only 1..7 used
+    sigmoid( ownKingOwnPawn,    ownKingOwnPawnV,  -ownKingOwnPawnV, 1, 10);
+    sigmoid( oppKingOwnPasser, -oppKingOwnPasserV, oppKingOwnPasserV, 1, 10);  // only 1..7 used
+    sigmoid( ownKingOwnPasser,  ownKingOwnPasserV,-ownKingOwnPasserV, 1, 10);
+    sigmoid( pawnConnPasser, 0, pawnConnPasserV, 6, 1.0 );
+
+
+    SETPARM(standardError);
+    SETPARM(standardSigma);
+    SETPARM(calcMeanError);
+    SETPARM(prune1);
+    SETPARM(prune2);
+    SETPARM(prune1c);
+    SETPARM(prune2c);
+    SETPARM(dNullIncr);
+    SETPARM(dVerifyIncr);
+    SETPARM(dMinReduction);
+
+    SETPARM(bishopAttack);
+    SETPARM(knightAttack);
+    SETPARM(pawnAttack);
+    SETPARM(rookAttack);
+    SETPARM(kingAttack);
+    SETPARM(queenAttack);
+
+    SETPARM(dRed[0]);
+    SETPARM(dRed[1]);
+    SETPARM(dRed[2]);
+    SETPARM(dRed[3]);
+    SETPARM(dRed[4]);
+    SETPARM(dRed[5]);
+    SETPARM(dRed[6]);
+    SETPARM(dRed[7]);
+
+    for (int i=8; i<=maxDepth; ++i) {
+        dRed[i] = dRed[7];
+    }
 }
 
 int CompoundScore::calc(int material, const Eval& eval) const
