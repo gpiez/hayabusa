@@ -21,7 +21,6 @@
 #define SELFGAME_H
 
 #include <pch.h>
-#include <boost/chrono/process_cpu_clocks.hpp>
 #include "rootboard.h"
 #include "parameters.h"
 
@@ -35,7 +34,7 @@ class SelfGame
     int result;
 public:
     RootBoard   *wrb, *brb;
-    boost::chrono::process_cpu_clock::time_point start;
+    std::chrono::system_clock::time_point start;
     SelfGame(Console* c, const Parameters&, const Parameters&);
     ~SelfGame();
     int doGame(RootBoard*, RootBoard*);

@@ -32,7 +32,7 @@
 #include "stringlist.h"
 #include "selfgame.h"
 #include "evolution.h"
-// #include <fstream>
+
 namespace Options {
     unsigned int        splitDepth = 1000;
     int                 humanreadable = 0;
@@ -40,13 +40,10 @@ namespace Options {
     uint64_t            pHash = 0x1000000;
     bool                quiet = false;
     bool                preCutIfNotThreatened = false;
-    unsigned            veinDepth = 20;
-    unsigned            leafDepth = 8;
     bool                reduction = true;
     bool                pruning = true;
     unsigned            debug = 0;
     bool                currline = false;
-    bool                cpuTime = false;
 #ifdef QT_NETWORK_LIB    
     bool                server = false;
 #endif    
@@ -75,7 +72,9 @@ Console::Console(int& argc, char** argv)
     BoardBase::initTables();
     WorkThread::init();
     Parameters::init();
-
+    evolution = new Evolution(this);
+    evolution->init();
+    
     board = new RootBoard(this, defaultParameters, Options::hash, Options::pHash);
     board->setup();
 
@@ -284,11 +283,13 @@ void Console::uci(StringList /*cmds*/) {
     send("option name Pruning type check default true");
     send("option name Clear Hash type button");
     send("option name UCI_ShowCurrLine type check default false");
-    for (auto i=Parameters::index.begin(); i!=Parameters::index.end(); ++i) {
+#if 0    
+    for (auto i=Parameters::index.begin(); i!=Parameters::index.end(); ++i) { //FIXME this is overwhelming some UIs
         std::stringstream ss;
-        ss << "option name " << i->first << "type spin default " << Parameters::base.at(i->second);
+        ss << "option name " << i->first << " type spin default " << Parameters::base.at(i->second);
         send(ss.str());
     }
+#endif
     send("uciok");
 }
 
@@ -337,10 +338,11 @@ void Console::setoption(StringList cmds) {
             server->listen(QHostAddress::Any, 7788);
             connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
 #endif
-        } else if (Parameters::index.count(name)) {
+        } else if (Parameters::exists(name)) {
             defaultParameters[name] = convert<float>(data);
-            board->eval.setParameters(defaultParameters);
+            board->eval.setParameters(defaultParameters);//TODO lazy init of eval after paramter change
             board->eval.init();
+            board->clearEE();
         } else {
             std::cerr << "option " << name << " not understood";
         }
@@ -408,7 +410,6 @@ void Console::quit(StringList /*cmds*/) {
 }
 
 void Console::ordering(StringList cmds) {
-    Options::quiet = true;
     board->infinite = true;
     if (cmds.size() > 1 && cmds[1] == "init") {
         for (unsigned int i = 0; testPositions[i]; ++i) {
@@ -457,9 +458,7 @@ void Console::eval(StringList)
 void Console::selfgame(StringList )
 {
 //     Options::cpuTime = true;
-    Evolution e(this);
-    e.init();
-    e.evolve();
+    evolution->evolve();
 //     Parameters a;
 // 
 //     SelfGame sf(this, a, a);
@@ -468,13 +467,13 @@ void Console::selfgame(StringList )
 
 void Console::parmtest(StringList cmds)
 {
-    Evolution e(this);
+    Options::quiet = true;
     if (cmds.size() == 5) 
-        e.parmTest(cmds[1], convert(cmds[2]), convert(cmds[3]), convert(cmds[4]));
+        evolution->parmTest(cmds[1], convert(cmds[2]), convert(cmds[3]), convert(cmds[4]));
     else if (cmds.size() == 9) 
-        e.parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]));
+        evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]));
     else if (cmds.size() == 13)
-        e.parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]),
+        evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]),
                    cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]),
                    cmds[9], convert<float>(cmds[10]), convert<float>(cmds[11]), convert(cmds[12])
                 );

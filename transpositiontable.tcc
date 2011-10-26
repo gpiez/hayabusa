@@ -201,7 +201,9 @@ void Table<Entry, assoc, Key>::setSize(size_t s)
     nEntries |= nEntries >> 4;
     nEntries |= nEntries >> 8;
     nEntries |= nEntries >> 16;
+#ifdef __x86_64__    
     nEntries |= nEntries >> 32;
+#endif    
     nEntries++;
     nEntries >>= 1;
     size = nEntries*sizeof(SubTable);

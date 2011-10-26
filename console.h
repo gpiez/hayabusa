@@ -34,6 +34,7 @@
 
 class WorkThread;
 class RootBoard;
+class Evolution;
 
 class Console
 #if defined(QT_GUI_LIB)
@@ -76,6 +77,7 @@ private
 
 private:
     RootBoard* board;
+    Evolution* evolution;
     StringList args;
     std::string answer;
     bool debugMode;

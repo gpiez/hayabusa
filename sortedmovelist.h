@@ -57,7 +57,7 @@ public:
     }
 
     void sort(unsigned bm) { //FIXME move bm into class
-        return;
+//         return;
         ASSERT(bm >= 1 && bm <= last);
 //         bm = 1;
 

@@ -16,7 +16,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef __x86_64__
 #include <boost/chrono.hpp>
+#endif
 #include "selfgame.h"
 #include "rootboard.tcc"
 
@@ -79,8 +81,8 @@ std::vector<std::string> testPosition = {
 
 SelfGame::SelfGame(Console* c, const Parameters& wp, const Parameters& bp)
 {
-    wrb = new RootBoard(c, wp, 0x80000, 0x8000);
-    brb = new RootBoard(c, bp, 0x80000, 0x8000);
+    wrb = new RootBoard(c, wp, 0x200000, 0x10000);
+    brb = new RootBoard(c, bp, 0x200000, 0x10000);
 
     decisiveScore = 800;
     decisiveScoreMoves = 5;
@@ -102,8 +104,8 @@ void SelfGame::setupRootBoard(RootBoard* rb) {
 //     p["btime"] = StringList() << t.str().c_str();
 //     p["winc"] = StringList() << "10";
 //     p["binc"] = StringList() << "10";
-    p["infinity"] = StringList();
-    p["nodes"] = StringList() << "1000";
+    p["infinite"] = StringList();
+    p["nodes"] = StringList() << "64000";
     rb->goReadParam(p);
 }
 
@@ -153,9 +155,11 @@ black:
 
 uint64_t SelfGame::cpuTime()
 {
-    boost::chrono::duration<boost::chrono::process_cpu_clock::times, boost::nano> t = boost::chrono::process_cpu_clock::now() - start;
-    start = boost::chrono::process_cpu_clock::now();
-    return t.count().system + t.count().user;
+#ifdef __x86_64__
+    std::chrono::nanoseconds t = std::chrono::system_clock::now() - start;
+    start = std::chrono::system_clock::now();
+    return t.count();
+#endif    
 }
 
 template<Colors C>
