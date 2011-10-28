@@ -88,6 +88,8 @@ struct PawnEntry {
     uint8_t openFiles[nColors]; //  2
     uint8_t weak[nColors];      //  2
     uint8_t center[nColors];    //  2
+    uint8_t dark[nColors];
+    uint8_t light[nColors];
     struct Shield {
         uint8_t qside;
         uint8_t kside;

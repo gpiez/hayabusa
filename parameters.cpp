@@ -119,10 +119,15 @@ void Parameters::init()
 
     Parameters::add("pawn.value.opening", 96 , 10, 150);
     Parameters::add("pawn.value.endgame", 106, 10, 150);
-    Parameters::add("pawn.horizontal.value.opening", 8);
-    Parameters::add("pawn.vertical.value.opening", 12);
-    Parameters::add("pawn.horizontal.value.endgame", -8);
-    Parameters::add("pawn.vertical.value.endgame", 14);
+    Parameters::add("pawn.hor.value.opening", 8);
+    Parameters::add("pawn.vert.value.opening", 12);
+    Parameters::add("pawn.hor.value.endgame", -8);
+    Parameters::add("pawn.vert.value.endgame", 14);
+    Parameters::add("pawn.hor.inflection.opening", 1.5);
+    Parameters::add("pawn.vert.inflection.opening", 6);
+    Parameters::add("pawn.vcenter.opening", 6);
+    Parameters::add("pawn.hor.inflection.endgame", 1.5);
+    Parameters::add("pawn.vert.inflection.endgame", 1.5);
 
     Parameters::add("knight.value.opening", 312, 20, 400);
     Parameters::add("knight.value.endgame", 288, 20, 400);
@@ -150,10 +155,6 @@ void Parameters::init()
     Parameters::add("king.horizontal.value.endgame", -4);
     Parameters::add("king.vertical.value.endgame", 4);
     
-    Parameters::add("pawnHValue", 8);
-    Parameters::add("pawnVValue", 12);
-    Parameters::add("pawnHEValue", -8);
-    Parameters::add("pawnVEValue", 14);
     Parameters::add("kingHValue", -20);
     Parameters::add("kingVValue", -24);
     Parameters::add("kingHEValue", -4);
@@ -187,21 +188,11 @@ void Parameters::init()
     Parameters::add("bishopHEValue", 0);
     Parameters::add("bishopVEValue", 0);
     Parameters::add("bishopCenter", 3.5);
-    Parameters::add("mobB1value", 6);
-    Parameters::add("mobB1slope", 5.0);
-    Parameters::add("mobN1value", 10);
-    Parameters::add("mobN1slope", 3.0);
-    Parameters::add("mobR1value", 4);
-    Parameters::add("mobR1slope", 6.0);
-    Parameters::add("mobQ1value", 2);
-    Parameters::add("mobQ1slope", 10.0);
+    Parameters::add("knight.mobslope", 3.0);
+    Parameters::add("bishop.mobslope", 5.0);
+    Parameters::add("rook.mobslope", 6.0);
+    Parameters::add("queen.mobslope", 10.0);
 
-    Parameters::add("mobB2value", 1.5);
-    Parameters::add("mobB2slope", 5.0);
-    Parameters::add("mobR2value", 0);
-    Parameters::add("mobR2slope", 8.0);
-    Parameters::add("mobN2value", 6);
-    Parameters::add("mobN2slope", 3.0);
     Parameters::add("queenHEValue", 4);
     Parameters::add("queenVEValue", 4);
     Parameters::add("pawnPasser2", 0);
@@ -253,9 +244,6 @@ void Parameters::init()
 
     Parameters::add("rookCenter", 3.5);
 
-    Parameters::add("pawnHInfl", 1.5);
-    Parameters::add("pawnVInfl", 6);
-    Parameters::add("pawnCenter", 6);
 
     Parameters::add("kingCenter", 3.5);
 
@@ -263,10 +251,6 @@ void Parameters::init()
     
     Parameters::add("bishopHEInfl", 1.5);
     Parameters::add("bishopVEInfl", 1.5);
-
-
-    Parameters::add("pawnHEInfl", 1.5);
-    Parameters::add("pawnVEInfl", 1.5);
 
     Parameters::add("queenHEInfl", 1.5);
     Parameters::add("queenVEInfl", 1.5);
@@ -291,7 +275,7 @@ void Parameters::init()
 //  1   539k
 //  0   427k
     Parameters::add("dMaxExt", 6);
-    Parameters::add("dMinDualExt", 0);
+    Parameters::add("dMinDualExt", 2);
     Parameters::add("dMinSingleExt", 4);
     Parameters::add("dMinForkExt", 4);
     Parameters::add("dMinMateExt", 4);
@@ -337,10 +321,19 @@ void Parameters::init()
     Parameters::add("dRed[5]", 2);
     Parameters::add("dRed[4]", 3);
     Parameters::add("dRed[3]", 6);
-    Parameters::add("dRed[2]", 255);
+    Parameters::add("dRed[2]", 16);
     Parameters::add("dRed[1]", 255);
     Parameters::add("dRed[0]", 255);
-    defaultParameters.parms.resize(maxIndex);
+
+    Parameters::add("bishopOwnPawn", 0);
+    Parameters::add("bishopOppPawn", 0);
+
+    Parameters::add("bishopNotOwnPawn", 2);
+    Parameters::add("bishopNotOppPawn", 1);
+
+    Parameters::add("dRedCapture", 5);
+    Parameters::add("dRedCheck", 9);
+defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) 
         defaultParameters.parms[i] = Parm<float>(base[i]);
 }

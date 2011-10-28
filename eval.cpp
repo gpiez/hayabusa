@@ -32,7 +32,7 @@ static const __v2di mask45 = { 0x1010101010101010, 0x2020202020202020 };
 static const __v2di mask67 = { 0x4040404040404040, 0x8080808080808080 };
 static const int baseAttack = 1024;
 static const int baseDefense = -256;
-
+static const uint64_t darkSquares = 0xaa55aa55aa55aa55;
 static const int ksv[nSquares] = {
      0,  2,  4,  6,  6,  4,  2,  0,
      2, 10, 12, 14, 14, 12, 10,  2,
@@ -211,7 +211,6 @@ void Eval::init() {
     initTables();
 
     if (Options::debug & DebugFlags::debugEval) {
-        printSigmoid(mobN1, "mobN1");
         printSigmoid(attackN1, "attN1");
         printSigmoid(attackN2, "attN2");
         printSigmoid(attackB1, "attB1");
@@ -296,7 +295,7 @@ void Eval::initPS() {
         int yh = sq >> 3;
         double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
         if (xh>3) xh ^= 7;
-        if (yh>pawnCenter) yh = 2*pawnCenter - yh;
+        if (yh>pawn.vcenter.opening) yh = 2*pawn.vcenter.opening - yh;
         yh = std::max(0, std::min(7, yh));
         getPS( Pawn, sq) = { (short) (pawn.value.opening + pawnH[xh] + pawnV[yh] + corner*pawn.corner.opening), (short) (pawn.value.endgame + pawnHE[xh] + pawnVE[yh] + corner*pawn.corner.endgame) };
         getPS(-Pawn, sq ^ 070) = -getPS( Pawn, sq);
@@ -434,8 +433,15 @@ int Eval::pieces(const BoardBase& b, const PawnEntry& p) const {
     value += knightBlockPasser * popcount3(b.getPieces<C,Knight>() & shift<C*8>(p.passers[EI]));
     value += bishopBlockPasser * popcount3(b.getPieces<C,Bishop>() & shift<C*8>(p.passers[EI]));
 
-    
-    return value;
+    // TODO vectorize
+    int darkB = !!(b.getPieces<C,Bishop>() & darkSquares);
+    int lightB = !!(b.getPieces<C,Bishop>() & ~darkSquares);
+    value += bishopOwnPawn * (p.dark[CI] * darkB + p.light[CI] * lightB);
+    value += bishopOppPawn * (p.dark[EI] * darkB + p.light[EI] * lightB);
+
+    value += bishopNotOwnPawn * (p.dark[CI] * lightB + p.light[CI] * darkB);
+    value += bishopNotOppPawn * (p.dark[EI] * lightB + p.light[EI] * darkB);
+return value;
 }
 
 template<Colors C>
@@ -483,26 +489,9 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         uint64_t wpawn = b.getPieces<White,Pawn>();
         uint64_t bpawn = b.getPieces<Black,Pawn>();
 
-//         int w0 = weightedPopcount(wpawn, wpawnOpen);
-//         int b0 = weightedPopcount(bpawn, bpawnOpen);
-//         pawnEntry.centerOpen = w0-b0;
-//         print_debug(debugEval, "pawnCenterOpen:%3d/%3d\n", w0, b0);
-        
-//         w0 = weightedPopcount(wpawn, wpawnEnd);
-//         b0 = weightedPopcount(bpawn, bpawnEnd);
-//         pawnEntry.centerEnd = w0-b0;
-//         print_debug(debugEval, "pawnCenterEnd:%3d/%3d\n", w0, b0);
-
         int wps = pawnShoulder * popcount15(wpawn & wpawn<<1 & ~file<'a'>());
         int bps = pawnShoulder * popcount15(bpawn & bpawn<<1 & ~file<'a'>());
-        
-/*        uint64_t wpawnHole = wpawn & wpawn<<2 & ~file<'a'>() & ~file<'b'>();
-        uint64_t bpawnHole = bpawn & bpawn<<2 & ~file<'a'>() & ~file<'b'>();
-        pawnEntry.score += pawnHole * popcount15(wpawnHole);
-        pawnEntry.score -= pawnHole * popcount15(bpawnHole);
-        print_debug(debugEval, "wpawnHole:     %3d\n", pawnHole * popcount15(wpawnHole));
-        print_debug(debugEval, "bpawnHole:     %3d\n", pawnHole * popcount15(bpawnHole));*/
-        
+           
         uint64_t wFront = wpawn << 8 | wpawn << 16;
         wFront |= wFront << 16 | wFront << 32;
         uint64_t wBack = wpawn >> 8 | wpawn >> 16;
@@ -599,6 +588,13 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         int bpie = pawnIsolatedEdge * (popcount15(bIsolani & (file<'a'>()|file<'h'>())));
         int wpio = pawnIsolatedOpen * (popcount15(wIsolani & ~bFront));
         int bpio = pawnIsolatedOpen * (popcount15(bIsolani & ~wFront));
+
+        uint64_t wDarkpawn = wpawn & darkSquares;
+        uint64_t bDarkpawn = bpawn & darkSquares;
+        pawnEntry.dark[0] = popcount(wDarkpawn);
+        pawnEntry.dark[1] = popcount(bDarkpawn);
+        pawnEntry.light[0] = popcount(wpawn - wDarkpawn);
+        pawnEntry.light[1] = popcount(bpawn - bDarkpawn);
         
         pawnEntry.score += wdbl + wpbw + wpbwo + wps + wpic + wpio + wpie;
         pawnEntry.score -= bdbl + bpbw + bpbwo + bps + bpic + bpio + bpie;
@@ -775,7 +771,6 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         mobStat[CI][Bishop][0][popcount(bmob1)]++;
         mobStat[CI][Bishop][1][popcount(bmob2)]++;
 #endif
-        print_debug(debugMobility, "b mobility%d: d%2d:%3d\n", CI, popcount(bmob1), mobB1[popcount(bmob1)]);
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(bmob1); printBit(bmob2); /*printBit(rmob3);*/ }
     }
     
@@ -804,7 +799,6 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 #ifdef MYDEBUG
         mobStat[CI][Knight][0][popcount(nmob1)]++;
         mobStat[CI][Knight][1][popcount(nmob2)]++;
-        print_debug(debugMobility, "n mobility%d: d%2d:%3d\n", CI, popcount(nmob1), mobN1[popcount(nmob1)]);
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(nmob1); printBit(nmob2); /*printBit(rmob3);*/ }
 #endif
 
@@ -849,7 +843,6 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         mobStat[CI][Rook][0][popcount(rmob1)]++;
         mobStat[CI][Rook][1][popcount(rmob2)]++;
 #endif
-        print_debug(debugMobility, "r mobility%d: d%2d:%3d\n", CI, popcount(rmob1), mobR1[popcount(rmob1)]);
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); /*printBit(rmob3);*/ }
     }
 
@@ -889,7 +882,6 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         mobStat[CI][Queen][0][popcount(qmob1)]++;
         mobStat[CI][Queen][1][popcount(qmob2)]++;
 #endif
-        print_debug(debugMobility, "q mobility%d: d%2d:%3d\n", CI, popcount(qmob1), mobQ1[popcount(qmob1)]/*, popcourt(rmor3)*/);
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(qmob1); printBit(qmob2); /*printBit(rmob3);*/ }
     }
         
@@ -1121,19 +1113,19 @@ void Eval::ptClear() {
 
 void Eval::setParameters(const Parameters& p)
 {
-    SETPARM(pawnHValue);
-    SETPARM(pawnHInfl);
-    SETPARM(pawnVValue);
-    SETPARM(pawnVInfl);
-    sigmoid(pawnH, -pawnHValue, pawnHValue, pawnHInfl );
-    sigmoid(pawnV, -pawnVValue, pawnVValue, pawnVInfl );
-    SETPARM(pawnHEValue);
-    SETPARM(pawnHEInfl);
-    SETPARM(pawnVEValue);
-    SETPARM(pawnVEInfl);
-    sigmoid(pawnHE, -pawnHEValue, pawnHEValue, pawnHEInfl );
-    sigmoid(pawnVE, -pawnVEValue, pawnVEValue, pawnVEInfl );
-    SETPARM(pawnCenter);
+    SETPARM(pawn.hor.value.opening);
+    SETPARM(pawn.hor.inflection.opening);
+    SETPARM(pawn.vert.value.opening);
+    SETPARM(pawn.vert.inflection.opening);
+    sigmoid(pawnH, -pawn.hor.value.opening, pawn.hor.value.opening, pawn.hor.inflection.opening );
+    sigmoid(pawnV, -pawn.vert.value.opening, pawn.vert.value.opening, pawn.vert.inflection.opening );
+    SETPARM(pawn.hor.value.endgame);
+    SETPARM(pawn.hor.inflection.endgame);
+    SETPARM(pawn.vert.value.endgame);
+    SETPARM(pawn.vert.inflection.endgame);
+    sigmoid(pawnHE, -pawn.hor.value.endgame, pawn.hor.value.endgame, pawn.hor.inflection.endgame );
+    sigmoid(pawnVE, -pawn.vert.value.endgame, pawn.vert.value.endgame, pawn.vert.inflection.endgame );
+    SETPARM(pawn.vcenter.opening);
     
     SETPARM(knightHValue);
     SETPARM(knightHInfl);
@@ -1280,25 +1272,19 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(queen.mobility.endgame);
     SETPARM(bishop.mobility.endgame);
 
-    SETPARM(mobN1slope);
-    SETPARM(mobB1slope);
-    SETPARM(mobR1slope);
-    SETPARM(mobQ1slope);
-    sigmoid(nmo, -knight.mobility.opening, knight.mobility.opening, 0, mobN1slope);
-    sigmoid(bmo, -bishop.mobility.opening, bishop.mobility.opening, 0, mobB1slope);
-    sigmoid(rmo, -rook.mobility.opening, rook.mobility.opening, 0, mobR1slope);
-    sigmoid(qmo, -queen.mobility.opening, queen.mobility.opening, 0, mobQ1slope);
-    sigmoid(nme, -knight.mobility.endgame, knight.mobility.endgame, 0, mobN1slope);
-    sigmoid(bme, -bishop.mobility.endgame, bishop.mobility.endgame, 0, mobB1slope);
-    sigmoid(rme, -rook.mobility.endgame, rook.mobility.endgame, 0, mobR1slope);
-    sigmoid(qme, -queen.mobility.endgame, queen.mobility.endgame, 0, mobQ1slope);
+    SETPARM(knight.mobslope);
+    SETPARM(bishop.mobslope);
+    SETPARM(rook.mobslope);
+    SETPARM(queen.mobslope);
+    sigmoid(nmo, -knight.mobility.opening, knight.mobility.opening, 0, knight.mobslope);
+    sigmoid(bmo, -bishop.mobility.opening, bishop.mobility.opening, 0, bishop.mobslope);
+    sigmoid(rmo, -rook.mobility.opening, rook.mobility.opening, 0, rook.mobslope);
+    sigmoid(qmo, -queen.mobility.opening, queen.mobility.opening, 0, queen.mobslope);
+    sigmoid(nme, -knight.mobility.endgame, knight.mobility.endgame, 0, knight.mobslope);
+    sigmoid(bme, -bishop.mobility.endgame, bishop.mobility.endgame, 0, bishop.mobslope);
+    sigmoid(rme, -rook.mobility.endgame, rook.mobility.endgame, 0, rook.mobslope);
+    sigmoid(qme, -queen.mobility.endgame, queen.mobility.endgame, 0, queen.mobslope);
     
-//TODO remove
-    sigmoid(mobN1, -knight.mobility.opening, knight.mobility.opening, 0, mobN1slope);
-    sigmoid(mobB1, -bishop.mobility.opening, bishop.mobility.opening, 0, mobB1slope);
-    sigmoid(mobR1, -rook.mobility.opening, rook.mobility.opening, 0, mobR1slope);
-    sigmoid(mobQ1, -queen.mobility.opening, queen.mobility.opening, 0, mobQ1slope);
-
     initPS();
 
     SETPARM(dMaxCapture);
@@ -1355,7 +1341,15 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(dRed[6]);
     SETPARM(dRed[7]);
 
-    for (int i=8; i<=maxDepth; ++i) {
+    SETPARM(bishopOwnPawn);
+    SETPARM(bishopOppPawn);
+    SETPARM(bishopNotOwnPawn);
+    SETPARM(bishopNotOppPawn);
+
+    SETPARM(dRedCapture);
+    SETPARM(dRedCheck);
+    
+    for (unsigned i=8; i<=maxDepth; ++i) {
         dRed[i] = dRed[7];
     }
 }

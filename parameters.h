@@ -81,6 +81,7 @@ public:
         Phase vcenter;
         Phase mobility;
         Phase pair;
+        float mobslope;
     };
     Parameters();
     Parameters(const Parameters&);

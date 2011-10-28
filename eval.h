@@ -58,6 +58,12 @@ struct CompoundScore {
         temp.endgame = x.endgame + endgame;
         return temp;
     }
+    CompoundScore operator - (const CompoundScore& x) const {
+        CompoundScore temp;
+        temp.opening = x.opening - opening;
+        temp.endgame = x.endgame - endgame;
+        return temp;
+    }
     CompoundScore operator - () const {
         CompoundScore temp;
         temp.opening = -opening;
@@ -128,6 +134,10 @@ class Eval {
     int bishopVE[8];
     float bishopCenter;
     int bishopAttack;
+    int bishopOwnPawn;
+    int bishopOppPawn;
+    int bishopNotOwnPawn;
+    int bishopNotOppPawn;
     
     int bishopPair;
     int bishopBlockPasser;
@@ -172,17 +182,9 @@ class Eval {
     int rookWeakPawn;
     int rookAttack;
     
-    float pawnHValue;
-    float pawnHInfl;
     int pawnH[4];
-    float pawnVValue;
-    float pawnVInfl;
     int pawnV[8];
-    float pawnHEValue;
-    float pawnHEInfl;
     int pawnHE[4];
-    float pawnVEValue;
-    float pawnVEInfl;
     int pawnVE[8];
     int pawnBackward;
     int pawnBackwardOpen;
@@ -194,7 +196,6 @@ class Eval {
     float pawnPasser2, pawnPasser7, pawnPasserSlope;
     int pawnFileOpen[4], pawnFileEnd[4];
     int pawnRankOpen[6], pawnRankEnd[6];
-    float pawnCenter;
 
     int pawnDouble;
     int pawnShoulder;
@@ -254,19 +255,10 @@ class Eval {
 
     int attackTable[256], defenseTable[256];
 
-    int mobB1[14];
-    int mobN1[9];
-    int mobR1[15];
-    int mobQ1[28];
     int bmo[14], bme[14];
     int nmo[9], nme[9];
     int rmo[15], rme[15];
     int qmo[28], qme[28];
-    float mobN1slope;
-    float mobB1slope;
-    float mobR1slope;
-    float mobQ1slope;
-    
 
     int oppKingOwnPawn[8];
     int ownKingOwnPawn[8];
@@ -282,7 +274,7 @@ class Eval {
     template<GamePhase P>
     int mobilityDiff(const BoardBase& b, int& wap, int& bap, int& wdp, int& bdp) const __attribute__((noinline));
     template<Colors C, GamePhase P>
-    int mobility(const BoardBase&, int& attackingPieces, int& defendingPieces) const __attribute__((__always_inline__));
+    int mobility(const BoardBase& b, int& attackingPieces, int& defendingPieces) const /*__attribute__((__always_inline__))*/;
     int attackDiff(const BoardBase& b, const PawnEntry& p, int wap, int bap, int wdp, int bdp) const __attribute__((noinline));
     template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const __attribute__((__always_inline__));
     template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const __attribute__((__always_inline__));
@@ -301,6 +293,8 @@ public:
     unsigned dNullIncr;
     unsigned dVerifyIncr;
     unsigned dMinReduction;
+    int dRedCapture;
+    int dRedCheck;
     int standardError;
     float standardSigma;
     bool calcMeanError;

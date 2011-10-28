@@ -51,7 +51,9 @@ int RootBoard::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int
         red = 1;
         if (m.isSpecial() && (m.piece() == Rook || m.piece() == Knight || m.piece() == Bishop))
             red += 2;
-        if (check && depth<9)
+        if (check && depth<eval.dRedCheck)
+            red=0;
+        if (m.capture() && depth<eval.dRedCapture)
             red=0;
         if (red<0) red=0;
         return red/* & ~1*/;
