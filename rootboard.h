@@ -47,7 +47,7 @@ template<class T> class Result;
 
 enum Extension {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
                 ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32,
-                ExtFork = 64, ExtTestMate = 128 };
+                ExtFork = 64, ExtTestMate = 128, ExtDiscoveredCheck = 256, ExtFirstMove = 512 };
 
 enum Status { Running, Stopping, Stopped };
 
@@ -151,7 +151,7 @@ public:
     template<Colors C, Phase P, class A, class B, Colors PREVC>
     int search3(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, bool& nextMaxDepth, int& attack
+                unsigned ply, Extension ext, bool& nextMaxDepth, NodeType nt
 #ifdef QT_GUI_LIB
         , NodeItem*
 #endif
@@ -159,7 +159,7 @@ public:
     template<Colors C, Phase P, class A, class B, Colors PREVC>
     int search4(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, int& attack
+                unsigned ply, Extension ext, NodeType nt
 #ifdef QT_GUI_LIB
         , NodeItem*
 #endif

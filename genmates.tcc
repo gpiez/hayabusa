@@ -584,6 +584,49 @@ haveMate:
         }*/
     return (R)false;
 }
+
+template<Colors C>
+template<bool AbortOnFirst, typename R>
+R ColoredBoard<C>::generateDiscoveredCheck( Move** const good)  const {
+
+    for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
+        __v2di a02 = rs->d02;
+        __v2di from2 = bits[rs->move.from()].doublebits;
+        __v2di pin02 = from2 & dpins[CI].d02 & ~dpins[EI].d02;
+        pin02 = pcmpeqq(pin02, zero);
+        pin02 = ~pin02 & a02;
+        for (uint64_t a=fold(pin02) & ~getOcc<C>(); a; a&=a-1) {
+            if (AbortOnFirst) return (R)true;
+            Move n;
+            n.data = rs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
+            *--*good = n;
+        }
+    }
+
+    for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
+        __v2di a13 = bs->d13;
+        __v2di from2 = bits[bs->move.from()].doublebits;
+        __v2di pin13 = from2 & dpins[CI].d13 & ~dpins[EI].d13;
+        pin13 = pcmpeqq(pin13, zero);
+        pin13 = ~pin13 & a13;
+        for (uint64_t a=fold(pin13) & ~getOcc<C>(); a; a&=a-1) {
+            if (AbortOnFirst) return (R)true;
+            Move n;
+            n.data = bs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
+            *--*good = n;
+        }
+    }
+
+    for (uint64_t p = getPieces<C, Knight>() & pins[CI] & ~pins[EI]; p; p &= p-1) {
+        unsigned from = bit(p);
+        for (uint64_t q = knightAttacks[from] & ~getOcc<C>(); q; q &= q-1) {
+            if (AbortOnFirst) return (R)true;
+            unsigned to = bit(q);
+            *--*good = Move(from, to, Knight, getPieceKind(1ULL << to));
+        }
+    }
+    return (R)false;
+}
 #pragma GCC diagnostic warning "-Wreturn-type"
 
 template<Colors C>
@@ -614,36 +657,5 @@ uint64_t ColoredBoard<C>::generateKnightMates(uint64_t block, uint64_t king, uns
     }
     return nmate;
 }
-
-#if 0
-                    /*
-                     * Bad pruning test
-                     */
-/*                    {
-                        const B beta0(current.v - 149*C);
-                        const A alpha0(current.v - 150*C);
-                        unsigned newDepth = depth-4;
-                        ASSERT(depth > 4);
-                        value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, alpha0, ply+1, ExtNot, hasMaxDepth, nattack NODE);
-                        if (value <= alpha0.v) continue;
-                    }*/
-                }
-                /*
-                 * Reduced search
-                 */
-                if (Options::reduction
-                    && i-good > 3
-                    && depth > 3
-                    && nattack <= oldattack
-                    && (*i).capture() == 0
-                    && current.v != -infinity*C) {
-
-                    const B beta0(current.v + C);
-                    unsigned newDepth = depth-(reduction+1);
-                    ASSERT(depth > (unsigned)reduction+1);
-                    value.v = search4<(Colors)-C, P>(b, *i, newDepth, beta0, current, ply+1, ExtNot, hasMaxDepth, nattack NODE);
-                    if (value <= current.v) continue; //TODO second part could be earlier
-                }
-#endif
 
 #endif
