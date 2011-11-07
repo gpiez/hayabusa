@@ -409,42 +409,115 @@ void Console::quit(StringList /*cmds*/) {
 #endif
 }
 
-void Console::ordering(StringList cmds) {
-    board->infinite = true;
-    if (cmds.size() > 1 && cmds[1] == "init") {
-        for (unsigned int i = 0; testPositions[i]; ++i) {
-            stats.node=0;
-            board->maxSearchNodes = 1000000;
-            board->setup(testPositions[i]);
-            board->clearHash();
-            if (board->color == White)
-                board->rootSearch<White>(40);
-            else
-                board->rootSearch<Black>(40);
-            if (!(i % 26)) std::cerr << std::endl;
-            if (stats.node < 1000000)
-                std::cerr << " 0,";
-            else
-                std::cerr << std::setw(2) << board->depth - (20 + 1) << ",";
+std::mutex nThreadMutex;
+int nThread;
+int maxThread;
+double tested;
+std::condition_variable nThreadCond;
+std::vector<RootBoard*> prb;
+std::vector<std::future<uint64_t> > results;
+
+uint64_t orderingInit(RootBoard* board, int i) {
+    int result;
+    {
+        board->maxSearchNodes = 5000000;
+        board->setup(testPositions[i]);
+        board->clearHash();
+        if (board->color == White)
+            board->rootSearch<White>(40);
+        else
+            board->rootSearch<Black>(40);
+        if (stats.node < 5000000)
+            result = 0;
+        else
+            result = board->depth - board->eval.dMaxExt;
+    }
+    {
+        std::lock_guard<std::mutex> lock(nThreadMutex);
+        --nThread;
+        board->color = (Colors)0;
+    }
+    nThreadCond.notify_one();
+    return result;
+}
+
+uint64_t orderingTest(RootBoard* board, int i) {
+    uint64_t result;
+    if (testDepths[i]) {
+        board->maxSearchNodes = ~0;
+        tested++;
+        stats.node=0;
+        board->setup(testPositions[i]);
+        board->clearHash();
+        if (board->color == White)
+            board->rootSearch<White>(testDepths[i]+ board->eval.dMaxExt-1);
+        else
+            board->rootSearch<Black>(testDepths[i]+ board->eval.dMaxExt-1);
+        result = stats.node;
+    } else {
+        result = 1;
+    }
+    {
+        std::lock_guard<std::mutex> lock(nThreadMutex);
+        --nThread;
+        board->color = (Colors)0;
+    }
+    nThreadCond.notify_one();
+    std::cout << std::setw(4) << i << "(" << std::setw(2) << testDepths[i]  << "):" << std::setw(10) << result << std::endl;
+    return result;
+}
+
+void tournament(uint64_t (*ordering)(RootBoard*, int)) {
+    for (unsigned int i = 0; testPositions[i]; ++i)  {
+        {
+            std::unique_lock<std::mutex> lock(nThreadMutex);
+            while (nThread >= maxThread)
+                nThreadCond.wait(lock);
+            ++nThread;
         }
-        std::cerr << "0" << std::endl;
+        RootBoard* free;
+        std::for_each(prb.begin(), prb.end(), [&free] (RootBoard* rb) {
+            if (!rb->color) free = rb;
+        });
+        free->color = (Colors)1;
+        results[i]=std::async(std::launch::async, ordering, free, i);
+    }
+}
+
+void Console::ordering(StringList cmds) {
+
+    nThread = 0;
+    maxThread = 8;
+    results.clear();
+    for (int i = 0; testPositions[i]; ++i)
+        results.push_back(std::future<uint64_t>());
+    
+    for (int i=0; i<maxThread; ++i) {
+        board->infinite = true;
+        RootBoard* rb = new RootBoard(this, defaultParameters, 0x2000000, 0x100000);
+        rb->infinite = true;
+        rb->color = (Colors) 0;
+        prb.push_back(rb);
+    }
+    Options::quiet = true;
+    if (cmds.size() > 1 && cmds[1] == "init") {
+        std::thread th(tournament, orderingInit);
+        th.detach();
+        for (int i = 0; testPositions[i]; ++i) {
+            while (!results[i].valid())
+                usleep(10000);
+            if (!(i % 26)) std::cout << std::endl;
+            std::cout << std::setw(2) << results[i].get() << "," << std::flush;
+        }
+        std::cout << "0" << std::endl;
     } else {
         double sum=0.0;
-        double tested=0.0;
+        std::thread th(tournament, orderingTest);
+        th.detach();
         for (int i = 0; testPositions[i]; ++i) {
-            if (testDepths[i] < 0) break;
-            if (testDepths[i] <= 0) continue;
-            board->maxSearchNodes = ~0;
-            tested++;
-            stats.node=0;
-            board->setup(testPositions[i]);
-            board->clearHash();
-            if (board->color == White)
-                board->rootSearch<White>(testDepths[i]+22);
-            else
-                board->rootSearch<Black>(testDepths[i]+22);
-            std::cout << std::setw(4) << i << "(" << std::setw(2) << testDepths[i]  << "):" << std::setw(10) << stats.node << std::endl;
-            sum += log(stats.node);
+            while (!results[i].valid())
+                usleep(10000);
+            sum += log(results[i].get());
         }
         std::cout << std::setw(20) << exp(sum/tested) << std::endl;
     }
@@ -478,5 +551,5 @@ void Console::parmtest(StringList cmds)
                    cmds[9], convert<float>(cmds[10]), convert<float>(cmds[11]), convert(cmds[12])
                 );
     else
-        std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> [n]\"" << std::endl;
+        std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> <n>\"" << std::endl;
 }
