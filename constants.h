@@ -73,7 +73,7 @@ enum Phase { root, trunk, tree, mate, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
 
-enum NodeType { NodeFailLow, NodeFailHigh, NodePV, NodeFull, NodeTT, NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile1, NodeFutile2, NodeFutile3, NodeMate, NodePresearch, NodeIllegal, NodeRepetition, NodeEndgameEval, NodeStandpat };
+enum NodeType { NodeFailLow=-1, NodePV=0, NodeFailHigh=1, NodeFull, NodeTT, NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile1, NodeFutile2, NodeFutile3, NodeMate, NodePresearch, NodeIllegal, NodeRepetition, NodeEndgameEval, NodeStandpat };
 
 enum NodeFlag { Threatened = 1, Extend = 2 };
 
