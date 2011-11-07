@@ -84,8 +84,9 @@ SelfGame::SelfGame(Console* c, const Parameters& wp, const Parameters& bp)
     wrb = new RootBoard(c, wp, 0x200000, 0x10000);
     brb = new RootBoard(c, bp, 0x200000, 0x10000);
 
-    decisiveScore = 800;
-    decisiveScoreMoves = 5;
+    decisiveScore = 700;
+    decisiveScoreMoves = 4;
+    drawScoreMoves = 6;
 }
 
 SelfGame::~SelfGame() {
@@ -115,6 +116,7 @@ int SelfGame::doGame(RootBoard* rb1, RootBoard* rb2)
     setupRootBoard(rb1);
     setupRootBoard(rb2);
     nDecisive = 0;
+    nDraw = 0;
     Move m;
     if (rb1->color == Black) goto black;
     for (;;) {
@@ -184,6 +186,15 @@ bool SelfGame::checkResult(const RootBoard& rb)
     } else
         nDecisive = 0;
 
+    if (abs(rb.getScore()) == 0) {
+        nDraw++;
+        if (nDraw >= drawScoreMoves) {
+            result = 0;
+            return true;
+        }
+    } else
+        nDraw = 0;
+    
     int v;
     if (rb.eval.draw<C>(rb.currentBoard<C>(), v) || rb.isDraw(rb.currentBoard<C>())) {
         result = 0;

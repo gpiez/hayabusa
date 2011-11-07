@@ -37,7 +37,7 @@ Evolution::Evolution(Console* c):
 
 void Evolution::init()
 {
-    initFixed(1024);
+    initFixed(4096);
 }
 
 void Evolution::initFixed(int n)
@@ -45,7 +45,6 @@ void Evolution::initFixed(int n)
     nThread = 0;
     maxThread = 8;
     nIndiFixed = n;
-    srand(1);
     recalc.resize(n);
     minElo.resize(n);
     maxElo.resize(n);
@@ -73,7 +72,7 @@ void Evolution::parmTest(std::string pname, float min, float max, int n) {
     for (int i=0; i<nIndi; ++i)
         results[i].resize(nIndiFixed);
 
-    for (currentNGames=1; currentNGames<=nIndiFixed; currentNGames<<=1) {
+    for (currentNGames=4; currentNGames<=nIndiFixed; currentNGames<<=1) {
         step();
         if (findmax() < 2) break;
     }

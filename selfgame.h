@@ -30,7 +30,9 @@ class SelfGame
     uint64_t btime;
     int decisiveScore;
     int decisiveScoreMoves;
+    int drawScoreMoves;
     int nDecisive;
+    int nDraw;
     int result;
 public:
     RootBoard   *wrb, *brb;
