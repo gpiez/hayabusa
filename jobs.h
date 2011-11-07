@@ -53,11 +53,12 @@ class SearchJob: public Job {
     unsigned ply;
     unsigned parent;
     const RepetitionKeys& rep;  //TODO really needed? This should be always thread-local keys
+    NodeType nt;
 #ifdef QT_GUI_LIB
     NodeItem* node;
 #endif
 public:
-    SearchJob(RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent, const RepetitionKeys& rep
+    SearchJob(RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent, const RepetitionKeys& rep, NodeType nt
 #ifdef QT_GUI_LIB
         , NodeItem* node
 #endif

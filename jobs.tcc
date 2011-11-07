@@ -21,11 +21,11 @@
 
 #include "jobs.h"
 template<Colors C, typename A, typename B, typename T>
-SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent, const RepetitionKeys& rep
+SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent, const RepetitionKeys& rep, NodeType nt
 #ifdef QT_GUI_LIB
     , NodeItem* node
 #endif
-    ): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), parent(parent), rep(rep)
+    ): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), ply(ply), parent(parent), rep(rep), nt(nt)
 #ifdef QT_GUI_LIB
     , node(node)
 #endif
@@ -37,8 +37,7 @@ template<Colors C, typename A, typename B, typename T>
 void SearchJob<C,A,B,T>::job() {
     rb.clone(b, rep, ply);
     bool dummy __attribute__((unused));
-    int dummy2 __attribute__((unused));
-    int ret = rb.search3<C,trunk>(b, m, depth, alpha, beta, ply, ExtNot, dummy, dummy2
+    int ret = rb.search3<C,trunk>(b, m, depth, alpha, beta, ply, ExtNot, dummy, nt
 #ifdef QT_GUI_LIB
                        , node
 #endif
