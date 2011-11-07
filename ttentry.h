@@ -96,6 +96,7 @@ struct PawnEntry {
 //        uint8_t weakLight;
 //        uint8_t weakDark;
     } shield[nColors];          //  4
+    int8_t shield2[nColors][nRows];
 };
 
 struct PerftEntry {

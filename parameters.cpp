@@ -222,7 +222,7 @@ void Parameters::init()
     Parameters::add("pawnIsolatedCenter", 0);
     Parameters::add("pawnIsolatedEdge", 0);
     Parameters::add("pawnIsolatedOpen", -6);
-    Parameters::add("pawnDouble", -12);
+    Parameters::add("pawnDouble", -25);
     Parameters::add("pawnShoulder", 1);
 
     Parameters::add("deltaAttack", 190);
@@ -276,11 +276,11 @@ void Parameters::init()
 //  0   427k
     Parameters::add("dMaxExt", 6);
     Parameters::add("dMinDualExt", 2);
-    Parameters::add("dMinSingleExt", 4);
+    Parameters::add("dMinSingleExt", 6);
     Parameters::add("dMinForkExt", 4);
     Parameters::add("dMinMateExt", 4);
     Parameters::add("dMinPawnExt", 4);
-    Parameters::add("dEvenAlpha", 3, 0, 3, 3);
+    Parameters::add("flags", 3);
 
     Parameters::add("oppKingOwnPawnV", 14);  // only 1..7 used
     Parameters::add("ownKingOwnPawnV", 8);
@@ -294,8 +294,8 @@ void Parameters::init()
     Parameters::add("prune2", 110);
     Parameters::add("prune1c", 60);
     Parameters::add("prune2c", 0);
-    Parameters::add("dNullIncr", 0xaa, 0, 255, 0);
-    Parameters::add("dVerifyIncr", 0xaa, 0, 255, 0);
+    Parameters::add("dNullIncr", 0x2a, 0, 0xfffffff, 0);
+    Parameters::add("dVerifyIncr", 0x2a, 0, 0xfffffff, 0);
     Parameters::add("dMinReduction", 2, 0, 10, 1);
 
     Parameters::add("pawnAttack", 112);
@@ -333,7 +333,48 @@ void Parameters::init()
 
     Parameters::add("dRedCapture", 5);
     Parameters::add("dRedCheck", 9);
-defaultParameters.parms.resize(maxIndex);
+
+    Parameters::add("dMaxExtCheck", 3);
+    Parameters::add("dMaxExtPawn", 0);
+    Parameters::add("dMinExtDisco", 0);
+
+    Parameters::add("aspirationLow", 40);
+    Parameters::add("aspirationHigh", 5);
+    Parameters::add("aspirationHigh2", 20);
+    Parameters::add("tempo", 10);
+
+    Parameters::add("kingShield.center[0]", 25);
+    Parameters::add("kingShield.center[1]", 20);
+    Parameters::add("kingShield.center[2]", 12);
+    Parameters::add("kingShield.outer[0]",  24);
+    Parameters::add("kingShield.outer[1]",  20);
+    Parameters::add("kingShield.outer[2]",  16);
+    Parameters::add("kingShield.inner[0]",  26);
+    Parameters::add("kingShield.inner[1]",  19);
+    Parameters::add("kingShield.inner[2]",  15);
+    Parameters::add("kingShield.openFile",   -25);
+    Parameters::add("kingShield.halfOpenFile",-25);
+
+    Parameters::add("pawnShield", 100);
+    Parameters::add("pieceDefense", 100);
+    Parameters::add("pieceAttack", 100);
+
+    Parameters::add("attackTotal", 200);
+
+    Parameters::add("rook.attack", 50);
+    Parameters::add("bishop.attack", 40);
+    Parameters::add("knight.attack", 40);
+    Parameters::add("queen.attack", 120);
+    Parameters::add("pawn.attack", 25);
+    Parameters::add("king.attack", 40);
+    Parameters::add("rook.defense", 10);
+    Parameters::add("bishop.defense", 15);
+    Parameters::add("knight.defense", 15);
+    Parameters::add("queen.defense", 5);
+
+    Parameters::add("castlingTempo", 5);
+    
+    defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) 
         defaultParameters.parms[i] = Parm<float>(base[i]);
 }

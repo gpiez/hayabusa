@@ -122,17 +122,17 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
             null++;
             nullIncr >>= 1;
         }
-        nullReduction[i] = null;
+        nullReduction[i] = i-null;
         nullIncr >>= 1;
         
         while (verifyIncr & 1) {
             verify++;
             verifyIncr >>= 1;
         }
-        verifyReduction[i] = verify;
+        verifyReduction[i] = i-verify;
         verifyIncr >>= 1;
 #ifdef MYDEBUG
-        if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i] << std::endl;
+        if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i]-eval.dMaxExt << std::endl;
 #endif
     }
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>(hashSize);

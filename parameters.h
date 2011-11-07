@@ -82,6 +82,8 @@ public:
         Phase mobility;
         Phase pair;
         float mobslope;
+        float attack;
+        float defense;
     };
     Parameters();
     Parameters(const Parameters&);
