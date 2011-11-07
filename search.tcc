@@ -570,63 +570,63 @@ nosort:
 //         ASSERT(bestMove.piece() || !bestMove.fromto());
 
     bool unused __attribute__((unused));
-    if (P != vein && P != leaf && nt != NodeFailLow && eval.flags & 4)
-    for (unsigned int d = (depth+1)%3 + 2 + eval.dMaxExt; d < depth; d+=3) {
-//      if (depth > 2 + dMaxCapture + dMaxThreat && depth > ttDepth+2) {
-//          unsigned d = depth-2;
-        if (d<=ttDepth) continue;
-        B beta0(beta);
-        A current0(origAlpha); //FIXME alpha here
-//             if (alpha0 > -0x400*C) alpha0.v -= 5*C;
-//             if (beta0 > 0x400*C) beta0.v += 5*C;
-        NodeType nextNT = (NodeType)-nt;
-        for (Move* i = good; i<bad; ++i) {
-/*                NodeType nextNodeType;
-            if (nodeType == NodeFailHigh)
-                nextNodeType = NodeFailLow;
-            else if (nodeType == NodeFailLow)
-                nextNodeType = NodeFailHigh;
-            else if (i == good)
-                nextNodeType = NodePV;
-            else
-                nextNodeType = NodeFailHigh;*/
-//              if (!i->data) continue;
-            ASSERT(d>0);
-            Score<C> value;
-            if (d-1 > eval.dMinReduction) {
-                const B beta1(alpha.v + C);
-                Score<C> nullvalue(search4<C, P>(b, *i, nullReduction[d-1], current0, beta1, ply+2, ExtNot, nextNT NODE));
-                if (nullvalue <= current0.v) {
-                    nextNT = NodeFailHigh;
-                    current0.max(value.v);
-                    continue;
-                }
-            }
-            int red = calcReduction(b, i-good, *i, d);
-            int dummy2 __attribute__((unused));
-            value.v = search4<(Colors)-C, P>(b, *i, d -red - 1, beta0, current0, ply+1, ExtNot, nextNT NODE);
-            nextNT = NodeFailHigh;
-            if (value > current0.v) {
-                current0.v = value.v;
-                Move first = good[0];
-                good[0] = *i;
-                for (Move* j = good+1; j<i; ++j) {
-                    Move second = *j;
-                    *j = first;
-                    first = second;
-                }
-                *i = first;
-            }
-            if (current0 >= beta0.v) {
-                if (d+2 >= depth) {
-                    /*betaNode = true;*/
-                }
-                break;
-            }
-        }
-        if (current0 >= infinity*C) break;
-    }
-
+//     if (P != vein && P != leaf && nt != NodeFailLow && eval.flags & 4)
+//     for (unsigned int d = (depth-4-eval.dMaxExt+4)%4 + 4 + eval.dMaxExt; d < depth; d+=4) {
+// //      if (depth > 2 + dMaxCapture + dMaxThreat && depth > ttDepth+2) {
+// //          unsigned d = depth-2;
+//         if (d<=ttDepth) continue;
+//         B beta0(beta);
+//         A current0(origAlpha); //FIXME alpha here
+// //             if (alpha0 > -0x400*C) alpha0.v -= 5*C;
+// //             if (beta0 > 0x400*C) beta0.v += 5*C;
+//         NodeType nextNT = (NodeType)-nt;
+//         for (Move* i = good; i<bad; ++i) {
+// /*                NodeType nextNodeType;
+//             if (nodeType == NodeFailHigh)
+//                 nextNodeType = NodeFailLow;
+//             else if (nodeType == NodeFailLow)
+//                 nextNodeType = NodeFailHigh;
+//             else if (i == good)
+//                 nextNodeType = NodePV;
+//             else
+//                 nextNodeType = NodeFailHigh;*/
+// //              if (!i->data) continue;
+//             ASSERT(d>0);
+//             Score<C> value;
+//             if (d-1 > eval.dMinReduction) {
+//                 const B beta1(alpha.v + C);
+//                 Score<C> nullvalue(search4<C, P>(b, *i, nullReduction[d-1], current0, beta1, ply+2, ExtNot, nextNT NODE));
+//                 if (nullvalue <= current0.v) {
+//                     nextNT = NodeFailHigh;
+//                     current0.max(value.v);
+//                     continue;
+//                 }
+//             }
+//             int red = calcReduction(b, i-good, *i, d);
+//             int dummy2 __attribute__((unused));
+//             value.v = search4<(Colors)-C, P>(b, *i, d -red - 1, beta0, current0, ply+1, ExtNot, nextNT NODE);
+//             nextNT = NodeFailHigh;
+//             if (value > current0.v) {
+//                 current0.v = value.v;
+//                 Move first = good[0];
+//                 good[0] = *i;
+//                 for (Move* j = good+1; j<i; ++j) {
+//                     Move second = *j;
+//                     *j = first;
+//                     first = second;
+//                 }
+//                 *i = first;
+//             }
+//             if (current0 >= beta0.v) {
+//                 if (d+2 >= depth) {
+//                     /*betaNode = true;*/
+//                 }
+//                 break;
+//             }
+//         }
+//         if (current0 >= infinity*C) break;
+//     }
+// 
 //         if (bad > good) bestMove = *good;
     Extension leafExt = threatened;
     if (P != vein && b.template inCheck<C>()) {
