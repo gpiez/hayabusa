@@ -232,6 +232,19 @@ class Eval {
     int attackN2[21];
     int attackP[21];
     int attackK[21];
+
+    int attackR[8];
+    int attackB[8];
+    int attackQ3[8];
+    int attackN[8];
+    int attackP2[8];
+    int attackK2[8];
+
+    int defenseR[8];
+    int defenseB[8];
+    int defenseQ[8];
+    int defenseN[8];
+
     int attackQMaMi[13];
     int attackQMiMi[13];
     int attackMaMiMi[13];
@@ -270,6 +283,7 @@ class Eval {
 
     void initPS();
     void initZobrist();
+    void initShield();
     static void initTables();
     template<GamePhase P>
     int mobilityDiff(const BoardBase& b, int& wap, int& bap, int& wdp, int& bdp) const __attribute__((noinline));
@@ -277,11 +291,13 @@ class Eval {
     int mobility(const BoardBase& b, int& attackingPieces, int& defendingPieces) const /*__attribute__((__always_inline__))*/;
     int attackDiff(const BoardBase& b, const PawnEntry& p, int wap, int bap, int wdp, int bdp) const __attribute__((noinline));
     template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const __attribute__((__always_inline__));
+    template<Colors C> int attack2(const BoardBase& b, const PawnEntry& p, int attackingPieces, int defendingPieces) const __attribute__((__always_inline__));
     template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const __attribute__((__always_inline__));
     PawnEntry pawns(const BoardBase&) const;
     template<Colors C> void mobilityRestrictions(const BoardBase &b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
     template<Colors C> int kingSafety(const BoardBase& b) const;
     template<Colors C> int endgame(const BoardBase& b, const PawnEntry&, int sideToMoves) const;
+    template<Colors C> int evalShield2(uint64_t pawns, unsigned file) const;
 public:
     unsigned dMaxCapture;
     unsigned dMaxExt;
@@ -293,6 +309,9 @@ public:
     unsigned dNullIncr;
     unsigned dVerifyIncr;
     unsigned dMinReduction;
+    unsigned dMaxExtPawn;
+    unsigned dMinExtDisco;
+//     unsigned dMaxExtDisco;
     int dRedCapture;
     int dRedCheck;
     int standardError;
@@ -300,16 +319,33 @@ public:
     bool calcMeanError;
 
     int dRed[maxDepth+1];
-    int dEvenAlpha;
+    unsigned flags;
 //     unsigned dMinSingleExt;
 //     unsigned dMinMateExt;
-    int aspiration0;
-    int aspiration1;
+    int aspirationLow;
+    int aspirationHigh;
+    int aspirationHigh2;
     int evalHardBudget;
     int prune1;
     int prune2;
     int prune1c;
     int prune2c;
+    unsigned dMaxExtCheck;
+    int tempo;
+    int castlingTempo;
+    struct {
+        int outer[3];
+        int center[3];
+        int inner[3];
+        int openFile;
+        int halfOpenFile;
+    } kingShield;
+    int pawnShield;
+    int pieceAttack;
+    int pieceDefense;
+    int attackTable2[1024];
+    int attackTotal;
+
 #ifdef MYDEBUG
     mutable uint64_t bmob1, bmob2, bmob3, bmobn;
     mutable uint64_t rmob1, rmob2, rmob3, rmobn;
@@ -355,7 +391,7 @@ public:
 
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter, double width, unsigned istart) {
-    static const size_t n = sizeof(T)/sizeof(p[0])-1-istart;
+    const size_t n = sizeof(T)/sizeof(p[0])-1-istart;
     dcenter -= istart;
     double t0 = -dcenter;
     double t1 = n-dcenter;
