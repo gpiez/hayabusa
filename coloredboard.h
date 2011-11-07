@@ -54,6 +54,8 @@ public:
     void generateCheckEvasions(Move* &list, Move* &bad) const __attribute__((noinline));
     template<bool AbortOnFirst, typename R>
     R generateMateMoves( Move** good = NULL, Move** bad = NULL) const __attribute__((noinline));
+    template<bool AbortOnFirst, typename R>
+    R generateDiscoveredCheck( Move** good = NULL) const __attribute__((noinline));
     bool generateSkewers( Move** good) const __attribute__((noinline));
     bool generateForks( Move** good) const __attribute__((noinline));
     void generateNonCap(Move*& good, Move*& bad) const __attribute__((noinline));
