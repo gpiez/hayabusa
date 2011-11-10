@@ -42,6 +42,7 @@ class Evolution
     static unsigned maxThread;
     static std::mutex nThreadMutex;
     static std::condition_variable nThreadCond;
+    void setCurrentParameters(Parameters& p);
 public:
     Evolution(Console*);
     ~Evolution();

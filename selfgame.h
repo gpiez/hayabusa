@@ -39,6 +39,7 @@ public:
     std::chrono::system_clock::time_point start;
     SelfGame(Console* c, const Parameters&, const Parameters&);
     ~SelfGame();
+    static int nTests();
     int doGame(RootBoard*, RootBoard*);
     template<Colors C> bool checkResult(const RootBoard&);
     void setupRootBoard(RootBoard* );

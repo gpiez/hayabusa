@@ -373,7 +373,10 @@ void Parameters::init()
     Parameters::add("queen.defense", 5);
 
     Parameters::add("castlingTempo", 5);
-    
+
+    Parameters::add("attackFirst", 64);
+    Parameters::add("attackSlope", 3.0);
+
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) 
         defaultParameters.parms[i] = Parm<float>(base[i]);

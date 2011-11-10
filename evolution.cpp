@@ -37,7 +37,7 @@ Evolution::Evolution(Console* c):
 
 void Evolution::init()
 {
-    initFixed(4096);
+    initFixed(64);
 }
 
 void Evolution::initFixed(int n)
@@ -51,14 +51,24 @@ void Evolution::initFixed(int n)
     firstGame.resize(n);
     for (int i=0; i<nIndiFixed; ++i) {
         Parameters adam(defaultParameters);
-        adam.mutate(0.5);
+        adam.mutate(0.25);
         indiFixed.push_back(adam);
     }
     
 }
 
+void Evolution::setCurrentParameters(Parameters& p)
+{
+    p["pawnShield"] = 175;
+    p["pieceAttack"] = 125;
+    p["pieceDefense"] = 150;
+    p["attackFirst"] = 75;
+    p["attackSlope"] = 1.0;
+}
+
 void Evolution::parmTest(std::string pname, float min, float max, int n) {
     Parameters adam(defaultParameters);
+    setCurrentParameters(adam);
     indi.clear();
     nIndi = n;
     for (int i=0; i<nIndi; ++i) {
@@ -77,9 +87,9 @@ void Evolution::parmTest(std::string pname, float min, float max, int n) {
         if (findmax() < 2) break;
     }
 
-    cerr << pname << endl;
+    cout << pname << endl;
     for (int i=0; i<nIndi; ++i) {
-        cerr << setw(5) << indi[i].parm[pname].value << ": " << setw(5) << minElo[i] << "-" << setw(5) << maxElo[i] << endl;
+        cout << setw(5) << indi[i].parm[pname].value << ": " << setw(5) << (minElo[i]+maxElo[i])/2 << endl;
     }
 }
 
@@ -100,16 +110,16 @@ void Evolution::parmTest(std::string pname, float min, float max, int n, std::st
         results[i].resize(indi.size());
 
     step();
-    cerr << pname2 << endl << "    ,";
+    cout << pname2 << endl << "    ,";
     for (int j=0; j<n2; ++j)
-        cerr << setw(3) << indi[j].parm[pname2].value << ",";
-    cerr << endl << pname << endl;
+        cout << setw(3) << indi[j].parm[pname2].value << ",";
+    cout << endl << pname << endl;
     for (int i=0; i<n; ++i) {
-        cerr << setw(3) << indi[i*n2].parm[pname].value << ",";
+        cout << setw(3) << indi[i*n2].parm[pname].value << ",";
         for (int j=0; j<n2; ++j) {
-            cerr << setw(3) << indi[i*n2+j].score << ",";
+            cout << setw(3) << indi[i*n2+j].score << ",";
         }
-        cerr << endl;
+        cout << endl;
     }
 }
 
@@ -135,19 +145,19 @@ void Evolution::parmTest(std::string pname, float min, float max, int n, std::st
     step();
    
     for (int k=0; k<n3; ++k) {
-        cerr << pname3 << ": " << indi[k].parm[pname3].value << "  ";
-        cerr << pname2 << endl << "    ,";
+        cout << pname3 << ": " << indi[k].parm[pname3].value << "  ";
+        cout << pname2 << endl << "    ,";
         for (int j=0; j<n2; ++j)
-            cerr << setw(3) << indi[j*n3].parm[pname2].value << ",";
-        cerr << endl << pname << endl;
+            cout << setw(3) << indi[j*n3].parm[pname2].value << ",";
+        cout << endl << pname << endl;
         for (int i=0; i<n; ++i) {
-            cerr << setw(3) << indi[i*n2*n3].parm[pname].value << ",";
+            cout << setw(3) << indi[i*n2*n3].parm[pname].value << ",";
             for (int j=0; j<n2; ++j) {
-                cerr << setw(3) << indi[i*n2*n3+j*n3+k].score << ",";
+                cout << setw(3) << indi[i*n2*n3+j*n3+k].score << ",";
             }
-            cerr << endl;
+            cout << endl;
         }
-        cerr << "------------------" << endl;
+        cout << "------------------" << endl;
     }
 }
 
@@ -186,13 +196,13 @@ void Evolution::step()
     
     for (int i=0; i<nIndi; ++i)
     if (recalc[i]) {
-        cerr << setw(4) << i << ": " << flush;
+        cout << setw(4) << i << ": " << flush;
         for (int j=firstGame[i]; j<currentNGames; ++j) {
             if (results[i][j].valid()) {
                 int result = results[i][j].get();
                 indi[i].score += result;
                 double n = j+1.0;
-                double nGames = 110.0;  // from SelfGame
+                double nGames = SelfGame::nTests();  // from SelfGame
                 double p = indi[i].score / (n*nGames*2.0) +0.5;
                 double v = sqrt(p*(1-p)*(n*nGames))*2.0 *3.0;
                 double pe = v / (n*nGames*2.0);
@@ -202,18 +212,18 @@ void Evolution::step()
                 double eloh = -log10(1.0/(p+pe) - 1.0)*400.0;
                 maxElo[i] = eloh;
                 double eloe = (eloh - elol)/2;
-                cerr << setprecision(0) << std::fixed << "\015" << setw(4) << i << ": " << "Abs Score: " << setw(5) << indi[i].score << "/" << setw(5) << n << "  Rel Score: " << setprecision(4) << setw(6) << p << " ±" << setw(6) << pe << "  Elo: " <<  setprecision(1) << setw(5) << elo << " ±" << setw(5) << eloe << "      " << flush;
+                cout << setprecision(0) << std::fixed << "\015" << setw(4) << i << ": " << "Abs Score: " << setw(5) << indi[i].score << "/" << setw(5) << n << "  Rel Score: " << setprecision(4) << setw(6) << p << " ±" << setw(6) << pe << "  Elo: " <<  setprecision(1) << setw(5) << elo << " ±" << setw(5) << eloe << "      " << flush;
             } else {
                 --j;
                 usleep(100000);
             }
         }
-        cerr << endl;
+        cout << endl;
         firstGame[i] = currentNGames;
         recalc[i] = false;
     } else {
                 double n = firstGame[i];
-                double nGames = 110.0;  // from SelfGame
+                double nGames = SelfGame::nTests();  // from SelfGame
                 double p = indi[i].score / (n*nGames*2.0) +0.5;
                 double v = sqrt(p*(1-p)*(n*nGames))*2.0 *3.0;
                 double pe = v / (n*nGames*2.0);
@@ -221,7 +231,7 @@ void Evolution::step()
                 double elol = -log10(1.0/(p-pe) - 1.0)*400.0;
                 double eloh = -log10(1.0/(p+pe) - 1.0)*400.0;
                 double eloe = (eloh - elol)/2;
-                cerr << setprecision(0) << std::fixed << setw(4) << i << ": " << "Abs Score: " << setw(5) << indi[i].score << "/" << setw(5) << n << "  Rel Score: " << setprecision(4) << setw(6) << p << " ±" << setw(6) << pe << "  Elo: " <<  setprecision(1) << setw(5) << elo << " ±" << setw(5) << eloe << "      " << endl;
+                cout << setprecision(0) << std::fixed << setw(4) << i << ": " << "Abs Score: " << setw(5) << indi[i].score << "/" << setw(5) << n << "  Rel Score: " << setprecision(4) << setw(6) << p << " ±" << setw(6) << pe << "  Elo: " <<  setprecision(1) << setw(5) << elo << " ±" << setw(5) << eloe << "      " << endl;
         
     }
 }
@@ -229,11 +239,9 @@ void Evolution::step()
 int Evolution::findmax()
 {
     double maxelo = -400.0;
-    int bestIndi;
     for (int i=0; i<nIndi; ++i) {
         if ((minElo[i]+maxElo[i])/2 > maxelo) {
             maxelo = (minElo[i]+maxElo[i])/2;
-            bestIndi = i;
         }
     }
     int nMax=0;
@@ -250,8 +258,8 @@ void Evolution::selection()
 {
     sort(indi.begin()+1, indi.end());
     for (unsigned i=0; i<results.size(); ++i) {
-        cerr << setw(4) << i << ": ";
-        cerr << setw(5) << indi[i].score << endl;
+        cout << setw(4) << i << ": ";
+        cout << setw(5) << indi[i].score << endl;
     }
     for (unsigned i=(indi.size()+1)/2; i<indi.size(); ++i) {
         Individual father = indi[(i & ~1) -indi.size()/2];
@@ -265,7 +273,7 @@ void Evolution::evolve()
 {
     for (int generation=0; ; ++generation) {
         step();
-        cerr << endl << "Generation " << generation << endl;
+        cout << endl << "Generation " << generation << endl;
         selection();
         saveState(generation);
     }
@@ -273,7 +281,7 @@ void Evolution::evolve()
 
 void Evolution::saveState(int g)
 {
-    cerr << "Evolution::saveState(int g)" << endl;
+    cout << "Evolution::saveState(int g)" << endl;
     ofstream file("evo.txt", ios_base::app);
     file << "Generation " << g << endl;
     for (unsigned i=0; i<indi.size(); ++i) {
