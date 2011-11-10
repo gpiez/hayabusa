@@ -329,7 +329,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
     bool leafMaxDepth;
     if (P == leaf) leafMaxDepth=false;
 
-    if (P==tree && Options::pruning && !threatened && !(extend & ExtFirstMove && eval.flags & 2)) {
+    if (P==tree && Options::pruning && !threatened && nt != NodePV && !b.isPieceHanging()) {
         if (depth == eval.dMaxExt + 1) {
             Score<C> fScore;
             fScore.v = estimatedScore - C*eval.prune1 - !!m.capture()*C*eval.prune1c;
@@ -542,11 +542,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
     }
     if (badCaptures > nonCaptures+1) {
         ASSERT(badCaptures <= bad);
-        history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply + rootPly
-#ifdef USE_DIFF_FOR_SORT
-            , pe
-#endif
-        );
+        history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply + rootPly, pe, b.material, eval);
     }
     ASSERT(good<bad);
 

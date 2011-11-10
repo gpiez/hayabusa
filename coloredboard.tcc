@@ -50,31 +50,6 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
     uint64_t to = 1ULL << m.to();
     ASSERT(m.piece());
 
-//     next->cep.castling.data4 = 0;
-// 
-//     if (m.isSpecial()) {
-//         ASSERT(m.piece() != Pawn);
-//         ASSERT(m.piece() != King);
-//         next->getPieces<C,Pawn>() -= from;
-//         next->getPieces<C>(m.piece()) += to;
-//         next->material = material - materialTab[m.capture()] + materialTab[m.piece()] - materialTab[Pawn];
-//     } else {
-//         // Do only fill in the enpPassant field, if there is really a pawn which
-//         // can capture besides the target square. This is because enpassant goes
-//         // into the zobrist key.
-//         ASSERT(occupied[CI] & from);
-//         ASSERT(~occupied[CI] & to);
-//         ASSERT(from != to);
-//         next->getPieces<C>(m.piece()) += to - from;
-//         next->material = material - materialTab[m.capture()];
-//     }
-//     next->fiftyMoves = 0;
-//     next->cep.enPassant = 0;
-//     next->getPieces<-C>(m.capture()) -= to;
-//     next->occupied[CI] = occupied[CI] - from + to;
-//     next->occupied[EI] = occupied[EI] & ~to;
-//     next->occupied1 = next->occupied[CI] | next->occupied[EI];
-
     next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
 
     if (m.isSpecial()) {
@@ -136,48 +111,23 @@ void ColoredBoard<C>::doSpecialMove(BoardBase* next, Move m, uint64_t from, uint
     }
 }
 
-// template<Colors C>
-// __v8hi ColoredBoard<C>::estimatedEval(const Move m, const Eval& eval) const {
-//     return inline_estimatedEval(m, eval);
-// }
-// template<Colors C>
-// __v8hi ColoredBoard<C>::inline_estimatedEval(const Move m, const Eval& eval) const {
-//     ASSERT(m.piece());
-//     if (m.isSpecial()) {
-//         unsigned piece = m.piece() & 7;
-//         if (piece == King) {
-//             ASSERT(m.capture() == 0);
-//             __v8hi estKing = keyScore.vector
-//                 - eval.getKSVector(C*King, m.from())
-//                 + eval.getKSVector(C*King, m.to());
-//             if (m.to() == (pov^g1)) {
-//                 return estKing - eval.getKSVector(C*Rook, pov^h1)
-//                                + eval.getKSVector(C*Rook, pov^f1);
-//             } else {
-//                 return estKing - eval.getKSVector(C*Rook, pov^a1)
-//                                + eval.getKSVector(C*Rook, pov^d1);
-//             }
-//         } else if (piece == Pawn) {
-//             return keyScore.vector - eval.getKSVector(C*Pawn, m.from())
-//                                    + eval.getKSVector(C*Pawn, m.to())
-//                                    - eval.getKSVector(-C*Pawn, m.to()-C*8);
-// 
-//         } else {
-//             return keyScore.vector - eval.getKSVector(C*Pawn, m.from())
-//                                    + eval.getKSVector(C*piece, m.to())
-//                                    - eval.getKSVector(-C*m.capture(), m.to());
-//         }
-//     } else {
-//         return keyScore.vector
-//             - eval.getKSVector(C*m.piece(), m.from())
-//             + eval.getKSVector(C*m.piece(), m.to())
-//             - eval.getKSVector(-C*m.capture(), m.to());
-//     }
-// }
-
 template<Colors C>
 Key ColoredBoard<C>::getZobrist() const {
     return keyScore.key + cep.castling.data4 + cep.enPassant + (C+1);
 }
 
+template<Colors C>
+int ColoredBoard<C>::isPieceHanging() const {
+    uint64_t oppAtt = getAttacks<-C,Pawn>();
+    uint64_t ownPieces = getOcc<C>() & ~getPieces<C,Pawn>();
+    if (ownPieces & oppAtt) return true;
+    oppAtt |= getAttacks<-C, Knight>() | getAttacks<-C, Bishop>();
+    ownPieces &= ~(getPieces<C,Knight>() | getPieces<C,Bishop>());
+    if (ownPieces & oppAtt) return true;
+    oppAtt |= getAttacks<-C, Rook>();
+    ownPieces &= ~getPieces<C,Rook>();
+    if (ownPieces & oppAtt) return true;
+
+    return false;
+}
 #endif /* COLOREDBOARD_TCC_ */
