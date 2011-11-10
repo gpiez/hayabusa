@@ -250,10 +250,10 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                         if (value >= beta3.v) {
                             now = system_clock::now();
                             if (!Options::quiet) console->send(status(now, value.v) + " lowerbound");
-                            alpha.v = value.v;
                             if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                             value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, NodePV NODE);
                             if (stopSearch) break;
+                            alpha.v = value.v;
                         }
                     }
                     ml.nodesCount(stats.node - subnode);

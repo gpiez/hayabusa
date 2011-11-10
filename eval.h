@@ -345,7 +345,13 @@ public:
     int pieceDefense;
     int attackTable2[1024];
     int attackTotal;
-
+    int nAttackersTab[16];
+    int attackFirst;
+    int attackSlope;
+    struct {
+        int opening;
+        int endgame;
+    } scale[128];
 #ifdef MYDEBUG
     mutable uint64_t bmob1, bmob2, bmob3, bmobn;
     mutable uint64_t rmob1, rmob2, rmob3, rmobn;

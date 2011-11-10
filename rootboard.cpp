@@ -213,7 +213,7 @@ const BoardBase& RootBoard::currentBoard() const {
 }
 
 const BoardBase& RootBoard::setup(const std::string& str) {
-    static const StringList tokens = StringList() << "fen" << "bm" << "am" << "id";
+    static const StringList tokens = StringList() << "fen" << "bm" << "am" << "id" << "pm";
     auto tl = split("fen " + str, "; ").parse(tokens);
     if (tl.find("fen") == tl.end()) return currentBoard();
     info = tl["id"].join(" ");

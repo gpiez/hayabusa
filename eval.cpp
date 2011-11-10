@@ -185,6 +185,12 @@ void Eval::init() {
     const int totalMaterial = 4*(materialRook+materialBishop+materialKnight) + 2*materialQueen + 16*materialPawn;
     ASSERT(totalMaterial == 56);
 
+    for (int i=0; i<sizeof(scale)/sizeof(*scale); ++i) {
+        int openingScale = i - endgameMaterial + endgameTransitionSlope/2;
+        openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
+        scale[i].endgame = endgameTransitionSlope-openingScale;
+        scale[i].opening = openingScale;
+    }
 //     pawnUnstoppable = 700;
 
     sigmoid(attackR1, 55, 80, 3.0, 3.0, 1); // max bits set = 21
@@ -212,6 +218,7 @@ void Eval::init() {
     initShield();
 
     if (Options::debug & DebugFlags::debugEval) {
+        printSigmoid(nAttackersTab, "nAttackersTab");
         printSigmoid(attackN, "attN");
         printSigmoid(attackTable2, "attTable2");
         printSigmoid(attackN1, "attN1");
@@ -409,6 +416,7 @@ void Eval::initShield() {
         if (index &    4) score += kingShield.outer[0];
         if (index &  040) score += kingShield.outer[1];
         if (index & 0400) score += kingShield.outer[2];
+        ASSERT(score >= 0);
         shieldMirrored[index] = score;
     }
 }
@@ -671,15 +679,15 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         for (unsigned i=0; i<nRows; ++i) {
             pawnEntry.shield2[0][i] = evalShield2<White>(wpawn, i);
 //             if (pawnEntry.openFiles[0] & 1<<i)
-//                 pawnEntry.shield2[0][i] -= kingShield.halfOpenFile;
+//                 pawnEntry.shield2[0][i] += kingShield.halfOpenFile;
             
             pawnEntry.shield2[1][i] = evalShield2<Black>(bpawn, i);
 //             if (pawnEntry.openFiles[1] & 1<<i)
-//                 pawnEntry.shield2[1][i] -= kingShield.halfOpenFile;
+//                 pawnEntry.shield2[1][i] += kingShield.halfOpenFile;
             
             if (pawnEntry.openFiles[0] & pawnEntry.openFiles[1] & 7<<i>>1) {
-                pawnEntry.shield2[1][i] -= kingShield.openFile;
-                pawnEntry.shield2[1][i] -= kingShield.openFile;
+                pawnEntry.shield2[0][i] += kingShield.openFile;
+                pawnEntry.shield2[1][i] += kingShield.openFile;
             }
         }
         
@@ -945,6 +953,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             attackingPieces = (attackingPieces * (0x100 - (0x200>>nAttackers))) >> 8;
         else
             attackingPieces = 0;
+//         attackingPieces = (nAttackersTab[nAttackers] * attackingPieces) >> 8;
     } else {
         if (P != Endgame) {
             attackingPieces += attackP[popcount15(b.getAttacks<C,Pawn>() & oppking)];
@@ -952,9 +961,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         }
     }
     
-    int openingScale = b.material - endgameMaterial + endgameTransitionSlope/2;
-    openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
-    score += ((endgameTransitionSlope-openingScale)*score_endgame + openingScale*score_opening) >> logEndgameTransitionSlope;
+    score += (scale[b.material].endgame*score_endgame + scale[b.material].opening*score_opening) >> logEndgameTransitionSlope;
 
     return score;
 }
@@ -1163,31 +1170,12 @@ int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
     if (b.getPieces<White,Pawn>() + b.getPieces<Black,Pawn>()) {
         PawnEntry pe = pawns(b);
 
-        int openingScale = b.material - endgameMaterial + endgameTransitionSlope/2;
-//         openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
         int m, a, e, pa;
         int wdp, bdp;
-/*        int wap, bap, wdp, bdp;
-        wap = bap = wdp = bdp = 0;
-        m = mobility<White, Opening>(b, wap, wdp) - mobility<Black, Opening>(b, bap, bdp);
-        a = attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);*/
-        if (openingScale >= endgameTransitionSlope) {
-            m = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
-            a = attackDiff(b, pe, wap, bap, wdp, bdp);
-            e = 0;
-            pa = pe.score;
-        } else if (openingScale <= 0) {
-            m = mobilityDiff<Endgame>(b, wap, bap, wdp, bdp);
-            a = 0;
-            e = endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm);
-            pa = pe.score;
-        } else {
-            m = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
-            a = (openingScale*attackDiff(b, pe, wap, bap, wdp, bdp)) >> logEndgameTransitionSlope;
-            e = ((endgameTransitionSlope-openingScale)*(endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm))) >> logEndgameTransitionSlope;
-            pa = pe.score;
-            
-        }
+        m = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
+        a = scale[b.material].opening ? scale[b.material].opening*attackDiff(b, pe, wap, bap, wdp, bdp) >> logEndgameTransitionSlope : 0;
+        e = scale[b.material].endgame ? scale[b.material].endgame *(endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm)) >> logEndgameTransitionSlope : 0;
+        pa = pe.score;
         int pi = pieces<White>(b, pe) - pieces<Black>(b, pe);
         print_debug(debugEval, "endgame:        %d\n", e);
         print_debug(debugEval, "mobility:       %d\n", m);
@@ -1511,21 +1499,14 @@ void Eval::setParameters(const Parameters& p)
     sigmoid(defenseN, knight.defense, knight.defense*2, 0, 3.0, 1);
     sigmoid(defenseQ, queen.defense, queen.defense*2, 0, 3.0, 1);
 
+    SETPARM(attackFirst);
+    SETPARM(attackSlope);
+    sigmoid(nAttackersTab, attackFirst, 256, 0, attackSlope, 1);
 }
 
 int CompoundScore::calc(int material, const Eval& eval) const
 {
-        int openingScale = material - eval.endgameMaterial + endgameTransitionSlope/2;
-        if (openingScale > endgameTransitionSlope)
-            openingScale = endgameTransitionSlope;
-        else if (openingScale <= 0)
-            openingScale = 0;
-
-        return (openingScale*opening + (endgameTransitionSlope-openingScale)*endgame) >> logEndgameTransitionSlope;
-
-        //        return material >= endgameMaterial ? opening : endgame;
-//        int compound = *(int*)this;
-//        return material >= endgameMaterial ? (int16_t)compound : compound >> 16;
+    return (eval.scale[material].opening*opening + eval.scale[material].endgame*endgame) >> logEndgameTransitionSlope;
 }
 
 void sigmoid(int n, int p[], double start, double end, double dcenter, double width) {
