@@ -18,6 +18,8 @@
 
 #define BESTKILLER 64
 
+class Eval;
+
 struct PositionalError {
     RawScore v;
     RawScore error;
@@ -40,11 +42,7 @@ public:
     void init64(uint8_t v[nSquares]);
     template<Colors C> void good(Move, unsigned ply);
     template<Colors C> int get(Move, unsigned ply);
-    template<Colors C> void sort(Move* begin, unsigned n, unsigned ply
-#ifdef USE_DIFF_FOR_SORT
-            , const PositionalError (&pe)[nPieces*2+1][nSquares][nSquares]
-#endif            
-    );
+    template<Colors C> void sort(Move* begin, unsigned n, unsigned ply, const PositionalError (&pe)[nPieces*2+1][nSquares][nSquares], const int material, const Eval& eval);
 };
 
 #endif /* HISTORY_H_ */

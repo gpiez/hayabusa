@@ -24,7 +24,6 @@
 #endif
 
 #define CALCULATE_MEAN_POSITIONAL_ERROR
-#define USE_DIFF_FOR_SORT
 
 //#define static_assert(x) char __y[(x) ? 1 : -1 ] __attribute__((unused));
 
