@@ -712,7 +712,6 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
 template<Colors C, GamePhase P> // TODO use overload for P == Endgame, where attack and defend are not used
 inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-    int score = 0;
     int score_endgame = 0;
     int score_opening = 0;
     attackingPieces = 0;
@@ -768,20 +767,17 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             batt1 |= bxray;
             batt2 |= bxray | batt1;
             ASSERT((batt2 & batt1) == batt1);
-            if (flags & 1) {
-                uint64_t a = batt1 & oppking;
-                uint64_t d = batt1 & ownking;
-                attackingPieces += attackB[popcount15(a)];
-                nAttackers += !!a;
-                defendingPieces += defenseB[popcount15(d)];
-                nDefenders += !!d;
-                print_debug(debugEval, "bAtt index: %d, bAtt value: %d\n", popcount15(a), attackB[popcount15(a)]);
-                print_debug(debugEval, "bDef index: %d, bDef value: %d\n", popcount15(d), defenseB[popcount15(d)]);
-            } else {
-                attackingPieces += attackB1[popcount15(batt1 & oppking)];
-                attackingPieces += attackB2[popcount15(batt2 & oppking)];
-                if (batt1 & ownking) defendingPieces++;
-            }
+            uint64_t a = batt1 & oppking;
+            uint64_t d = batt1 & ownking;
+            attackingPieces += attackB[popcount15(a)];
+            nAttackers += !!a;
+            defendingPieces += defenseB[popcount15(d)];
+            nDefenders += !!d;
+            print_debug(debugEval, "bAtt index: %d, bAtt value: %d\n", popcount15(a), attackB[popcount15(a)]);
+            print_debug(debugEval, "bDef index: %d, bDef value: %d\n", popcount15(d), defenseB[popcount15(d)]);
+//                 attackingPieces += attackB1[popcount15(batt1 & oppking)];
+//                 attackingPieces += attackB2[popcount15(batt2 & oppking)];
+//                 if (batt1 & ownking) defendingPieces++;
             print_debug(debugMobility, "b attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(batt1 & oppking), attackB1[popcount15(batt1 & oppking)], popcount15(batt2 & oppking), attackB2[popcount15(batt2 & oppking)]);
         }
 
@@ -808,20 +804,17 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         if (P != Endgame) {
             natt2 |= natt1;
             ASSERT((natt2 & natt1) == natt1);
-            if (flags & 1) {
-                uint64_t a = natt1 & oppking;
-                uint64_t d = natt1 & ownking;
-                attackingPieces += attackN[popcount15(a)];
-                nAttackers += !!a;
-                defendingPieces += defenseN[popcount15(d)];
-                nDefenders += !!d;
-                print_debug(debugEval, "nAtt index: %d, nAtt value: %d\n", popcount15(a), attackN[popcount15(a)]);
-                print_debug(debugEval, "nDef index: %d, nDef value: %d\n", popcount15(d), defenseN[popcount15(d)]);
-            } else {
-                attackingPieces += attackN1[popcount15(natt1 & oppking)];
-                attackingPieces += attackN2[popcount15(natt2 & oppking)];
-                if (b.knightAttacks[sq] & ownking) defendingPieces++;
-            }
+            uint64_t a = natt1 & oppking;
+            uint64_t d = natt1 & ownking;
+            attackingPieces += attackN[popcount15(a)];
+            nAttackers += !!a;
+            defendingPieces += defenseN[popcount15(d)];
+            nDefenders += !!d;
+            print_debug(debugEval, "nAtt index: %d, nAtt value: %d\n", popcount15(a), attackN[popcount15(a)]);
+            print_debug(debugEval, "nDef index: %d, nDef value: %d\n", popcount15(d), defenseN[popcount15(d)]);
+//                 attackingPieces += attackN1[popcount15(natt1 & oppking)];
+//                 attackingPieces += attackN2[popcount15(natt2 & oppking)];
+//                 if (b.knightAttacks[sq] & ownking) defendingPieces++;
             print_debug(debugMobility, "n attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(natt1 & oppking), attackN1[popcount15(natt1 & oppking)], popcount15(natt2 & oppking), attackN2[popcount15(natt2 & oppking)]);
         }
 //         if (rmob3 & oppking) attackingPieces++;
@@ -863,20 +856,17 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             ratt1 |= rxray;
             ratt2 |= rxray | ratt1;
             ASSERT((ratt2 & ratt1) == ratt1);
-            if (flags & 1) {
-                uint64_t a = ratt1 & oppking;
-                uint64_t d = ratt1 & ownking;
-                attackingPieces += attackR[popcount15(a)];
-                nAttackers += !!a;
-                defendingPieces += defenseR[popcount15(d)];
-                nDefenders += !!d;
-                print_debug(debugEval, "rAtt index: %d, rAtt value: %d\n", popcount15(a), attackR[popcount15(a)]);
-                print_debug(debugEval, "rDef index: %d, rDef value: %d\n", popcount15(d), defenseR[popcount15(d)]);
-            } else {
-                attackingPieces += attackR1[popcount15(ratt1 & oppking)];
-                attackingPieces += attackR2[popcount15(ratt2 & oppking)];
-                if (ratt1 & ownking) defendingPieces++;
-            }
+            uint64_t a = ratt1 & oppking;
+            uint64_t d = ratt1 & ownking;
+            attackingPieces += attackR[popcount15(a)];
+            nAttackers += !!a;
+            defendingPieces += defenseR[popcount15(d)];
+            nDefenders += !!d;
+            print_debug(debugEval, "rAtt index: %d, rAtt value: %d\n", popcount15(a), attackR[popcount15(a)]);
+            print_debug(debugEval, "rDef index: %d, rDef value: %d\n", popcount15(d), defenseR[popcount15(d)]);
+//                 attackingPieces += attackR1[popcount15(ratt1 & oppking)];
+//                 attackingPieces += attackR2[popcount15(ratt2 & oppking)];
+//                 if (ratt1 & ownking) defendingPieces++;
             print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
         }
         unsigned m = popcount(rmob1x);
@@ -913,20 +903,17 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             qatt1 |= qxray;
             qatt2 |= qxray | qatt1;
             ASSERT((qatt2 & qatt1) == qatt1);
-            if (flags & 1) {
-                uint64_t a = qatt1 & oppking;
-                uint64_t d = qatt1 & ownking;
-                attackingPieces += attackQ3[popcount15(a)];
-                nAttackers += !!a;
-                defendingPieces += defenseQ[popcount15(d)];
-                nDefenders += !!d;
-                print_debug(debugEval, "qAtt index: %d, qAtt value: %d\n", popcount15(a), attackQ3[popcount15(a)]);
-                print_debug(debugEval, "qDef index: %d, qDef value: %d\n", popcount15(d), defenseQ[popcount15(d)]);
-            } else {
-                attackingPieces += attackQ1[popcount15(qatt1 & oppking)];
-                attackingPieces += attackQ2[popcount15(qatt2 & oppking)];
-                if (qatt1 & ownking) defendingPieces++;
-            }
+            uint64_t a = qatt1 & oppking;
+            uint64_t d = qatt1 & ownking;
+            attackingPieces += attackQ3[popcount15(a)];
+            nAttackers += !!a;
+            defendingPieces += defenseQ[popcount15(d)];
+            nDefenders += !!d;
+            print_debug(debugEval, "qAtt index: %d, qAtt value: %d\n", popcount15(a), attackQ3[popcount15(a)]);
+            print_debug(debugEval, "qDef index: %d, qDef value: %d\n", popcount15(d), defenseQ[popcount15(d)]);
+//                 attackingPieces += attackQ1[popcount15(qatt1 & oppking)];
+//                 attackingPieces += attackQ2[popcount15(qatt2 & oppking)];
+//                 if (qatt1 & ownking) defendingPieces++;
             print_debug(debugMobility, "q attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(qatt1 & oppking), attackQ1[popcount15(qatt1 & oppking)], popcount15(qatt2 & oppking), attackQ2[popcount15(qatt2 & oppking)]);
         }
         unsigned m = popcount(qmob1x);
@@ -939,31 +926,26 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(qmob1); printBit(qmob2); /*printBit(rmob3);*/ }
     }
 
-    if (flags & 1) {
-        uint64_t a = b.getAttacks<C,Pawn>() & oppking;
-        attackingPieces += attackP2[popcount15(a)];
-        nAttackers += !!a;
-        print_debug(debugEval, "pAtt index: %d, pAtt value: %d\n", popcount15(a), attackP2[popcount15(a)]);
-        a = b.getAttacks<C,King>() & oppking;
-        attackingPieces += attackK2[popcount15(a)];
-        nAttackers += !!a;
-        print_debug(debugEval, "kAtt index: %d, kAtt value: %d\n", popcount15(a), attackK2[popcount15(a)]);
+    uint64_t a = b.getAttacks<C,Pawn>() & oppking;
+    attackingPieces += attackP2[popcount15(a)];
+    nAttackers += !!a;
+    print_debug(debugEval, "pAtt index: %d, pAtt value: %d\n", popcount15(a), attackP2[popcount15(a)]);
+    a = b.getAttacks<C,King>() & oppking;
+    attackingPieces += attackK2[popcount15(a)];
+    nAttackers += !!a;
+    print_debug(debugEval, "kAtt index: %d, kAtt value: %d\n", popcount15(a), attackK2[popcount15(a)]);
 
-        if (nAttackers>1)
-            attackingPieces = (attackingPieces * (0x100 - (0x200>>nAttackers))) >> 8;
-        else
-            attackingPieces = 0;
+    if (nAttackers>1)
+        attackingPieces = (attackingPieces * (0x100 - (0x200>>nAttackers))) >> 8;
+    else
+        attackingPieces = 0;
 //         attackingPieces = (nAttackersTab[nAttackers] * attackingPieces) >> 8;
-    } else {
-        if (P != Endgame) {
-            attackingPieces += attackP[popcount15(b.getAttacks<C,Pawn>() & oppking)];
-            attackingPieces += attackK[popcount15(b.getAttacks<C,King>() & oppking)];
-        }
-    }
+//         if (P != Endgame) {
+//             attackingPieces += attackP[popcount15(b.getAttacks<C,Pawn>() & oppking)];
+//             attackingPieces += attackK[popcount15(b.getAttacks<C,King>() & oppking)];
+//         }
     
-    score += (scale[b.material].endgame*score_endgame + scale[b.material].opening*score_opening) >> logEndgameTransitionSlope;
-
-    return score;
+    return (scale[b.material].endgame*score_endgame + scale[b.material].opening*score_opening) >> logEndgameTransitionSlope;
 }
 
 template<Colors C>
@@ -1136,11 +1118,8 @@ int Eval::mobilityDiff(const BoardBase& b, int& wap, int& bap, int& wdp, int& bd
 }
 
 int Eval::attackDiff(const BoardBase& b, const PawnEntry& pe, int wap, int bap, int wdp, int bdp) const {
-    if (flags & 1) {
-        return attack2<White>(b, pe, wap, bdp) - attack2<Black>(b, pe, bap, wdp);     
-    } else {
-        return attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);
-    }
+    return attack2<White>(b, pe, wap, bdp) - attack2<Black>(b, pe, bap, wdp);     
+//         return attack<White>(b, pe, wap, bdp) - attack<Black>(b, pe, bap, wdp);
 }
             
 int Eval::operator () (const BoardBase& b, int stm ) const {
