@@ -83,7 +83,6 @@ static const int hashDefaultSize = 16ULL; //Mibibytes
 // tcp server incurs some lag
 static const std::chrono::milliseconds operatorTime = std::chrono::milliseconds(200);
 static const std::chrono::milliseconds minimumTime = std::chrono::milliseconds(100);
-static const unsigned int maxMovesNull = 8;     // So a lone king with 8 possible moves will always inhibit null moves
 static const int maxRows = 1000;
 static const unsigned int maxThreadId = 255;
 static const int maxHistory = 256;
