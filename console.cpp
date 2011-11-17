@@ -32,6 +32,8 @@
 #include "stringlist.h"
 #include "selfgame.h"
 #include "evolution.h"
+#include "jobs.tcc"
+#include "score.tcc"
 
 namespace Options {
     unsigned int        splitDepth = 1000;

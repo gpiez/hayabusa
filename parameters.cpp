@@ -280,7 +280,6 @@ void Parameters::init()
     Parameters::add("dMinForkExt", 4);
     Parameters::add("dMinMateExt", 4);
     Parameters::add("dMinPawnExt", 4);
-    Parameters::add("flags", 3);
 
     Parameters::add("oppKingOwnPawnV", 14);  // only 1..7 used
     Parameters::add("ownKingOwnPawnV", 8);
@@ -294,8 +293,8 @@ void Parameters::init()
     Parameters::add("prune2", 110);
     Parameters::add("prune1c", 60);
     Parameters::add("prune2c", 0);
-    Parameters::add("dNullIncr", 0x2a, 0, 0xfffffff, 0);
-    Parameters::add("dVerifyIncr", 0x2a, 0, 0xfffffff, 0);
+    Parameters::add("dNullIncr", 0b10000100001010, 0, 0xfffffff, 0);
+    Parameters::add("dVerifyIncr", 0b10000100001010, 0, 0xfffffff, 0);
     Parameters::add("dMinReduction", 2, 0, 10, 1);
 
     Parameters::add("pawnAttack", 112);
@@ -355,16 +354,27 @@ void Parameters::init()
     Parameters::add("kingShield.openFile",   -25);
     Parameters::add("kingShield.halfOpenFile",-25);
 
-    Parameters::add("pawnShield", 100);
-    Parameters::add("pieceDefense", 100);
-    Parameters::add("pieceAttack", 100);
+//     Parameters::add("pawnShield", 100);
+//     Parameters::add("pieceDefense", 100);
+//     Parameters::add("pieceAttack", 100);
+//     Parameters::add("attackFirst", 64);
+//     Parameters::add("attackSlope", 3.0);
+//     Parameters::add("flags", 3);
+//     Parameters::add("queen.attack", 120);
+//     Parameters::add("rook.attack", 50);
+    Parameters::add("pawnShield", 175);
+    Parameters::add("pieceDefense", 125);
+    Parameters::add("pieceAttack", 150);
+    Parameters::add("attackFirst", 75);
+    Parameters::add("attackSlope", 1.0);
+    Parameters::add("flags", 15);
+    Parameters::add("queen.attack", 160);
+    Parameters::add("rook.attack", 110);
 
     Parameters::add("attackTotal", 200);
 
-    Parameters::add("rook.attack", 50);
     Parameters::add("bishop.attack", 40);
     Parameters::add("knight.attack", 40);
-    Parameters::add("queen.attack", 120);
     Parameters::add("pawn.attack", 25);
     Parameters::add("king.attack", 40);
     Parameters::add("rook.defense", 10);
@@ -374,8 +384,6 @@ void Parameters::init()
 
     Parameters::add("castlingTempo", 5);
 
-    Parameters::add("attackFirst", 64);
-    Parameters::add("attackSlope", 3.0);
 
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) 
