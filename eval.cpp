@@ -741,13 +741,13 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         uint64_t batt1 = fold(bs->d13);
         uint64_t bmob1 = batt1 & restrictions;
         // remove blocked pawns, this positions will not be reachable even in two moves
-        uint64_t bmob2 = bmob1 & noBlockedPawns;
+//         uint64_t bmob2 = bmob1 & noBlockedPawns;
         // remove own pieces
         bmob1 &= ~b.getOcc<C>();
         uint64_t bmob1x = bmob1;
         // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move
-        uint64_t batt2 = b.build13Attack(bmob1);
-        bmob2 |= batt2 & restrictions & ~b.getOcc<C>();
+//         uint64_t batt2 = b.build13Attack(bmob1);
+//         bmob2 |= batt2 & restrictions & ~b.getOcc<C>();
 //             batt2 |= batt1;
         // generator for three move squares, mask blocked pawns
 //                 uint64_t rmob3 = rmob2 & noBlockedPawns;
@@ -761,12 +761,12 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         */
         uint64_t bxray = fold( ~ pcmpeqq(bs->d13 & v2queen, zero) & b.qsingle[CI][0].d13); //TODO optimize for queenless positions
         bmob1 |= bxray & ~b.getOcc<C>() & restrictions;
-        bmob2 |= bxray & ~b.getOcc<C>() & restrictions;
-        ASSERT((bmob2 & bmob1) == bmob1);
+//         bmob2 |= bxray & ~b.getOcc<C>() & restrictions;
+//         ASSERT((bmob2 & bmob1) == bmob1);
         if (P != Endgame) {
             batt1 |= bxray;
-            batt2 |= bxray | batt1;
-            ASSERT((batt2 & batt1) == batt1);
+//             batt2 |= bxray | batt1;
+//             ASSERT((batt2 & batt1) == batt1);
             uint64_t a = batt1 & oppking;
             uint64_t d = batt1 & ownking;
             attackingPieces += attackB[popcount15(a)];
@@ -778,7 +778,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //                 attackingPieces += attackB1[popcount15(batt1 & oppking)];
 //                 attackingPieces += attackB2[popcount15(batt2 & oppking)];
 //                 if (batt1 & ownking) defendingPieces++;
-            print_debug(debugMobility, "b attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(batt1 & oppking), attackB1[popcount15(batt1 & oppking)], popcount15(batt2 & oppking), attackB2[popcount15(batt2 & oppking)]);
+//             print_debug(debugMobility, "b attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(batt1 & oppking), attackB1[popcount15(batt1 & oppking)], popcount15(batt2 & oppking), attackB2[popcount15(batt2 & oppking)]);
         }
 
         unsigned m = popcount(bmob1x);
@@ -788,22 +788,22 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         mobStat[CI][Bishop][0][popcount(bmob1)]++;
         mobStat[CI][Bishop][1][popcount(bmob2)]++;
 #endif
-        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(bmob1); printBit(bmob2); /*printBit(rmob3);*/ }
+//         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(bmob1); printBit(bmob2); /*printBit(rmob3);*/ }
     }
     
     for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
         uint64_t sq = bit(p);
         uint64_t natt1 = b.knightAttacks[sq];
         uint64_t nmob1 = natt1 & restrictions;
-        uint64_t nmob2 = nmob1 & noBlockedPawns;
+//         uint64_t nmob2 = nmob1 & noBlockedPawns;
         nmob1 &= ~b.getOcc<C>();
         uint64_t nmob1x = nmob1;
-        uint64_t natt2 = b.buildNAttack(nmob1);
-        nmob2 |= natt2 & restrictions & ~b.getOcc<C>();
-        ASSERT((nmob2 & nmob1) == nmob1);
+//         uint64_t natt2 = b.buildNAttack(nmob1);
+//         nmob2 |= natt2 & restrictions & ~b.getOcc<C>();
+//         ASSERT((nmob2 & nmob1) == nmob1);
         if (P != Endgame) {
-            natt2 |= natt1;
-            ASSERT((natt2 & natt1) == natt1);
+//             natt2 |= natt1;
+//             ASSERT((natt2 & natt1) == natt1);
             uint64_t a = natt1 & oppking;
             uint64_t d = natt1 & ownking;
             attackingPieces += attackN[popcount15(a)];
@@ -815,7 +815,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //                 attackingPieces += attackN1[popcount15(natt1 & oppking)];
 //                 attackingPieces += attackN2[popcount15(natt2 & oppking)];
 //                 if (b.knightAttacks[sq] & ownking) defendingPieces++;
-            print_debug(debugMobility, "n attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(natt1 & oppking), attackN1[popcount15(natt1 & oppking)], popcount15(natt2 & oppking), attackN2[popcount15(natt2 & oppking)]);
+//             print_debug(debugMobility, "n attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(natt1 & oppking), attackN1[popcount15(natt1 & oppking)], popcount15(natt2 & oppking), attackN2[popcount15(natt2 & oppking)]);
         }
 //         if (rmob3 & oppking) attackingPieces++;
         unsigned m = popcount(nmob1x);
@@ -823,8 +823,8 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         score_endgame += nme[m];
 #ifdef MYDEBUG
         mobStat[CI][Knight][0][popcount(nmob1)]++;
-        mobStat[CI][Knight][1][popcount(nmob2)]++;
-        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(nmob1); printBit(nmob2); /*printBit(rmob3);*/ }
+//         mobStat[CI][Knight][1][popcount(nmob2)]++;
+//         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(nmob1); printBit(nmob2); /*printBit(rmob3);*/ }
 #endif
 
     }
@@ -837,25 +837,25 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         uint64_t ratt1 = fold(rs->d02);
         uint64_t rmob1 = ratt1 & restrictions;
         // remove blocked pawns, this positions will not be reachable even in two moves
-        uint64_t rmob2 = rmob1 & noBlockedPawns;
+//         uint64_t rmob2 = rmob1 & noBlockedPawns;
         // remove own pieces
         rmob1 &= ~b.getOcc<C>();
         uint64_t rmob1x = rmob1;
         // restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move
-        uint64_t ratt2 = b.build02Attack(rmob1);
-        rmob2 |= ratt2 & restrictions & ~b.getOcc<C>();
+//         uint64_t ratt2 = b.build02Attack(rmob1);
+//         rmob2 |= ratt2 & restrictions & ~b.getOcc<C>();
 
         __v2di connectedQR = ~pcmpeqq(rs->d02 & v2queen, zero) & b.qsingle[CI][0].d02;
         if (b.rsingle[CI][1].move.data)
             connectedQR |= ~ pcmpeqq(rs->d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero) & (b.rsingle[CI][0].d02 | b.rsingle[CI][1].d02);
         uint64_t rxray = fold(connectedQR); //TODO optimize for queenless positions
         rmob1 |= rxray & ~b.getOcc<C>() & restrictions;
-        rmob2 |= rxray & ~b.getOcc<C>() & restrictions;
-        ASSERT((rmob2 & rmob1) == rmob1);
+//         rmob2 |= rxray & ~b.getOcc<C>() & restrictions;
+//         ASSERT((rmob2 & rmob1) == rmob1);
         if (P != Endgame) {
             ratt1 |= rxray;
-            ratt2 |= rxray | ratt1;
-            ASSERT((ratt2 & ratt1) == ratt1);
+//             ratt2 |= rxray | ratt1;
+//             ASSERT((ratt2 & ratt1) == ratt1);
             uint64_t a = ratt1 & oppking;
             uint64_t d = ratt1 & ownking;
             attackingPieces += attackR[popcount15(a)];
@@ -867,7 +867,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //                 attackingPieces += attackR1[popcount15(ratt1 & oppking)];
 //                 attackingPieces += attackR2[popcount15(ratt2 & oppking)];
 //                 if (ratt1 & ownking) defendingPieces++;
-            print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
+//             print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
         }
         unsigned m = popcount(rmob1x);
         score_opening += rmo[m];
@@ -876,18 +876,18 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         mobStat[CI][Rook][0][popcount(rmob1)]++;
         mobStat[CI][Rook][1][popcount(rmob2)]++;
 #endif
-        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); /*printBit(rmob3);*/ }
+//         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); /*printBit(rmob3);*/ }
     }
 
     if (b.getPieces<C,Queen>()) {
         restrictions &= ~(b.getAttacks<-C,Rook>());
         uint64_t qatt1 = b.getAttacks<C,Queen>();
         uint64_t qmob1 = qatt1 & restrictions;
-        uint64_t qmob2 = qmob1 & noBlockedPawns;
+//         uint64_t qmob2 = qmob1 & noBlockedPawns;
         qmob1 &= ~b.getOcc<C>();
         uint64_t qmob1x = qmob1;
-        uint64_t qatt2 = b.build02Attack(qmob1) | b.build13Attack(qmob1);
-        qmob2 |= qatt2 & restrictions & ~b.getOcc<C>();
+//         uint64_t qatt2 = b.build02Attack(qmob1) | b.build13Attack(qmob1);
+//         qmob2 |= qatt2 & restrictions & ~b.getOcc<C>();
         unsigned q=bit(b.getPieces<C,Queen>());
         __v2di connectedBR = ~ pcmpeqq(b.qsingle[CI][0].d13 & _mm_set1_epi64x(b.getPieces<C,Bishop>()), zero)
             & allBishopAttacks
@@ -897,12 +897,12 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
             & b.bits[q].mask02;
         uint64_t qxray = fold(connectedBR); //TODO optimize for queenless positions
         qmob1 |= qxray & ~b.getOcc<C>() & restrictions;
-        qmob2 |= qxray & ~b.getOcc<C>() & restrictions;
-        ASSERT((qmob2 & qmob1) == qmob1);
+//         qmob2 |= qxray & ~b.getOcc<C>() & restrictions;
+//         ASSERT((qmob2 & qmob1) == qmob1);
         if (P != Endgame) {
             qatt1 |= qxray;
-            qatt2 |= qxray | qatt1;
-            ASSERT((qatt2 & qatt1) == qatt1);
+//             qatt2 |= qxray | qatt1;
+//             ASSERT((qatt2 & qatt1) == qatt1);
             uint64_t a = qatt1 & oppking;
             uint64_t d = qatt1 & ownking;
             attackingPieces += attackQ3[popcount15(a)];
@@ -914,7 +914,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //                 attackingPieces += attackQ1[popcount15(qatt1 & oppking)];
 //                 attackingPieces += attackQ2[popcount15(qatt2 & oppking)];
 //                 if (qatt1 & ownking) defendingPieces++;
-            print_debug(debugMobility, "q attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(qatt1 & oppking), attackQ1[popcount15(qatt1 & oppking)], popcount15(qatt2 & oppking), attackQ2[popcount15(qatt2 & oppking)]);
+//             print_debug(debugMobility, "q attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(qatt1 & oppking), attackQ1[popcount15(qatt1 & oppking)], popcount15(qatt2 & oppking), attackQ2[popcount15(qatt2 & oppking)]);
         }
         unsigned m = popcount(qmob1x);
         score_opening += qmo[m];
@@ -923,7 +923,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         mobStat[CI][Queen][0][popcount(qmob1)]++;
         mobStat[CI][Queen][1][popcount(qmob2)]++;
 #endif
-        if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(qmob1); printBit(qmob2); /*printBit(rmob3);*/ }
+//         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(qmob1); printBit(qmob2); /*printBit(rmob3);*/ }
     }
 
     uint64_t a = b.getAttacks<C,Pawn>() & oppking;
