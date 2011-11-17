@@ -219,6 +219,21 @@ haveMate:
                                 | (isQB0Connected & qsingle[CI][0].d13));
             attNotQueen |= xray;
         }
+        // if a queen promotion delivers check, the original queen may disable
+        // the king escape squares, but pawns no longer may
+        if (checkingMoves & pMoves) {   
+            attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Queen>() | getAttacks<C,King>();
+            // backtrack original pawn position and see if it gives a discovered
+            // check. In that case other pieces defending the king are irrelevant
+            uint64_t origPawn = shift<-C*8-1>(pMoves & occupied[EI] & ~file<'a'>());
+            origPawn |= shift<-C*8+1>(pMoves & occupied[EI] & ~file<'h'>());
+            origPawn |= shift<-C*8>(pMoves & ~occupied1);
+            origPawn &= getPieces<C,Pawn>() & pins[CI];
+            ASSERT(origPawn);            
+            if (origPawn & ~pins[EI]) {
+                attNotEnemyKing = xprot = 0;
+            }
+        }
         uint64_t qescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
         qescape = ror(qescape, k-9);
         uint64_t qmate = checkingMoves & attNotQueen & ~(attNotEnemyKing | xprot) & getAttacks<-C,King>();
