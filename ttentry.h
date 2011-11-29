@@ -82,21 +82,14 @@ union TTEntry {
 
 struct PawnEntry {
     enum { upperShift = 16 };
-    uint64_t passers[nColors];  // 16
-    uint16_t upperKey;          //  2
-    int16_t score;              //  2
-    uint8_t openFiles[nColors]; //  2
-    uint8_t weak[nColors];      //  2
-    uint8_t center[nColors];    //  2
-    uint8_t dark[nColors];
-    uint8_t light[nColors];
-    struct Shield {
-        uint8_t qside;
-        uint8_t kside;
-//        uint8_t weakLight;
-//        uint8_t weakDark;
-    } shield[nColors];          //  4
-    int8_t shield2[nColors][nRows];
+    uint64_t passers[nColors];          // 16
+    uint16_t upperKey;                  //  2
+    int16_t score;                      //  2
+    uint8_t openFiles[nColors];         //  2
+    uint8_t weak[nColors];              //  2
+    uint8_t dark[nColors];              //  2
+    uint8_t light[nColors];             //  2
+    int8_t shield2[nColors][nRows];     // 16
 };
 
 struct PerftEntry {
