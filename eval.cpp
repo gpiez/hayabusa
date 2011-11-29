@@ -25,6 +25,8 @@
 #include "transpositiontable.tcc"
 #include "parameters.h"
 
+unsigned Eval::distance[nSquares][nSquares];
+
 static const __v2di zero = {0};
 static const __v2di mask01 = { 0x0101010101010101, 0x0202020202020202 };
 static const __v2di mask23 = { 0x0404040404040404, 0x0808080808080808 };
@@ -63,12 +65,6 @@ static const int ksvb[2][nSquares] = {
     10, 21, 32, 43, 43, 36, 28, 22,
      0, 10, 20, 30, 30, 26, 22, 18
 }};
-
-int shield[01000], shieldMirrored[01000];       //indexed by 9 bits in front of the king
-
-unsigned distance[nSquares][nSquares];
-
-uint64_t mobStat[nColors][nPieces+1][2][nSquares];
 
 void printBit(uint64_t bits) {
     for (int y=8; y; ) {
@@ -144,7 +140,7 @@ static inline int popcount2( uint64_t x )
 #define popcount3(x) __builtin_popcountll(x)
 #define popcount2(x) __builtin_popcountll(x)
 #endif
-
+#if 0
 static inline int weightedPopcount(const uint64_t bb, const int8_t weights[64]) __attribute__((always_inline));
 static inline int weightedPopcount(const uint64_t bb, const int8_t weights[64]) {
 
@@ -167,7 +163,7 @@ static inline int weightedPopcount(const uint64_t bb, const int8_t weights[64]) 
     __v2di s = _mm_sad_epu8(x3+x2+x1+x0, zero);
     return _mm_extract_epi16(s,0) + _mm_extract_epi16(s,4);
 }
-
+#endif
 Eval::Eval(uint64_t pHashSize, const Parameters& p)
 {
     pt = new TranspositionTable<PawnEntry, 4, PawnKey>(pHashSize);
@@ -185,53 +181,22 @@ void Eval::init() {
     const int totalMaterial = 4*(materialRook+materialBishop+materialKnight) + 2*materialQueen + 16*materialPawn;
     ASSERT(totalMaterial == 56);
 
-    for (int i=0; i<sizeof(scale)/sizeof(*scale); ++i) {
+    for (unsigned i=0; i<sizeof(scale)/sizeof(*scale); ++i) {
         int openingScale = i - endgameMaterial + endgameTransitionSlope/2;
         openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
         scale[i].endgame = endgameTransitionSlope-openingScale;
         scale[i].opening = openingScale;
     }
-//     pawnUnstoppable = 700;
-
-    sigmoid(attackR1, 55, 80, 3.0, 3.0, 1); // max bits set = 21
-    sigmoid(attackR2, 55, 80, 6.0, 6.0, 1); // max bits set = 21
-    sigmoid(attackB1, 40, 60, 2.5, 2.5, 1); // max bits set = 21
-    sigmoid(attackB2, 40, 60, 5.0, 5.0, 1); // max bits set = 21
-    sigmoid(attackQ1, 100, 130, 3.5, 3.5, 1); // max bits set = 21
-    sigmoid(attackQ2, 100, 130, 7.0, 7.0, 1); // max bits set = 21
-    sigmoid(attackN1, 40, 60, 2.5, 2.5, 1); // max bits set = 21
-    sigmoid(attackN2, 40, 60, 5.0, 5.0, 1); // max bits set = 21
-    sigmoid(attackP, 40, 95, 2.5, 0.5, 1); // max bits set = 21
-    sigmoid(attackK, 40, 50, 2.0, 1.5, 1); // max bits set = 21
 
     evalHardBudget = -20;
 
-//     for (unsigned x=0; x<4; ++x)
-//         for (unsigned y=1; y<7; ++y) {
-//             bpawnOpen[(7-x)*8 + 7-y] = bpawnOpen[    x*8 + 7-y] = wpawnOpen[(7-x)*8 + y] = wpawnOpen[    x*8 + y]
-//             = (pawnOpening + pawnFileOpen[x])*(pawnOpening + pawnRankOpen[y-1]) / pawnOpening - pawnOpening;
-//             bpawnEnd [(7-x)*8 + 7-y] = bpawnEnd [    x*8 + 7-y] = wpawnEnd [(7-x)*8 + y] = wpawnEnd [    x*8 + y]
-//             = (pawnEndgame + pawnFileEnd[x])*(pawnEndgame + pawnRankEnd[y-1]) / pawnEndgame - pawnEndgame;
-//         }
     initZobrist();
-    initTables();
     initShield();
 
     if (Options::debug & DebugFlags::debugEval) {
         printSigmoid(nAttackersTab, "nAttackersTab");
         printSigmoid(attackN, "attN");
         printSigmoid(attackTable2, "attTable2");
-        printSigmoid(attackN1, "attN1");
-        printSigmoid(attackN2, "attN2");
-        printSigmoid(attackB1, "attB1");
-        printSigmoid(attackB2, "attB2");
-        printSigmoid(attackR1, "attR1");
-        printSigmoid(attackR2, "attR2");
-        printSigmoid(attackQ1, "attQ1");
-        printSigmoid(attackQ2, "attQ2");
-        printSigmoid(attackP, "attP");
-        printSigmoid(attackK, "attK");
-        printSigmoid(attackTable, "att", baseAttack);
         printSigmoid(pawnPasser, "pass");
         printSigmoid(pawnConnPasser, "cpass");
         printSigmoid(oppKingOwnPasser, "eKpas");
@@ -240,6 +205,10 @@ void Eval::init() {
         printSigmoid(ownKingOwnPawn, "mKp");
         printSigmoid(pawnFileOpen, "pfo");
         printSigmoid(pawnFileEnd, "pfe");
+
+        for (unsigned i=0; i<3; ++i) {
+            std::cout << "kingShield" << i << ": " << std::setw(3) << kingShield.inner[i] << std::setw(3) << kingShield.center[i] << std::setw(3) << kingShield.outer[i] << std::endl;
+        }
     }
 }
 
@@ -374,22 +343,6 @@ void Eval::initTables() {
     for (int x1=0; x1<8; ++x1)
     for (int y1=0; y1<8; ++y1)
         distance[x0+8*y0][x1+8*y1] = std::max(abs(x0-x1), abs(y0-y1));
-
-    /*    for (unsigned int x = 0; x<nFiles; ++x)
-        for (unsigned int y = 0; y<nRows; ++y) {
-            uint64_t oking = x+y*nFiles;
-            uint64_t offset = (oking + 010) & 020;    // 070-077 -> 080, 060-067 -> 060
-            borderTab4_0[oking] = (x==0) | (x==7) << 16;
-            borderTab321[oking] = (x==0) | (x==7) << 16 | 0x10101*(y==7);
-            borderTab567[oking] = (x==0) | (x==7) << 16 | 0x10101*(y==0);
-
-            BoardBase b = {{{0}}};
-            for (unsigned int dir = 0; dir<nDirs; ++dir) {
-                b.pieces[oking+dirOffsets[dir]] = 0xff;
-            }
-            kMask0[oking] = (__v16qi&)b.pieces[offset];
-            kMask1[oking] = (__v16qi&)b.pieces[offset-0x10];
-        }*/
 }
 
 void Eval::initShield() {
@@ -404,6 +357,8 @@ void Eval::initShield() {
         if (index &    4) score += kingShield.inner[0];
         if (index &  040) score += kingShield.inner[1];
         if (index & 0400) score += kingShield.inner[2];
+        ASSERT(score >= 0);
+        score = std::min(INT8_MAX, score);
         shield[index] = score;
 
         score = 0;
@@ -417,10 +372,11 @@ void Eval::initShield() {
         if (index &  040) score += kingShield.outer[1];
         if (index & 0400) score += kingShield.outer[2];
         ASSERT(score >= 0);
+        score = std::min(INT8_MAX, score);
         shieldMirrored[index] = score;
     }
 }
-
+#if 0
 template<Colors C>
 PawnEntry::Shield evalShield(const BoardBase &b) {
 
@@ -453,7 +409,7 @@ PawnEntry::Shield evalShield(const BoardBase &b) {
 #endif*/
     return ret;
 }
-
+#endif
 template<Colors C>
 int Eval::pieces(const BoardBase& b, const PawnEntry& p) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
@@ -523,12 +479,14 @@ int Eval::evalShield2(uint64_t pawns, unsigned file) const {
     int bitrank2 = 28-20*C;
     int bitrank3 = 28-12*C;
     int bitrank4 = 28- 4*C;
+
+    // Shift pawns in a position in which they will directly used as part of an
+    // index in a lookup table, add pawns left to a2 and right to h2 pawn
+    unsigned rank2 = pawns >> (bitrank2-1) |  0b1000000001;
+    unsigned rank3 = pawns >> (bitrank3-4) & ~0b1000000001000;
+    unsigned rank4 = pawns >> (bitrank4-7) & ~0b1000000001000000;
     
-    unsigned rank2 = (pawns&rank<C,2>()) >> file+bitrank2-1;
-    unsigned rank3 = (pawns&rank<C,3>()) >> file+bitrank3-4;
-    unsigned rank4 = (pawns&rank<C,4>()) >> file+bitrank4-7;
-    
-    unsigned index = (rank2 & 7) + (rank3 & 070) + (rank4 & 0700);
+    unsigned index = (rank2>>file & 7) + (rank3>>file & 070) + (rank4>>file & 0700);
 
     if (file<4)
         return shield[index];
@@ -673,8 +631,8 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         print_debug(debugEval, "wpawn oiso:     %3d\n", wpio);
         print_debug(debugEval, "bpawn oiso:     %3d\n", bpio);
         
-        pawnEntry.shield[0] = evalShield<White>(b);
-        pawnEntry.shield[1] = evalShield<Black>(b);
+//         pawnEntry.shield[0] = evalShield<White>(b);
+//         pawnEntry.shield[1] = evalShield<Black>(b);
 
         for (unsigned i=0; i<nRows; ++i) {
             pawnEntry.shield2[0][i] = evalShield2<White>(wpawn, i);
@@ -690,7 +648,6 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
                 pawnEntry.shield2[1][i] += kingShield.openFile;
             }
         }
-        
         pawnEntry.upperKey = k >> PawnEntry::upperShift;
         if (k >> PawnEntry::upperShift)
             pt->store(st, pawnEntry);
@@ -722,7 +679,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //     int king = bit(b.getPieces<-C,King>());
     const uint64_t oppking = /*b.kAttacked[king];*/ b.getAttacks<-C,King>();
     const uint64_t ownking = b.getAttacks< C,King>()/* | shift<C* 8>(b.getAttacks< C,King>())*/;
-    const uint64_t noBlockedPawns = ~(b.getPieces<C,Pawn>() & shift<C*-8>(b.getPieces<-C,Pawn>()));      //only own pawns
+//     const uint64_t noBlockedPawns = ~(b.getPieces<C,Pawn>() & shift<C*-8>(b.getPieces<-C,Pawn>()));      //only own pawns
     const __v2di v2queen = _mm_set1_epi64x(b.getPieces<C,Queen>());
 
     uint64_t twoAttacks=( (b.getAttacks<C,Rook>()   &  b.getAttacks<C,Pawn>())
@@ -784,11 +741,6 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         unsigned m = popcount(bmob1x);
         score_opening += bmo[m];
         score_endgame += bme[m];
-#ifdef MYDEBUG
-        mobStat[CI][Bishop][0][popcount(bmob1)]++;
-        mobStat[CI][Bishop][1][popcount(bmob2)]++;
-#endif
-//         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(bmob1); printBit(bmob2); /*printBit(rmob3);*/ }
     }
     
     for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
@@ -821,11 +773,6 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         unsigned m = popcount(nmob1x);
         score_opening += nmo[m];
         score_endgame += nme[m];
-#ifdef MYDEBUG
-        mobStat[CI][Knight][0][popcount(nmob1)]++;
-//         mobStat[CI][Knight][1][popcount(nmob2)]++;
-//         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(nmob1); printBit(nmob2); /*printBit(rmob3);*/ }
-#endif
 
     }
 
@@ -872,11 +819,6 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         unsigned m = popcount(rmob1x);
         score_opening += rmo[m];
         score_endgame += rme[m];
-#ifdef MYDEBUG
-        mobStat[CI][Rook][0][popcount(rmob1)]++;
-        mobStat[CI][Rook][1][popcount(rmob2)]++;
-#endif
-//         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(rmob1); printBit(rmob2); /*printBit(rmob3);*/ }
     }
 
     if (b.getPieces<C,Queen>()) {
@@ -919,11 +861,6 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         unsigned m = popcount(qmob1x);
         score_opening += qmo[m];
         score_endgame += qme[m];
-#ifdef MYDEBUG
-        mobStat[CI][Queen][0][popcount(qmob1)]++;
-        mobStat[CI][Queen][1][popcount(qmob2)]++;
-#endif
-//         if(TRACE_DEBUG && Options::debug & debugMobility) { printBit(qmob1); printBit(qmob2); /*printBit(rmob3);*/ }
     }
 
     uint64_t a = b.getAttacks<C,Pawn>() & oppking;
@@ -947,7 +884,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
     
     return (scale[b.material].endgame*score_endgame + scale[b.material].opening*score_opening) >> logEndgameTransitionSlope;
 }
-
+#if 0
 template<Colors C>
 int Eval::attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
@@ -1007,7 +944,7 @@ int Eval::attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPiece
     print_debug(debugEval, "att*defval%d: %3d\n", CI, att);
     return att;
 }
-
+#endif
 template<Colors C>
 int Eval::attack2(const BoardBase& b, const PawnEntry& p, int attackingPieces, int defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
@@ -1037,7 +974,7 @@ int Eval::attack2(const BoardBase& b, const PawnEntry& p, int attackingPieces, i
     print_debug(debugEval, "piece defense%d: %3d\n", EI, defendingPieces);
     print_debug(debugEval, "piece attack%d: %3d\n", CI, attackingPieces);
 
-    unsigned attack = (-possibleShield*pawnShield + attackingPieces*pieceAttack - defendingPieces*pieceDefense)/256 + sizeof attackTable2 / (2 * sizeof(int));
+    unsigned attack = (-possibleShield*pawnDefense + attackingPieces*pieceAttack - defendingPieces*pieceDefense)/256 + sizeof attackTable2 / (2 * sizeof(int));
     ASSERT(attack < sizeof attackTable2/sizeof(int));
 
     print_debug(debugEval, "attack index%d: %3d\n", CI, attack);
@@ -1292,15 +1229,6 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(pawnDouble);
     SETPARM(pawnShoulder);
 
-    //attack Q                          = 230 = 14
-    //attack Q + N                      = 330 = 20.5
-    //attack Q + R + N = 200 + 80 + 110 = 475 = 30
-    maxAttack = baseAttack + p["deltaAttack"].value;
-    sigmoid(attackTable, baseAttack, maxAttack, 30, 7);
-
-    maxDefense = baseDefense + p["deltaDefense"].value;
-    sigmoid(defenseTable, baseDefense, maxDefense, 8, 4);
-
     SETPARM(pawnPasser2);
     SETPARM(pawnPasser7);
     SETPARM(pawnPasserSlope);
@@ -1433,20 +1361,24 @@ void Eval::setParameters(const Parameters& p)
         dRed[i] = dRed[7];
     }
 
-    SETPARM(kingShield.center[0]);
-    SETPARM(kingShield.center[1]);
-    SETPARM(kingShield.center[2]);
-    SETPARM(kingShield.outer[0]);
-    SETPARM(kingShield.outer[1]);
-    SETPARM(kingShield.outer[2]);
-    SETPARM(kingShield.inner[0]);
-    SETPARM(kingShield.inner[1]);
-    SETPARM(kingShield.inner[2]);
+    SETPARM(kingShield.base);
+    SETPARM(kingShield.vdelta);
+    SETPARM(kingShield.idelta);
+    SETPARM(kingShield.odelta);
+    int scale = (kingShield.odelta+kingShield.idelta)/3 + kingShield.vdelta;
+    kingShield.center[0] = kingShield.base+scale;
+    kingShield.outer[0] = kingShield.base+scale-kingShield.odelta;
+    kingShield.inner[0] = kingShield.base+scale-kingShield.idelta;
+    for (unsigned i=0; i<2; ++i) {
+        kingShield.center[i+1] = kingShield.center[i] - kingShield.vdelta;
+        kingShield.outer[i+1]  = kingShield.outer[i]  - kingShield.vdelta;
+        kingShield.inner[i+1]  = kingShield.inner[i]  - kingShield.vdelta;
+    }
 
     SETPARM(kingShield.openFile);
     SETPARM(kingShield.halfOpenFile);
 
-    SETPARM(pawnShield);
+    SETPARM(pawnDefense);
     SETPARM(pieceDefense);
     SETPARM(pieceAttack);
 
