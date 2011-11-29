@@ -100,9 +100,6 @@ class Eval {
 
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
 
-    int maxAttack;
-    int maxDefense;
-
     Parameters::Piece rook, bishop, queen, knight, pawn, king;
     float queenHValue;
     float queenHInfl;
@@ -141,7 +138,6 @@ class Eval {
     
     int bishopPair;
     int bishopBlockPasser;
-//     int bishopAlone;
 
     float knightHValue;
     float knightHInfl;
@@ -157,7 +153,6 @@ class Eval {
     int knightVE[8];
     float knightCenter;
     int knightPair;
-//     int knightAlone;
     int knightBlockPasser;
     int knightAttack;
     
@@ -222,17 +217,6 @@ class Eval {
     float ownKingOwnPasserV;
     float pawnConnPasserV;
 
-    int attackR1[21];
-    int attackR2[21];
-    int attackB1[21];
-    int attackB2[21];
-    int attackQ1[21];
-    int attackQ2[21];
-    int attackN1[21];
-    int attackN2[21];
-    int attackP[21];
-    int attackK[21];
-
     int attackR[8];
     int attackB[8];
     int attackQ3[8];
@@ -244,29 +228,6 @@ class Eval {
     int defenseB[8];
     int defenseQ[8];
     int defenseN[8];
-
-    int attackQMaMi[13];
-    int attackQMiMi[13];
-    int attackMaMiMi[13];
-    int attackQMa[13];
-    int attackQMi[13];
-    int attackMaMi[13];
-    int attackMiMi[13];
-    int attackQ[13];
-    int attackMa[13];
-    int attackMi[13];
-    float attQMaMi;
-    float attQMiMi;
-    float attMaMiMi;
-    float attQMa;
-    float attQMi;
-    float attMaMi;
-    float attMiMi;
-    float attQ;
-    float attMa;
-    float attMi;
-
-    int attackTable[256], defenseTable[256];
 
     int bmo[14], bme[14];
     int nmo[9], nme[9];
@@ -284,13 +245,11 @@ class Eval {
     void initPS();
     void initZobrist();
     void initShield();
-    static void initTables();
     template<GamePhase P>
     int mobilityDiff(const BoardBase& b, int& wap, int& bap, int& wdp, int& bdp) const __attribute__((noinline));
     template<Colors C, GamePhase P>
     int mobility(const BoardBase& b, int& attackingPieces, int& defendingPieces) const /*__attribute__((__always_inline__))*/;
     int attackDiff(const BoardBase& b, const PawnEntry& p, int wap, int bap, int wdp, int bdp) const __attribute__((noinline));
-    template<Colors C> int attack(const BoardBase& b, const PawnEntry& p, unsigned attackingPieces, unsigned defendingPieces) const __attribute__((__always_inline__));
     template<Colors C> int attack2(const BoardBase& b, const PawnEntry& p, int attackingPieces, int defendingPieces) const __attribute__((__always_inline__));
     template<Colors C> int pieces(const BoardBase&, const PawnEntry&) const __attribute__((__always_inline__));
     PawnEntry pawns(const BoardBase&) const;
@@ -339,8 +298,12 @@ public:
         int inner[3];
         int openFile;
         int halfOpenFile;
+        int base;
+        int idelta;
+        int odelta;
+        int vdelta;
     } kingShield;
-    int pawnShield;
+    int pawnDefense;
     int pieceAttack;
     int pieceDefense;
     int attackTable2[1024];
@@ -352,14 +315,14 @@ public:
         int opening;
         int endgame;
     } scale[128];
-#ifdef MYDEBUG
-    mutable uint64_t bmob1, bmob2, bmob3, bmobn;
-    mutable uint64_t rmob1, rmob2, rmob3, rmobn;
-    mutable uint64_t qmob1, qmob2, qmob3, qmobn;
-#endif
+    int shield[01000], shieldMirrored[01000];       //indexed by 9 bits in front of the king
+
+    static unsigned distance[nSquares][nSquares];  //todo convert to 8 bit, lazy init
+    
     Eval(uint64_t, const Parameters&);
     ~Eval();
     void init();
+    static void initTables();
     int operator () (const BoardBase&, int sideToMove) const __attribute__((noinline));
     int operator () (const BoardBase&, int sideToMove, int&, int&) const __attribute__((noinline));
     template<Colors C> Move evalMate(const BoardBase&) const __attribute__((noinline));
