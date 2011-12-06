@@ -24,6 +24,7 @@
 #include "options.h"
 #include "transpositiontable.tcc"
 #include "parameters.h"
+#include "eval.tcc"
 
 unsigned Eval::distance[nSquares][nSquares];
 
@@ -108,38 +109,6 @@ void printBit(__v2di bits) {
     std::cout << std::endl;
 }
 
-#if !defined(__SSE_4_2__)
-// popcount, which counts at most 15 ones, for counting pawns
-static inline int popcount15( uint64_t x )
-{
-    x -=  x>>1 & 0x5555555555555555LL;
-    x  = ( x>>2 & 0x3333333333333333LL ) + ( x & 0x3333333333333333LL );
-    x *= 0x1111111111111111LL;
-    return  x>>60;
-}
-
-static inline int popcount3( uint64_t x )
-{
-    x -=  x>>1 & 0x5555555555555555LL;
-    x *= 0x5555555555555555LL;
-    return  x>>62;
-}
-
-// special popcount, assuming each 2-bit block has max one bit set, for counting light/dark squares.
-static inline int popcount2( uint64_t x )
-{
-    x -=  x>>1 & 0x5555555555555555LL;
-    x  = (( x>>2 )+x) & 0x3333333333333333LL;
-    x  = (( x>>4 )+x) & 0x0f0f0f0f0f0f0f0fLL;
-    x *= 0x0101010101010101LL;
-    return  x>>56;
-}
-
-#else
-#define popcount15(x) __builtin_popcountll(x)
-#define popcount3(x) __builtin_popcountll(x)
-#define popcount2(x) __builtin_popcountll(x)
-#endif
 #if 0
 static inline int weightedPopcount(const uint64_t bb, const int8_t weights[64]) __attribute__((always_inline));
 static inline int weightedPopcount(const uint64_t bb, const int8_t weights[64]) {
@@ -178,8 +147,7 @@ Eval::~Eval() {
 
 void Eval::init() {
 
-    const int totalMaterial = 4*(materialRook+materialBishop+materialKnight) + 2*materialQueen + 16*materialPawn;
-    ASSERT(totalMaterial == 56);
+    static_assert(56 == 4*(materialRook+materialBishop+materialKnight) + 2*materialQueen + 16*materialPawn, "Total material");
 
     for (unsigned i=0; i<sizeof(scale)/sizeof(*scale); ++i) {
         int openingScale = i - endgameMaterial + endgameTransitionSlope/2;
@@ -203,8 +171,6 @@ void Eval::init() {
         printSigmoid(ownKingOwnPasser, "mKpas");
         printSigmoid(oppKingOwnPawn, "eKp");
         printSigmoid(ownKingOwnPawn, "mKp");
-        printSigmoid(pawnFileOpen, "pfo");
-        printSigmoid(pawnFileEnd, "pfe");
 
         for (unsigned i=0; i<3; ++i) {
             std::cout << "kingShield" << i << ": " << std::setw(3) << kingShield.inner[i] << std::setw(3) << kingShield.center[i] << std::setw(3) << kingShield.outer[i] << std::endl;
@@ -212,88 +178,39 @@ void Eval::init() {
     }
 }
 
+void Eval::initPS(Pieces pIndex, Parameters::Piece& piece) {
+    for (unsigned int sq = 0; sq<nSquares; ++sq) {
+        int xh = (sq & 7);
+        int y = sq >> 3;
+        double corner = 2-std::min(xh, std::min(y, std::min(7-xh, 7-y)));
+        if (xh>3) xh ^= 7;
+        int yo = y;
+        if (y>piece.vcenter.opening)
+            yo = 2*piece.vcenter.opening - y;
+        yo = std::max(0, std::min(7, yo));
+        int ye = y;
+        if (y>piece.vcenter.endgame)
+            ye = 2*piece.vcenter.endgame - y;
+        ye = std::max(0, std::min(7, ye));
+        getPS( pIndex, sq) = { (short) (piece.value.opening + piece.hor.opening[xh] + piece.vert.opening[yo] + corner*piece.corner.opening),
+                               (short) (piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame) };
+        getPS(-pIndex, sq ^ 070) = -getPS( pIndex, sq);
+        print_debug(debugEval, "%4d %4d  ", getPS(pIndex, sq).opening, getPS(pIndex, sq).endgame);
+        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
+    }
+    
+}
 void Eval::initPS() {
 
     for (unsigned int sq = 0; sq<nSquares; ++sq)
         getPS( 0, sq) = 0;
 
-    for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        int xh = (sq & 7);
-        int yh = sq >> 3;
-        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
-        if (xh>3) xh ^= 7;
-        if (yh>rookCenter) yh = 2*rookCenter - yh;
-        yh = std::max(0, std::min(7, yh));
-        getPS( Rook, sq) = { (short) (rook.value.opening + rookH[xh] + rookV[yh] + corner*rook.corner.opening), (short) (rook.value.endgame + rookHE[xh] + rookVE[yh] + corner*rook.corner.endgame) };
-        getPS(-Rook, sq ^ 070) = -getPS( Rook, sq);
-        print_debug(debugEval, "%4d %4d  ", getPS(Rook, sq).opening, getPS(Rook, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
-    }
-
-    for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        int xh = (sq & 7);
-        int yh = sq >> 3;
-        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
-        if (xh>3) xh ^= 7;
-        if (yh>bishopCenter) yh = 2*bishopCenter - yh;
-        yh = std::max(0, std::min(7, yh));
-        getPS( Bishop, sq) = { (short) (bishop.value.opening + bishopH[xh] +  bishopV[yh] + corner*bishop.corner.opening), (short) (bishop.value.endgame + bishopHE[xh] + bishopVE[yh] + corner*bishop.corner.endgame) };
-        getPS(-Bishop, sq ^ 070) = -getPS( Bishop, sq);
-        print_debug(debugEval, "%4d %4d  ", getPS(Bishop, sq).opening, getPS(Bishop, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
-    }
-
-    for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        int xh = (sq & 7);
-        int yh = sq >> 3;
-        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
-        if (xh>3) xh ^= 7;
-        if (yh>queenCenter) yh = 2*queenCenter - yh;
-        yh = std::max(0, std::min(7, yh));
-        getPS( Queen, sq) = { (short) (queen.value.opening + queenH[xh] +  queenV[yh] + corner*queen.corner.opening), (short) (queen.value.endgame + queenHE[xh] + queenVE[yh] + corner*queen.corner.endgame) };
-        getPS(-Queen, sq ^ 070) = -getPS( Queen, sq);
-        print_debug(debugEval, "%4d %4d  ", getPS(Queen, sq).opening, getPS(Queen, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
-    }
-
-    for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        int xh = (sq & 7);
-        int yh = sq >> 3;
-        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
-        if (xh>3) xh ^= 7;
-        if (yh>knightCenter) yh = 2*knightCenter - yh;
-        yh = std::max(0, std::min(7, yh));
-        getPS( Knight, sq) =  { (short) (knight.value.opening + knightH[xh] + knightV[yh] + corner*knight.corner.opening), (short) (knight.value.endgame + knightHE[xh] + knightVE[yh] + corner*knight.corner.endgame) };
-        getPS(-Knight, sq ^ 070) = -getPS( Knight, sq);
-        print_debug(debugEval, "%4d %4d  ", getPS(Knight, sq).opening, getPS(Knight, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
-    }
-
-    for (unsigned int sq = a2; sq<a8; ++sq) {
-        int xh = (sq & 7);
-        int yh = sq >> 3;
-        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
-        if (xh>3) xh ^= 7;
-        if (yh>pawn.vcenter.opening) yh = 2*pawn.vcenter.opening - yh;
-        yh = std::max(0, std::min(7, yh));
-        getPS( Pawn, sq) = { (short) (pawn.value.opening + pawnH[xh] + pawnV[yh] + corner*pawn.corner.opening), (short) (pawn.value.endgame + pawnHE[xh] + pawnVE[yh] + corner*pawn.corner.endgame) };
-        getPS(-Pawn, sq ^ 070) = -getPS( Pawn, sq);
-        print_debug(debugEval, "%4d %4d  ", getPS(Pawn, sq).opening, getPS(Pawn, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
-    }
-
-    for (unsigned int sq = 0; sq<nSquares; ++sq) {
-        int xh = (sq & 7);
-        int yh = sq >> 3;
-        double corner = 2-std::min(xh, std::min(yh, std::min(7-xh, 7-yh)));
-        if (xh>3) xh ^= 7;
-        if (yh>kingCenter) yh = 2*kingCenter - yh;
-        yh = std::max(0, std::min(7, yh));
-        getPS( King, sq) = { (short) (kingH[xh] +  kingV[yh] + corner*king.corner.opening), (short) (kingHE[xh] + kingVE[yh] + corner*king.corner.endgame) };
-        getPS(-King, sq ^ 070) = -getPS( King, sq);
-        print_debug(debugEval, "%4d %4d  ", getPS(King, sq).opening, getPS(King, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
-    }
+    initPS(Rook, rook);
+    initPS(Bishop, bishop);
+    initPS(Queen, queen);
+    initPS(Knight, knight);
+    initPS(Pawn, pawn);
+    initPS(King, king);
 }
 
 void Eval::initZobrist() {
@@ -376,55 +293,22 @@ void Eval::initShield() {
         shieldMirrored[index] = score;
     }
 }
-#if 0
-template<Colors C>
-PawnEntry::Shield evalShield(const BoardBase &b) {
 
-    uint64_t p = b.getPieces<C,Pawn>();
-    const uint64_t kside = p & (file<'f'>() | file<'g'>() | file<'h'>());
-    const uint64_t qside = p & (file<'a'>() | file<'b'>() | file<'c'>());
-
-    unsigned kshield = 4*popcount(kside & rank<C,2>())
-                       + 2*popcount(kside & rank<C,3>())
-                       + 1*popcount(kside & rank<C,4>())
-                       + 2*!!(kside & file<'h'>())
-                       + 2*!!(kside & file<'g'>());
-
-    unsigned qshield = 4*popcount(qside & rank<C,2>())
-                       + 2*popcount(qside & rank<C,3>())
-                       + 1*popcount(qside & rank<C,4>())
-                       + 2*!!(qside & file<'a'>())
-                       + 2*!!(qside & file<'b'>());
-
-    PawnEntry::Shield ret;
-//    ret.weakLight = 0;
-//    ret.weakDark = 0;
-    ret.qside = qshield;
-    ret.kside = kshield;
-/*#ifdef MYDEBUG
-    if (debug) {
-        std::cout << "kshield:        " << kshield << std::endl;
-        std::cout << "qshield:        " << qshield << std::endl;
-    }
-#endif*/
-    return ret;
-}
-#endif
 template<Colors C>
 int Eval::pieces(const BoardBase& b, const PawnEntry& p) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     int value = 0;
     int temp;
-    if (popcount3(b.getPieces<C, Bishop>()) >= 2) {
+    if (popcount3((b.getPieces<C, Bishop>()) >= 2)) {
         value += bishopPair;
     }
-    if (popcount3(b.getPieces<C, Knight>()) >= 2) {
+    if (popcount3((b.getPieces<C, Knight>()) >= 2)) {
         value += knightPair;
     }
-    if (popcount3(b.getPieces<C, Rook>()) >= 2) {
+    if (popcount3((b.getPieces<C, Rook>()) >= 2)) {
         value += rookPair;
     }
-    if (popcount3(b.getPieces<C, Queen>()) >= 2) {
+    if (popcount3((b.getPieces<C, Queen>()) >= 2)) {
         value += queenPair;
     }
     if  (   (  b.getPieces<C, Rook>() & (file<'h'>()|file<'g'>()) & (rank<C,1>()|rank<C,2>()) 
@@ -452,14 +336,14 @@ int Eval::pieces(const BoardBase& b, const PawnEntry& p) const {
     weak += weak << 020;
     weak += weak << 040;
 
-    value += rookHalfOpen * popcount3(b.getPieces<C,Rook>() & own);
-    value += rookOpen * popcount3(b.getPieces<C,Rook>() & own & opp);
-    temp = rookWeakPawn * popcount3(b.getPieces<C,Rook>() & weak);
+    value += rookHalfOpen * popcount3((b.getPieces<C,Rook>() & own));
+    value += rookOpen * popcount3((b.getPieces<C,Rook>() & own & opp));
+    temp = rookWeakPawn * popcount3((b.getPieces<C,Rook>() & weak));
     print_debug(debugEval, "rookWeakP%d: %3d\n", CI, temp);
     value += temp;
     
-    value += knightBlockPasser * popcount3(b.getPieces<C,Knight>() & shift<C*8>(p.passers[EI]));
-    value += bishopBlockPasser * popcount3(b.getPieces<C,Bishop>() & shift<C*8>(p.passers[EI]));
+    value += knightBlockPasser * popcount3((b.getPieces<C,Knight>() & shift<C*8>(p.passers[EI])));
+    value += bishopBlockPasser * popcount3((b.getPieces<C,Bishop>() & shift<C*8>(p.passers[EI])));
 
     // TODO vectorize
     int darkB = !!(b.getPieces<C,Bishop>() & darkSquares);
@@ -669,6 +553,7 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
 template<Colors C, GamePhase P> // TODO use overload for P == Endgame, where attack and defend are not used
 inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defendingPieces) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
+    DeltaScore score(0,0);
     int score_endgame = 0;
     int score_opening = 0;
     attackingPieces = 0;
@@ -741,6 +626,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         unsigned m = popcount(bmob1x);
         score_opening += bmo[m];
         score_endgame += bme[m];
+        score = score + bm[m];
     }
     
     for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
@@ -773,6 +659,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         unsigned m = popcount(nmob1x);
         score_opening += nmo[m];
         score_endgame += nme[m];
+        score = score + nm[m];
 
     }
 
@@ -819,6 +706,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         unsigned m = popcount(rmob1x);
         score_opening += rmo[m];
         score_endgame += rme[m];
+        score = score + rm[m];
     }
 
     if (b.getPieces<C,Queen>()) {
@@ -861,6 +749,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         unsigned m = popcount(qmob1x);
         score_opening += qmo[m];
         score_endgame += qme[m];
+        score = score + qm[m];
     }
 
     uint64_t a = b.getAttacks<C,Pawn>() & oppking;
@@ -881,8 +770,21 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //             attackingPieces += attackP[popcount15(b.getAttacks<C,Pawn>() & oppking)];
 //             attackingPieces += attackK[popcount15(b.getAttacks<C,King>() & oppking)];
 //         }
-    
-    return (scale[b.material].endgame*score_endgame + scale[b.material].opening*score_opening) >> logEndgameTransitionSlope;
+    union {
+        struct {
+            short opening;
+            short endgame;
+        };
+        DeltaScore s;
+    } converter;
+    converter.s = score;
+
+    int newscore = (scale[b.material].endgame*converter.endgame + scale[b.material].opening*converter.opening) >> logEndgameTransitionSlope;
+#ifdef MYDEBUG
+    int oldscore = (scale[b.material].endgame*score_endgame + scale[b.material].opening*score_opening) >> logEndgameTransitionSlope;
+    ASSERT(newscore == oldscore);
+#endif    
+    return newscore;
 }
 #if 0
 template<Colors C>
@@ -1121,92 +1023,93 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(pawn.hor.inflection.opening);
     SETPARM(pawn.vert.value.opening);
     SETPARM(pawn.vert.inflection.opening);
-    sigmoid(pawnH, -pawn.hor.value.opening, pawn.hor.value.opening, pawn.hor.inflection.opening );
-    sigmoid(pawnV, -pawn.vert.value.opening, pawn.vert.value.opening, pawn.vert.inflection.opening );
+    sigmoid(pawn.hor.opening, -pawn.hor.value.opening, pawn.hor.value.opening, pawn.hor.inflection.opening );
+    sigmoid(pawn.vert.opening, -pawn.vert.value.opening, pawn.vert.value.opening, pawn.vert.inflection.opening );
     SETPARM(pawn.hor.value.endgame);
     SETPARM(pawn.hor.inflection.endgame);
     SETPARM(pawn.vert.value.endgame);
     SETPARM(pawn.vert.inflection.endgame);
-    sigmoid(pawnHE, -pawn.hor.value.endgame, pawn.hor.value.endgame, pawn.hor.inflection.endgame );
-    sigmoid(pawnVE, -pawn.vert.value.endgame, pawn.vert.value.endgame, pawn.vert.inflection.endgame );
+    sigmoid(pawn.hor.endgame, -pawn.hor.value.endgame, pawn.hor.value.endgame, pawn.hor.inflection.endgame );
+    sigmoid(pawn.vert.endgame, -pawn.vert.value.endgame, pawn.vert.value.endgame, pawn.vert.inflection.endgame );
     SETPARM(pawn.vcenter.opening);
+    SETPARM(pawn.vcenter.endgame);
     
-    SETPARM(knightHValue);
-    SETPARM(knightHInfl);
-    SETPARM(knightVValue);
-    SETPARM(knightVInfl);
-    SETPARM(knightCenter);
-    sigmoid(knightH, -knightHValue, knightHValue, knightHInfl );
-    sigmoid(knightCenter, knightV, -knightVValue, knightVValue, knightVInfl );
-    SETPARM(knightHEValue);
-    SETPARM(knightHEInfl);
-    SETPARM(knightVEValue);
-    SETPARM(knightVEInfl);
-    sigmoid(knightHE, -knightHEValue, knightHEValue, knightHEInfl );
-    sigmoid(knightCenter, knightVE, -knightVEValue, knightVEValue, knightVEInfl );
-    
-    SETPARM(bishopHValue);
-    SETPARM(bishopHInfl);
-    SETPARM(bishopVValue);
-    SETPARM(bishopVInfl);
-    SETPARM(bishopCenter);
-    sigmoid(bishopH, -bishopHValue, bishopHValue, bishopHInfl );
-    sigmoid(bishopCenter, bishopV, -bishopVValue, bishopVValue, bishopVInfl );
-    SETPARM(bishopHEValue);
-    SETPARM(bishopHEInfl);
-    SETPARM(bishopVEValue);
-    SETPARM(bishopVEInfl);
-    sigmoid(bishopHE, -bishopHEValue, bishopHEValue, bishopHEInfl );
-    sigmoid(bishopCenter, bishopVE, -bishopVEValue, bishopVEValue, bishopVEInfl );
+    SETPARM(knight.hor.value.opening);
+    SETPARM(knight.hor.inflection.opening);
+    sigmoid(knight.hor.opening, -knight.hor.value.opening, knight.hor.value.opening, knight.hor.inflection.opening );
+    SETPARM(knight.vert.value.opening);
+    SETPARM(knight.vert.inflection.opening);
+    SETPARM(knight.vcenter.opening);
+    sigmoid(knight.vcenter.opening, knight.vert.opening, -knight.vert.value.opening, knight.vert.value.opening, knight.vert.inflection.opening );
+    SETPARM(knight.hor.value.endgame);
+    SETPARM(knight.hor.inflection.endgame);
+    sigmoid(knight.hor.endgame, -knight.hor.value.endgame, knight.hor.value.endgame, knight.hor.inflection.endgame );
+    SETPARM(knight.vert.value.endgame);
+    SETPARM(knight.vert.inflection.endgame);
+    SETPARM(knight.vcenter.endgame);
+    sigmoid(knight.vcenter.endgame, knight.vert.endgame, -knight.vert.value.endgame, knight.vert.value.endgame, knight.vert.inflection.endgame );
     
     SETPARM(rookPair);
-    SETPARM(rookHValue);
-    SETPARM(rookHInfl);
-    SETPARM(rookVValue);
-    SETPARM(rookVInfl);
-    SETPARM(rookCenter);
-    sigmoid(rookH, -rookHValue, rookHValue, rookHInfl );
-    sigmoid(rookCenter, rookV, -rookVValue, rookVValue, rookVInfl );
-    SETPARM(rookHEValue);
-    SETPARM(rookHEInfl);
-    SETPARM(rookVEValue);
-    SETPARM(rookVEInfl);
-    sigmoid(rookHE, -rookHEValue, rookHEValue, rookHEInfl );
-    sigmoid(rookCenter, rookVE, -rookVEValue, rookVEValue, rookVEInfl );
-    
-    SETPARM(queenPair);
-    SETPARM(queenHValue);
-    SETPARM(queenHInfl);
-    SETPARM(queenVValue);
-    SETPARM(queenVInfl);
-    SETPARM(queenCenter);
-    sigmoid(queenH, -queenHValue, queenHValue, queenHInfl );
-    sigmoid(queenCenter, queenV, -queenVValue, queenVValue, queenVInfl );
-    SETPARM(queenHEValue);
-    SETPARM(queenHEInfl);
-    SETPARM(queenVEValue);
-    SETPARM(queenVEInfl);
-    sigmoid(queenHE, -queenHEValue, queenHEValue, queenHEInfl );
-    sigmoid(queenCenter, queenVE, -queenVEValue, queenVEValue, queenVEInfl );
-    
-    SETPARM(kingHValue);
-    SETPARM(kingHInfl);
-    SETPARM(kingVValue);
-    SETPARM(kingVInfl);
-    SETPARM(kingCenter);
-    sigmoid(kingH, -kingHValue, kingHValue, kingHInfl );
-    sigmoid(kingCenter, kingV, -kingVValue, kingVValue, kingVInfl );
-    SETPARM(kingHEValue);
-    SETPARM(kingHEInfl);
-    SETPARM(kingVEValue);
-    SETPARM(kingVEInfl);
-    sigmoid(kingHE, -kingHEValue, kingHEValue, kingHEInfl );
-    sigmoid(kingCenter, kingVE, -kingVEValue, kingVEValue, kingVEInfl );
+    SETPARM(rook.hor.value.opening);
+    SETPARM(rook.hor.inflection.opening);
+    sigmoid(rook.hor.opening, -rook.hor.value.opening, rook.hor.value.opening, rook.hor.inflection.opening );
+    SETPARM(rook.vert.value.opening);
+    SETPARM(rook.vert.inflection.opening);
+    SETPARM(rook.vcenter.opening);
+    sigmoid(rook.vcenter.opening, rook.vert.opening, -rook.vert.value.opening, rook.vert.value.opening, rook.vert.inflection.opening );
+    SETPARM(rook.hor.value.endgame);
+    SETPARM(rook.hor.inflection.endgame);
+    sigmoid(rook.hor.endgame, -rook.hor.value.endgame, rook.hor.value.endgame, rook.hor.inflection.endgame );
+    SETPARM(rook.vert.value.endgame);
+    SETPARM(rook.vert.inflection.endgame);
+    SETPARM(rook.vcenter.endgame);
+    sigmoid(rook.vcenter.endgame, rook.vert.endgame, -rook.vert.value.endgame, rook.vert.value.endgame, rook.vert.inflection.endgame );
 
-    sigmoid(pawnFileOpen, 0, 20, 2);
-    sigmoid(pawnFileEnd, 30, 0, 1);
-    sigmoid(pawnRankOpen, 0, 20, 6);
-    sigmoid(pawnRankEnd, 0, 30, 6);
+    SETPARM(bishop.hor.value.opening);
+    SETPARM(bishop.hor.inflection.opening);
+    sigmoid(bishop.hor.opening, -bishop.hor.value.opening, bishop.hor.value.opening, bishop.hor.inflection.opening );
+    SETPARM(bishop.vert.value.opening);
+    SETPARM(bishop.vert.inflection.opening);
+    SETPARM(bishop.vcenter.opening);
+    sigmoid(bishop.vcenter.opening, bishop.vert.opening, -bishop.vert.value.opening, bishop.vert.value.opening, bishop.vert.inflection.opening );
+    SETPARM(bishop.hor.value.endgame);
+    SETPARM(bishop.hor.inflection.endgame);
+    sigmoid(bishop.hor.endgame, -bishop.hor.value.endgame, bishop.hor.value.endgame, bishop.hor.inflection.endgame );
+    SETPARM(bishop.vert.value.endgame);
+    SETPARM(bishop.vert.inflection.endgame);
+    SETPARM(bishop.vcenter.endgame);
+    sigmoid(bishop.vcenter.endgame, bishop.vert.endgame, -bishop.vert.value.endgame, bishop.vert.value.endgame, bishop.vert.inflection.endgame );
+
+    SETPARM(queenPair);
+    SETPARM(queen.hor.value.opening);
+    SETPARM(queen.hor.inflection.opening);
+    sigmoid(queen.hor.opening, -queen.hor.value.opening, queen.hor.value.opening, queen.hor.inflection.opening );
+    SETPARM(queen.vert.value.opening);
+    SETPARM(queen.vert.inflection.opening);
+    SETPARM(queen.vcenter.opening);
+    sigmoid(queen.vcenter.opening, queen.vert.opening, -queen.vert.value.opening, queen.vert.value.opening, queen.vert.inflection.opening );
+    SETPARM(queen.hor.value.endgame);
+    SETPARM(queen.hor.inflection.endgame);
+    sigmoid(queen.hor.endgame, -queen.hor.value.endgame, queen.hor.value.endgame, queen.hor.inflection.endgame );
+    SETPARM(queen.vert.value.endgame);
+    SETPARM(queen.vert.inflection.endgame);
+    SETPARM(queen.vcenter.endgame);
+    sigmoid(queen.vcenter.endgame, queen.vert.endgame, -queen.vert.value.endgame, queen.vert.value.endgame, queen.vert.inflection.endgame );
+    
+    SETPARM(king.hor.value.opening);
+    SETPARM(king.hor.inflection.opening);
+    sigmoid(king.hor.opening, -king.hor.value.opening, king.hor.value.opening, king.hor.inflection.opening );
+    SETPARM(king.vert.value.opening);
+    SETPARM(king.vert.inflection.opening);
+    SETPARM(king.vcenter.opening);
+    sigmoid(king.vcenter.opening, king.vert.opening, -king.vert.value.opening, king.vert.value.opening, king.vert.inflection.opening );
+    SETPARM(king.hor.value.endgame);
+    SETPARM(king.hor.inflection.endgame);
+    sigmoid(king.hor.endgame, -king.hor.value.endgame, king.hor.value.endgame, king.hor.inflection.endgame );
+    SETPARM(king.vert.value.endgame);
+    SETPARM(king.vert.inflection.endgame);
+    SETPARM(king.vcenter.endgame);
+    sigmoid(king.vcenter.endgame, king.vert.endgame, -king.vert.value.endgame, king.vert.value.endgame, king.vert.inflection.endgame );
     
     SETPARM(endgameMaterial);
 
@@ -1239,11 +1142,13 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(rook.value.opening);
     SETPARM(queen.value.opening);
     SETPARM(bishop.value.opening);
+    king.value.opening = 0;
     SETPARM(pawn.value.endgame);
     SETPARM(knight.value.endgame);
     SETPARM(rook.value.endgame);
     SETPARM(queen.value.endgame);
     SETPARM(bishop.value.endgame);
+    king.value.endgame = 0;
 
     SETPARM(pawn.corner.opening);
     SETPARM(knight.corner.opening);
@@ -1267,19 +1172,27 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(queen.mobility.endgame);
     SETPARM(bishop.mobility.endgame);
 
-    SETPARM(knight.mobslope);
-    SETPARM(bishop.mobslope);
-    SETPARM(rook.mobslope);
-    SETPARM(queen.mobslope);
-    sigmoid(nmo, -knight.mobility.opening, knight.mobility.opening, 0, knight.mobslope);
-    sigmoid(bmo, -bishop.mobility.opening, bishop.mobility.opening, 0, bishop.mobslope);
-    sigmoid(rmo, -rook.mobility.opening, rook.mobility.opening, 0, rook.mobslope);
-    sigmoid(qmo, -queen.mobility.opening, queen.mobility.opening, 0, queen.mobslope);
-    sigmoid(nme, -knight.mobility.endgame, knight.mobility.endgame, 0, knight.mobslope);
-    sigmoid(bme, -bishop.mobility.endgame, bishop.mobility.endgame, 0, bishop.mobslope);
-    sigmoid(rme, -rook.mobility.endgame, rook.mobility.endgame, 0, rook.mobslope);
-    sigmoid(qme, -queen.mobility.endgame, queen.mobility.endgame, 0, queen.mobslope);
-    
+    SETPARM(knight.mobslope.opening);
+    SETPARM(bishop.mobslope.opening);
+    SETPARM(rook.mobslope.opening);
+    SETPARM(queen.mobslope.opening);
+    SETPARM(knight.mobslope.endgame);
+    SETPARM(bishop.mobslope.endgame);
+    SETPARM(rook.mobslope.endgame);
+    SETPARM(queen.mobslope.endgame);
+    sigmoid(nmo, -knight.mobility.opening, knight.mobility.opening, 0, knight.mobslope.opening);
+    sigmoid(bmo, -bishop.mobility.opening, bishop.mobility.opening, 0, bishop.mobslope.opening);
+    sigmoid(rmo, -rook.mobility.opening, rook.mobility.opening, 0, rook.mobslope.opening);
+    sigmoid(qmo, -queen.mobility.opening, queen.mobility.opening, 0, queen.mobslope.opening);
+    sigmoid(nme, -knight.mobility.endgame, knight.mobility.endgame, 0, knight.mobslope.endgame);
+    sigmoid(bme, -bishop.mobility.endgame, bishop.mobility.endgame, 0, bishop.mobslope.endgame);
+    sigmoid(rme, -rook.mobility.endgame, rook.mobility.endgame, 0, rook.mobslope.endgame);
+    sigmoid(qme, -queen.mobility.endgame, queen.mobility.endgame, 0, queen.mobslope.endgame);
+    sigmoid(nm, Parameters::Piece::Phase{ -knight.mobility.opening,  -knight.mobility.endgame }, knight.mobility, Parameters::Piece::Phase{0,0}, knight.mobslope);
+    sigmoid(bm, Parameters::Piece::Phase{ -bishop.mobility.opening,  -bishop.mobility.endgame }, bishop.mobility, Parameters::Piece::Phase{0,0}, bishop.mobslope);
+    sigmoid(rm, Parameters::Piece::Phase{ -rook.mobility.opening,  -rook.mobility.endgame }, rook.mobility, Parameters::Piece::Phase{0,0}, rook.mobslope);
+    sigmoid(qm, Parameters::Piece::Phase{ -queen.mobility.opening,  -queen.mobility.endgame }, queen.mobility, Parameters::Piece::Phase{0,0}, queen.mobslope);
+ 
     initPS();
 
     SETPARM(dMaxCapture);
@@ -1332,13 +1245,6 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(prune1c);
     SETPARM(prune2c);
 
-    SETPARM(bishopAttack);
-    SETPARM(knightAttack);
-    SETPARM(pawnAttack);
-    SETPARM(rookAttack);
-    SETPARM(kingAttack);
-    SETPARM(queenAttack);
-
     SETPARM(dRed[0]);
     SETPARM(dRed[1]);
     SETPARM(dRed[2]);
@@ -1365,14 +1271,14 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(kingShield.vdelta);
     SETPARM(kingShield.idelta);
     SETPARM(kingShield.odelta);
-    int scale = (kingShield.odelta+kingShield.idelta)/3 + kingShield.vdelta;
-    kingShield.center[0] = kingShield.base+scale;
-    kingShield.outer[0] = kingShield.base+scale-kingShield.odelta;
-    kingShield.inner[0] = kingShield.base+scale-kingShield.idelta;
+    float scale = 9.0/((1.0+kingShield.odelta+kingShield.idelta) * (1.0+kingShield.vdelta+kingShield.vdelta*kingShield.vdelta));
+    kingShield.center[0] = scale*kingShield.base;
+    kingShield.outer[0] = kingShield.center[0]*kingShield.odelta;
+    kingShield.inner[0] = kingShield.center[0]*kingShield.idelta;
     for (unsigned i=0; i<2; ++i) {
-        kingShield.center[i+1] = kingShield.center[i] - kingShield.vdelta;
-        kingShield.outer[i+1]  = kingShield.outer[i]  - kingShield.vdelta;
-        kingShield.inner[i+1]  = kingShield.inner[i]  - kingShield.vdelta;
+        kingShield.center[i+1] = kingShield.center[i] * kingShield.vdelta;
+        kingShield.outer[i+1]  = kingShield.outer[i]  * kingShield.vdelta;
+        kingShield.inner[i+1]  = kingShield.inner[i]  * kingShield.vdelta;
     }
 
     SETPARM(kingShield.openFile);
