@@ -118,9 +118,13 @@ static const int materialKnight = 2;
 static const int materialPawn = 0;
 static const int materialTab[nPieces+1] = { 0, materialRook, materialBishop, materialQueen, materialKnight, materialPawn, 0 };
 
+/*
+ * All popcount functions return int, because they are usually used in summing
+ * up a score or multiplication with possibly negative values.
+ */
 static inline int popcount(uint64_t x) {
 #if defined(__SSE4_2__) && defined(__x86_64__)
-    return _popcnt64(x);
+    return __popcntq(x);
 #else
     x -=  x>>1 & 0x5555555555555555;
     x  = ( x>>2 & 0x3333333333333333 ) + ( x & 0x3333333333333333 );
@@ -129,6 +133,39 @@ static inline int popcount(uint64_t x) {
     return  x>>56;
 #endif
 }
+
+// popcount, which counts at most 15 ones, for counting pawns
+static inline int popcount15( uint64_t x )
+{
+#if defined(__SSE4_2__) && defined(__x86_64__)
+    return __popcntq(x);
+#else
+#ifdef MYDEBUG
+    uint64_t y = popcount(x);
+#endif
+    x -=  x>>1 & 0x5555555555555555LL;
+    x  = ( x>>2 & 0x3333333333333333LL ) + ( x & 0x3333333333333333LL );
+    x *= 0x1111111111111111LL;
+    ASSERT(x>>60 == y);
+    return  x>>60;
+#endif    
+}
+
+// popcount, which counts at most 15 ones, for counting pieces
+// this always returns values < 4, so for non relevant cases like 4 minor pieces
+// of the same kind this returns a wrong value.
+static inline int popcount3( uint64_t x )
+{
+#if defined(__SSE4_2__) && defined(__x86_64__)
+    return __popcntq(x);
+#else
+    x -=  x>>1 & 0x5555555555555555LL;
+    x *= 0x5555555555555555LL;
+    ASSERT(x>>62 == y);
+    return  x>>62;
+#endif    
+}
+
 
 static __v2di inline pcmpeqq(__v2di a, __v2di b) __attribute__((__always_inline__));
 static __v2di inline pcmpeqq(__v2di a, __v2di b) {
