@@ -92,11 +92,9 @@ struct BoardBase {
         __v2di mask02;
         __v2di mask13; // 1 KByte  antidiag : diagonal, excluding square
         __v2di doublebits; // 1 KByte    1<<sq  : 1<<sq
-        __v2di doublereverse; // 1 KByte    1<<sq  : 1<<sq
-        uint64_t knightAttacks; // don't use it, addressing mode is to slow
-        uint64_t kAttacked1; // don't use it, addressing mode is to slow
+        __v2di doublereverse; // 1 KByte    1<<(sq^070)  : 1<<(sq^070)
         __v2di doublereverse2; // 1 KByte    1<<sq  : 1<<sq
-        char fill[32];
+        char fill[48];
     };
     static const Bits bits[nSquares];
     static const uint64_t knightAttacks[nSquares+2];
