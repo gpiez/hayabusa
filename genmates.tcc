@@ -41,9 +41,6 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
     rmate &= checkingMoves & undefended;
 #else
     uint64_t rmate = checkingMoves & undefended & getAttacks<-C,King>();
-#ifdef MYDEBUG
-        mobStat[CI][Pawn][0][popcount(rmate)]++;
-#endif
     if (rmate) {
         if (rescape & 0x30003)
             rmate &= ~(king<<1);
@@ -140,7 +137,7 @@ R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) cons
             } else if (checkR1Moves) {
                 attNotSelfRook = attNotRook | r0attacks;
                 checkingMoves = checkR1Moves;
-            }
+            } else goto haveNoMate; // irrelevant case where only the third rook checks
             attNotRook |= rxray;
             attNotSelfRook |= rxray;
         } else {
@@ -174,7 +171,7 @@ haveMate:
             }
         }
     }
-
+haveNoMate:
     // promotion moves, always assuming queen promotions are counted as queen moves.
     // pawn promotions may only move if not pinned at all.
     uint64_t pMoves = getPieces<C,Pawn>() & pins[CI];
@@ -237,9 +234,6 @@ haveMate:
         uint64_t qescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
         qescape = ror(qescape, k-9);
         uint64_t qmate = checkingMoves & attNotQueen & ~(attNotEnemyKing | xprot) & getAttacks<-C,King>();
-#ifdef MYDEBUG
-        mobStat[CI][King][0][popcount(qmate)]++;
-#endif
         if (qmate) {
             // emptiness of near king squares in even directions
             // this is needed for the mate patterns, where the queen mates on an
