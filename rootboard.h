@@ -132,7 +132,6 @@ public:
 
     PositionalError pe[nPieces*2+1][nSquares][nSquares];
 
-// //     RootBoard(Console*);
     RootBoard(Console* c, const Parameters& p, uint64_t, uint64_t);
 #ifdef QT_GUI_LIB
     virtual
@@ -163,7 +162,16 @@ public:
 #ifdef QT_GUI_LIB
         , NodeItem*
 #endif
+        ) __attribute__((always_inline));
+    template<Colors C, Phase P, class A, class B>
+    int search9(const bool doNull, const unsigned reduction, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned depth,
+                const A& alpha, const B& beta,
+                unsigned ply, Extension ext, NodeType nt
+#ifdef QT_GUI_LIB
+        , NodeItem*
+#endif
         );
+    
     void perft(unsigned int depth);
     void divide(unsigned int depth);
     template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
