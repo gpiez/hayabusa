@@ -510,8 +510,8 @@ int main(int, char** argv) {
             std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << dir1x << ", 0x" << std::setw(16) << dir3x << " }, ";
             std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ", 0x" << std::setw(16) << bits << " }, ";
             std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << rbits << ", 0x" << std::setw(16) << rbits << " }, ";
-            std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << nbits << ", ";
-            std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << kbits << ", ";
+//             std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << nbits << ", ";
+//             std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << kbits << ", ";
             std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << rbits2 << ", 0x" << std::setw(16) << rbits2 << " }}, ";
 
             if (x == 7)
