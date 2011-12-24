@@ -72,7 +72,10 @@ enum Phase { root, trunk, tree, mate, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
 
-enum NodeType { NodeFailLow=-1, NodePV=0, NodeFailHigh=1, NodeFull, NodeTT, NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile1, NodeFutile2, NodeFutile3, NodeMate, NodePresearch, NodeIllegal, NodeRepetition, NodeEndgameEval, NodeStandpat };
+enum NodeType { NodeFailLow=-1, NodePV=0, NodeFailHigh=1, NodeFull, NodeTT,
+    NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile1, NodeFutile2,
+    NodeFutile3, NodeMate, NodePresearch, NodeIllegal, NodeRepetition,
+    NodeEndgameEval, NodeStandpat, NodeStart };
 
 enum NodeFlag { Threatened = 1, Extend = 2 };
 
@@ -117,7 +120,7 @@ static const int materialQueen = 10;
 static const int materialKnight = 2;
 static const int materialPawn = 0;
 static const int materialTab[nPieces+1] = { 0, materialRook, materialBishop, materialQueen, materialKnight, materialPawn, 0 };
-
+static const int maxScoreChildren = 16;
 /*
  * All popcount functions return int, because they are usually used in summing
  * up a score or multiplication with possibly negative values.
@@ -146,7 +149,6 @@ static inline int popcount15( uint64_t x )
     x -=  x>>1 & 0x5555555555555555LL;
     x  = ( x>>2 & 0x3333333333333333LL ) + ( x & 0x3333333333333333LL );
     x *= 0x1111111111111111LL;
-    ASSERT(x>>60 == y);
     return  x>>60;
 #endif    
 }
@@ -161,7 +163,6 @@ static inline int popcount3( uint64_t x )
 #else
     x -=  x>>1 & 0x5555555555555555LL;
     x *= 0x5555555555555555LL;
-    ASSERT(x>>62 == y);
     return  x>>62;
 #endif    
 }
