@@ -24,9 +24,19 @@
 #endif
 
 #include "constants.h"
+#include "move.h"
 
 typedef int16_t RawScore;
 class BoardBase;
+
+// struct PlainScore {
+//     int         v;
+// };
+// 
+// struct MoveScore {
+//     int         v;
+//     Move        m;
+// };
 
 template<Colors C> struct Score
 {
@@ -54,7 +64,11 @@ template<Colors C> struct Score
     void setNotReady() {};
 };
 
-template<Colors C> struct SharedScore: public Score<C>
+template<Colors C> struct VolatileScore {
+     typedef volatile Score<C> Type;
+};
+
+template<Colors C> struct SharedScore: public VolatileScore<C>::Type
 {
     using Score<C>::v;
 
@@ -62,17 +76,27 @@ template<Colors C> struct SharedScore: public Score<C>
 
     enum { isNotShared = false };
 
-    volatile unsigned int notReady;
+    unsigned int notReady;
+    mutable int nChildren;
+    const SharedScore<C>* parent;
+    mutable SharedScore<C>* children[maxScoreChildren];
     RecursiveMutex valueMutex;
     Condition readyCond;
     Mutex readyMutex;
+    mutable Mutex childrenMutex;
 //    SharedScore<C>* depending;
 
 public:
     SharedScore():
-        notReady(0) {}
+        notReady(0),
+        nChildren(0),
+        parent(nullptr),
+        children({nullptr})
+    {}
     ~SharedScore() {
         ASSERT(!notReady);
+        ASSERT(!nChildren);
+        if (parent) parent->deleteChild(this);
     }
 
     // construct a shared score depending on the parameter
@@ -81,15 +105,21 @@ public:
     // for its depending scores too.
     explicit SharedScore(const SharedScore& a):
         Score<C>(a),
-        notReady(0)
-//        depending(0)
+        notReady(0),
+        nChildren(0),
+        parent(&a),
+        children({nullptr})
+
     {
+        a.addChild(this);
     }
 
     explicit SharedScore(int a):
         Score<C>(a),
-        notReady(0)
-//        depending(0)
+        notReady(0),
+        nChildren(0),
+        parent(nullptr),
+        children({nullptr})
     {
     }
 
@@ -108,38 +138,38 @@ public:
     }
 
     bool max(const int b);
-/*    {
-        LockGuard<RecursiveMutex> lock(valueMutex);
-        if (*this < b) {
-            v = b;
-            return true;
-        }
-        return false;
-    }*/
-//     bool max(const int b, const Move n)         {
-//         LockGuard<RecursiveMutex> lock(valueMutex);
-//         if (*this < b) {
-//             v = b;
-//             m = n;
-//             return true;
-//         }
-//         return false;
-//     }
-
-    void setReady() {
-        {
-            LockGuard<Mutex> lock(readyMutex);
-            --notReady;
-        }
-//        ASSERT(notReady <= 6);
-        readyCond.notify_one();
-    }
-
-    void setNotReady() {
-        LockGuard<Mutex> lock(readyMutex);
-        ++notReady;
-//        ASSERT(notReady <= 6);    //queued jobs + running
-    }
+    void setReady();
+    void setNotReady();
+    void addChild(SharedScore<C>*) const;
+    void deleteChild(SharedScore<C>*) const;
+    void maximizeChildren(int) const;
 };
+
+/*
+ * Score with bestMove, not used
+ * only the partial specializations below are needed
+ */
+template<Colors C, typename T > struct ScoreMove;
+
+template<Colors C> struct ScoreMove<C, Score<C> >: public Score<C> {
+    using Score<C>::v;
+    Move m;
+    using Score<C>::max;
+    bool max(const int b, Move bm);
+};
+
+template<Colors C> struct ScoreMove<C, SharedScore<C> >: public  SharedScore<C> {
+    using SharedScore<C>::v;
+    Move m;
+    using SharedScore<C>::max;
+    bool max(const int b, Move bm);
+};
+
+// template<Colors C> struct ScoreMove: public Score<C, MoveScore> {
+//     using SharedScore<C, MoveScore>::v;
+//     using SharedScore<C, MoveScore>::m;
+//     bool max(const int b) = delete;
+//     bool max(const int b, Move bm);
+// };
 
 #endif // SCORE_H
