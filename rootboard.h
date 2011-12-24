@@ -93,7 +93,6 @@ private:
     Move line[nMaxGameLength];
     unsigned rootPly;
     unsigned currentPly;
-    History history;        // FIXME probably needs to be thread local
     std::string info;
     system_clock::time_point start;
     uint64_t stopTime;
@@ -121,6 +120,7 @@ private:
 
 public:
     Eval eval;
+    static __thread History history;
     unsigned int depth;
     TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt;
     TranspositionTable<PerftEntry, 1, Key>* pt;

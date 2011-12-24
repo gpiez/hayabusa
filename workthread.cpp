@@ -63,6 +63,7 @@ void WorkThread::run() {
     lastPositionalEval = 0;
     stats = &::stats;
     threadId = &::threadId;
+    RootBoard::history.init();
     workThread = this;
 
     UniqueLock <Mutex> lock(runningMutex);
@@ -291,8 +292,9 @@ const std::vector< WorkThread* >& WorkThread::getThreads() {
     return threads;
 }
 
-/*
-extern "C" void __throw_bad_alloc() { asm("int3"); }
-extern "C" void __throw_out_of_range() { asm("int3"); }
-extern "C" void __cxa_throw(void*, void*, void(*)(void*))  { asm("int3"); }
-*/
+void WorkThread::clearStats()
+{
+    for (unsigned int i=0; i<nWorkThreads; ++i) {
+        threads[i]->getStats()->node = 0;
+    }
+}

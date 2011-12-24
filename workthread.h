@@ -73,7 +73,6 @@ public:
     unsigned& getThreadId() {
         return *threadId;
     }
-
     static unsigned findFreeChild(unsigned parent);
     static void stopAll();
     static void queueJob(unsigned, Job*);
@@ -86,6 +85,7 @@ public:
     static void init();
     static const std::vector<WorkThread*>& getThreads();
     static void printJobs();
+    static void clearStats();
 };
 
 #endif /* WORKTHREAD_H_ */

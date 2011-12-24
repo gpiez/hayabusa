@@ -28,6 +28,8 @@
 #include "transpositiontable.tcc"
 #include "book.h"
 
+__thread History RootBoard::history;
+
 void RootBoard::stopTimer(milliseconds hardlimit) {
     UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
 /*#ifdef __WIN32__    

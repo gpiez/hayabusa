@@ -51,11 +51,11 @@ const __v16qi History::sinctab[16] = {
 
 static const __v16qi zero = _mm_set1_epi8(0);
 
-History::History()
-{
-    init();
-}
-
+// History::History()
+// {
+//     init();
+// }
+// 
 void History::init() {
     for (unsigned d=0; d<nMaxGameLength/32+4; ++d) { //FIXME find some way to init this fast, clearing 5M which are 98% unsused is not good
         max[0][d] = max[1][d] = maxHistory/2;   // initialize with this, to// avoid unused pos with a high

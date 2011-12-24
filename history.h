@@ -37,7 +37,7 @@ class History {
     static const __v16qi sinctab[16];
 
 public:
-    History();
+//     History();
     void init();
     void init64(uint8_t v[nSquares]);
     template<Colors C> void good(Move, unsigned ply);

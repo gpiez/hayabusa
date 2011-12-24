@@ -34,7 +34,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     const ColoredBoard<C>& b = currentBoard<C>();
     const unsigned ply=0;
     store(b.getZobrist(), ply);
-    stats.node = 1;
+    WorkThread::clearStats();
     SortedMoveList ml(b);
 
     milliseconds time( C==White ? wtime : btime );
