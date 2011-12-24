@@ -16,9 +16,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifdef __x86_64__
-#include <boost/chrono.hpp>
-#endif
 #include "selfgame.h"
 #include "rootboard.tcc"
 
@@ -703,7 +700,8 @@ std::vector<std::string> testPosition = {
     "rq2kb1r/1b1n1ppp/p3pn2/1ppP4/8/1BN1PN2/PP2QPPP/R1BR2K1 b kq - pm c4; id Neutral.400;"    
 };
 
-SelfGame::SelfGame(Console* c, const Parameters& wp, const Parameters& bp)
+SelfGame::SelfGame(Console* c, const Parameters& wp, const Parameters& bp, const std::string& nodes):
+    nodes(nodes)
 {
     wrb = new RootBoard(c, wp, 0x200000, 0x10000);
     brb = new RootBoard(c, bp, 0x200000, 0x10000);
@@ -734,7 +732,7 @@ void SelfGame::setupRootBoard(RootBoard* rb) {
 //     p["winc"] = StringList() << "10";
 //     p["binc"] = StringList() << "10";
     p["infinite"] = StringList();
-    p["nodes"] = StringList() << "16000";
+    p["nodes"] = StringList() << nodes.c_str();
     rb->goReadParam(p);
 }
 

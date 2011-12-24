@@ -29,7 +29,6 @@
 #endif
 
 #include <unistd.h>
-
 #include "rootboard.h"
 #include "coloredboard.h"
 #include "generateMoves.tcc"

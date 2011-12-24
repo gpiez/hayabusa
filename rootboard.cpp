@@ -22,17 +22,14 @@
 #include "workthread.h"
 #include "console.h"
 #include "boardbase.tcc"
+#include "rootsearch.tcc"
 #include "jobs.tcc"
 #include "score.tcc"
 #include "transpositiontable.tcc"
 #include "book.h"
 
 void RootBoard::stopTimer(milliseconds hardlimit) {
-#if defined(__WIN32__) || defined(POSIX_TIME_HPP___)
-    UniqueLock<TimedMutex> lock(stopTimerMutex, boost::posix_time::millisec(hardlimit.count()));
-#else    
     UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
-#endif    
 /*#ifdef __WIN32__    
     Sleep(hardlimit.count()*1000);
 #else
@@ -55,11 +52,7 @@ std::string RootBoard::commonStatus() const {
 void RootBoard::infoTimer(milliseconds repeat) {
     static int lastCurrentMoveIndex = 0;
     while(!infoTimerMutex.try_lock()) {
-#if defined(__WIN32__) || defined(POSIX_TIME_HPP___)
-        UniqueLock<TimedMutex> lock(infoTimerMutex, boost::posix_time::millisec(repeat.count()));
-#else        
         UniqueLock<TimedMutex> lock(infoTimerMutex, repeat);
-#endif  
         Stats tempStats = getStats();
         uint64_t ntemp = tempStats.node;
         uint64_t t = duration_cast<milliseconds>(system_clock::now()-start).count();
@@ -378,9 +371,6 @@ const BoardBase& RootBoard::setup(const std::string& str) {
     rootPly = 0;
     board.positionalScore = eval(board, color);
     board.isExact = true;
-#ifdef MYDEBUG    
-    memset(mobStat, 0, sizeof(mobStat));
-#endif    
     return board;
 }
 

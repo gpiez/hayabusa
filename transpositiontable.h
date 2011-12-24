@@ -104,7 +104,7 @@ public:
     bool retrieve(Sub<PawnEntry, assoc>* subTable, Key k, PawnEntry& entry);
 };
 
-int score2tt(int s);
-int tt2Score(int s);
+int score2tt(int s) __attribute__((noinline));
+int tt2Score(int s) __attribute__((noinline));
 
 #endif /* TRANSPOSITIONTABLE_H_ */

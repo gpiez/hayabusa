@@ -34,15 +34,16 @@ class SelfGame
     int nDecisive;
     int nDraw;
     int result;
+    std::string nodes;
 public:
     RootBoard   *wrb, *brb;
     std::chrono::system_clock::time_point start;
-    SelfGame(Console* c, const Parameters&, const Parameters&);
+    SelfGame(Console* c, const Parameters&, const Parameters&, const std::string& nodes);
     ~SelfGame();
     static int nTests();
     int doGame(RootBoard*, RootBoard*);
     template<Colors C> bool checkResult(const RootBoard&);
-    void setupRootBoard(RootBoard* );
+    void setupRootBoard(RootBoard*);
     uint64_t cpuTime();
     int tournament();
 };

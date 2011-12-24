@@ -30,9 +30,6 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
     while (!statWidget->tree);
     statWidget->emptyTree();
 #endif
-#ifdef MYDEBUG        
-    eval.bmob1 = eval.bmob2 = eval.bmob3 = eval.bmobn = 0;
-#endif        
     isMain = true;
     const ColoredBoard<C>& b = currentBoard<C>();
     const unsigned ply=0;
@@ -80,9 +77,11 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             NodeData data;
             data.move.data = 0;
             data.ply = 1;
+            data.threadId = threadId;
+            data.nodes = 1;
             NodeItem::m.lock();
             NodeItem* node=0;
-            uint64_t startnode = NodeItem::nNodes;
+            uint64_t startnode = stats.node;
             if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
                 node = new NodeItem(data, statWidget->tree->root());
                 NodeItem::nNodes++;
@@ -112,7 +111,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         }
     #ifdef QT_GUI_LIB
         if (node) {
-            node->nodes = stats.node - startnode;
+            for (unsigned i=0; i<node->childCount(); ++i)
+                node->nodes += node->child(i)->nodes;
         }
     #endif
 
@@ -131,10 +131,12 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             NodeData data;
             data.move.data = 0;
             data.ply = depth-eval.dMaxExt;
+            data.threadId = threadId;
+            data.nodes = 1;
             NodeItem::m.lock();
             NodeItem* node=0;
-            uint64_t startnode = NodeItem::nNodes;
-            if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
+            uint64_t startnode = stats.node;
+            if (NodeItem::nNodes < MAX_NODES && stats.node >= MIN_NODES) {
                 node = new NodeItem(data, statWidget->tree->root());
                 NodeItem::nNodes++;
             }
@@ -161,7 +163,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                     if (!Options::quiet) console->send(status(now, value.v) + " upperbound");
                     beta2.v = value.v;
                     alpha.v = value.v;
-                    value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, SharedScore<C>(-infinity*C), ply+1, ExtNot, NodePV NODE);
+                    SharedScore<C> neginf(-infinity*C);
+                    value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, neginf, ply+1, ExtNot, NodePV NODE);
                     if (stopSearch) break;
                     alpha.v = value.v;
                 } else if (value >= beta2.v) {
@@ -212,27 +215,12 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 currentMoveIndex++;
                 currentMove = *ml;
                 uint64_t subnode = stats.node;
-                if (alpha.v != -infinity*C
-                    && depth > eval.dMaxExt+eval.dMinReduction
-                    && ml.count() > maxMovesNull
+                bool doNull = alpha.v != -infinity*C
+                    && depth > eval.dMinReduction
                     && b.material
-                    && stopSearch == Running)
-                {
-                    const SharedScore<(Colors)-C> beta0(alpha.v + C);
-                    unsigned newDepth = depth-verifyReduction[depth];
-                    value.v = search4<(Colors)-C, trunk>(b, *ml, newDepth, beta0, alpha, ply+1, ExtNot, NodeFailHigh NODE);
-                    if (value <= -infinity*C) continue;
-
-                    if (value <= alpha.v && stopSearch == Running) {
-                        newDepth = depth-nullReduction[depth];
-                        Score<C> nullvalue(search4<C, trunk>(b, *ml, newDepth, alpha, beta0, ply+2, ExtNot, NodeFailLow NODE));
-                        ml.nodesCount(stats.node - subnode);
-                        if (nullvalue <= alpha.v) continue;
-                    }
-
-                }
+                    && stopSearch == Running;
                 if (stopSearch == Running) {
-                    value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha, ply+1, ExtNot, NodeFailHigh NODE);
+                    value.v = search9<(Colors)-C,trunk>(doNull, 0, b, *ml, depth-1, beta2, alpha, ply+1, ExtNot, NodeFailHigh NODE);
                     ml.nodesCount(stats.node - subnode);
                     if (stopSearch || value <= alpha.v) continue;
                     alpha.v = value.v;
@@ -277,7 +265,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 
     #ifdef QT_GUI_LIB
         if (node) {
-            node->nodes = stats.node - startnode;
+            for (unsigned i=0; i<node->childCount(); ++i)
+                node->nodes += node->child(i)->nodes;
         }
     #endif
             if (alpha >= infinity*C) break;
