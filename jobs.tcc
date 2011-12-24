@@ -20,19 +20,6 @@
 #define JOBS_TCC_
 
 #include "jobs.h"
-// template<Colors C, typename A, typename B, typename T>
-// SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, B& retval, unsigned ply, unsigned parent, const RepetitionKeys& rep, NodeType nt
-// #ifdef QT_GUI_LIB
-//     , NodeItem* node
-// #endif
-//     ): rb(rb), b(b), m(m), depth(depth), alpha(alpha), beta(beta), retval(retval), ply(ply), parent(parent), rep(rep), nt(nt)
-// #ifdef QT_GUI_LIB
-//     , node(node)
-// #endif
-// {
-//     beta.setNotReady();
-//     retval.setNotReady();
-// };
 template<Colors C, typename A, typename B, typename T>
 SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, bool doNull,
                               unsigned reduction, Move m, unsigned int depth, A& alpha, const B& beta, ScoreMove<C,A>& retval,
@@ -46,31 +33,46 @@ SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, bool doNull,
     , node(node)
 #endif
 {
-//     std::stringstream ss;
-//     ss << "Construct Job " << this << " with board " << &b << " from " << threadId << std::endl;
-//     std::cerr << ss.str();
     alpha.setNotReady();
     retval.setNotReady();
+#ifdef QT_GUI_LIB    
+    if (NodeItem::nNodes < MAX_NODES && node) {
+        NodeData data = {};
+        data.alpha = alpha.v;
+        data.beta = beta.v;
+        data.move = m;
+        data.ply = ply;
+        data.searchType = trunk;
+        data.depth = depth;
+        data.moveColor = b.CI == 0 ? White:Black;
+        data.nodeColor = C;
+        data.flags = 0;
+        data.threadId = threadId;
+        data.nodes = 0;
+        data.nodeType = NodeStart;
+        NodeItem::m.lock();
+        startnode = new NodeItem(data, node);
+        NodeItem::nNodes++;
+        NodeItem::m.unlock();
+    } else
+        startnode = nullptr;
+#endif
+
 };
+
 template<Colors C, typename A, typename B, typename T>
 void SearchJob<C,A,B,T>::job() {
+#ifdef QT_GUI_LIB
+    if (startnode) startnode->threadId = threadId;
+#endif    
     if (alpha < beta.v) {
         rb.clone(b, rep, ply);
-    //     int ret = rb.search3<C,trunk>(b, m, depth, alpha, beta, ply, ExtNot, dummy, nt
-    //     std::stringstream ss;
-    //     usleep(100000);
-    //     ss << "Execute Job " << this << " with board "  << &b << " from " << threadId << std::endl;
-    //     std::cerr << ss.str();
         int ret = rb.search9<(Colors)-C,trunk>(doNull, reduction, b, m, depth, beta, alpha, ply,
                                       ExtNot, nt
     #ifdef QT_GUI_LIB
                            , node
     #endif
                            );
-    //     ss.str("");
-    //     ss << "Finished Job " << this << " with board "  << &b << " from " << threadId << std::endl;
-    //     std::cerr << ss.str();
-
         alpha.max(ret);
         retval.max(ret, m);
     } else

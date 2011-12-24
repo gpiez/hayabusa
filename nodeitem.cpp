@@ -84,3 +84,11 @@ NodeItem* NodeItem::getParent() const
 }
 
 #endif
+
+void NodeItem::moveToEnd(NodeItem* node)
+{
+    int i=children.indexOf(node);
+    ASSERT(i != -1);
+    children.removeAt(i);
+    children.append(node);
+}

@@ -17,7 +17,7 @@
 #include "move.h"
 
 #define MIN_NODES 0
-#define MAX_NODES 45000000
+#define MAX_NODES 50000000
 
 struct NodeData {
     uint64_t key;
@@ -30,6 +30,7 @@ struct NodeData {
     char depth;
     char moveColor, nodeColor;
     char flags;
+    char threadId;
     int8_t ply;
 };
 
@@ -46,6 +47,7 @@ public:
     const NodeData& data() const;
     int row();
     NodeItem* getParent() const;
+    void moveToEnd(NodeItem* node);
     static std::recursive_mutex m;
 
 private:

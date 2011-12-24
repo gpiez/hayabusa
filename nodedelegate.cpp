@@ -19,7 +19,9 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
     if ( item->move.fromto() ) {
         str1 = QString().fromStdString(item->move.string());
 
-        str2 = QString( "D%4 [%1 %2]\n %3" ).arg( item->alpha ).arg( item->beta ).arg( item->bestEval ).arg( (int)item->depth );
+        str2 = QString( "D%3 [%1 %2]\n" ).arg( item->alpha ).arg( item->beta ).arg( (int)item->depth );
+        if (item->nodeType != NodeStart)
+            str2 += QString( "%1 " ).arg( item->bestEval );
         str2+=QString( " ply: %1 " ).arg( item->ply );
     } else {
         str1 = QString( "Depth %1" ).arg( item->ply );
@@ -57,6 +59,9 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
     case NodeEndgameEval:
         str2 += "EndgameEval";
         break;
+    case NodeStart:
+        str2 += "SearchJobStart";
+        break;
     default:
         str2 += "Full";
         break;
@@ -83,7 +88,9 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
     if (item->flags & Extend)
         str2 += QString(" EXT ");
 
-    str2 += QString( " size: %2" ).arg(item->nodes);
+    if (item->nodeType != NodeStart)
+        str2 += QString( " size: %2" ).arg(item->nodes);
+    str2 += QString( " thread: %3" ).arg((int)item->threadId);
 /*
     if ( index.parent().isValid() )
         if ( static_cast<NodeItem*>( index.parent().internalPointer() )->bestMove.fromto() == item->move.fromto() )
@@ -91,6 +98,13 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
 */
 
     QRect coor = option.rect;
+    QColor col;
+    if (item->threadId)
+        col.setHsv((int)pow(item->threadId, 1.3)*25-25, 255-128*(item->nodeType==NodeStart), 255);
+    else
+        col = Qt::gray;
+    painter->setBrush(QBrush(col));
+    painter->drawRect( option.rect );
     if (item->moveColor == White) {
         painter->setPen(Qt::white);
     } else {
@@ -105,11 +119,12 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
         painter->setPen(Qt::black);
     }
     painter->drawText( coor, Qt::AlignTop | Qt::AlignLeft, str2 );
+    painter->setPen(col);
 }
 
 QSize NodeDelegate::sizeHint ( const QStyleOptionViewItem& /*option*/, const QModelIndex& /*index*/ ) const
 {
-    return QSize( 100,40 );
+    return QSize( 200,40 );
 }
 
 #endif

@@ -167,6 +167,7 @@ void StatWidget::update()
     DISPLAYNUM(ptuse);
     DISPLAYNUM(ptcollision);
     DISPLAYNUM(jobs);
+    DISPLAYNUM(cancelJob);
 }
 
 void StatWidget::updateBoard()
@@ -265,16 +266,16 @@ void StatWidget::updateBoard()
                         pa.drawRect(x*size,y*size,size,size);
                     }
                 minipm[(1-c)/2][p]->setPixmap(pm);*/
-                uint64_t mobMax = 1;
-                for ( int x=0; x<16; x++ )
-                    mobMax = std::max(mobMax, mobStat[0][p][r][x]);
-                for ( int x=0; x<16; x++ ) {
-                    int y = (hh*mobStat[0][p][r][x])/mobMax;
-                    pa.setBrush(QBrush(pal[x*16]));
-        //                 pa.setBrush(QBrush(QColor(192,192,192)));
-                    pa.drawRect(x*size,hh-y,size,y);
-                }
-                minipm[r][p]->setPixmap(pm);
+//                 uint64_t mobMax = 1;
+//                 for ( int x=0; x<16; x++ )
+//                     mobMax = std::max(mobMax, mobStat[0][p][r][x]);
+//                 for ( int x=0; x<16; x++ ) {
+//                     int y = (hh*mobStat[0][p][r][x])/mobMax;
+//                     pa.setBrush(QBrush(pal[x*16]));
+//         //                 pa.setBrush(QBrush(QColor(192,192,192)));
+//                     pa.drawRect(x*size,hh-y,size,y);
+//                 }
+//                 minipm[r][p]->setPixmap(pm);
             }
         #endif
     }

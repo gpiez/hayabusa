@@ -46,19 +46,24 @@ template<Colors C, typename A, typename B, typename T>
 class SearchJob: public Job {
     RootBoard& rb;
     const T& b;
+    bool doNull;
+    unsigned reduction;
     Move m;
     unsigned int depth;
-    const A& alpha;
-    B& beta;
+    A& alpha;
+    const B& beta;
+    ScoreMove<C,A>& retval;
     unsigned ply;
     unsigned parent;
     const RepetitionKeys& rep;  //TODO really needed? This should be always thread-local keys
     NodeType nt;
 #ifdef QT_GUI_LIB
     NodeItem* node;
+    NodeItem* startnode;
 #endif
 public:
-    SearchJob(RootBoard& rb, const T& b, Move m, unsigned int depth, const A& alpha, B& beta, unsigned ply, unsigned parent, const RepetitionKeys& rep, NodeType nt
+    SearchJob(RootBoard& rb, const T& b, bool, unsigned, Move m, unsigned int depth, A& alpha, const B& beta,
+              ScoreMove<C,A>& retval, unsigned ply, unsigned parent, const RepetitionKeys& rep, NodeType nt
 #ifdef QT_GUI_LIB
         , NodeItem* node
 #endif
@@ -87,11 +92,11 @@ class PerftJob: public Job {
     unsigned int depth;
 public:
     PerftJob(RootBoard& rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {
-        setNotReady(n);
+//         setNotReady(n);
     };
     void job() {
         rb.perft<C, trunk>(n, b, m, depth);
-        setReady(n);
+//         setReady(n);
     }
 };
 
