@@ -41,17 +41,29 @@ struct Parm {
 
     Parm(T value, T var):
         value(value),
-        min(0),
-        max(2*value),
         var(var)
-    {}
+    {
+        if (value >= 0.0) {
+            min = 0.0;
+            max = 2.0*value;
+        } else {
+            max = 0.0;
+            min = 2.0*value;            
+        }
+    }
     
     Parm(T value):
         value(value),
-        min(0),
-        max(2*value),
         var(value/8)
-    {}
+    {
+        if (value >= 0.0) {
+            min = 0.0;
+            max = 2.0*value;
+        } else {
+            max = 0.0;
+            min = 2.0*value;
+        }
+    }
 
     Parm() {}
 
@@ -71,17 +83,21 @@ public:
             float opening;
             float endgame;
         };
+        template<int N>
         struct Direction {
             Phase value;
             Phase inflection;
+            int opening[N];
+            int endgame[N];
         };
         Phase value;
         Phase corner;
-        Direction hor, vert;
+        Direction<4> hor;
+        Direction<8> vert;
         Phase vcenter;
         Phase mobility;
         Phase pair;
-        float mobslope;
+        Phase mobslope;
         float attack;
         float defense;
     };

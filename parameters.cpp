@@ -33,10 +33,16 @@ void Parameters::mutate(float mutationRate)
 {
     for(unsigned i = 0; i < maxIndex; ++i) {
         if (std::bernoulli_distribution(mutationRate)(mt)) {
-            std::normal_distribution<float> ndist(parms[i].value, parms[i].var);
+            std::normal_distribution<float> ndist(base[i].value, base[i].var);
             parms[i].value = ndist(mt);
             parms[i].value = std::min(parms[i].value, parms[i].max);
             parms[i].value = std::max(parms[i].value, parms[i].min);
+//             if (base[i].value != parms[i].value)
+//             for (auto j=Parameters::index.begin(); j!=Parameters::index.end(); ++j) { 
+//                 if (j->second == i) {
+//                     std::cout << "Parameter " << std::setw(20) << j->first << ":" << std::setw(5) <<  base[i].value << "->" << std::setw(5) << parms[i].value << std::endl;
+//                 }
+//             }
         }
     }
 }
@@ -95,122 +101,130 @@ void Parameters::add(std::string s, float value, float var, float max, float min
 
 void Parameters::init()
 {
-    Parameters::add("knight.mobility.opening", 24);
-    Parameters::add("knight.mobility.endgame", 18);
-    Parameters::add("bishop.mobility.opening", 12);
-    Parameters::add("bishop.mobility.endgame", 0);
-    Parameters::add("rook.mobility.opening", 16);
-    Parameters::add("rook.mobility.endgame", 0);
-    Parameters::add("queen.mobility.endgame", 0);
-    Parameters::add("queen.mobility.opening", 0);
-
-    Parameters::add("pawn.corner.opening", -4);
-    Parameters::add("knight.corner.opening", 0);
-    Parameters::add("rook.corner.opening", 0);
-    Parameters::add("queen.corner.opening", 0);
-    Parameters::add("bishop.corner.opening", 0);
-    Parameters::add("king.corner.opening", 0);
-    Parameters::add("pawn.corner.endgame", 0);
-    Parameters::add("knight.corner.endgame", -16);
-    Parameters::add("rook.corner.endgame", 0);
-    Parameters::add("queen.corner.endgame", 0);
+    Parameters::add("bishop.attack", 60);
     Parameters::add("bishop.corner.endgame", -8);
-    Parameters::add("king.corner.endgame", 0);
-
-    Parameters::add("pawn.value.opening", 96 , 10, 150);
-    Parameters::add("pawn.value.endgame", 106, 10, 150);
-    Parameters::add("pawn.hor.value.opening", 8);
-    Parameters::add("pawn.vert.value.opening", 12);
-    Parameters::add("pawn.hor.value.endgame", -8);
-    Parameters::add("pawn.vert.value.endgame", 14);
-    Parameters::add("pawn.hor.inflection.opening", 1.5);
-    Parameters::add("pawn.vert.inflection.opening", 6);
-    Parameters::add("pawn.vcenter.opening", 6);
-    Parameters::add("pawn.hor.inflection.endgame", 1.5);
-    Parameters::add("pawn.vert.inflection.endgame", 1.5);
-
-    Parameters::add("knight.value.opening", 312, 20, 400);
-    Parameters::add("knight.value.endgame", 288, 20, 400);
-
-    Parameters::add("bishop.value.opening", 292, 20, 400);
+    Parameters::add("bishop.corner.opening", 0);
+    Parameters::add("bishop.defense", 15);
+    Parameters::add("bishop.hor.inflection.endgame", 1.5);
+    Parameters::add("bishop.hor.inflection.opening", 0.6875);
+    Parameters::add("bishop.hor.value.endgame", 0);
+    Parameters::add("bishop.hor.value.opening", 12);
+    Parameters::add("bishop.mobility.endgame", 0);
+    Parameters::add("bishop.mobility.opening", 30);
+    Parameters::add("bishop.mobslope.endgame", 5.0);
+    Parameters::add("bishop.mobslope.opening", 5.0);
     Parameters::add("bishop.value.endgame", 300, 20, 400);
-    
-    Parameters::add("rook.value.opening", 480, 30, 600);
-    Parameters::add("rook.value.endgame", 480, 30, 600);
-    Parameters::add("rook.horizontal.value.opening", 14);
-    Parameters::add("rook.vertical.value.opening", 12);
-    Parameters::add("rook.horizontal.inflection.opening", 1.2);
-    Parameters::add("rook.vertical.inflection.opening", 1.2);
-    
-    Parameters::add("queen.value.opening", 1000, 100, 1200);
-    Parameters::add("queen.value.endgame", 890, 100, 1200);
-    Parameters::add("queen.horizontal.value.opening", 7);
-    Parameters::add("queen.vertical.value.opening", 5);
-    Parameters::add("queen.horizontal.inflection.opening", 1.0);
-    Parameters::add("queen.vertical.inflection.opening", 0.5);
-    Parameters::add("queen.mobility.endgame", 4);
-
-    Parameters::add("king.horizontal.value.opening", -20);
-    Parameters::add("king.vertical.value.opening", -24);
-    Parameters::add("king.horizontal.value.endgame", -4);
-    Parameters::add("king.vertical.value.endgame", 4);
-    
-    Parameters::add("kingHValue", -20);
-    Parameters::add("kingVValue", -24);
-    Parameters::add("kingHEValue", -4);
-    Parameters::add("kingVEValue", 4);
-    
-    Parameters::add("rookHValue", 14);
-    Parameters::add("rookVValue", 12);
-    Parameters::add("rookHInfl", 1.2);
-    Parameters::add("rookVInfl", 1.2);
-    Parameters::add("rookHEValue", 0);
-    Parameters::add("rookVEValue", 0);
-    Parameters::add("rookHEInfl", 1.5);
-    Parameters::add("rookVEInfl", 1.5);
-    Parameters::add("rookPair", 0);
-    
-    Parameters::add("queenHValue", 7);
-    Parameters::add("queenVValue", 5);
-    Parameters::add("queenHInfl", 1.0);
-    Parameters::add("queenVInfl", 0.5);
-    Parameters::add("queenPair", 0);
-    
-    Parameters::add("knightHValue", 10);
-    Parameters::add("knightVValue", 32);
-    Parameters::add("knightHEValue", 2);
-    Parameters::add("knightVEValue", 2);
-    Parameters::add("knightHEInfl", 0.5);
-    Parameters::add("knightVEInfl", 0);
+    Parameters::add("bishop.value.opening", 310, 20, 400);
+    Parameters::add("bishop.vcenter.endgame", 3.5);
+    Parameters::add("bishop.vcenter.opening", 4.0);
+    Parameters::add("bishop.vert.inflection.endgame", 1.5);
+    Parameters::add("bishop.vert.inflection.opening", 1.34375);
+    Parameters::add("bishop.vert.value.endgame", 0);
+    Parameters::add("bishop.vert.value.opening", 22);
+    Parameters::add("king.attack", 40);
+    Parameters::add("king.corner.endgame", 0);
+    Parameters::add("king.corner.opening", 0);
+    Parameters::add("king.hor.inflection.endgame", 1.0);
+    Parameters::add("king.hor.inflection.opening", 2);
+    Parameters::add("king.hor.value.endgame", -4);
+    Parameters::add("king.hor.value.opening", -20);
+    Parameters::add("king.vcenter.endgame", 3.5);
+    Parameters::add("king.vcenter.opening", 3.5);
+    Parameters::add("king.vert.inflection.endgame", 1.5);
+    Parameters::add("king.vert.inflection.opening", 1);
+    Parameters::add("king.vert.value.endgame", 4);
+    Parameters::add("king.vert.value.opening", -24);
+    Parameters::add("knight.attack", 40);
+    Parameters::add("knight.corner.endgame", -16);
+    Parameters::add("knight.corner.opening", 0);
+    Parameters::add("knight.defense", 15);
+    Parameters::add("knight.hor.inflection.endgame", 0.5);
+    Parameters::add("knight.hor.inflection.opening", 0.5);
+    Parameters::add("knight.hor.value.endgame", 2);
+    Parameters::add("knight.hor.value.opening", 10);
+    Parameters::add("knight.mobility.endgame", 18);
+    Parameters::add("knight.mobility.opening", 30);
+    Parameters::add("knight.mobslope.endgame", 3.0);
+    Parameters::add("knight.mobslope.opening", 3.0);
     Parameters::add("knightPair", -30);
-    Parameters::add("bishopHValue", 12);
-    Parameters::add("bishopVValue", 22);
-    Parameters::add("bishopHEValue", 0);
-    Parameters::add("bishopVEValue", 0);
-    Parameters::add("bishopCenter", 3.5);
-    Parameters::add("knight.mobslope", 3.0);
-    Parameters::add("bishop.mobslope", 5.0);
-    Parameters::add("rook.mobslope", 6.0);
-    Parameters::add("queen.mobslope", 10.0);
-
-    Parameters::add("queenHEValue", 4);
-    Parameters::add("queenVEValue", 4);
+    Parameters::add("knight.value.endgame", 288, 20, 400);
+    Parameters::add("knight.value.opening", 290, 20, 400);
+    Parameters::add("knight.vcenter.endgame", 4.0);
+    Parameters::add("knight.vcenter.opening", 5.0);
+    Parameters::add("knight.vert.inflection.endgame", 0);
+    Parameters::add("knight.vert.inflection.opening", 0.75);
+    Parameters::add("knight.vert.value.endgame", 2);
+    Parameters::add("knight.vert.value.opening", 32);
+    Parameters::add("pawn.attack", 30);
+    Parameters::add("pawn.corner.endgame", 0);
+    Parameters::add("pawn.corner.opening", -4);
+    Parameters::add("pawn.hor.inflection.endgame", 1.5);
+    Parameters::add("pawn.hor.inflection.opening", 1.5);
+    Parameters::add("pawn.hor.value.endgame", -8);
+    Parameters::add("pawn.hor.value.opening", 8);
+    Parameters::add("pawn.value.endgame", 100, 10, 150);
+    Parameters::add("pawn.value.opening", 90 , 10, 150);
+    Parameters::add("pawn.vcenter.endgame", 6);
+    Parameters::add("pawn.vcenter.opening", 6);
+    Parameters::add("pawn.vert.inflection.endgame", 1.5);
+    Parameters::add("pawn.vert.inflection.opening", 6);
+    Parameters::add("pawn.vert.value.endgame", 14);
+    Parameters::add("pawn.vert.value.opening", 12);
+    Parameters::add("queen.attack", 160);
+    Parameters::add("queen.corner.endgame", 0);
+    Parameters::add("queen.corner.opening", 0);
+    Parameters::add("queen.defense", 5);
+    Parameters::add("queen.hor.inflection.endgame", 1.5);
+    Parameters::add("queen.hor.inflection.opening", 1.0);
+    Parameters::add("queen.horizontal.inflection.opening", 1.0);
+    Parameters::add("queen.horizontal.value.opening", 7);
+    Parameters::add("queen.hor.value.endgame", 4);
+    Parameters::add("queen.hor.value.opening", 7);
+    Parameters::add("queen.mobility.endgame", 4);
+    Parameters::add("queen.mobility.opening", 0);
+    Parameters::add("queen.mobslope.endgame", 10.0);
+    Parameters::add("queen.mobslope.opening", 10.0);
+    Parameters::add("queenPair", 0);
+    Parameters::add("queen.value.endgame", 890, 100, 1200);
+    Parameters::add("queen.value.opening", 1000, 100, 1200);
+    Parameters::add("queen.vcenter.endgame", 3.5);
+    Parameters::add("queen.vcenter.opening", 3.5);
+    Parameters::add("queen.vertical.inflection.opening", 0.5);
+    Parameters::add("queen.vertical.value.opening", 5);
+    Parameters::add("queen.vert.inflection.endgame", 1.5);
+    Parameters::add("queen.vert.inflection.opening", 0.5);
+    Parameters::add("queen.vert.value.endgame", 4);
+    Parameters::add("queen.vert.value.opening", 5);
+    Parameters::add("rook.attack", 110);
+    Parameters::add("rook.corner.endgame", 0);
+    Parameters::add("rook.corner.opening", 0);
+    Parameters::add("rook.defense", 10);
+    Parameters::add("rook.hor.inflection.endgame", 1.5);
+    Parameters::add("rook.hor.inflection.opening", 1.2);
+    Parameters::add("rook.hor.value.endgame", 0);
+    Parameters::add("rook.hor.value.opening", 14);
+    Parameters::add("rook.mobility.endgame", 0);
+    Parameters::add("rook.mobility.opening", 16);
+    Parameters::add("rook.mobslope.endgame", 6.0);
+    Parameters::add("rook.mobslope.opening", 6.0);
+    Parameters::add("rookPair", 0);
+    Parameters::add("rook.value.endgame", 480, 30, 600);
+    Parameters::add("rook.value.opening", 480, 30, 600);
+    Parameters::add("rook.vcenter.endgame", 3.5);
+    Parameters::add("rook.vcenter.opening", 3.5);
+    Parameters::add("rook.vert.inflection.endgame", 1.5);
+    Parameters::add("rook.vert.inflection.opening", 1.2);
+    Parameters::add("rook.vert.value.endgame", 0);
+    Parameters::add("rook.vert.value.opening", 12);
+    
     Parameters::add("pawnPasser2", 0);
     Parameters::add("pawnPasser7", 150);
     Parameters::add("pawnPasserSlope", 1.0);
     Parameters::add("knightBlockPasser", 10);
     Parameters::add("bishopBlockPasser", 15);
     Parameters::add("bishopPair", 28);
-    Parameters::add("kingHEInfl", 1.0);
-    Parameters::add("kingVEInfl", 1.5);
-    Parameters::add("kingHInfl", 2);
-    Parameters::add("kingVInfl", 1);
 
     Parameters::add("endgameMaterial", 32);
-
-//     Parameters::add("bishopAlone", -100);
-
-//     Parameters::add("knightAlone", -125);
 
     Parameters::add("rookTrapped", -50);
     Parameters::add("rookOpen", 16);
@@ -227,33 +241,6 @@ void Parameters::init()
 
     Parameters::add("deltaAttack", 190);
     Parameters::add("deltaDefense", -75);
-
-
-
-
-
-
-
-
-    Parameters::add("knightHInfl", 0.5);
-    Parameters::add("knightVInfl", 0.75);
-    Parameters::add("knightCenter", 4.0);
-
-    Parameters::add("bishopHInfl", 0.6875);
-    Parameters::add("bishopVInfl", 1.34375);
-
-    Parameters::add("rookCenter", 3.5);
-
-
-    Parameters::add("kingCenter", 3.5);
-
-    Parameters::add("queenCenter", 3.5);
-    
-    Parameters::add("bishopHEInfl", 1.5);
-    Parameters::add("bishopVEInfl", 1.5);
-
-    Parameters::add("queenHEInfl", 1.5);
-    Parameters::add("queenVEInfl", 1.5);
 
     Parameters::add("dMaxCapture", 8, 4, 20, 2);
     Parameters::add("standardError", 30);
@@ -297,24 +284,6 @@ void Parameters::init()
     Parameters::add("dVerifyIncr", 0b10000100001010, 0, 0xfffffff, 0);
     Parameters::add("dMinReduction", 2, 0, 10, 1);
 
-    Parameters::add("pawnAttack", 112);
-    Parameters::add("bishopAttack", 144);
-    Parameters::add("knightAttack", 96);
-    Parameters::add("kingAttack", 96);
-    Parameters::add("rookAttack", 160);
-    Parameters::add("queenAttack", 192);
-
-    Parameters::add("attQMaMi", 200);
-    Parameters::add("attQMiMi", 180);
-    Parameters::add("attMaMiMi", 160);
-    Parameters::add("attQMa", 80);
-    Parameters::add("attQMi", 70);
-    Parameters::add("attMaMi", 40);
-    Parameters::add("attMiMi", 30);
-    Parameters::add("attQ", 20);
-    Parameters::add("attMa",15);
-    Parameters::add("attMi",12);
-
     Parameters::add("dRed[7]", 2);
     Parameters::add("dRed[6]", 2);
     Parameters::add("dRed[5]", 2);
@@ -331,7 +300,7 @@ void Parameters::init()
     Parameters::add("bishopNotOppPawn", 1);
 
     Parameters::add("dRedCapture", 5);
-    Parameters::add("dRedCheck", 9);
+    Parameters::add("dRedCheck", 20);
 
     Parameters::add("dMaxExtCheck", 3);
     Parameters::add("dMaxExtPawn", 0);
@@ -342,48 +311,27 @@ void Parameters::init()
     Parameters::add("aspirationHigh2", 20);
     Parameters::add("tempo", 10);
 
-    Parameters::add("kingShield.center[0]", 25);
-    Parameters::add("kingShield.center[1]", 20);
-    Parameters::add("kingShield.center[2]", 12);
-    Parameters::add("kingShield.outer[0]",  24);
-    Parameters::add("kingShield.outer[1]",  20);
-    Parameters::add("kingShield.outer[2]",  16);
-    Parameters::add("kingShield.inner[0]",  26);
-    Parameters::add("kingShield.inner[1]",  19);
-    Parameters::add("kingShield.inner[2]",  15);
-    Parameters::add("kingShield.openFile",   -25);
+    // sum of shield pawns is capped at 127, so the 3*(base+vdelta) should be
+    // smaller than 127
+    Parameters::add("kingShield.base", 20);
+    Parameters::add("kingShield.vdelta", 0.625);
+    Parameters::add("kingShield.idelta", 0.8125);
+    Parameters::add("kingShield.odelta", 0.875);
+
+    Parameters::add("kingShield.openFile",   -10);
     Parameters::add("kingShield.halfOpenFile",-25);
 
-//     Parameters::add("pawnShield", 100);
-//     Parameters::add("pieceDefense", 100);
-//     Parameters::add("pieceAttack", 100);
-//     Parameters::add("attackFirst", 64);
-//     Parameters::add("attackSlope", 3.0);
-//     Parameters::add("flags", 3);
-//     Parameters::add("queen.attack", 120);
-//     Parameters::add("rook.attack", 50);
-    Parameters::add("pawnShield", 175);
-    Parameters::add("pieceDefense", 125);
-    Parameters::add("pieceAttack", 150);
+    Parameters::add("pawnDefense", 384);
+    Parameters::add("pieceDefense", 150);
+    Parameters::add("pieceAttack", 125);
     Parameters::add("attackFirst", 75);
     Parameters::add("attackSlope", 1.0);
     Parameters::add("flags", 15);
-    Parameters::add("queen.attack", 160);
-    Parameters::add("rook.attack", 110);
-
     Parameters::add("attackTotal", 200);
-
-    Parameters::add("bishop.attack", 40);
-    Parameters::add("knight.attack", 40);
-    Parameters::add("pawn.attack", 25);
-    Parameters::add("king.attack", 40);
-    Parameters::add("rook.defense", 10);
-    Parameters::add("bishop.defense", 15);
-    Parameters::add("knight.defense", 15);
-    Parameters::add("queen.defense", 5);
 
     Parameters::add("castlingTempo", 5);
 
+    
 
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) 
