@@ -43,6 +43,15 @@ template<Colors C> bool Score<C>::operator < (int a) const {
     else            return v>a;
 }
 
+template<Colors C> bool ScoreMove<C,Score<C> >::max(const int b, Move bm) {
+    if (*this < b) {
+        v = b;
+        m = bm;
+        return true;
+    }
+    return false;
+}
+
 template<Colors C> bool Score<C>::max(const int b) {
     if (*this < b) {
         v = b;
@@ -91,11 +100,81 @@ void SharedScore<C>::join() {
 }
 
 template<Colors C>
-bool  SharedScore<C>::max(const int b)         {
+bool  SharedScore<C>::max(const int b) {
     LockGuard<RecursiveMutex> lock(valueMutex);
     if (*this < b) {
         v = b;
+        maximizeChildren(b);
         return true;
     }
     return false;
+}
+
+template<Colors C>
+bool ScoreMove<C,SharedScore<C> >::max(const int b, Move bm) {
+    LockGuard<RecursiveMutex> lock(SharedScore<C>::valueMutex);
+    if (*this < b) {
+        v = b;
+        m = bm;
+        SharedScore<C>::maximizeChildren(b);
+        return true;
+    }
+    return false;    
+}
+
+template<Colors C>
+void SharedScore<C>::setReady() {
+    LockGuard<Mutex> lock(readyMutex);
+    ASSERT(notReady);
+    --notReady;
+    /*
+     * The notify cannot be moved out of the scope of the lock. The waiting
+     * thread may wakeup after here with a spurious wakeup and destroy the local
+     * SharedScore variable, the setReady here executing in a different thread
+     * may then try to notify a no longer existing condition
+     */
+    readyCond.notify_one();
+}
+
+template<Colors C>
+void SharedScore<C>::setNotReady() {
+    LockGuard<Mutex> lock(readyMutex);
+    ++notReady;
+//        ASSERT(notReady <= 6);    //queued jobs + running
+}
+
+template<Colors C>
+void SharedScore<C>::addChild(SharedScore<C> *child) const {
+    LockGuard<Mutex> lock(childrenMutex);
+    if (nChildren >= maxScoreChildren) return;
+    ++nChildren;
+    unsigned i;
+    for (i=0; children[i]; ++i)
+        ASSERT(i <= (unsigned)maxScoreChildren);
+    children[i] = child;        
+}
+
+template<Colors C>
+void SharedScore<C>::deleteChild(SharedScore<C> *child) const {
+    LockGuard<Mutex> lock(childrenMutex);
+    ASSERT(nChildren);
+    --nChildren;
+    unsigned i;
+    for (i=0; i<maxScoreChildren; ++i)
+        if (children[i] == child) {
+            children[i] = 0;
+            return;
+        }
+}
+
+template<Colors C>
+void SharedScore<C>::maximizeChildren(const int b) const {
+    LockGuard<Mutex> lock(childrenMutex);
+    if (unsigned n = nChildren)
+        for (int i=0; i<maxScoreChildren; ++i) {
+            if (SharedScore<C>* child = children[i]) {
+                child->max(b);
+                if (!--n) return;
+            }
+        }
 }
