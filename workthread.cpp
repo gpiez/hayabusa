@@ -69,8 +69,8 @@ void WorkThread::run() {
     {
         LockGuard<Mutex> stoplock(stoppedMutex);
         isStopped = true;
+        stopped.notify_one();
     }
-    stopped.notify_one();
 #ifdef __linux__
     std::stringstream name;
     name << "WorkThread " << std::find(threads.begin(), threads.end(), this) - threads.begin();
@@ -95,8 +95,6 @@ void WorkThread::run() {
 
                 getThreadId() = findFreeChild(parent);
                 ++running;
-//                 ASSERT(running <= nThreads);
-//                std::cerr << "deque:" << (void*)job << " parent:" << parent << " id:" << getThreadId() << " count:" << jobs.size() << std::endl;
             }
             if (!job) starting.wait(lock);//starting is signalled by StartJob() or QJob()
             ASSERT(job);
@@ -104,12 +102,9 @@ void WorkThread::run() {
         } while(!job);
         isStopped = false;
         doStop = false;
-//        std::cerr << "start:" << (void*)job << " parent:" << ((getThreadId()-1) >> logWorkThreads) << " id:" << getThreadId() << " count:" << jobs.size() << std::endl;
-//        ASSERT(running <= nThreads);
         runningMutex.unlock();
         job->job();             //returning the result must have happened here.
         runningMutex.lock();
-//        std::cerr << "end  :" << (void*)job << " parent:" << ((getThreadId()-1) >> logWorkThreads) << " id:" << getThreadId() << " count:" << jobs.size() << std::endl;
         delete job;
         job = NULL;
         --running;
@@ -120,6 +115,7 @@ void WorkThread::run() {
 // try to find jobs for children, grandchildren of a current waiting job
 Job* WorkThread::findGoodJob(unsigned& parent) {
     ASSERT(jobs.size() > 0);
+    ASSERT(!runningMutex.try_lock());
     Job* j;
 
     for (unsigned generation = 1; generation <= maxThreadId; generation*=nWorkThreads)
@@ -141,6 +137,7 @@ Job* WorkThread::findGoodJob(unsigned& parent) {
 }
 
 unsigned WorkThread::findFreeChild(unsigned parent) {
+    ASSERT(!runningMutex.try_lock());
     bool used[nWorkThreads];
     for (unsigned i=0; i<nWorkThreads; ++i)
         used[i] = false;
@@ -177,14 +174,12 @@ void WorkThread::queueJob(unsigned parent, Job *j) {
                 (*th)->job = j;
                 (*th)->isStopped = false;
                 ++running;
-//    std::cerr << "qstrt:" << (void*)j << " parent:" << parent << " id:" << th->getThreadId() << " count:" << jobs.size() << std::endl;
-                (*th)->starting.notify_one(); //FIXME move outside lock
+                (*th)->starting.notify_one();
                 return;
             }
         }
 
     jobs.insert(std::pair<unsigned, Job*>(parent, j));
-//    std::cerr << "queue:" << (void*)j << " parent:" << parent << " count:" << jobs.size() << std::endl;
 }
 
 void WorkThread::idle(int n) {
@@ -206,8 +201,7 @@ void WorkThread::idle(int n) {
                     (*th)->getThreadId() = findFreeChild(parent);
                     (*th)->isStopped = false;
                     ++running;
-//    std::cerr << "istrt:" << (void*)th->job << " parent:" << parent << " id:" << th->getThreadId() << " count:" << jobs.size() << std::endl;
-                    (*th)->starting.notify_one(); //FIXME move outside lock
+                    (*th)->starting.notify_one();
                     break;
                 }
             }
@@ -227,8 +221,6 @@ void WorkThread::stopAll() {
     for(auto j=jobs.begin(); j!=jobs.end(); ++j)
         delete (*j).second;
     jobs.clear();
-//     for (auto th = threads.begin(); th !=threads.end(); ++th)
-//         (*th)->doStop = true;
     runningMutex.unlock();
     for (auto th = threads.begin(); th !=threads.end(); ++th)
         (*th)->stop();
@@ -240,6 +232,7 @@ Job* WorkThread::getJob(unsigned parent) {
 }
 
 Job* WorkThread::findJob(unsigned parent) {
+    ASSERT(!runningMutex.try_lock());
     auto wjob = jobs.find(parent);
     if (wjob != jobs.end()) {
         Job* j = (*wjob).second;
@@ -252,7 +245,7 @@ Job* WorkThread::findJob(unsigned parent) {
 
 bool WorkThread::canQueued(unsigned parent, int ) {
     UniqueLock<Mutex> lock(runningMutex);
-    return jobs.count(parent) < nThreads;
+    return jobs.count(parent) < nThreads && running < nThreads;
 }
 
 void WorkThread::printJobs() {
