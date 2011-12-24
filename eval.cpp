@@ -560,6 +560,10 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
     unsigned nAttackers = 0;
     if (P != Endgame) defendingPieces = 0;
     unsigned nDefenders = 0;
+    unsigned nb = 0;
+    unsigned nn = 0;
+    unsigned nq = 0;
+    unsigned nr = 0;
     
 //     int king = bit(b.getPieces<-C,King>());
     const uint64_t oppking = /*b.kAttacked[king];*/ b.getAttacks<-C,King>();
@@ -623,10 +627,10 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //             print_debug(debugMobility, "b attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(batt1 & oppking), attackB1[popcount15(batt1 & oppking)], popcount15(batt2 & oppking), attackB2[popcount15(batt2 & oppking)]);
         }
 
-        unsigned m = popcount(bmob1x);
-        score_opening += bmo[m];
-        score_endgame += bme[m];
-        score = score + bm[m];
+        nb = popcount(bmob1x);
+        score_opening += bmo[nb];
+        score_endgame += bme[nb];
+        score = score + bm[nb];
     }
     
     for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
@@ -656,10 +660,10 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //             print_debug(debugMobility, "n attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(natt1 & oppking), attackN1[popcount15(natt1 & oppking)], popcount15(natt2 & oppking), attackN2[popcount15(natt2 & oppking)]);
         }
 //         if (rmob3 & oppking) attackingPieces++;
-        unsigned m = popcount(nmob1x);
-        score_opening += nmo[m];
-        score_endgame += nme[m];
-        score = score + nm[m];
+        nn = popcount(nmob1x);
+        score_opening += nmo[nn];
+        score_endgame += nme[nn];
+        score = score + nm[nn];
 
     }
 
@@ -703,10 +707,10 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //                 if (ratt1 & ownking) defendingPieces++;
 //             print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
         }
-        unsigned m = popcount(rmob1x);
-        score_opening += rmo[m];
-        score_endgame += rme[m];
-        score = score + rm[m];
+        nr = popcount(rmob1x);
+        score_opening += rmo[nr];
+        score_endgame += rme[nr];
+        score = score + rm[nr];
     }
 
     if (b.getPieces<C,Queen>()) {
@@ -720,11 +724,9 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //         qmob2 |= qatt2 & restrictions & ~b.getOcc<C>();
         unsigned q=bit(b.getPieces<C,Queen>());
         __v2di connectedBR = ~ pcmpeqq(b.qsingle[CI][0].d13 & _mm_set1_epi64x(b.getPieces<C,Bishop>()), zero)
-            & allBishopAttacks
-            & b.bits[q].mask13;
+            & allBishopAttacks;
         connectedBR |= ~ pcmpeqq(b.qsingle[CI][0].d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero)
-            & allRookAttacks
-            & b.bits[q].mask02;
+            & allRookAttacks;
         uint64_t qxray = fold(connectedBR); //TODO optimize for queenless positions
         qmob1 |= qxray & ~b.getOcc<C>() & restrictions;
 //         qmob2 |= qxray & ~b.getOcc<C>() & restrictions;
@@ -746,10 +748,11 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
 //                 if (qatt1 & ownking) defendingPieces++;
 //             print_debug(debugMobility, "q attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(qatt1 & oppking), attackQ1[popcount15(qatt1 & oppking)], popcount15(qatt2 & oppking), attackQ2[popcount15(qatt2 & oppking)]);
         }
-        unsigned m = popcount(qmob1x);
-        score_opening += qmo[m];
-        score_endgame += qme[m];
-        score = score + qm[m];
+        // this may be the summed mobility of two queens or wrongly added rook mob
+        nq = std::min(popcount(qmob1x), 27);
+        score_opening += qmo[nq];
+        score_endgame += qme[nq];
+        score = score + qm[nq];
     }
 
     uint64_t a = b.getAttacks<C,Pawn>() & oppking;

@@ -48,6 +48,31 @@ class Parameters;
 class PieceList;
 class BoardBase;
 
+struct DeltaScore {
+    typedef short vector_t __attribute__((vector_size(16)));
+    vector_t data;
+    DeltaScore() = default;
+    DeltaScore(int opening, int endgame) {
+        ASSERT(opening <= 0x7fff && opening >= -0x8000);
+        ASSERT(endgame <= 0x7fff && endgame >= -0x8000);
+        data = (vector_t){ (short)opening, (short)endgame };
+    }
+    DeltaScore(vector_t init): data(init) {}
+    DeltaScore operator + (const DeltaScore& x) const {
+        return data + x.data;
+    }
+};
+
+struct BiasedScore {
+    unsigned data;
+    BiasedScore(int opening, int endgame) {
+        ASSERT(opening <= 0x7fff && opening >= -0x8000);
+        ASSERT(endgame <= 0x7fff && endgame >= -0x8000);
+        data = 0x80008000 + (opening << 16 ) + (uint16_t)endgame;
+    }
+    int calc(int material, const Eval& eval) const;
+    
+};
 struct CompoundScore {
     RawScore    opening;
     RawScore    endgame;
@@ -92,6 +117,8 @@ union KeyScore {
 
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986, unsigned istart=0 );
+template<typename T>
+void sigmoid(T& p, Parameters::Piece::Phase start, Parameters::Piece::Phase end, Parameters::Piece::Phase dcenter, Parameters::Piece::Phase width, unsigned istart=0);
 
 void sigmoid(int n, int p[], double start, double end, double dcenter, double width = 1.5986);
     
@@ -101,36 +128,8 @@ class Eval {
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
 
     Parameters::Piece rook, bishop, queen, knight, pawn, king;
-    float queenHValue;
-    float queenHInfl;
-    int queenH[4];
-    float queenVValue;
-    float queenVInfl;
-    int queenV[8];
-    float queenHEValue;
-    float queenHEInfl;
-    int queenHE[4];
-    float queenVEValue;
-    float queenVEInfl;
-    int queenVE[8];
-    float queenCenter;
     int queenPair;
-    int queenAttack;
     
-    float bishopHValue;
-    float bishopHInfl;
-    int bishopH[4];
-    float bishopVValue;
-    float bishopVInfl;
-    int bishopV[8];
-    float bishopHEValue;
-    float bishopHEInfl;
-    int bishopHE[4];
-    float bishopVEValue;
-    float bishopVEInfl;
-    int bishopVE[8];
-    float bishopCenter;
-    int bishopAttack;
     int bishopOwnPawn;
     int bishopOppPawn;
     int bishopNotOwnPawn;
@@ -139,48 +138,16 @@ class Eval {
     int bishopPair;
     int bishopBlockPasser;
 
-    float knightHValue;
-    float knightHInfl;
-    int knightH[4];
-    float knightVValue;
-    float knightVInfl;
-    int knightV[8];
-    float knightHEValue;
-    float knightHEInfl;
-    int knightHE[4];
-    float knightVEValue;
-    float knightVEInfl;
-    int knightVE[8];
-    float knightCenter;
     int knightPair;
     int knightBlockPasser;
-    int knightAttack;
     
-    float rookHValue;
-    float rookHInfl;
-    int rookH[4];
-    float rookVValue;
-    float rookVInfl;
-    int rookV[8];
-    float rookHEValue;
-    float rookHEInfl;
-    int rookHE[4];
-    float rookVEValue;
-    float rookVEInfl;
-    int rookVE[8];
-    float rookCenter;
     int rookPair;
     
     int rookTrapped;
     int rookOpen;
     int rookHalfOpen;
     int rookWeakPawn;
-    int rookAttack;
     
-    int pawnH[4];
-    int pawnV[8];
-    int pawnHE[4];
-    int pawnVE[8];
     int pawnBackward;
     int pawnBackwardOpen;
     int pawnIsolatedCenter;
@@ -189,27 +156,9 @@ class Eval {
     int pawnConnPasser[6];
     int pawnPasser[6];
     float pawnPasser2, pawnPasser7, pawnPasserSlope;
-    int pawnFileOpen[4], pawnFileEnd[4];
-    int pawnRankOpen[6], pawnRankEnd[6];
 
     int pawnDouble;
     int pawnShoulder;
-    int pawnAttack;
-
-    float kingHValue;
-    float kingHInfl;
-    int kingH[4];
-    float kingVValue;
-    float kingVInfl;
-    int kingV[8];
-    float kingHEValue;
-    float kingHEInfl;
-    int kingHE[4];
-    float kingVEValue;
-    float kingVEInfl;
-    int kingVE[8];
-    float kingCenter;
-    int kingAttack;
     
     float oppKingOwnPawnV;  // only 1..7 used
     float ownKingOwnPawnV;
@@ -230,9 +179,13 @@ class Eval {
     int defenseN[8];
 
     int bmo[14], bme[14];
+    DeltaScore bm[14];
     int nmo[9], nme[9];
+    DeltaScore nm[9];
     int rmo[15], rme[15];
+    DeltaScore rm[15];
     int qmo[28], qme[28];
+    DeltaScore qm[28];
 
     int oppKingOwnPawn[8];
     int ownKingOwnPawn[8];
@@ -243,6 +196,7 @@ class Eval {
     int endgameMaterial;
 
     void initPS();
+    void initPS(Pieces pIndex, Parameters::Piece& piece);
     void initZobrist();
     void initShield();
     template<GamePhase P>
@@ -299,9 +253,9 @@ public:
         int openFile;
         int halfOpenFile;
         int base;
-        int idelta;
-        int odelta;
-        int vdelta;
+        float idelta;
+        float odelta;
+        float vdelta;
     } kingShield;
     int pawnDefense;
     int pieceAttack;
