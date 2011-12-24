@@ -37,40 +37,55 @@ Evolution::Evolution(Console* c):
 
 void Evolution::init()
 {
-    initFixed(64);
+    initFixed(1024);
 }
 
 void Evolution::initFixed(int n)
 {
     nThread = 0;
-    maxThread = 8;
+    maxThread = 4;
     nIndiFixed = n;
     recalc.resize(n);
     minElo.resize(n);
     maxElo.resize(n);
     firstGame.resize(n);
     for (int i=0; i<nIndiFixed; ++i) {
+//         std::cout << "Individual " << i << std::endl;
         Parameters adam(defaultParameters);
         adam.mutate(0.25);
         indiFixed.push_back(adam);
+//         std::cout << std::endl;
     }
-    
 }
 
 void Evolution::setCurrentParameters(Parameters& p)
 {
-    p["pawnShield"] = 175;
-    p["pieceAttack"] = 125;
-    p["pieceDefense"] = 150;
-    p["attackFirst"] = 75;
-    p["attackSlope"] = 1.0;
+//     p["pieceAttack"] = 125;
+//     p["pieceDefense"] = 150;
+//     p["attackFirst"] = 75;
+//     p["attackSlope"] = 1.0;
+//     p["flags"] = 0b1111;
+//     p["queen.attack"] = 160;
+//     p["rook.attack"] = 110;
+//     p["bishop.attack"] = 60;
+//     p["kingShield.base"] = 20;
+//     p["kingShield.vdelta"] = 8;
+//     p["kingShield.idelta"] = 12;
+//     p["pawnDefense"] = 384;
+//     p["knight.value.opening"] = 290;
+//     p["bishop.value.opening"] = 310;
+    p["bishop.mobility.opening"] = 30;
+    p["knight.mobility.opening"] = 30;
+
 }
 
-void Evolution::parmTest(std::string pname, float min, float max, int n) {
+void Evolution::parmTest(std::string pname, float min, float max, int n, const std::string& nodes) {
+    this->nodes = nodes;
     Parameters adam(defaultParameters);
     setCurrentParameters(adam);
     indi.clear();
     nIndi = n;
+    std::cout << "From " << min << " to " << max << std::endl;
     for (int i=0; i<nIndi; ++i) {
         recalc[i] = true;
         adam[pname] = n == 1 ? min : (max-min)*i/(n-1.0) + min;
@@ -164,7 +179,7 @@ void Evolution::parmTest(std::string pname, float min, float max, int n, std::st
 int Evolution::game(const Evolution::Individual& a, const Evolution::Individual& b) const {
     int result;
     {
-        SelfGame sg(console, a.parm, b.parm);
+        SelfGame sg(console, a.parm, b.parm, nodes);
         result = sg.tournament();
     }
     {
@@ -215,7 +230,9 @@ void Evolution::step()
                 cout << setprecision(0) << std::fixed << "\015" << setw(4) << i << ": " << "Abs Score: " << setw(5) << indi[i].score << "/" << setw(5) << n << "  Rel Score: " << setprecision(4) << setw(6) << p << " ±" << setw(6) << pe << "  Elo: " <<  setprecision(1) << setw(5) << elo << " ±" << setw(5) << eloe << "      " << flush;
             } else {
                 --j;
+#ifdef __LINUX__                
                 usleep(100000);
+#endif                
             }
         }
         cout << endl;

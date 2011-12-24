@@ -42,6 +42,7 @@ class Evolution
     static unsigned maxThread;
     static std::mutex nThreadMutex;
     static std::condition_variable nThreadCond;
+    std::string nodes;
     void setCurrentParameters(Parameters& p);
 public:
     Evolution(Console*);
@@ -55,7 +56,7 @@ public:
     void evolve();
     void tournament();
     int findmax();
-    void parmTest(std::string, float, float, int);
+    void parmTest(std::string, float, float, int, const std::string&);
     void parmTest(std::string pname, float min, float max, int n, std::string pname2, float min2, float max2, int n2);
     void parmTest(std::string pname, float min, float max, int n, std::string pname2, float min2, float max2, int n2, std::string pname3, float min3, float max3, int n3);
     int game(const Individual& a, const Individual& b) const;
