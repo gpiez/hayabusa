@@ -36,7 +36,7 @@
 #include "score.tcc"
 
 namespace Options {
-    unsigned int        splitDepth = 1000;
+    unsigned int        splitDepth = 7;
     int                 humanreadable = 0;
     uint64_t            hash = 0x1000000;
     uint64_t            pHash = 0x1000000;
@@ -72,6 +72,7 @@ Console::Console(int& argc, char** argv)
     }
 //     Options::debug = debugEval;
     BoardBase::initTables();
+    Eval::initTables();
     WorkThread::init();
     Parameters::init();
     evolution = new Evolution(this);
@@ -544,7 +545,9 @@ void Console::parmtest(StringList cmds)
 {
     Options::quiet = true;
     if (cmds.size() == 5) 
-        evolution->parmTest(cmds[1], convert(cmds[2]), convert(cmds[3]), convert(cmds[4]));
+        evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), "20000");
+    else if (cmds.size() == 6) 
+        evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5]);
     else if (cmds.size() == 9) 
         evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]));
     else if (cmds.size() == 13)

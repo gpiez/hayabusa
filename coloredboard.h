@@ -44,10 +44,17 @@ public:
     static unsigned errorPieceIndex[7];
 
     ColoredBoard() = default;
+    const ColoredBoard<(Colors)-C>& swapped() const {
+        const union {
+            const ColoredBoard<C>* const normal;
+            const ColoredBoard<(Colors)-C>* const swapped;
+        } swapper = { this };
+        return *(swapper.swapped);
+    }
     template<typename T>
     inline ColoredBoard(const T& prev, Move m, __v8hi est);
-//     inline __v8hi inline_estimatedEval(const Move m, const Eval& rb) const;
-//     __v8hi estimatedEval(const Move m, const Eval& rb) const __attribute__((noinline));
+    template<typename T>
+    ColoredBoard(const T& prev, Move m, const Eval&);
     static void initTables();
     template<MoveType>
     void generateCaptureMoves(Move* &list, Move* &bad) const __attribute__((noinline));
@@ -60,7 +67,9 @@ public:
     bool generateForks( Move** good) const __attribute__((noinline));
     void generateNonCap(Move*& good, Move*& bad) const __attribute__((noinline));
     void doMove(BoardBase* next, Move m) const;
+    void doMove(BoardBase* next, Move m, const Eval&) const;
     void doSpecialMove(BoardBase* next, Move m, uint64_t from, uint64_t to) const;
+    void doSpecialMove(BoardBase* next, Move m, uint64_t from, uint64_t to, const Eval&) const;
 
     bool isForked() const __attribute__((noinline));
     int isPieceHanging() const;
