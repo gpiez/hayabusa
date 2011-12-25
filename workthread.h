@@ -28,7 +28,6 @@ class Job;
 class RootBoard;
 union Stats;
 
-extern __thread unsigned threadId;
 extern __thread bool isMain;
 
 class WorkThread {
@@ -42,7 +41,8 @@ class WorkThread {
     static volatile unsigned int waiting;
     static unsigned logWorkThreads;
     static unsigned nWorkThreads;
-
+    static __thread unsigned reserved;
+    
     volatile bool isStopped;
 
     volatile bool keepRunning;
@@ -53,13 +53,15 @@ class WorkThread {
     Job* job;
     Key key;
     Stats* stats;
-    unsigned* threadId;
+    unsigned* pThreadId;
     void stop();
 
 public:
     static volatile bool doStop;
     static unsigned int nThreads;
     static unsigned int running;
+    static __thread unsigned threadId;
+    unsigned int parent;
 
     WorkThread();
     virtual ~WorkThread();
@@ -71,7 +73,7 @@ public:
         return stats;
     }
     unsigned& getThreadId() {
-        return *threadId;
+        return *pThreadId;
     }
     static unsigned findFreeChild(unsigned parent);
     static void stopAll();
@@ -86,6 +88,8 @@ public:
     static const std::vector<WorkThread*>& getThreads();
     static void printJobs();
     static void clearStats();
+    static unsigned getReserved(unsigned);
+    static void reserve(unsigned);
 };
 
 #endif /* WORKTHREAD_H_ */

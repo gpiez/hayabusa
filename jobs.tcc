@@ -87,7 +87,6 @@ RootSearchJob<C>::RootSearchJob(RootBoard& rb, const RepetitionKeys& rep, unsign
 
 template<Colors C>
 void RootSearchJob<C>::job() {
-    threadId = 0;
     rb.clone<C>(rb.currentBoard<C>(), rep, 0);
     rb.rootSearch<C>(depth);
 }

@@ -686,14 +686,15 @@ nosort:
                 && b.material; /*&& eval.flags & 4*/
             bool ninf = current.v == -C*infinity;
             int reduction = !ninf && calcReduction(b, i-good, *i, depth); //FIXME compare to alpha0.v, reuse condition;
-            if (P == trunk && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i > good) && WorkThread::canQueued(threadId, current.isNotReady())) {
-                WorkThread::queueJob(threadId,
+            if (P == trunk && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i > good) && WorkThread::canQueued(WorkThread::threadId, current.isNotReady())) {
+                WorkThread::queueJob(WorkThread::threadId,
                     new SearchJob<C, A, B, ColoredBoard<C> >(*this, b, doNull, reduction, *i, newDepth,
-                                           alpha, beta, current, ply, threadId, keys, nextNT NODE));
+                                           alpha, beta, current, ply, WorkThread::threadId, keys, nextNT NODE));
                     if (stopSearch != Running) break;
                     continue;
             } else {
                 value.v = search9<(Colors)-C, P>(doNull, reduction, b, *i, newDepth, beta, alpha, ply, ExtNot, nextNT NODE);
+                WorkThread::reserve(bad-i-1);
             }
         }
         
@@ -706,7 +707,7 @@ nosort:
     // if there are queued jobs started from _this_ node, do them first
     if (P == trunk) {
         Job* job;
-        while((job = WorkThread::getJob(threadId))) {
+        while((job = WorkThread::getJob(WorkThread::threadId))) {
             job->job();
         }
 //        while(current.isNotReady() && (job = WorkThread::getChildJob(zd))) job->job();
