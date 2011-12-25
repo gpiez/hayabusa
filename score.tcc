@@ -158,10 +158,10 @@ template<Colors C>
 void SharedScore<C>::deleteChild(SharedScore<C> *child) const {
     LockGuard<Mutex> lock(childrenMutex);
     ASSERT(nChildren);
-    --nChildren;
     unsigned i;
-    for (i=0; i<maxScoreChildren; ++i)
+    for (i=0; i<(unsigned)maxScoreChildren; ++i)
         if (children[i] == child) {
+            --nChildren;
             children[i] = 0;
             return;
         }
