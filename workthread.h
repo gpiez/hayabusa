@@ -47,7 +47,6 @@ class WorkThread {
 
     volatile bool keepRunning;
     volatile int result;
-    bool isWaiting;
     BoardBase board;
     Colors color;
     Job* job;
@@ -79,9 +78,9 @@ public:
     static void stopAll();
     static void queueJob(unsigned, Job*);
     static bool canQueued(unsigned, int);
-    static Job* getJob(unsigned);
-    static Job* findJob(unsigned);
-    Job* findGoodJob(unsigned& parent);
+    static Job* getJob(unsigned, unsigned);
+    static Job* findJob(unsigned, unsigned);
+//     Job* findGoodJob(unsigned& parent);
     static void idle(int);
     static WorkThread* findFree();
     static void init();
