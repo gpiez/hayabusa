@@ -82,27 +82,26 @@ void WorkThread::run() {
     while(keepRunning) {
 
         if (doStop) stopped.notify_one();    //wake stop() function
-        do {
-            if (!doStop && jobs.size()>0 && running<nThreads) {
-                if (waiting)
-                    job = findGoodJob(parent);
-
-                if (!job) {
-                    auto last = jobs.end();
-                    --last;
-                    parent = (*last).first;
-                    job = (*last).second;
-                    jobs.erase(last);
-                }
+//         do {
+        ASSERT(!job);
+        if (/*!doStop &&*/ jobs.size()>0 && running<nThreads) {
+//                 if (waiting)
+//                     job = findGoodJob(parent);
+            ASSERT(!job);
+            auto last = jobs.end();
+            --last;
+            parent = (*last).first;
+            job = (*last).second;
+            jobs.erase(last);
 
 //                 getThreadId() = findFreeChild(parent);
-                ++running;
-            }
-            if (!job) starting.wait(lock);//starting is signalled by StartJob() or QJob()
-            ASSERT(job);
-            stats->jobs++;
-        } while(!job);
-        isStopped = false;
+            ++running;
+        }
+        if (!job) starting.wait(lock);//starting is signalled by StartJob() or QJob()
+        ASSERT(job);
+        stats->jobs++;
+//         } while(!job);
+        isStopped = false;      //TODO wrong semantic: this should be reset by the starting event/thread
         doStop = false;
         runningMutex.unlock();
         job->job();             //returning the result must have happened here.
@@ -115,22 +114,22 @@ void WorkThread::run() {
 }
 
 // try to find jobs for children, grandchildren of a current waiting job
-Job* WorkThread::findGoodJob(unsigned& parent) {
-    ASSERT(jobs.size() > 0);
-    ASSERT(!runningMutex.try_lock());
-
-    for (auto i=threads.begin(); i != threads.end(); ++i) {
-        if ((*i)->isWaiting) {
-            auto j = jobs.begin();
-            parent = j->first;
-            Job* ret = j->second;
-            jobs.erase(j);
-            --waiting;
-            return ret;
-        }
-    }
-    return NULL;
-}
+// Job* WorkThread::findGoodJob(unsigned& parent) {
+//     ASSERT(jobs.size() > 0);
+//     ASSERT(!runningMutex.try_lock());
+// 
+//     for (auto i=threads.begin(); i != threads.end(); ++i) {
+//         if ((*i)->isWaiting) {
+//             auto j = jobs.begin();
+//             parent = j->first;
+//             Job* ret = j->second;
+//             jobs.erase(j);
+//             --waiting;
+//             return ret;
+//         }
+//     }
+//     return NULL;
+// }
 
 unsigned WorkThread::findFreeChild(unsigned parent) {
     ASSERT(!runningMutex.try_lock());
@@ -188,20 +187,19 @@ void WorkThread::idle(int n) {
     UniqueLock<Mutex> lock(runningMutex);
     running -= n;
     waiting += n;
-    workThread->isWaiting = true;
     if (n>0 && running < nThreads && jobs.size() > 0)
         for (auto th = threads.begin(); th !=threads.end(); ++th)
             if ((*th)->isStopped) {
                 ASSERT((*th)->job == NULL);
-                unsigned parent;
-                (*th)->job = (*th)->findGoodJob(parent);
-                if ((*th)->job) {
-//                     (*th)->getThreadId() = findFreeChild(parent);
-                    (*th)->isStopped = false;
-                    ++running;
-                    (*th)->starting.notify_one();
-                    break;
-                }
+                auto j = jobs.begin();
+                (*th)->parent = j->first;
+                (*th)->job = j->second;
+                jobs.erase(j);
+                --waiting;
+                (*th)->isStopped = false;
+                ++running;
+                (*th)->starting.notify_one();
+                return;
             }
 }
 
@@ -224,20 +222,28 @@ void WorkThread::stopAll() {
         (*th)->stop();
 }
 
-Job* WorkThread::getJob(unsigned parent) {
+Job* WorkThread::getJob(unsigned parent, unsigned ply) {
     UniqueLock<Mutex> lock(runningMutex);
-    return findJob(parent);
+    return findJob(parent, ply);
 }
 
-Job* WorkThread::findJob(unsigned parent) {
+Job* WorkThread::findJob(unsigned parent, unsigned ply) {
     ASSERT(!runningMutex.try_lock());
-    auto wjob = jobs.find(parent);
-    if (wjob != jobs.end()) {
+    unsigned bestPly = 0;
+    std::multimap<unsigned, Job*>::iterator ij = jobs.end();
+    for (auto wjob = jobs.find(parent); wjob != jobs.end(); ++wjob) {
         Job* j = (*wjob).second;
-        jobs.erase(wjob);
-        return j;
+        if (j->getPly() >= ply && j->getPly() > bestPly) {
+            bestPly = j->getPly();
+            ij = wjob;
+        }
     }
 
+    if (ij != jobs.end() ) {
+        jobs.erase(ij);
+        return ij->second;
+    }
+    
     return 0;
 }
 
