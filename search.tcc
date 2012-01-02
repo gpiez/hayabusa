@@ -79,7 +79,7 @@ int RootBoard::search9(const bool doNull, const unsigned reduction, const Colore
          * The actual null move search. Search returns true if the
          * result in beta1 comes down to alpha0, in that case prune
          */
-        if (value >= beta.v && stopSearch == Running) {
+        if (value >= beta.v) {
             if (value >= infinity*C) return value.v;
             Score<C> nullvalue(search4<(Colors)-C, P>(prev, m, nullReduction[newDepth], beta, alpha0, ply+2, ExtNot, nextNT NODE));
             if (nullvalue >= beta.v) {
@@ -88,15 +88,13 @@ int RootBoard::search9(const bool doNull, const unsigned reduction, const Colore
         }
     }
 
-    if (reduction && stopSearch == Running) {
+    if (reduction) {
         const A alpha0(beta.v - C);
         value.v = search4<C, P>(prev, m, newDepth-reduction, alpha0, beta, ply+1, ExtNot, nextNT NODE);
         if (value >= beta.v) {
             return value.v;
         }
     }
-
-    if (stopSearch != Running) return 0;
 
     value.v = search4<C, P>(prev, m, newDepth, alpha, beta, ply+1, ExtNot, nextNT NODE);
 #ifdef QT_GUI_LIB    
@@ -705,9 +703,10 @@ nosort:
     }  // for Move*
 
     // if there are queued jobs started from _this_ node, do them first
+    // don't start threads from parent search but with same therad id here
     if (P == trunk) {
         Job* job;
-        while((job = WorkThread::getJob(WorkThread::threadId))) {
+        while((job = WorkThread::getJob(WorkThread::threadId, ply))) {
             job->job();
         }
 //        while(current.isNotReady() && (job = WorkThread::getChildJob(zd))) job->job();

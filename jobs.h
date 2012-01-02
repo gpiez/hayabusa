@@ -40,6 +40,7 @@ struct Job {
     virtual ~Job() {};            // the for calling destructor of QObject in signalJob
     virtual void job() = 0;
     virtual void stop() {};
+    virtual unsigned getPly() { return 0; };
 };
 
 template<Colors C, typename A, typename B, typename T>
@@ -69,6 +70,9 @@ public:
 #endif
         );
     void job();
+    unsigned getPly() {
+        return ply;
+    }
 };
 
 template<Colors C>

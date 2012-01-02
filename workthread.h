@@ -56,7 +56,6 @@ class WorkThread {
     void stop();
 
 public:
-    static volatile bool doStop;
     static unsigned int nThreads;
     static unsigned int running;
     static __thread unsigned threadId;
@@ -80,7 +79,6 @@ public:
     static bool canQueued(unsigned, int);
     static Job* getJob(unsigned, unsigned);
     static Job* findJob(unsigned, unsigned);
-//     Job* findGoodJob(unsigned& parent);
     static void idle(int);
     static WorkThread* findFree();
     static void init();

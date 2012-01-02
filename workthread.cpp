@@ -30,7 +30,6 @@ unsigned int                    WorkThread::running = 0;
 volatile unsigned int           WorkThread::waiting = 0;
 unsigned int                    WorkThread::nThreads = 0;
 std::vector<WorkThread*>        WorkThread::threads;
-volatile bool                   WorkThread::doStop = false;
 unsigned                        WorkThread::logWorkThreads;
 unsigned                        WorkThread::nWorkThreads;
 
@@ -80,81 +79,31 @@ void WorkThread::run() {
     prctl(PR_SET_NAME, name.str().c_str() );
 #endif
     while(keepRunning) {
-
-        if (doStop) stopped.notify_one();    //wake stop() function
-//         do {
         ASSERT(!job);
-        if (/*!doStop &&*/ jobs.size()>0 && running<nThreads) {
-//                 if (waiting)
-//                     job = findGoodJob(parent);
+        if (jobs.size()>0 && running<nThreads) {
             ASSERT(!job);
             auto last = jobs.end();
             --last;
             parent = (*last).first;
             job = (*last).second;
             jobs.erase(last);
-
-//                 getThreadId() = findFreeChild(parent);
             ++running;
         }
-        if (!job) starting.wait(lock);//starting is signalled by StartJob() or QJob()
+        if (!job) {
+            isStopped = true;
+            stopped.notify_one();    //wake stop() function
+            starting.wait(lock);//starting is signalled by StartJob() or QJob()
+        }
         ASSERT(job);
         stats->jobs++;
-//         } while(!job);
         isStopped = false;      //TODO wrong semantic: this should be reset by the starting event/thread
-        doStop = false;
         runningMutex.unlock();
         job->job();             //returning the result must have happened here.
         runningMutex.lock();
         delete job;
         job = NULL;
         --running;
-        isStopped = true;
     }
-}
-
-// try to find jobs for children, grandchildren of a current waiting job
-// Job* WorkThread::findGoodJob(unsigned& parent) {
-//     ASSERT(jobs.size() > 0);
-//     ASSERT(!runningMutex.try_lock());
-// 
-//     for (auto i=threads.begin(); i != threads.end(); ++i) {
-//         if ((*i)->isWaiting) {
-//             auto j = jobs.begin();
-//             parent = j->first;
-//             Job* ret = j->second;
-//             jobs.erase(j);
-//             --waiting;
-//             return ret;
-//         }
-//     }
-//     return NULL;
-// }
-
-unsigned WorkThread::findFreeChild(unsigned parent) {
-    ASSERT(!runningMutex.try_lock());
-    bool used[nWorkThreads];
-    for (unsigned i=0; i<nWorkThreads; ++i)
-        used[i] = false;
-
-    unsigned firstChild = parent*nWorkThreads+1;
-    for (auto ch = threads.begin(); ch !=threads.end(); ++ch)
-        if (!(*ch)->isStopped) {
-            if ((*ch)->getThreadId() >= firstChild && (*ch)->getThreadId() <  firstChild + nWorkThreads)
-                used[(*ch)->getThreadId() - firstChild] = true;
-        }
-
-    for (unsigned i=0; i<nWorkThreads; ++i)
-        if (!used[i])
-            return i + firstChild;
-
-    for (auto ch = threads.begin(); ch !=threads.end(); ++ch) {
-        std::cout << (void*)(*ch) << " " << (void*)(*ch)->job;
-        if ((*ch)->job) std::cout << " " << (*ch)->getThreadId();
-        std::cout << std::endl;
-    }
-    ASSERT(!"no free child ID");
-    return 0;
 }
 
 // Queue a job from a parent. This allows the parent later to start only its
@@ -166,7 +115,6 @@ void WorkThread::queueJob(unsigned parent, Job *j) {
         for (auto th = threads.begin(); th !=threads.end(); ++th) {
             if ((*th)->isStopped) {
                 ASSERT((*th)->job == NULL);
-//                 (*th)->getThreadId() = findFreeChild(parent);
                 (*th)->job = j;
                 (*th)->isStopped = false;
                 ++running;
@@ -207,17 +155,11 @@ void WorkThread::stop() {
     UniqueLock<Mutex> lock(stoppedMutex);
     if (job) job->stop();
     while (!isStopped) {
-        doStop = true;
         stopped.wait(lock);    //waits until the end of the run loop is reached.
     }
 }
 
 void WorkThread::stopAll() {
-    runningMutex.lock();
-    for(auto j=jobs.begin(); j!=jobs.end(); ++j)
-        delete (*j).second;
-    jobs.clear();
-    runningMutex.unlock();
     for (auto th = threads.begin(); th !=threads.end(); ++th)
         (*th)->stop();
 }
