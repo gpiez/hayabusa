@@ -746,30 +746,24 @@ int SelfGame::doGame(RootBoard* rb1, RootBoard* rb2)
     Move m;
     if (rb1->color == Black) goto black;
     for (;;) {
-//         rb1->setTime(wtime, btime);
-//         cpuTime();
         rb1->goWait();
-//         wtime -= cpuTime();
         m = rb1->bestMove;
         if (!m.data) {
             result = 0;
             break;
         }
-//         std::cerr << m.string() << " ";
+//        std::cerr << m.string() << " ";
         rb1->doMove(m);
         rb2->doMove(m);
         if (checkResult<Black>(*rb1)) break;
 black:
-//         rb2->setTime(wtime, btime);
-//         cpuTime();
         rb2->goWait();
-//         btime -= cpuTime();
         m = rb2->bestMove;
         if (!m.data) {
             result = 0;
             break;
         }
-//         std::cerr << m.string() << " ";
+//        std::cerr << m.string() << " ";
         rb1->doMove(m);
         rb2->doMove(m);
         if (checkResult<White>(*rb2)) break;
@@ -833,9 +827,10 @@ bool SelfGame::checkResult(const RootBoard& rb)
 int SelfGame::tournament()
 {
     int sum = 0;
-//     Options::quiet = false;
+    Options::splitDepth = 1000;
+    Options::quiet = true;
     for (unsigned i=0; i<testPosition.size(); ++i) {
-//         std::cerr << "Game " << i << std::endl;
+//        std::cerr << "Game " << i << std::endl;
         wrb->setup(testPosition[i]);
         brb->setup(testPosition[i]);
         wrb->clearHash();
@@ -848,5 +843,6 @@ int SelfGame::tournament()
         sum -= doGame(brb, wrb);
     }
     return sum;
+//     std::cerr << "Sum " << sum << std::endl;
 }
 

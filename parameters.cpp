@@ -84,6 +84,23 @@ void Parameters::add(std::string s, float value)
     base[ index[s] ] = Parm<float>(value);
 }
 
+void Parameters::add(std::string s, float opening, float endgame)
+{
+    s = toLower(s);
+#ifdef MYDEBUG
+    if (parmsLocked) {
+        std::cerr << "Parameter list modified after created" << std::endl;
+    }
+#endif
+    std::string so = s + ".opening";
+    std::string se = s + ".endgame";
+    ASSERT(index.find(so) == index.end());
+    ASSERT(index.find(se) == index.end());
+    base.resize(maxIndex+2);
+    base[ index[so] = maxIndex++ ] = Parm<float>(opening);
+    base[ index[se] = maxIndex++ ] = Parm<float>(endgame);
+}
+
 void Parameters::add(std::string s, float value, float var, float max, float min)
 {
     s = toLower(s);
@@ -238,6 +255,18 @@ void Parameters::init()
     Parameters::add("pawnIsolatedOpen", -6);
     Parameters::add("pawnDouble", -25);
     Parameters::add("pawnShoulder", 1);
+
+    Parameters::add("pawnBackwardC", -1, -1);
+    Parameters::add("pawnBackwardOpenC", -10, -10);
+    Parameters::add("pawnIsolatedCenterC", 0, 0);
+    Parameters::add("pawnIsolatedEdgeC", 0, 0);
+    Parameters::add("pawnIsolatedOpenC", -6, -6);
+    Parameters::add("pawnDoubleC", -25, -25);
+    Parameters::add("pawnShoulderC", 1, 1);
+    Parameters::add("pawnPasser2C", 0, 0);
+    Parameters::add("pawnPasser7C", 150, 150);
+    Parameters::add("pawnPasserSlopeC", 1.0, 1.0);
+    Parameters::add("pawnConnPasserVC", 36, 36 );
 
     Parameters::add("deltaAttack", 190);
     Parameters::add("deltaDefense", -75);

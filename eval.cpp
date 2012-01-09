@@ -29,12 +29,12 @@
 unsigned Eval::distance[nSquares][nSquares];
 
 static const __v2di zero = {0};
-static const __v2di mask01 = { 0x0101010101010101, 0x0202020202020202 };
-static const __v2di mask23 = { 0x0404040404040404, 0x0808080808080808 };
-static const __v2di mask45 = { 0x1010101010101010, 0x2020202020202020 };
-static const __v2di mask67 = { 0x4040404040404040, 0x8080808080808080 };
-static const int baseAttack = 1024;
-static const int baseDefense = -256;
+//static const __v2di mask01 = { 0x0101010101010101, 0x0202020202020202 };
+//static const __v2di mask23 = { 0x0404040404040404, 0x0808080808080808 };
+//static const __v2di mask45 = { 0x1010101010101010, 0x2020202020202020 };
+//static const __v2di mask67 = { 0x4040404040404040, 0x8080808080808080 };
+//static const int baseAttack = 1024;
+//static const int baseDefense = -256;
 static const uint64_t darkSquares = 0xaa55aa55aa55aa55;
 static const int ksv[nSquares] = {
      0,  2,  4,  6,  6,  4,  2,  0,
@@ -390,9 +390,12 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         uint64_t wpawn = b.getPieces<White,Pawn>();
         uint64_t bpawn = b.getPieces<Black,Pawn>();
 
+#if NEW_PAWN
+        DeltaScore score = pawnShoulder2[ popcount15(wpawn & wpawn<<1 & ~file<'a'>()) ];
+        score = score - pawnShoulder2[ popcount15(bpawn & bpawn<<1 & ~file<'a'>()) ];
+#endif
         int wps = pawnShoulder * popcount15(wpawn & wpawn<<1 & ~file<'a'>());
         int bps = pawnShoulder * popcount15(bpawn & bpawn<<1 & ~file<'a'>());
-           
         uint64_t wFront = wpawn << 8 | wpawn << 16;
         wFront |= wFront << 16 | wFront << 32;
         uint64_t wBack = wpawn >> 8 | wpawn >> 16;
@@ -403,6 +406,10 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         uint64_t bFront = bpawn >> 8 | bpawn >> 16;
         bFront |= bFront >> 16 | bFront >> 32;
 
+#if NEW_PAWN
+        score = score + pawnDouble2[popcount15(wpawn & wBack)];
+        score = score - pawnDouble2[popcount15(bpawn & bBack)];
+#endif
         int wdbl = pawnDouble*popcount15(wpawn & wBack);
         int bdbl = pawnDouble*popcount15(bpawn & bBack);
         // calculate squares which are or possibly are attacked by w and b pawns
@@ -424,6 +431,10 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         uint64_t bBackward = bpawn & bstop;
         if(TRACE_DEBUG && Options::debug & debugEval) { printBit(wBackward); printBit(bBackward); }
         
+#if NEW_PAWN
+        score = score + pawnBackward2[popcount15(wBackward)];
+        score = score - pawnBackward2[popcount15(bBackward)];
+#endif
         int wpbw = pawnBackward * popcount15(wBackward);
         int bpbw = pawnBackward * popcount15(bBackward);
         
@@ -439,6 +450,10 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         pawnEntry.weak[1] = bBack8;
         if(TRACE_DEBUG && Options::debug & debugEval) { printBit(wBack8); printBit(bBack8); }
         //TODO scale pbwo with the number of rooks + queens
+#if NEW_PAWN
+        score = score + pawnBackwardOpen2[popcount15(wBackOpen)];
+        score = score - pawnBackwardOpen2[popcount15(bBackOpen)];
+#endif
         int wpbwo = pawnBackwardOpen * popcount15(wBackOpen);
         int bpbwo = pawnBackwardOpen * popcount15(bBackOpen);
 
@@ -460,7 +475,11 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
             unsigned y = pos >> 3;
             ASSERT(y>0 && y<7);
             pawnEntry.score += pawnPasser[y-1];
-            if (wPassedConnected >> pos & 1) pawnEntry.score += pawnConnPasser[y-1];
+            score = score + pawnPasser22[y-1];
+            if (wPassedConnected >> pos & 1) {
+                pawnEntry.score += pawnConnPasser[y-1];
+                score = score + pawnConnPasser22[y-1];
+            }
 
             print_debug(debugEval, "pawn wpasser:   %d\n", pawnPasser[y-1]);
         }
@@ -470,7 +489,11 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
             unsigned y = pos  >> 3;
             ASSERT(y>0 && y<7);
             pawnEntry.score -= pawnPasser[6-y];
-            if (bPassedConnected >> pos & 1) pawnEntry.score += pawnConnPasser[6-y];
+            score = score - pawnPasser22[6-y];
+            if (bPassedConnected >> pos & 1) {
+                pawnEntry.score -= pawnConnPasser[6-y];
+                score = score - pawnConnPasser22[6-y];
+            }
             print_debug(debugEval, "pawn bpasser:   %d\n", pawnPasser[6-y]);
         }
 
@@ -483,6 +506,17 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         
         uint64_t wIsolani = wpawn & (wOpenFiles<<1 | 0x101010101010101LL) & (wOpenFiles>>1 | 0x8080808080808080LL);
         uint64_t bIsolani = bpawn & (bOpenFiles<<1 | 0x101010101010101LL) & (bOpenFiles>>1 | 0x8080808080808080LL);
+#if NEW_PAWN
+        score = score + pawnIsolatedCenter2[ (popcount15(wIsolani & ~(file<'a'>()|file<'h'>()))) ];
+        score = score - pawnIsolatedCenter2[ (popcount15(bIsolani & ~(file<'a'>()|file<'h'>()))) ];
+        score = score + pawnIsolatedEdge2[ (popcount15(wIsolani & (file<'a'>()|file<'h'>()))) ];
+        score = score - pawnIsolatedEdge2[ (popcount15(bIsolani & (file<'a'>()|file<'h'>()))) ];
+        score = score + pawnIsolatedOpen2[ (popcount15(wIsolani & ~bFront)) ];
+        score = score - pawnIsolatedOpen2[ (popcount15(bIsolani & ~wFront)) ];
+        pawnEntry.oscore = score.opening();
+        pawnEntry.escore = score.endgame();
+        
+#endif
         int wpic = pawnIsolatedCenter * (popcount15(wIsolani & ~(file<'a'>()|file<'h'>())));
         int bpic = pawnIsolatedCenter * (popcount15(bIsolani & ~(file<'a'>()|file<'h'>())));
         int wpie = pawnIsolatedEdge * (popcount15(wIsolani & (file<'a'>()|file<'h'>())));
@@ -499,6 +533,9 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         
         pawnEntry.score += wdbl + wpbw + wpbwo + wps + wpic + wpio + wpie;
         pawnEntry.score -= bdbl + bpbw + bpbwo + bps + bpic + bpio + bpie;
+
+        ASSERT(pawnEntry.score == pawnEntry.oscore);
+        ASSERT(pawnEntry.score == pawnEntry.escore);
         
         print_debug(debugEval, "wpawnDouble:    %3d\n", wdbl);
         print_debug(debugEval, "bpawnDouble:    %3d\n", bdbl);
@@ -515,9 +552,6 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         print_debug(debugEval, "wpawn oiso:     %3d\n", wpio);
         print_debug(debugEval, "bpawn oiso:     %3d\n", bpio);
         
-//         pawnEntry.shield[0] = evalShield<White>(b);
-//         pawnEntry.shield[1] = evalShield<Black>(b);
-
         for (unsigned i=0; i<nRows; ++i) {
             pawnEntry.shield2[0][i] = evalShield2<White>(wpawn, i);
 //             if (pawnEntry.openFiles[0] & 1<<i)
@@ -722,7 +756,7 @@ inline int Eval::mobility( const BoardBase &b, int& attackingPieces, int& defend
         uint64_t qmob1x = qmob1;
 //         uint64_t qatt2 = b.build02Attack(qmob1) | b.build13Attack(qmob1);
 //         qmob2 |= qatt2 & restrictions & ~b.getOcc<C>();
-        unsigned q=bit(b.getPieces<C,Queen>());
+//        unsigned q=bit(b.getPieces<C,Queen>());
         __v2di connectedBR = ~ pcmpeqq(b.qsingle[CI][0].d13 & _mm_set1_epi64x(b.getPieces<C,Bishop>()), zero)
             & allBishopAttacks;
         connectedBR |= ~ pcmpeqq(b.qsingle[CI][0].d02 & _mm_set1_epi64x(b.getPieces<C,Rook>()), zero)
@@ -996,7 +1030,9 @@ int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
         m = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
         a = scale[b.material].opening ? scale[b.material].opening*attackDiff(b, pe, wap, bap, wdp, bdp) >> logEndgameTransitionSlope : 0;
         e = scale[b.material].endgame ? scale[b.material].endgame *(endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm)) >> logEndgameTransitionSlope : 0;
-        pa = pe.score;
+        CompoundScore cp{ pe.oscore, pe.escore };
+        pa = cp.calc(b.material, *this);
+        ASSERT(pa == pe.score);
         int pi = pieces<White>(b, pe) - pieces<Black>(b, pe);
         print_debug(debugEval, "endgame:        %d\n", e);
         print_debug(debugEval, "mobility:       %d\n", m);
@@ -1135,10 +1171,47 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(pawnDouble);
     SETPARM(pawnShoulder);
 
+#ifdef NEW_PAWN    
+    SETPARM(pawnBackwardC.opening);
+    SETPARM(pawnBackwardOpenC.opening);
+    SETPARM(pawnIsolatedCenterC.opening);
+    SETPARM(pawnIsolatedEdgeC.opening);
+    SETPARM(pawnIsolatedOpenC.opening);
+    SETPARM(pawnDoubleC.opening);
+    SETPARM(pawnShoulderC.opening);
+    SETPARM(pawnBackwardC.endgame);
+    SETPARM(pawnBackwardOpenC.endgame);
+    SETPARM(pawnIsolatedCenterC.endgame);
+    SETPARM(pawnIsolatedEdgeC.endgame);
+    SETPARM(pawnIsolatedOpenC.endgame);
+    SETPARM(pawnDoubleC.endgame);
+    SETPARM(pawnShoulderC.endgame);
+    mulTab(pawnBackward2, pawnBackwardC);
+    mulTab(pawnBackwardOpen2, pawnBackwardOpenC);
+    mulTab(pawnIsolatedCenter2, pawnIsolatedCenterC);
+    mulTab(pawnIsolatedEdge2, pawnIsolatedEdgeC);
+    mulTab(pawnIsolatedOpen2, pawnIsolatedOpenC);
+    mulTab(pawnDouble2, pawnDoubleC);
+    mulTab(pawnShoulder2, pawnShoulderC);
+    SETPARM(pawnPasser2C.opening);
+    SETPARM(pawnPasser7C.opening);
+    SETPARM(pawnPasserSlopeC.opening);
+    SETPARM(pawnPasser2C.endgame);
+    SETPARM(pawnPasser7C.endgame);
+    SETPARM(pawnPasserSlopeC.endgame);
+    sigmoid( pawnPasser22, pawnPasser2C, pawnPasser7C, Parameters::Phase{6,6}, pawnPasserSlopeC );
+    SETPARM(pawnConnPasserVC.opening);
+    SETPARM(pawnConnPasserVC.endgame);
+    sigmoid( pawnConnPasser22, Parameters::Phase{0,0}, pawnConnPasserVC, Parameters::Phase{6,6}, Parameters::Phase{1.0,1.0} );
+
+#endif
+    
     SETPARM(pawnPasser2);
     SETPARM(pawnPasser7);
     SETPARM(pawnPasserSlope);
     sigmoid( pawnPasser, pawnPasser2, pawnPasser7, 6, pawnPasserSlope );
+    SETPARM(pawnConnPasserV);
+    sigmoid( pawnConnPasser, 0, pawnConnPasserV, 6, 1.0 );
 
     SETPARM(pawn.value.opening);
     SETPARM(knight.value.opening);
@@ -1191,10 +1264,10 @@ void Eval::setParameters(const Parameters& p)
     sigmoid(bme, -bishop.mobility.endgame, bishop.mobility.endgame, 0, bishop.mobslope.endgame);
     sigmoid(rme, -rook.mobility.endgame, rook.mobility.endgame, 0, rook.mobslope.endgame);
     sigmoid(qme, -queen.mobility.endgame, queen.mobility.endgame, 0, queen.mobslope.endgame);
-    sigmoid(nm, Parameters::Piece::Phase{ -knight.mobility.opening,  -knight.mobility.endgame }, knight.mobility, Parameters::Piece::Phase{0,0}, knight.mobslope);
-    sigmoid(bm, Parameters::Piece::Phase{ -bishop.mobility.opening,  -bishop.mobility.endgame }, bishop.mobility, Parameters::Piece::Phase{0,0}, bishop.mobslope);
-    sigmoid(rm, Parameters::Piece::Phase{ -rook.mobility.opening,  -rook.mobility.endgame }, rook.mobility, Parameters::Piece::Phase{0,0}, rook.mobslope);
-    sigmoid(qm, Parameters::Piece::Phase{ -queen.mobility.opening,  -queen.mobility.endgame }, queen.mobility, Parameters::Piece::Phase{0,0}, queen.mobslope);
+    sigmoid(nm, Parameters::Phase{ -knight.mobility.opening,  -knight.mobility.endgame }, knight.mobility, Parameters::Phase{0,0}, knight.mobslope);
+    sigmoid(bm, Parameters::Phase{ -bishop.mobility.opening,  -bishop.mobility.endgame }, bishop.mobility, Parameters::Phase{0,0}, bishop.mobslope);
+    sigmoid(rm, Parameters::Phase{ -rook.mobility.opening,  -rook.mobility.endgame }, rook.mobility, Parameters::Phase{0,0}, rook.mobslope);
+    sigmoid(qm, Parameters::Phase{ -queen.mobility.opening,  -queen.mobility.endgame }, queen.mobility, Parameters::Phase{0,0}, queen.mobslope);
  
     initPS();
 
@@ -1232,12 +1305,10 @@ void Eval::setParameters(const Parameters& p)
     SETPARM(ownKingOwnPawnV);
     SETPARM(oppKingOwnPasserV);
     SETPARM(ownKingOwnPasserV);
-    SETPARM(pawnConnPasserV);
     sigmoid( oppKingOwnPawn,   -oppKingOwnPawnV,   oppKingOwnPawnV, 1, 10);  // only 1..7 used
     sigmoid( ownKingOwnPawn,    ownKingOwnPawnV,  -ownKingOwnPawnV, 1, 10);
     sigmoid( oppKingOwnPasser, -oppKingOwnPasserV, oppKingOwnPasserV, 1, 10);  // only 1..7 used
     sigmoid( ownKingOwnPasser,  ownKingOwnPasserV,-ownKingOwnPasserV, 1, 10);
-    sigmoid( pawnConnPasser, 0, pawnConnPasserV, 6, 1.0 );
 
 
     SETPARM(standardError);

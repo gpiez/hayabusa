@@ -103,7 +103,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 alpha0.v = value.v;
                 bestMove = *ml;
 #ifdef USE_GENETIC                
-                if (!Options::quiet) bestScore = value.v;
+                if (Options::quiet) bestScore = value.v;
 #endif                
                 ml.nodesCount(stats.node - subnode);
                 ml.currentToFront();
@@ -192,7 +192,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             } else {
                 value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, NodePV NODE);
 #ifdef USE_GENETIC                
-                if (!Options::quiet) bestScore = value.v;
+                if (Options::quiet) bestScore = value.v;
 #endif                
                 if (stopSearch) break;
                 alpha.v = value.v;

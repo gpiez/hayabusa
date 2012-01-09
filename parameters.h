@@ -78,11 +78,11 @@ class Parameters
     static std::vector<Parm<float> > base;
     
 public:
+    struct Phase {
+        float opening;
+        float endgame;
+    };
     struct Piece {
-        struct Phase {
-            float opening;
-            float endgame;
-        };
         template<int N>
         struct Direction {
             Phase value;
@@ -112,6 +112,7 @@ public:
     Parm<float>& operator [] (const std::string s);
     static bool exists(const std::string s);
     static void add(const std::string s, float value);
+    static void add(const std::string s, float opening, float endgame);
     static void add(const std::string s, float value, float var, float max, float min=0.0);
     void mutate(float mutationRate = 0.05);
     Parameters combine(const Parameters& father) const;

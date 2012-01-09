@@ -126,9 +126,7 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
         }
         verifyReduction[i] = i-verify;
         verifyIncr >>= 1;
-#ifdef MYDEBUG
-        if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i]-eval.dMaxExt << std::endl;
-#endif
+//        if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i]-eval.dMaxExt << std::endl;
     }
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>(hashSize);
     clearEE();
@@ -562,6 +560,7 @@ void RootBoard::setTime(uint64_t w, uint64_t b)
 void RootBoard::goWait()
 {
     Job* job;
+    stats.node = 0;
     if (color == White)
         job = new RootSearchJob<White>(*this, keys, maxSearchDepth);
     else

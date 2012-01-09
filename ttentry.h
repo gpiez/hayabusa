@@ -90,6 +90,8 @@ struct PawnEntry {
     uint8_t dark[nColors];              //  2
     uint8_t light[nColors];             //  2
     int8_t shield2[nColors][nRows];     // 16
+    int16_t oscore;
+    int16_t escore;
 };
 
 struct PerftEntry {

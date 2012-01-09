@@ -40,7 +40,7 @@
  * v = (sum over pieces (v_inhPieces * n_inhPieces) + n_totalInhPieces^2 * v_totalInh) * squareValue
  * squareValue = attack_king(dist_king) + attack_piece(dist_piece) + attack_pawn(dist_pawn) + const
  */
-
+#define NEW_PAWN 1
 static const int logEndgameTransitionSlope = 5;
 static const int endgameTransitionSlope = 1<<logEndgameTransitionSlope; //16 pieces material between full endgame and full opening
 
@@ -60,6 +60,18 @@ struct DeltaScore {
     DeltaScore(vector_t init): data(init) {}
     DeltaScore operator + (const DeltaScore& x) const {
         return data + x.data;
+    }
+    DeltaScore operator - (const DeltaScore& x) const {
+        return data - x.data;
+    }
+    DeltaScore operator - () const {
+        return DeltaScore(0,0) - *this;
+    }
+    int opening() {
+        return _mm_extract_epi16(data, 0);
+    }
+    int endgame() {
+        return _mm_extract_epi16(data, 1);
     }
 };
 
@@ -118,10 +130,10 @@ union KeyScore {
 template<typename T>
 void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986, unsigned istart=0 );
 template<typename T>
-void sigmoid(T& p, Parameters::Piece::Phase start, Parameters::Piece::Phase end, Parameters::Piece::Phase dcenter, Parameters::Piece::Phase width, unsigned istart=0);
+void sigmoid(T& p, Parameters::Phase start, Parameters::Phase end, Parameters::Phase dcenter, Parameters::Phase width, unsigned istart=0);
 
 void sigmoid(int n, int p[], double start, double end, double dcenter, double width = 1.5986);
-    
+
 class Eval {
     KeyScore zobristPieceSquare[nTotalPieces][nSquares];
 
@@ -153,13 +165,31 @@ class Eval {
     int pawnIsolatedCenter;
     int pawnIsolatedEdge;
     int pawnIsolatedOpen;
+    int pawnDouble;
+    int pawnShoulder;    
     int pawnConnPasser[6];
     int pawnPasser[6];
     float pawnPasser2, pawnPasser7, pawnPasserSlope;
 
-    int pawnDouble;
-    int pawnShoulder;
-    
+    Parameters::Phase pawnBackwardC;
+    Parameters::Phase pawnBackwardOpenC;
+    Parameters::Phase pawnIsolatedCenterC;
+    Parameters::Phase pawnIsolatedEdgeC;
+    Parameters::Phase pawnIsolatedOpenC;
+    Parameters::Phase pawnDoubleC;
+    Parameters::Phase pawnShoulderC;
+    Parameters::Phase pawnPasser2C, pawnPasser7C, pawnPasserSlopeC;
+    Parameters::Phase pawnConnPasserVC;
+    DeltaScore pawnBackward2[8];
+    DeltaScore pawnBackwardOpen2[8];
+    DeltaScore pawnIsolatedCenter2[8];
+    DeltaScore pawnIsolatedEdge2[8];
+    DeltaScore pawnIsolatedOpen2[8];
+    DeltaScore pawnDouble2[8];
+    DeltaScore pawnShoulder2[8];
+    DeltaScore pawnConnPasser22[6];
+    DeltaScore pawnPasser22[6];
+
     float oppKingOwnPawnV;  // only 1..7 used
     float ownKingOwnPawnV;
     float oppKingOwnPasserV;  // only 1..7 used
@@ -309,6 +339,8 @@ public:
     __v8hi estimate(const Move m, const KeyScore keyScore) const;
     template<Colors C>
     __v8hi inline_estimate(const Move m, const KeyScore keyScore) const __attribute__((always_inline)) ;
+    template<typename T>
+    static void mulTab(T& p, Parameters::Phase step);
 
 } ALIGN_XMM ;
 
@@ -328,6 +360,15 @@ void sigmoid(T& p, double start, double end, double dcenter, double width, unsig
     for (unsigned int i = 0; i <= n; ++i) {
         double t = i - dcenter;
         p[i+istart] = lrint(a + r/(1.0 + exp(-t/width)));
+    }
+}
+
+template<typename T>
+void Eval::mulTab(T& p, Parameters::Phase step) {
+    const size_t n = sizeof(T)/sizeof(p[0]);
+    p[0] = DeltaScore( 0, 0 );
+    for (unsigned int i = 1; i < n; ++i) {
+        p[i] = p[i-1] + DeltaScore( step.opening, step.endgame );
     }
 }
 

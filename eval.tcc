@@ -113,7 +113,7 @@ __v8hi Eval::inline_estimate(const Move m, const KeyScore keyScore) const {
 }
 
 template<typename T>
-void sigmoid(T& p, Parameters::Piece::Phase start, Parameters::Piece::Phase end, Parameters::Piece::Phase dcenter, Parameters::Piece::Phase width, unsigned istart) {
+void sigmoid(T& p, Parameters::Phase start, Parameters::Phase end, Parameters::Phase dcenter, Parameters::Phase width, unsigned istart) {
     const size_t n = sizeof(T)/sizeof(p[0]);
     int o[n];
     int e[n];
