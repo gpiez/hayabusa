@@ -146,6 +146,8 @@ Eval::~Eval() {
 
 void Eval::init(const Parameters& p) {
 
+    initZobrist();
+    Init parameters;
     parameters.setEvalParameters(*this, p);
     static_assert(56 == 4*(materialRook+materialBishop+materialKnight) + 2*materialQueen + 16*materialPawn, "Total material");
 
@@ -157,10 +159,6 @@ void Eval::init(const Parameters& p) {
     }
 
     evalHardBudget = -20;
-
-    initZobrist();
-    parameters.initShield(*this);
-    parameters.initPS(*this);
 
     if (Options::debug & DebugFlags::debugEval) {
         printSigmoid(nAttackersTab, "nAttackersTab");
@@ -233,6 +231,7 @@ void Eval::initZobrist() {
                 zobristPieceSquare[p+nPieces][i].pawnKey = 0;
         }
 
+#ifdef MYDEBUG
     int collision=0;
     for (int p = -nPieces; p <= (signed int)nPieces; p++) 
     if (p)
@@ -250,6 +249,7 @@ void Eval::initZobrist() {
     }
     if (collision)
         std::cerr << collision << " Zobrist collisions" << std::endl;
+#endif    
 }
 
 void Eval::initTables() {
@@ -1251,6 +1251,8 @@ void Eval::Init::setEvalParameters(Eval& e, const Parameters& p)
 #ifdef MYDEBUG
     ASSERT(!control.size());
 #endif
+    initShield(e);
+    initPS(e);
 }
 
 int CompoundScore::calc(int material, const Eval& eval) const

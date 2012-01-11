@@ -174,7 +174,7 @@ public:
         void initPS(Eval& e);
         void initPS(Eval& e, Pieces pIndex, Parameters::Piece& piece);
         void initShield(Eval& e);
-    } parameters;
+    };
 
     void initZobrist();
     template<GamePhase P>

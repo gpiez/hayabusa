@@ -292,8 +292,8 @@ void Parameters::init()
     Parameters::add("prune2", 110);
     Parameters::add("prune1c", 60);
     Parameters::add("prune2c", 0);
-    Parameters::add("dNullIncr", 0b10000100001010, 0, 0xfffffff, 0);
-    Parameters::add("dVerifyIncr", 0b10000100001010, 0, 0xfffffff, 0);
+    Parameters::add("dNullIncr", 0b10000100001010, 0, 0xffffff, 0);
+    Parameters::add("dVerifyIncr", 0b10000100001010, 0, 0xffffff, 0);
     Parameters::add("dMinReduction", 2, 0, 10, 1);
 
     Parameters::add("dRed[7]", 2);
