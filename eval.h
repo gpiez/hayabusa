@@ -72,20 +72,20 @@ class Eval {
 
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
     
-    PackedScore bishopOwnPawn[8];
-    PackedScore bishopOppPawn[8];
-    PackedScore bishopNotOwnPawn[8];
-    PackedScore bishopNotOppPawn[8];
-    PackedScore bishopBlockPasser[8];
+    PackedScore bishopOwnPawn[9];
+    PackedScore bishopOppPawn[9];
+    PackedScore bishopNotOwnPawn[9];
+    PackedScore bishopNotOppPawn[9];
+    PackedScore bishopBlockPasser[9];
     PackedScore bishopPair;
 
-    PackedScore knightBlockPasser[8];
+    PackedScore knightBlockPasser[9];
     PackedScore knightPair;
     
     PackedScore rookTrapped;
-    PackedScore rookOpen[8];
-    PackedScore rookHalfOpen[8];
-    PackedScore rookWeakPawn[8];
+    PackedScore rookOpen[9];
+    PackedScore rookHalfOpen[9];
+    PackedScore rookWeakPawn[9];
     
     PackedScore pawnBackward2[8];
     PackedScore pawnBackwardOpen2[8];

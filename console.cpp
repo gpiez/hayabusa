@@ -36,7 +36,7 @@
 #include "score.tcc"
 
 namespace Options {
-    unsigned int        splitDepth = 7;
+    unsigned int        splitDepth = 777;
     int                 humanreadable = 0;
     uint64_t            hash = 0x1000000;
     uint64_t            pHash = 0x1000000;
@@ -343,8 +343,7 @@ void Console::setoption(StringList cmds) {
 #endif
         } else if (Parameters::exists(name)) {
             defaultParameters[name] = convert<float>(data);
-            board->eval.setParameters(defaultParameters);//TODO lazy init of eval after paramter change
-            board->eval.init();
+            board->eval.init(defaultParameters);
             board->clearEE();
         } else {
             std::cerr << "option " << name << " not understood";
