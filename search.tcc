@@ -171,7 +171,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
         data.moveColor = prev.CI == 0 ? White:Black;
         data.nodeColor = C;
         data.flags = 0;
-        data.threadId = threadId;
+        data.threadId = WorkThread::threadId;
         data.nodes = 1;
        
         data.nodeType = NodeFull;
@@ -205,7 +205,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
     // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
     // TODO connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
     //     current.v = -infinity*C;
-    RawScore estimatedScore = estimate.score.calc(prev.material, eval) + prev.positionalScore + diff.v - C*diff.error; //TODO move score() into ColorBoard ctor
+    RawScore estimatedScore = CompoundScore(estimate.score).calc(prev.material, eval) + prev.positionalScore + diff.v - C*diff.error; //TODO move score() into ColorBoard ctor
     if (P==vein && !(extend & ~ExtFirstMove)) {
         Score<C> value(estimatedScore); //TODO get rid of this var
         if (value >= origBeta.v) {
@@ -301,7 +301,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
         currentPly = ply;
     }
 
-    ASSERT(b.keyScore.score.calc(prev.material, eval) == estimate.score.calc(prev.material, eval));
+    ASSERT(CompoundScore(b.keyScore.score).calc(prev.material, eval) == CompoundScore(estimate.score).calc(prev.material, eval));
     ASSERT(P == vein || z == b.getZobrist());
     if ((int)prev.CI == (int)b.CI) {
         if (b.template inCheck<(Colors)-C>()) {
@@ -423,7 +423,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
         int wattack, battack;
         b.positionalScore = eval(b, C, wattack, battack);
         b.isExact = true;
-        realScore = b.keyScore.score.calc(prev.material, eval) + b.positionalScore;
+        realScore = CompoundScore(b.keyScore.score).calc(prev.material, eval) + b.positionalScore;
         if (isMain & !m.isSpecial()) {
             int diff2 = b.positionalScore - prev.positionalScore;
             if (eval.calcMeanError) {

@@ -77,11 +77,10 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             NodeData data;
             data.move.data = 0;
             data.ply = 1;
-            data.threadId = threadId;
+            data.threadId = WorkThread::threadId;
             data.nodes = 1;
             NodeItem::m.lock();
             NodeItem* node=0;
-            uint64_t startnode = stats.node;
             if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
                 node = new NodeItem(data, statWidget->tree->root());
                 NodeItem::nNodes++;
@@ -111,7 +110,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
         }
     #ifdef QT_GUI_LIB
         if (node) {
-            for (unsigned i=0; i<node->childCount(); ++i)
+            for (int i=0; i<node->childCount(); ++i)
                 node->nodes += node->child(i)->nodes;
         }
     #endif
@@ -131,11 +130,10 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             NodeData data;
             data.move.data = 0;
             data.ply = depth-eval.dMaxExt;
-            data.threadId = threadId;
+            data.threadId = WorkThread::threadId;
             data.nodes = 1;
             NodeItem::m.lock();
             NodeItem* node=0;
-            uint64_t startnode = stats.node;
             if (NodeItem::nNodes < MAX_NODES && stats.node >= MIN_NODES) {
                 node = new NodeItem(data, statWidget->tree->root());
                 NodeItem::nNodes++;
@@ -265,7 +263,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 
     #ifdef QT_GUI_LIB
         if (node) {
-            for (unsigned i=0; i<node->childCount(); ++i)
+            for (int i=0; i<node->childCount(); ++i)
                 node->nodes += node->child(i)->nodes;
         }
     #endif

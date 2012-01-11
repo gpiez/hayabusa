@@ -55,7 +55,7 @@ int History::get(Move m, unsigned ply) {
 }
 
 template<Colors C>
-void History::sort(Move* list, unsigned n, unsigned ply, const PositionalError (&pe)[nPieces*2+1][nSquares][nSquares], const int material, const Eval& eval) {
+void History::sort(Move* list, unsigned n, unsigned ply, const PositionalError (&/*pe*/)[nPieces*2+1][nSquares][nSquares], const int /*material*/, const Eval& /*eval*/) {
     /*
      * Four groups of 16 counters for the 4 fourbit digits, which are the
      * keys for sorting. Counter group 3 is for the most significant nibble,
@@ -80,18 +80,6 @@ void History::sort(Move* list, unsigned n, unsigned ply, const PositionalError (
     for (i = 0; i<n; ++i) {
         mList0[i].m = list[i];
         int score = get<C>(list[i], ply);
-        if (0 && score <= maxHistory - 64) {
-            int piece = list[i].piece() & 7;
-            unsigned iPiece = ColoredBoard<C>::errorPieceIndex[ piece ];
-//             unsigned iPiece = (unsigned[7]) { 0, 6+1*C, 6+1*C, 6+3*C, 6+1*C, 6+5*C, 6+6*C } [ list[i].piece() & 7 ];
-//             int diff = pe[iPiece][list[i].from()][list[i].to()].v;
-//             if (diff >= 0)
-            unsigned to=list[i].to();
-            unsigned from=list[i].from();
-            int diff1 = (eval.getPS(piece*C, to) - eval.getPS(piece*C, from)).calc(material, eval);
-            int diff2 = pe[iPiece][from][to].v;
-            score = std::min(std::max((diff1+diff2)/2 + (maxHistory - 64)/2, 0), maxHistory - 64);
-        }
         unsigned nibble0 = score & 0xf;
         unsigned nibble1 = score >> 4 & 0xf;
 //         unsigned nibble2 = score >> 8 & 0xf;

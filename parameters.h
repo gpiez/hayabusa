@@ -116,6 +116,9 @@ public:
     static void add(const std::string s, float value, float var, float max, float min=0.0);
     void mutate(float mutationRate = 0.05);
     Parameters combine(const Parameters& father) const;
+    std::map< std::string, unsigned > getIndex() const {
+        return index;
+    }
 };
 
 extern Parameters defaultParameters;

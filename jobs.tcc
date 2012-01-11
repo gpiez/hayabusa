@@ -47,7 +47,7 @@ SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, bool doNull,
         data.moveColor = b.CI == 0 ? White:Black;
         data.nodeColor = C;
         data.flags = 0;
-        data.threadId = threadId;
+        data.threadId = WorkThread::threadId;
         data.nodes = 0;
         data.nodeType = NodeStart;
         NodeItem::m.lock();
@@ -63,7 +63,7 @@ SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, bool doNull,
 template<Colors C, typename A, typename B, typename T>
 void SearchJob<C,A,B,T>::job() {
 #ifdef QT_GUI_LIB
-    if (startnode) startnode->threadId = threadId;
+    if (startnode) startnode->threadId = WorkThread::threadId;
 #endif    
     if (alpha < beta.v) {
         rb.clone(b, rep, ply);

@@ -126,7 +126,7 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
         }
         verifyReduction[i] = i-verify;
         verifyIncr >>= 1;
-//        if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i]-eval.dMaxExt << std::endl;
+       if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i]-eval.dMaxExt << std::endl;
     }
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>(hashSize);
     clearEE();

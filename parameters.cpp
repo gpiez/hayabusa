@@ -163,7 +163,6 @@ void Parameters::init()
     Parameters::add("knight.mobility.opening", 30);
     Parameters::add("knight.mobslope.endgame", 3.0);
     Parameters::add("knight.mobslope.opening", 3.0);
-    Parameters::add("knightPair", -30);
     Parameters::add("knight.value.endgame", 288, 20, 400);
     Parameters::add("knight.value.opening", 290, 20, 400);
     Parameters::add("knight.vcenter.endgame", 4.0);
@@ -193,21 +192,16 @@ void Parameters::init()
     Parameters::add("queen.defense", 5);
     Parameters::add("queen.hor.inflection.endgame", 1.5);
     Parameters::add("queen.hor.inflection.opening", 1.0);
-    Parameters::add("queen.horizontal.inflection.opening", 1.0);
-    Parameters::add("queen.horizontal.value.opening", 7);
     Parameters::add("queen.hor.value.endgame", 4);
     Parameters::add("queen.hor.value.opening", 7);
     Parameters::add("queen.mobility.endgame", 4);
     Parameters::add("queen.mobility.opening", 0);
     Parameters::add("queen.mobslope.endgame", 10.0);
     Parameters::add("queen.mobslope.opening", 10.0);
-    Parameters::add("queenPair", 0);
     Parameters::add("queen.value.endgame", 890, 100, 1200);
     Parameters::add("queen.value.opening", 1000, 100, 1200);
     Parameters::add("queen.vcenter.endgame", 3.5);
     Parameters::add("queen.vcenter.opening", 3.5);
-    Parameters::add("queen.vertical.inflection.opening", 0.5);
-    Parameters::add("queen.vertical.value.opening", 5);
     Parameters::add("queen.vert.inflection.endgame", 1.5);
     Parameters::add("queen.vert.inflection.opening", 0.5);
     Parameters::add("queen.vert.value.endgame", 4);
@@ -224,7 +218,6 @@ void Parameters::init()
     Parameters::add("rook.mobility.opening", 16);
     Parameters::add("rook.mobslope.endgame", 6.0);
     Parameters::add("rook.mobslope.opening", 6.0);
-    Parameters::add("rookPair", 0);
     Parameters::add("rook.value.endgame", 480, 30, 600);
     Parameters::add("rook.value.opening", 480, 30, 600);
     Parameters::add("rook.vcenter.endgame", 3.5);
@@ -234,42 +227,33 @@ void Parameters::init()
     Parameters::add("rook.vert.value.endgame", 0);
     Parameters::add("rook.vert.value.opening", 12);
     
-    Parameters::add("pawnPasser2", 0);
-    Parameters::add("pawnPasser7", 150);
-    Parameters::add("pawnPasserSlope", 1.0);
-    Parameters::add("knightBlockPasser", 10);
-    Parameters::add("bishopBlockPasser", 15);
-    Parameters::add("bishopPair", 28);
+    Parameters::add("knightBlockPasser", 10, 10);
+    Parameters::add("knightPair", -30, -30);
+    Parameters::add("bishopBlockPasser", 15, 15);
+    Parameters::add("bishopPair", 28, 28);
+    Parameters::add("bishopOwnPawn", 0, 0);
+    Parameters::add("bishopOppPawn", 0, 0);
+    Parameters::add("bishopNotOwnPawn", 2, 2);
+    Parameters::add("bishopNotOppPawn", 1, 1);
 
     Parameters::add("endgameMaterial", 32);
 
-    Parameters::add("rookTrapped", -50);
-    Parameters::add("rookOpen", 16);
-    Parameters::add("rookHalfOpen", 7);
-    Parameters::add("rookWeakPawn", 24);
+    Parameters::add("rookTrapped", -50, -50);
+    Parameters::add("rookOpen", 16, 16);
+    Parameters::add("rookHalfOpen", 7, 7);
+    Parameters::add("rookWeakPawn", 24, 24);
 
-    Parameters::add("pawnBackward", -1);
-    Parameters::add("pawnBackwardOpen", -10);
-    Parameters::add("pawnIsolatedCenter", 0);
-    Parameters::add("pawnIsolatedEdge", 0);
-    Parameters::add("pawnIsolatedOpen", -6);
-    Parameters::add("pawnDouble", -25);
-    Parameters::add("pawnShoulder", 1);
-
-    Parameters::add("pawnBackwardC", -1, -1);
-    Parameters::add("pawnBackwardOpenC", -10, -10);
-    Parameters::add("pawnIsolatedCenterC", 0, 0);
-    Parameters::add("pawnIsolatedEdgeC", 0, 0);
-    Parameters::add("pawnIsolatedOpenC", -6, -6);
-    Parameters::add("pawnDoubleC", -25, -25);
-    Parameters::add("pawnShoulderC", 1, 1);
-    Parameters::add("pawnPasser2C", 0, 0);
-    Parameters::add("pawnPasser7C", 150, 150);
-    Parameters::add("pawnPasserSlopeC", 1.0, 1.0);
-    Parameters::add("pawnConnPasserVC", 36, 36 );
-
-    Parameters::add("deltaAttack", 190);
-    Parameters::add("deltaDefense", -75);
+    Parameters::add("pawnBackward", -1, -1);
+    Parameters::add("pawnBackwardOpen", -10, -10);
+    Parameters::add("pawnIsolatedCenter", 0, 0);
+    Parameters::add("pawnIsolatedEdge", 0, 0);
+    Parameters::add("pawnIsolatedOpen", -6, -6);
+    Parameters::add("pawnDouble", -25, -30);
+    Parameters::add("pawnShoulder", 1, 1);
+    Parameters::add("pawnPasser2", 0, 0);
+    Parameters::add("pawnPasser7", 150, 150);
+    Parameters::add("pawnPasserSlope", 1.0, 1.0);
+    Parameters::add("pawnConnPasser", 36, 36 );
 
     Parameters::add("dMaxCapture", 8, 4, 20, 2);
     Parameters::add("standardError", 30);
@@ -301,7 +285,6 @@ void Parameters::init()
     Parameters::add("ownKingOwnPawnV", 8);
     Parameters::add("oppKingOwnPasserV",  26);  // only 1..7 used
     Parameters::add("ownKingOwnPasserV", 32);
-    Parameters::add("pawnConnPasserV", 36 );
 
     Parameters::add("calcMeanError", 1);
 
@@ -322,11 +305,6 @@ void Parameters::init()
     Parameters::add("dRed[1]", 255);
     Parameters::add("dRed[0]", 255);
 
-    Parameters::add("bishopOwnPawn", 0);
-    Parameters::add("bishopOppPawn", 0);
-
-    Parameters::add("bishopNotOwnPawn", 2);
-    Parameters::add("bishopNotOppPawn", 1);
 
     Parameters::add("dRedCapture", 5);
     Parameters::add("dRedCheck", 20);
@@ -347,8 +325,8 @@ void Parameters::init()
     Parameters::add("kingShield.idelta", 0.8125);
     Parameters::add("kingShield.odelta", 0.875);
 
-    Parameters::add("kingShield.openFile",   -10);
-    Parameters::add("kingShield.halfOpenFile",-25);
+    Parameters::add("kingShieldOpenFile",   -10);
+    Parameters::add("kingShieldHalfOpenFile",-25);
 
     Parameters::add("pawnDefense", 384);
     Parameters::add("pieceDefense", 150);

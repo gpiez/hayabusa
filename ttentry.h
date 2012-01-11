@@ -24,6 +24,7 @@
 #endif
 
 #include "constants.h"
+#include "packedscore.h"
 
 template <unsigned int pos, unsigned int width, typename T>
 struct Bitfield {
@@ -83,15 +84,14 @@ union TTEntry {
 struct PawnEntry {
     enum { upperShift = 16 };
     uint64_t passers[nColors];          // 16
+    PackedScore score;                  //  4
     uint16_t upperKey;                  //  2
-    int16_t score;                      //  2
     uint8_t openFiles[nColors];         //  2
     uint8_t weak[nColors];              //  2
     uint8_t dark[nColors];              //  2
     uint8_t light[nColors];             //  2
     int8_t shield2[nColors][nRows];     // 16
-    int16_t oscore;
-    int16_t escore;
+    char fill[2];
 };
 
 struct PerftEntry {
