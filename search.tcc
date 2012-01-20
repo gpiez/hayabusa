@@ -366,8 +366,6 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
                     if (node) node->bestEval = ttScore.v;
                     if (node) node->nodeType = NodeTT;
 #endif
-//                     alpha.setReady();   //TODO avoid early construction fo alpha/beta
-//                     beta.setReady();
                     return current.v;
                 }
             }
