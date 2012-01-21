@@ -36,7 +36,7 @@
 #include "score.tcc"
 
 namespace Options {
-    unsigned int        splitDepth = 777;
+    unsigned int        splitDepth = 7;
     int                 humanreadable = 0;
     uint64_t            hash = 0x1000000;
     uint64_t            pHash = 0x1000000;
@@ -77,7 +77,6 @@ Console::Console(int& argc, char** argv)
     Parameters::init();
     evolution = new Evolution(this);
     evolution->init();
-    
     board = new RootBoard(this, defaultParameters, Options::hash, Options::pHash);
     board->setup();
 
@@ -99,6 +98,7 @@ Console::Console(int& argc, char** argv)
     dispatcher["eval"] = &Console::eval;
     dispatcher["selfgame"] = &Console::selfgame;
     dispatcher["parmtest"] = &Console::parmtest;
+    dispatcher["egtest"] = &Console::egtest;
     
 
 #if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
@@ -540,13 +540,22 @@ void Console::selfgame(StringList )
 //     sf.tournament();
 }
 
+void Console::egtest(StringList cmds)
+{
+    Options::quiet = true;
+    if (cmds.size() == 7)
+        evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], cmds[6]);
+    else
+        std::cerr << "expected \"egtest <name> <minimum value> <maximum value> <n> <pieces>\"" << std::endl;
+}
+
 void Console::parmtest(StringList cmds)
 {
     Options::quiet = true;
     if (cmds.size() == 5) 
-        evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), "20000");
+        evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), "20000", "");
     else if (cmds.size() == 6) 
-        evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5]);
+        evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], "");
     else if (cmds.size() == 9) 
         evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]));
     else if (cmds.size() == 13)

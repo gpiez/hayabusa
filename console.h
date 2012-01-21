@@ -68,6 +68,7 @@ class Console
     void eval(StringList);
     void selfgame(StringList);
     void parmtest(StringList);
+    void egtest(StringList);
 private
 #if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
     slots
