@@ -243,7 +243,9 @@ void ColoredBoard<C>::generateNonCap(Move* &good, Move* &bad) const {
      * Sliding pieces. If we detect a possible pinning, allow only the moves in
      * the directions of the pin. For masking the pinned directions use the
      * attack information stored in single[] in the same order as they were
-     * generated earlier in buildAttacks()
+     * generated earlier in buildAttacks(). Generating only legal moves comes at
+     * a cost of a load+cmp+2*and here and a store+and earlier in buildattacks 
+     * per piece and twice that for the queen.
      */
     const __v2di zero = _mm_set1_epi64x(0);
     for(const MoveTemplateQ* qs = qsingle[CI]; ; qs++) {
