@@ -79,7 +79,8 @@ void Evolution::setCurrentParameters(Parameters& p)
 
 }
 
-void Evolution::parmTest(std::string pname, float min, float max, int n, const std::string& nodes) {
+void Evolution::parmTest(std::string pname, float min, float max, int n, const std::string& nodes, std::string endgame) {
+    this->endgame = endgame;
     this->nodes = nodes;
     Parameters adam(defaultParameters);
     setCurrentParameters(adam);
@@ -176,11 +177,12 @@ void Evolution::parmTest(std::string pname, float min, float max, int n, std::st
     }
 }
 
-int Evolution::game(const Evolution::Individual& a, const Evolution::Individual& b) const {
+int Evolution::game(const Evolution::Individual& a, const Evolution::Individual& b) {
     int result;
     {
-        SelfGame sg(console, a.parm, b.parm, nodes);
+        SelfGame sg(console, a.parm, b.parm, nodes, endgame);
         result = sg.tournament();
+        nGames = sg.nTests();
     }
     {
         lock_guard<mutex> lock(nThreadMutex);
@@ -217,7 +219,6 @@ void Evolution::step()
                 int result = results[i][j].get();
                 indi[i].score += result;
                 double n = j+1.0;
-                double nGames = SelfGame::nTests();  // from SelfGame
                 double p = indi[i].score / (n*nGames*2.0) +0.5;
                 double v = sqrt(p*(1-p)*(n*nGames))*2.0 *3.0;
                 double pe = v / (n*nGames*2.0);
@@ -240,7 +241,6 @@ void Evolution::step()
         recalc[i] = false;
     } else {
                 double n = firstGame[i];
-                double nGames = SelfGame::nTests();  // from SelfGame
                 double p = indi[i].score / (n*nGames*2.0) +0.5;
                 double v = sqrt(p*(1-p)*(n*nGames))*2.0 *3.0;
                 double pe = v / (n*nGames*2.0);
