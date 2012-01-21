@@ -17,6 +17,7 @@
 
 */
 #include <pch.h>
+#include <memory>
 #include "rootboard.h"
 #include "rootboard.tcc"
 #include "workthread.h"
@@ -29,6 +30,8 @@
 #include "book.h"
 
 __thread History RootBoard::history;
+std::map<void*, void*> allocs;
+Mutex RootBoard::allocMutex;
 
 void RootBoard::stopTimer(milliseconds hardlimit) {
     UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
@@ -139,6 +142,29 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
 
 RootBoard::~RootBoard() {
     delete tt;
+}
+
+void* RootBoard::operator new(size_t size)
+{
+    const size_t alignment = 64;
+    const size_t space = size + alignment - 1;
+    void* allocp = malloc(space);
+    
+    void* p = (void*) (((size_t)allocp + alignment - 1) & -(size_t)64);
+    allocMutex.lock();
+    allocs[p] = allocp;
+    allocMutex.unlock();
+    return p;
+}
+
+void RootBoard::operator delete(void* p)
+{
+    allocMutex.lock();
+    ASSERT(allocs.find(p) != allocs.end());
+    void* allocp = allocs.at(p); 
+    allocs.erase(p);
+    allocMutex.unlock();
+    free(allocp);
 }
 
 std::string RootBoard::status(system_clock::time_point now, int score)
@@ -456,14 +482,6 @@ void RootBoard::divide(unsigned int depth) {
         WorkThread::findFree()->queueJob(0U, new RootDivideJob<White>(*this, depth));
     else
         WorkThread::findFree()->queueJob(0U, new RootDivideJob<Black>(*this, depth));
-}
-
-void update(uint64_t& r, uint64_t v) {
-    r += v;
-}
-
-void update(Result<uint64_t>& r, uint64_t v) {
-    r.update(v);
 }
 
 Stats RootBoard::getStats() const {

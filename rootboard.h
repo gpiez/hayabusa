@@ -25,7 +25,6 @@
 
 #include "eval.h"
 #include "coloredboard.h"
-#include "result.h"
 #include "stats.h"
 #include "history.h"
 #ifdef QT_GUI_LIB
@@ -113,13 +112,14 @@ private:
     TimedMutex stopTimerMutex;
     Book book;
     RawScore bestScore;
-
+    static Mutex allocMutex;
+    
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
     std::string status(system_clock::time_point, int);
 
 public:
-    Eval eval;
+    Eval eval ALIGN_XMM;
     static __thread History history;
     unsigned int depth;
     TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt;
@@ -137,6 +137,8 @@ public:
     virtual
 #endif    
     ~RootBoard();
+    void* operator new(size_t size);
+    void operator delete(void*);
     void clearEE();
     template<Colors C> const ColoredBoard<C>& currentBoard() const;
     template<Colors C> ColoredBoard<(Colors)-C>& nextBoard();

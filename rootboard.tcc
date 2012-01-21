@@ -34,7 +34,6 @@
 #include "generateMoves.tcc"
 #include "coloredboard.tcc"
 #include "perft.h"
-#include "result.tcc"
 #include "workthread.h"
 #include "jobs.h"
 #include "testgame.h"
@@ -60,9 +59,9 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
 
     uint64_t sum=0;
     for (Move* i = good; i<bad; ++i) {
-        Result<uint64_t> n(0);
+        uint64_t n(0);
         if (depth == 1) {
-            n.update(1);
+            n++;
         } else {
             perft<(Colors)-C, trunk>(n, b, *i, depth-1);
         }
@@ -72,23 +71,13 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
     return sum;
 }
 
-void update(Result<uint64_t>& r, uint64_t v);
 void update(uint64_t& r, uint64_t v);
-void inline setReady(uint64_t ) {};
-void inline setNotReady(uint64_t ) {};
-void inline setReady(Result<uint64_t>& r) {
-    r.setReady();
-}
-
-void inline setNotReady(Result<uint64_t>& r) {
-    r.setNotReady();
-}
 
 template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth) {
     if (P == trunk && depth <= Options::splitDepth) {
         uint64_t n=0;
         perft<C, tree>(n, prev, m, depth);
-        update(result, n);
+        result += n;
         return;
     }
 
@@ -100,7 +89,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
     PerftEntry subentry;
 
     if (pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
-        update(result, subentry.value);
+        result += subentry.value;
         return;
     }
     Move list[256];
@@ -113,19 +102,13 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
         b.generateNonCap(good, bad);
     }
     if (depth == 1) {
-        update(result, bad-good);
+        result += bad-good;
         return;
     }
 
     ResultType n(0);
     for (Move* i = good; i<bad; ++i) {
-        WorkThread* th;
-        if (P == trunk && !!(th = WorkThread::findFree())) {
-            th->queueJob(0U, new (PerftJob<(Colors)-C, ResultType>)(*this, n, b, *i, depth-1));
-        } else {
-            perft<(Colors)-C, P>(n, b, *i, depth-1);
-        }
-
+        perft<(Colors)-C, P>(n, b, *i, depth-1);
     }
 
     PerftEntry stored;
@@ -134,7 +117,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
     stored.upperKey |= z >> stored.upperShift;
     stored.value = (uint64_t)n;
     pt->store(pe, stored);
-    update(result, n);
+    result += n;
 }
 
 template<Colors C>
@@ -154,7 +137,7 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
     if (depth <= 1)
         return bad-good;
 
-    Result<uint64_t> n(0);
+    uint64_t n(0);
     for (Move* i = good; i<bad; ++i) {
         perft<(Colors)-C, trunk>(n, b, *i, depth-1);
     }
