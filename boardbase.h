@@ -84,6 +84,10 @@ struct BoardBase {
         __v2di d02, d13;
     } qsingle[nColors][1+8+1];                   //960
 
+    KeyScore keyScore;
+    CastlingAndEP cep;
+    unsigned fiftyMoves;
+
     int material;
     mutable RawScore positionalScore;
     mutable bool isExact;
@@ -103,7 +107,7 @@ struct BoardBase {
     static const uint64_t kAttacked2[nSquares+2];
     static const uint64_t kAttacked[nSquares+2];
     static uint64_t kingAttacks[16][nSquares];
-    static uint64_t epTab[nPieces+1][nSquares];
+    static Castling castlingMask[nSquares];
 
     template<int C>
     uint64_t getOcc() const {
@@ -183,10 +187,6 @@ struct BoardBase {
     template<Colors C> inline void buildAttacks() __attribute__((always_inline));
     template<Colors C> inline void buildPins() __attribute__((always_inline));
     void buildAttacks() __attribute__((noinline));
-    KeyScore keyScore;
-    unsigned fiftyMoves;
-    CastlingAndEP cep;
-    static Castling castlingMask[nSquares];
     void init();
     void print() const;
     unsigned getPieceKind(uint64_t bit) const;
