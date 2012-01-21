@@ -22,6 +22,7 @@
 
 #include "eval.h"
 #include "parameters.h"
+#include "boardbase.h"
 /*
  * called after a capture move of opponent
  * returns true if the score returned is an exact score
@@ -110,15 +111,4 @@ __v8hi Eval::inline_estimate(const Move m, const KeyScore keyScore) const {
             + getKSVector(C*m.piece(), m.to())
             - getKSVector(-C*m.capture(), m.to());
     }
-}
-
-template<typename T>
-void sigmoid(T& p, Parameters::Phase start, Parameters::Phase end, Parameters::Phase dcenter, Parameters::Phase width, unsigned istart) {
-    const size_t n = sizeof(T)/sizeof(p[0]);
-    int16_t o[n];
-    int16_t e[n];
-    sigmoid(o, start.opening, end.opening, dcenter.opening, width.opening, istart);
-    sigmoid(e, start.endgame, end.endgame, dcenter.endgame, width.endgame, istart);
-    for (unsigned int i = 0; i < n; ++i)
-        p[i] = PackedScore{ o[i], e[i] };
 }

@@ -60,13 +60,6 @@ union KeyScore {
     };
 };
 
-template<typename T>
-void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986, unsigned istart=0 );
-template<typename T>
-void sigmoid(T& p, Parameters::Phase start, Parameters::Phase end, Parameters::Phase dcenter, Parameters::Phase width, unsigned istart=0);
-
-void sigmoid(int n, int p[], double start, double end, double dcenter, double width = 1.5986);
-
 class Eval {
     KeyScore zobristPieceSquare[nTotalPieces][nSquares];
 
@@ -76,16 +69,18 @@ class Eval {
     PackedScore bishopOppPawn[9];
     PackedScore bishopNotOwnPawn[9];
     PackedScore bishopNotOppPawn[9];
-    PackedScore bishopBlockPasser[9];
+    PackedScore bishopBlockPasser[3];
     PackedScore bishopPair;
 
-    PackedScore knightBlockPasser[9];
+    PackedScore knightBlockPasser[3];
     PackedScore knightPair;
     
     PackedScore rookTrapped;
-    PackedScore rookOpen[9];
-    PackedScore rookHalfOpen[9];
-    PackedScore rookWeakPawn[9];
+    PackedScore rookOpen[9][8];
+    PackedScore rookHalfOpen[9][8];
+    PackedScore rookWeakPawn[5];
+    PackedScore rookOwnPasser[5];
+    PackedScore rookOppPasser[5];
     
     PackedScore pawnBackward2[8];
     PackedScore pawnBackwardOpen2[8];
@@ -126,6 +121,7 @@ class Eval {
 
     // exists purely to hide access to the float (=slow) initialization parameters
     class Init {
+        Eval& e;
         Parameters::Piece rook, bishop, queen, knight, pawn, king;
 
         Parameters::Phase bishopOwnPawn;
@@ -136,10 +132,14 @@ class Eval {
 
         Parameters::Phase knightBlockPasser;
 
-        Parameters::Phase rookOpen;
+        Parameters::Phase rookOpen2;
+        Parameters::Phase rookOpenSlope;
         Parameters::Phase rookTrapped;
-        Parameters::Phase rookHalfOpen;
+        Parameters::Phase rookHalfOpen2;
+        Parameters::Phase rookHalfOpenSlope;
         Parameters::Phase rookWeakPawn;
+        Parameters::Phase rookOwnPasser;
+        Parameters::Phase rookOppPasser;
 
         float oppKingOwnPawnV;  // only 1..7 used
         float ownKingOwnPawnV;
@@ -170,13 +170,22 @@ class Eval {
             float vdelta;
         } kingShield;
 public:
-        void setEvalParameters(Eval& e, const Parameters& p);
-        void initPS(Eval& e);
-        void initPS(Eval& e, Pieces pIndex, Parameters::Piece& piece);
-        void initShield(Eval& e);
+        Init(Eval& e);
+        void setEvalParameters(const Parameters& p);
+        void initPS();
+        void initPS(Pieces pIndex, Parameters::Piece& piece);
+        void initShield();
+        template<typename T>
+        void sigmoid(T& p, double start, double end, double dcenter = 0, double width = 1.5986, unsigned istart=0 );
+        template<typename T>
+        void sigmoid(T& p, Parameters::Phase start, Parameters::Phase end, Parameters::Phase dcenter, Parameters::Phase width, unsigned istart=0);
+        void sigmoid(int n, int p[], double start, double end, double dcenter, double width = 1.5986);
+        template<typename T>
+        static void mulTab(T& p, Parameters::Phase step);
+        void zobrist();
+        void scale();
     };
 
-    void initZobrist();
     template<GamePhase P>
     CompoundScore mobilityDiff(const BoardBase& b, int& wap, int& bap, int& wdp, int& bdp) const __attribute__((noinline));
     template<Colors C, GamePhase P>
@@ -236,6 +245,9 @@ public:
     int shield[01000], shieldMirrored[01000];       //indexed by 9 bits in front of the king
 
     static unsigned distance[nSquares][nSquares];  //todo convert to 8 bit, lazy init
+#ifdef MYDEBUG
+    std::map< std::string, unsigned > control;
+#endif
     
     Eval(uint64_t, const Parameters&);
     ~Eval();
@@ -273,60 +285,7 @@ public:
     __v8hi estimate(const Move m, const KeyScore keyScore) const;
     template<Colors C>
     __v8hi inline_estimate(const Move m, const KeyScore keyScore) const __attribute__((always_inline)) ;
-    template<typename T>
-    static void mulTab(T& p, Parameters::Phase step);
 
-} ALIGN_XMM ;
-
-template<typename T>
-void sigmoid(T& p, double start, double end, double dcenter, double width, unsigned istart) {
-    const size_t n = sizeof(T)/sizeof(p[0])-1-istart;
-    dcenter -= istart;
-    double t0 = -dcenter;
-    double t1 = n-dcenter;
-    double l0 = 1/(1+exp(-t0/width));
-    double l1 = 1/(1+exp(-t1/width));
-
-    double r = (end - start)/(l1-l0);
-    double a = start - l0*r;
-    for (unsigned int i = 0; i < istart; ++i)
-        p[i] = 0;
-    for (unsigned int i = 0; i <= n; ++i) {
-        double t = i - dcenter;
-        p[i+istart] = lrint(a + r/(1.0 + exp(-t/width)));
-    }
-}
-
-template<typename T>
-void Eval::mulTab(T& p, Parameters::Phase step) {
-    const size_t n = sizeof(T)/sizeof(p[0]);
-    CompoundScore cs(0,0);
-    for (unsigned int i = 0; i < n; ++i) {
-        p[i] = cs.packed();
-        cs = cs + CompoundScore( step.opening, step.endgame );
-    }
-}
-
-template<typename T>
-void printSigmoid(T& p, std::string str, int offset=0) {
-    size_t n;
-    for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && !p[n]; --n);
-    std::cout << std::setw(5) << str;
-    for (unsigned int i = 0; i <= n; ++i) {
-        std::cout << std::setw(4) << p[i]-offset;
-    }
-    std::cout << std::endl;
-}
-
-template<typename T>
-void printSigmoid2(T& p, std::string str, int offset=0) {
-    size_t n;
-    for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && (!p[n].opening | !p[n].endgame); --n);
-    std::cout << std::setw(5) << str;
-    for (unsigned int i = 0; i <= n; ++i) {
-        std::cout << std::setw(4) << p[i].opening-offset << "/" << p[i].endgame-offset;
-    }
-    std::cout << std::endl;
-}
+};
 
 #endif /* EVAL_H_ */
