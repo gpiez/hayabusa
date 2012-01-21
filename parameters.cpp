@@ -239,10 +239,14 @@ void Parameters::init()
     Parameters::add("endgameMaterial", 32);
 
     Parameters::add("rookTrapped", -50, -50);
-    Parameters::add("rookOpen", 16, 16);
-    Parameters::add("rookHalfOpen", 7, 7);
+    Parameters::add("rookOpen2", 18, 16);
+    Parameters::add("rookOpenSlope", -10, -10);
+    Parameters::add("rookHalfOpen2", 7, 7);
+    Parameters::add("rookHalfOpenSlope", -4, -4);
     Parameters::add("rookWeakPawn", 24, 24);
-
+    Parameters::add("rookOwnPasser", 5, 10);
+    Parameters::add("rookOppPasser", 5, 12);
+    
     Parameters::add("pawnBackward", -1, -1);
     Parameters::add("pawnBackwardOpen", -10, -10);
     Parameters::add("pawnIsolatedCenter", 0, 0);
@@ -338,11 +342,21 @@ void Parameters::init()
 
     Parameters::add("castlingTempo", 5);
 
-    
+     
 
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) 
         defaultParameters.parms[i] = Parm<float>(base[i]);
+
+#ifdef MYDEBUG
+    std::multimap<float, std::string> sortedList;
+    for (auto i=index.begin(); i!=index.end(); ++i)
+        sortedList.insert ( std::pair<float, std::string>( fabs(base[i->second].value) , i->first ));
+    
+    for (auto i=sortedList.rbegin(); i!=sortedList.rend(); ++i)
+        std::cout << std::setw(40) << std::left << i->second << i->first << std::endl;
+    
+#endif
 }
 
 Parm<float> Parameters::operator [] (std::string s) const {

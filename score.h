@@ -146,7 +146,7 @@ public:
 };
 
 /*
- * Score with bestMove, not used
+ * "abstract" forward template for Score with bestMove, not used
  * only the partial specializations below are needed
  */
 template<Colors C, typename T > struct ScoreMove;
@@ -164,12 +164,4 @@ template<Colors C> struct ScoreMove<C, SharedScore<C> >: public  SharedScore<C> 
     using SharedScore<C>::max;
     bool max(const int b, Move bm);
 };
-
-// template<Colors C> struct ScoreMove: public Score<C, MoveScore> {
-//     using SharedScore<C, MoveScore>::v;
-//     using SharedScore<C, MoveScore>::m;
-//     bool max(const int b) = delete;
-//     bool max(const int b, Move bm);
-// };
-
 #endif // SCORE_H

@@ -24,7 +24,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
 SET(common_SRCS console.cpp evolution.cpp parameters.cpp selfgame.cpp rootboard.cpp boardbase.cpp workthread.cpp eval.cpp testpositions.cpp
-    move.cpp testgame.cpp stringlist.cpp history.cpp book.cpp)
+    move.cpp stringlist.cpp history.cpp book.cpp evalinit.cpp)
 
 SET(USE_QTGUI FALSE CACHE BOOL "Build the QT interface")
 SET(USE_GENETIC FALSE CACHE BOOL "Use genetic training algorithms")

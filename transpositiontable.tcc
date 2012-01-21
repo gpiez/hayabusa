@@ -309,7 +309,20 @@ std::string Table<Entry, assoc, Key>::bestLine(const RootBoard& b) {
     }
 
 }
-
+/*
+ * float12 format:
+ * 
+ * SEE E/M MMMM MMMM
+ * 
+ * S sign of mantissa
+ * E exponent, 0/1      0.. 2,00  d=1/256
+ *             2        2.. 4,00  d=1/128
+ *             3        4.. 8,00  d=1/64 
+ *             4        8..16,00  d=1/32
+ *             5       16..32,00  d=1/16
+ *             6       32..64,00  d=1/8
+ *             7       M1..M256   d=1
+ */
 namespace {
 inline int inline_tt2Score(int s) {
     if (s < 0x400 && s > -0x400)

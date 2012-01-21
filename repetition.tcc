@@ -43,4 +43,3 @@ inline void RootBoard::clone(const ColoredBoard<C>& b, const RepetitionKeys& oth
         if (!i) break;
     }
 }
-

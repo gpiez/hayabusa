@@ -202,12 +202,9 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
     
     unsigned iPiece = prev.errorPieceIndex[ m.piece() & 7 ];
     PositionalError& diff = pe[iPiece][m.from()][m.to()];
-    // current is always the maximum of (alpha, current), a out of thread increased alpha may increase current, but current has no influence on alpha.
-    // TODO connect current with alpha, so that current is increased, if alpha inceases. Better update alpha explictly, requires no locking
-    //     current.v = -infinity*C;
-    RawScore estimatedScore = CompoundScore(estimate.score).calc(prev.material, eval) + prev.positionalScore + diff.v - C*diff.error; //TODO move score() into ColorBoard ctor
+    RawScore estimatedScore = CompoundScore(estimate.vector).calc(prev.material, eval) + prev.positionalScore + diff.v - C*diff.error;
     if (P==vein && !(extend & ~ExtFirstMove)) {
-        Score<C> value(estimatedScore); //TODO get rid of this var
+        Score<C> value(estimatedScore);
         if (value >= origBeta.v) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = value.v;
@@ -229,7 +226,6 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
         }
     }
 
-    Key z;
     /*
      * Extensions in leaf search
      * ExtCheck:        You are checking, generate ALL moves, NO standpat.
@@ -273,8 +269,9 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
     if (node && extend) node->flags |= Extend;
 #endif
 
+    Key z;
     if (P!=vein) {
-        z = b.getZobrist();/* if (z==7326551192246482564) asm("int3");*/
+        z = b.getZobrist();
         store(z, ply);          //TODO could be delayed?
     }
 
@@ -301,7 +298,7 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
         currentPly = ply;
     }
 
-    ASSERT(CompoundScore(b.keyScore.score).calc(prev.material, eval) == CompoundScore(estimate.score).calc(prev.material, eval));
+    ASSERT(CompoundScore(b.keyScore.vector).calc(prev.material, eval) == CompoundScore(estimate.vector).calc(prev.material, eval));
     ASSERT(P == vein || z == b.getZobrist());
     if ((int)prev.CI == (int)b.CI) {
         if (b.template inCheck<(Colors)-C>()) {
@@ -476,7 +473,6 @@ int RootBoard::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned d
     Move* bad = good;
     Move* badCaptures = good;
     Move *captures, *threats, *nonCaptures;
-
     if (b.template inCheck<C>()) {
         nonCaptures = good;
         b.generateCheckEvasions(good, bad);

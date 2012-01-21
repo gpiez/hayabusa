@@ -189,7 +189,7 @@ Job* WorkThread::findJob(unsigned parent, unsigned ply) {
     return 0;
 }
 
-bool WorkThread::canQueued(unsigned parent, int ) {
+bool WorkThread::canQueued(unsigned /*parent*/, int ) {
     UniqueLock<Mutex> lock(runningMutex);
 //     if (parent && getReserved(threads[parent]->parent) + running >= nThreads) return false;
     return running < nThreads;
