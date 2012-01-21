@@ -207,7 +207,7 @@ void ColoredBoard<C>::doSpecialMove(BoardBase* next, Move m, uint64_t from, uint
 
 template<Colors C>
 Key ColoredBoard<C>::getZobrist() const {
-    return keyScore.key + cep.castling.data4 + cep.enPassant + (C+1);
+    return keyScore.key + cep.castling.data4 + cep.enPassant*0x123456789abcdef + (C+1);
 }
 
 template<Colors C>
