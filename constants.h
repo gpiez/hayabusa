@@ -143,9 +143,6 @@ static inline int popcount15( uint64_t x )
 #if defined(__SSE4_2__) && defined(__x86_64__)
     return __popcntq(x);
 #else
-#ifdef MYDEBUG
-    uint64_t y = popcount(x);
-#endif
     x -=  x>>1 & 0x5555555555555555LL;
     x  = ( x>>2 & 0x3333333333333333LL ) + ( x & 0x3333333333333333LL );
     x *= 0x1111111111111111LL;
@@ -189,7 +186,7 @@ static inline uint64_t ror(uint64_t x, unsigned k) {
 #if defined(__x86_64__)
     return __rorq(x, k);
 #else
-    return x >> k | x << 64-k;
+    return x >> k | x << (64-k);
 #endif    
 }
 
@@ -198,7 +195,7 @@ static inline uint64_t rol(uint64_t x, unsigned k) {
 #if defined(__x86_64__)
     return __rolq(x, k);
 #else
-    return x << k | x >> 64-k;
+    return x << k | x >> (64-k);
 #endif
 }
 
