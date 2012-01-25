@@ -49,7 +49,7 @@ void Eval::Init::sigmoid(T& p, double start, double end, double dcenter, double 
         p[i] = 0;
     for (unsigned int i = 0; i <= n; ++i) {
         double t = i - dcenter;
-        p[i+istart] = lrint(a + r/(1.0 + exp(-t/width)));
+        p[i+istart] = a + r/(1.0 + exp(-t/width));
     }
 }
 
@@ -83,7 +83,7 @@ void printSigmoid(T& p, std::string str, int offset=0) {
     for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && !p[n]; --n);
     std::cout << std::setw(5) << str;
     for (unsigned int i = 0; i <= n; ++i) {
-        std::cout << std::setw(4) << p[i]-offset;
+        std::cout << std::setw(4) << std::right << p[i]-offset;
     }
     std::cout << std::endl;
 }
@@ -94,7 +94,9 @@ void printSigmoid2(T& p, std::string str, int offset=0) {
     for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && (!p[n].opening | !p[n].endgame); --n);
     std::cout << std::setw(5) << str;
     for (unsigned int i = 0; i <= n; ++i) {
-        std::cout << std::setw(4) << p[i].opening-offset << "/" << p[i].endgame-offset;
+    	std::stringstream s;
+    	s << p[i].opening-offset << "/" << p[i].endgame-offset; 
+        std::cout << std::setw(8) << s.str(); 
     }
     std::cout << std::endl;
 }
@@ -233,12 +235,18 @@ void Eval::Init::scale() {
         printSigmoid(e.attackTable2, "attTable2");
         printSigmoid2(e.pawnPasser22, "pass");
         printSigmoid2(e.pawnConnPasser22, "cpass");
-        printSigmoid(e.oppKingOwnPasser, "eKpas");
-        printSigmoid(e.ownKingOwnPasser, "mKpas");
-        printSigmoid(e.oppKingOwnPawn, "eKp");
-        printSigmoid(e.ownKingOwnPawn, "mKp");
-
     }
+#ifdef MYDEBUG
+    printSigmoid2(e.pawnCandidate, "Cand");
+    for (unsigned rank=1; rank<=6; ++rank) {
+    	std::stringstream s;
+    	s << rank << ":";
+		printSigmoid(e.oppKingOwnPasser[rank], "eKpass" + s.str());
+		printSigmoid(e.ownKingOwnPasser[rank], "mKpass" + s.str());
+		printSigmoid(e.oppKingOwnPawn[rank], "eKpawn" + s.str());
+		printSigmoid(e.ownKingOwnPawn[rank], "mKpawn" + s.str());
+    }
+#endif    
 }
 #define SETPARM(x) x = p[ #x ].value; \
                    ASSERT( e.control.erase(toLower( #x )) );
@@ -284,7 +292,9 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     sigmoid(e.pawnPasser22, pawnPasser2, pawnPasser7, Parameters::Phase{6,6}, pawnPasserSlope );
     SETPARM2(pawnConnPasser);
     sigmoid(e.pawnConnPasser22, Parameters::Phase{0,0}, pawnConnPasser, Parameters::Phase{6,6}, pawnPasserSlope );
-
+    SETPARM2(pawnCandidate);
+    sigmoid(e.pawnCandidate, Parameters::Phase{0,0}, pawnCandidate, Parameters::Phase{6,6}, pawnPasserSlope);
+    SETPARME2(pawnPiece);
     SETPARM2(knight.value);
     SETPARM2(knight.hor.value);
     SETPARM2(knight.hor.inflection);
@@ -394,14 +404,21 @@ void Eval::Init::setEvalParameters(const Parameters& p)
 
     SETPARME(endgameMaterial);
 
-    SETPARM(oppKingOwnPawnV);
-    SETPARM(ownKingOwnPawnV);
-    SETPARM(oppKingOwnPasserV);
-    SETPARM(ownKingOwnPasserV);
-    sigmoid( e.oppKingOwnPawn,   -oppKingOwnPawnV,   oppKingOwnPawnV, 1, 10);  // only 1..7 used
-    sigmoid( e.ownKingOwnPawn,    ownKingOwnPawnV,  -ownKingOwnPawnV, 1, 10);
-    sigmoid( e.oppKingOwnPasser, -oppKingOwnPasserV, oppKingOwnPasserV, 1, 10);  // only 1..7 used
-    sigmoid( e.ownKingOwnPasser,  ownKingOwnPasserV,-ownKingOwnPasserV, 1, 10);
+    SETPARM(oppKingOwnPawn2);
+    SETPARM(ownKingOwnPawn2);
+    SETPARM(oppKingOwnPasser2);
+    SETPARM(ownKingOwnPasser2);
+    SETPARM(kingPawnRankFactor);
+    SETPARM(kingPawnRankSlope);
+    SETPARM(kingPawnDistSlope)
+    float rankFactor[7];
+    sigmoid(rankFactor, 1.0/sqrt(kingPawnRankFactor), sqrt(kingPawnRankFactor), 7, kingPawnRankSlope, 1);
+    for (unsigned rank=1; rank<=6; ++rank) {
+		sigmoid( e.oppKingOwnPawn[rank],   -oppKingOwnPawn2*rankFactor[rank],   oppKingOwnPawn2*rankFactor[rank], 1, kingPawnDistSlope);  // only 1..7 used
+		sigmoid( e.ownKingOwnPawn[rank],    ownKingOwnPawn2*rankFactor[rank],  -ownKingOwnPawn2*rankFactor[rank], 1, kingPawnDistSlope);
+		sigmoid( e.oppKingOwnPasser[rank], -oppKingOwnPasser2*rankFactor[rank], oppKingOwnPasser2*rankFactor[rank], 1, kingPawnDistSlope);  // only 1..7 used
+		sigmoid( e.ownKingOwnPasser[rank],  ownKingOwnPasser2*rankFactor[rank],-ownKingOwnPasser2*rankFactor[rank], 1, kingPawnDistSlope);
+    }
 
     SETPARM(kingShield.base);
     SETPARM(kingShield.vdelta);

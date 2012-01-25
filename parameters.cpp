@@ -240,7 +240,7 @@ void Parameters::init()
 
     Parameters::add("rookTrapped", -50, -50);
     Parameters::add("rookOpen2", 18, 16);
-    Parameters::add("rookOpenSlope", -10, -10);
+    Parameters::add("rookOpenSlope", -8, -10);
     Parameters::add("rookHalfOpen2", 7, 7);
     Parameters::add("rookHalfOpenSlope", -4, -4);
     Parameters::add("rookWeakPawn", 24, 24);
@@ -258,7 +258,9 @@ void Parameters::init()
     Parameters::add("pawnPasser7", 150, 150);
     Parameters::add("pawnPasserSlope", 1.0, 1.0);
     Parameters::add("pawnConnPasser", 36, 36 );
-
+    Parameters::add("pawnCandidate", 20, 20);
+    Parameters::add("pawnPiece", -40, -40);
+    
     Parameters::add("dMaxCapture", 8, 4, 20, 2);
     Parameters::add("standardError", 30);
     Parameters::add("standardSigma", 2.0);
@@ -285,11 +287,14 @@ void Parameters::init()
     Parameters::add("dMinMateExt", 4);
     Parameters::add("dMinPawnExt", 4);
 
-    Parameters::add("oppKingOwnPawnV", 14);  // only 1..7 used
-    Parameters::add("ownKingOwnPawnV", 8);
-    Parameters::add("oppKingOwnPasserV",  26);  // only 1..7 used
-    Parameters::add("ownKingOwnPasserV", 32);
-
+    Parameters::add("oppKingOwnPawn2", 14);  // only 1..7 used
+    Parameters::add("ownKingOwnPawn2", 8);
+    Parameters::add("oppKingOwnPasser2",  40);  // only 1..7 used
+    Parameters::add("ownKingOwnPasser2", 32);
+    Parameters::add("kingPawnRankFactor", 4.0);
+    Parameters::add("kingPawnRankSlope", 2.0);
+    Parameters::add("kingPawnDistSlope", 2.0);
+    
     Parameters::add("calcMeanError", 1);
 
     Parameters::add("prune1", 10);
@@ -342,7 +347,7 @@ void Parameters::init()
 
     Parameters::add("castlingTempo", 5);
 
-     
+    
 
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) 

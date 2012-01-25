@@ -43,7 +43,7 @@ void Evolution::init()
 void Evolution::initFixed(int n)
 {
     nThread = 0;
-    maxThread = 4;
+    maxThread = 8;
     nIndiFixed = n;
     recalc.resize(n);
     minElo.resize(n);

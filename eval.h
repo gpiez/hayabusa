@@ -91,7 +91,9 @@ class Eval {
     PackedScore pawnShoulder2[8];
     PackedScore pawnConnPasser22[6];
     PackedScore pawnPasser22[6];
-
+    PackedScore pawnCandidate[6];
+    PackedScore pawnPiece;
+    
     PackedScore bm[14];
     PackedScore nm[9];
     PackedScore rm[15];
@@ -109,10 +111,10 @@ class Eval {
     int defenseQ[8];
     int defenseN[8];
 
-    int oppKingOwnPawn[8];
-    int ownKingOwnPawn[8];
-    int oppKingOwnPasser[8];
-    int ownKingOwnPasser[8];
+    int oppKingOwnPawn[7][8];
+    int ownKingOwnPawn[7][8];
+    int oppKingOwnPasser[7][8];
+    int ownKingOwnPasser[7][8];
     int kingShieldOpenFile;
     int kingShieldHalfOpenFile;
 
@@ -141,10 +143,13 @@ class Eval {
         Parameters::Phase rookOwnPasser;
         Parameters::Phase rookOppPasser;
 
-        float oppKingOwnPawnV;  // only 1..7 used
-        float ownKingOwnPawnV;
-        float oppKingOwnPasserV;  // only 1..7 used
-        float ownKingOwnPasserV;
+        float oppKingOwnPawn2; 
+        float ownKingOwnPawn2;
+        float oppKingOwnPasser2;
+        float ownKingOwnPasser2;
+        float kingPawnRankFactor; 
+        float kingPawnRankSlope;
+        float kingPawnDistSlope;
 
         Parameters::Phase pawnBackward;
         Parameters::Phase pawnBackwardOpen;
@@ -155,6 +160,7 @@ class Eval {
         Parameters::Phase pawnShoulder;
         Parameters::Phase pawnPasser2, pawnPasser7, pawnPasserSlope;
         Parameters::Phase pawnConnPasser;
+        Parameters::Phase pawnCandidate;
 
         int attackFirst;
         int attackSlope;

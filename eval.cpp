@@ -61,14 +61,28 @@ static const int ksvb[2][nSquares] = {
      0, 10, 20, 30, 30, 26, 22, 18
 }};
 
-void printBit(uint64_t bits) {
+void collectArgs(std::vector<uint64_t>) {}
+
+template<typename... Args>
+void collectArgs(std::vector<uint64_t>& argvector, uint64_t first, Args... tail) {
+	argvector.push_back(first);
+	collectArgs(argvector, tail...);
+}
+
+template<typename... Args>
+void printBit(Args... argpack) {
+	std::vector<uint64_t> argvector;
+	collectArgs(argvector, argpack...);
     for (int y=8; y; ) {
         --y;
-        for (int x=0; x<8; ++x) {
-            if ((bits >> (x+y*8)) & 1)
-                std::cout << "X";
-            else
-                std::cout << ".";
+        for (size_t w=0; w<argvector.size(); ++w) {
+			for (int x=0; x<8; ++x) {
+				if ((argvector[w] >> (x+y*8)) & 1)
+					std::cout << "X";
+				else
+					std::cout << ".";
+			}
+			std::cout << "  ";
         }
         std::cout << std::endl;
     }
@@ -218,15 +232,14 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
 
         score = score + pawnDouble2[popcount15(wpawn & wBack)];
         score = score - pawnDouble2[popcount15(bpawn & bBack)];
+        
         // calculate squares which are or possibly are attacked by w and b pawns
-        // take only the most advanced attacker and the most backward defender into account
-
-        uint64_t wAttack = (wFront >> 1 & ~0x8080808080808080LL) | (wFront << 1 & ~0x101010101010101LL);
-        uint64_t bAttack = (bFront >> 1 & ~0x8080808080808080LL) | (bFront << 1 & ~0x101010101010101LL);
-
+        // take only the most advanced attacker and the most backward defender into account        
+		uint64_t wAttack = ((wFront & ~file<'a'>()) >> 1) | (wFront << 1 & ~file<'a'>());
+		uint64_t bAttack = ((bFront & ~file<'a'>()) >> 1) | (bFront << 1 & ~file<'a'>());
+        	
         // backward pawns are pawns which may be attacked, if the advance,
         // but are not on a contested square (otherwise they would be defended)
-
         uint64_t wstop = b.getAttacks<Black,Pawn>() & ~wAttack;
         uint64_t bstop = b.getAttacks<White,Pawn>() & ~bAttack;
         wstop  = wstop>>010 | wstop>>020;
@@ -240,6 +253,7 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         score = score + pawnBackward2[popcount15(wBackward)];
         score = score - pawnBackward2[popcount15(bBackward)];
         
+        // backward pawns on open files, reduce to (uint8_t) for rooks later
         uint64_t wBackOpen = wBackward & ~bFront;
         uint64_t bBackOpen = bBackward & ~wFront;
         uint64_t wBack8 = wBackOpen | wBackOpen>>010;
@@ -266,6 +280,29 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
         wPassedConnected |= wPassed & (wPassed<<1 | wPassed<<9 | wPassed>>7) & ~file<'a'>();
         uint64_t bPassedConnected = bPassed & (bPassed>>1 | bPassed>>9 | bPassed<<7) & ~file<'h'>();
         bPassedConnected |= bPassed & (bPassed<<1 | bPassed<<9 | bPassed>>7) & ~file<'a'>();
+        // true on either exactly 1 attack
+		uint64_t wAttack1 = ((wFront & ~file<'a'>()) >> 1) ^ (wFront << 1 & ~file<'a'>());
+		uint64_t bAttack1 = ((bFront & ~file<'a'>()) >> 1) ^ (bFront << 1 & ~file<'a'>());
+		// nothing in front, but possibly attacked by =1 opponent pawn, 
+		// supported by at least one pawn
+        uint64_t wCandidate1 = wpawn & ~bFront & bAttack1 & wAttack;
+        uint64_t bCandidate1 = bpawn & ~wFront & wAttack1 & bAttack;                
+        // if directly attacked, we are attacked by ==1 pawn, we need support
+        // by >=1 pawn then. Mask out attacked pawn with no support
+        wCandidate1 &= ~(b.getAttacks<Black,Pawn>() & ~b.getAttacks<White,Pawn>());
+        bCandidate1 &= ~(b.getAttacks<White,Pawn>() & ~b.getAttacks<Black,Pawn>());
+		// nothing in front, but possibly attacked by >=1 opponent pawn and 
+        // not by ==1 pawn (=attack by 2), supported by >=1 pawn 
+        // and not ==1 pawn (=support by 2)
+        uint64_t wCandidate2 = wpawn & ~bFront & bAttack & ~bAttack1 & wAttack & ~wAttack1;
+        uint64_t bCandidate2 = bpawn & ~wFront & wAttack & ~wAttack1 & bAttack & ~bAttack1;                
+        // mask out attackeck pawns, which are not supported by at least 2 pawns
+        // border masking is not needed, no border pawn can be Candidate2
+        wCandidate2 &= ~(b.getAttacks<Black,Pawn>() & ~(wpawn>>9 & wpawn>>7));
+        bCandidate2 &= ~(b.getAttacks<White,Pawn>() & ~(bpawn<<9 & bpawn<<7));
+        uint64_t wCandidate = wCandidate1 | wCandidate2;
+        uint64_t bCandidate = bCandidate1 | bCandidate2;
+        
         unsigned i;
         pawnEntry.passers[0] = wPassed;
         for (i = 0; wPassed; wPassed &= wPassed - 1, i++) {
@@ -273,23 +310,32 @@ PawnEntry Eval::pawns(const BoardBase& b) const {
             unsigned y = pos >> 3;
             ASSERT(y>0 && y<7);
             score = score + pawnPasser22[y-1];
-            if (wPassedConnected >> pos & 1) {
-                score = score + pawnConnPasser22[y-1];
-            }
+            if (wPassedConnected & (1LL << pos)) score = score + pawnConnPasser22[y-1];
 
 //             print_debug(debugEval, "pawn wpasser:   %d\n", pawnPasser22[y-1]);
         }
+//		if (wCandidate) {
+//			printBit(wpawn, bpawn, wCandidate);
+//			std::cout << pawnCandidate[(bit(wCandidate)>>3)-1].opening << 
+//					" / " << pawnCandidate[(bit(wCandidate)>>3)-1].endgame <<
+//					std::endl << "-------------------------------------" << 
+//					std::endl;
+//		}
+        for (;wCandidate; wCandidate &= wCandidate-1)
+        	score = score + pawnCandidate[(bit(wCandidate)>>3)-1];
+
         pawnEntry.passers[1] = bPassed;
         for ( i=0; bPassed; bPassed &= bPassed-1, i++ ) {
             unsigned pos = bit(bPassed);
             unsigned y = pos  >> 3;
             ASSERT(y>0 && y<7);
             score = score - pawnPasser22[6-y];
-            if (bPassedConnected >> pos & 1) {
-                score = score - pawnConnPasser22[6-y];
-            }
+            if (bPassedConnected & (1LL << pos)) score = score - pawnConnPasser22[6-y];
+            
 //             print_debug(debugEval, "pawn bpasser:   %d\n", pawnPasser22[6-y]);
         }
+        for (; bCandidate; bCandidate &= bCandidate-1)
+        	score = score - pawnCandidate[6-(bit(bCandidate)>>3)];
 
         // possible weak pawns are adjacent to open files or below pawns an a adjacent file on both sides
         // rook pawns are always adjacent to a "open" file
@@ -630,9 +676,12 @@ int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int /*sideToMove*/) c
     print_debug(debugEval, "King dist pawn %d\n", CI);
     for (uint64_t p = b.getPieces<C,Pawn>() & ~pe.passers[CI]; p; p &= p-1) {
         unsigned pos = bit(p);
-        score += oppKingOwnPawn[distance[eking][pos]];
+        unsigned rank = (pos ^ (C==Black?070:0)) >> 3;
+        ASSERT(rank <= 6);
+        ASSERT(rank >= 1);
+        score += oppKingOwnPawn[rank][distance[eking][pos]];
         print_debug(debugEval, "(%3d:", oppKingOwnPawn[distance[eking][pos]]);
-        score += ownKingOwnPawn[distance[king][pos]];
+        score += ownKingOwnPawn[rank][distance[king][pos]];
         print_debug(debugEval, "%3d)", ownKingOwnPawn[distance[king][pos]]);
     }
     print_debug(debugEval, "\nKing dist passer %d\n", CI);
@@ -641,31 +690,12 @@ int Eval::endgame(const BoardBase& b, const PawnEntry& pe, int /*sideToMove*/) c
      */
     for (uint64_t p = b.getPieces<C,Pawn>() & pe.passers[CI]; p; p &= p-1) {
         unsigned pos = bit(p);
-/*        unsigned promo = pos & 7;
-        unsigned promodist = pos >> 3;
-        uint64_t pawnStops;
-        if (C == White) {
-            promo ^= 070;
-            promodist ^= 7;
-            pawnStops  = 1ULL << pos;
-            pawnStops += pawnStops << 010;
-            pawnStops += pawnStops << 020;
-            pawnStops += pawnStops << 040;      // TODO use table
-        } else {
-            pawnStops  = 1ULL << pos;
-            pawnStops += pawnStops >> 010;
-            pawnStops += pawnStops >> 020;
-            pawnStops += pawnStops >> 040;      // TODO use table
-        }
-        if (b.getAttacks<-C,All>() == b.getAttacks<-C,King>() && promodist + (C!=sideToMove) < distance[eking][promo])
-            score += pawnUnstoppable;
-        score += oppKingOwnPasser[distance[eking][promo]];
-        print_debug(debugEval, "(%3d:", oppKingOwnPasser[distance[eking][promo]]);
-        score += ownKingOwnPasser[distance[king][promo]];
-        print_debug(debugEval, "%3d)", ownKingOwnPasser[distance[king][promo]]);*/
-        score += oppKingOwnPasser[distance[eking][pos]];
+        unsigned rank = (pos ^ (C==Black?070:0)) >> 3;
+        ASSERT(rank <= 6);
+        ASSERT(rank >= 1);
+        score += oppKingOwnPasser[rank][distance[eking][pos]];
         print_debug(debugEval, "(%3d:", oppKingOwnPasser[distance[eking][pos]]);
-        score += ownKingOwnPasser[distance[king][pos]];
+        score += ownKingOwnPasser[rank][distance[king][pos]];
         print_debug(debugEval, "%3d)", ownKingOwnPasser[distance[king][pos]]);
     }
     print_debug(debugEval, "%d\n", 0);
@@ -716,6 +746,12 @@ int Eval::operator () (const BoardBase& b, int stm, int& wap, int& bap ) const {
                             scale[b.material].endgame ? endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm) : 0);
         CompoundScore pawn( pe.score );
         CompoundScore piece = pieces<White>(b, pe) - pieces<Black>(b, pe);
+        int diff = popcount(b.getPieces<White,Pawn>())-popcount(b.getPieces<Black,Pawn>());
+        if (diff >= 3)
+        	piece = piece + pawnPiece;
+        else if (diff <= -3)
+        	piece = piece - pawnPiece;
+        	
 //         print_debug(debugEval, "endgame:        %d\n", e);
 //         print_debug(debugEval, "mobility:       %d\n", m);
 //         print_debug(debugEval, "pawns:          %d\n", pa);
