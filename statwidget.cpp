@@ -21,15 +21,14 @@
 
 #ifdef QT_GUI_LIB
 #include "statwidget.h"
-#include "rootboard.h"
+#include "game.h"
 #include "transpositiontable.tcc"
 #include "console.h"
 #include "workthread.h"
 #include "nodemodel.h"
 #include "nodedelegate.h"
 
-static void splitImage( QImage* piecesSet, QImage piecesImage )
-{
+static void splitImage( QImage* piecesSet, QImage piecesImage ) {
     int x = piecesImage.width()/6;
     int y = piecesImage.height();
 
@@ -44,14 +43,12 @@ static void splitImage( QImage* piecesSet, QImage piecesImage )
         p.drawImage( ( size-x )/2, ( size-y )/2, piecesImage, i*x,0, x, y );
         piecesSet[i] = onePiece;
 
-    }
-}
+    } }
 
 
-StatWidget::StatWidget(const RootBoard& rb):
+StatWidget::StatWidget(const Game& rb):
     iRow(0),
-    rb(rb)
-{
+    rb(rb) {
     setupUi(this);
     QImage wset( ":/setwhite.png" );
     splitImage( wPieces, wset );
@@ -62,8 +59,7 @@ StatWidget::StatWidget(const RootBoard& rb):
     bestLine->setFont(fixed);
 
     for (int i=0; i<256; i++) {
-        pal[i] = QColor::fromHsvF(std::fmod(1.3-i/300.0, 1.0), 1.0, 1.0);
-    }
+        pal[i] = QColor::fromHsvF(std::fmod(1.3-i/300.0, 1.0), 1.0, 1.0); }
 
     minipm[0][Rook] = ww1;
     minipm[0][Bishop] = ww2;
@@ -91,15 +87,11 @@ StatWidget::StatWidget(const RootBoard& rb):
     connect(&rb, SIGNAL(signalInfo(int, uint64_t, uint64_t, QString, QString)),
             this,       SLOT  (updateInfo(int, uint64_t, uint64_t, QString, QString)));
     t->setInterval(1000);
-    t->start();
-}
+    t->start(); }
 
-StatWidget::~StatWidget()
-{
-}
+StatWidget::~StatWidget() {}
 
-void StatWidget::updateInfo(int depth, uint64_t time, uint64_t nodes, QString eval, QString line)
-{
+void StatWidget::updateInfo(int depth, uint64_t time, uint64_t nodes, QString eval, QString line) {
     QTableWidgetItem* depthItem = new QTableWidgetItem(QString::number(depth));
     QTableWidgetItem* timeItem = new QTableWidgetItem(QLocale().toString(time/1000.0, 'f', 3));
     QTableWidgetItem* nodesItem = new QTableWidgetItem(QLocale().toString((qulonglong)nodes));
@@ -108,8 +100,7 @@ void StatWidget::updateInfo(int depth, uint64_t time, uint64_t nodes, QString ev
 
     if (++iRow > maxRows) {
         bestLine->removeRow(0);
-        --iRow;
-    }
+        --iRow; }
     bestLine->insertRow(0);
 //     bestLine->setRowCount(iRow);
     bestLine->setItem(0, 0, depthItem);
@@ -121,8 +112,7 @@ void StatWidget::updateInfo(int depth, uint64_t time, uint64_t nodes, QString ev
     bestLine->resizeColumnToContents(2);
     bestLine->resizeColumnToContents(3);
     bestLine->setSelectionMode(QAbstractItemView::NoSelection);
-    bestLine->setCurrentCell(0, 0);
-}
+    bestLine->setCurrentCell(0, 0); }
 /* Store the last 10 stats for a sliding average */
 template<typename T>
 QString number(T n) {
@@ -131,11 +121,9 @@ QString number(T n) {
     if (base>4) base=4;
     if (base<-4) base=-4;
     double base10 = pow(1000.0, base);
-    return QString(QString::number(n/base10, 'g', 3) % QString(" ") % "pnµm kMGT"[base+5]).trimmed();
-}
+    return QString(QString::number(n/base10, 'g', 3) % QString(" ") % "pnµm kMGT"[base+5]).trimmed(); }
 
-void StatWidget::update()
-{
+void StatWidget::update() {
     NodeItem::m.lock();
     treeView->doItemsLayout();
     NodeItem::m.unlock();
@@ -167,18 +155,15 @@ void StatWidget::update()
     DISPLAYNUM(ptuse);
     DISPLAYNUM(ptcollision);
     DISPLAYNUM(jobs);
-    DISPLAYNUM(cancelJob);
-}
+    DISPLAYNUM(cancelJob); }
 
-void StatWidget::updateBoard()
-{
+void StatWidget::updateBoard() {
     QPixmap pm(scaleWidget->width(), scaleWidget->height());
     QPainter pa( &pm );
     for (int i=0; i<256; ++i) {
         pa.setPen(Qt::NoPen);
         pa.setBrush(QBrush(pal[i]));
-        pa.drawRect((i*scaleWidget->width())/256, 0, ((i+1)*scaleWidget->width())/256 - (i*scaleWidget->width())/256, scaleWidget->height());
-    }
+        pa.drawRect((i*scaleWidget->width())/256, 0, ((i+1)*scaleWidget->width())/256 - (i*scaleWidget->width())/256, scaleWidget->height()); }
     scaleWidget->setPixmap(pm);
     static int oldsize = 0;
     int size=qMin( position->width(), position->height() )/8;
@@ -190,8 +175,7 @@ void StatWidget::updateBoard()
 
         }
         for ( int i=0; i<6; i++ ) {
-            bScaled[i] = bPieces[i].scaled( QSize( size*11/8, size*11/8 ), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ).copy(size*3/16, size*3/16, size, size);
-        }
+            bScaled[i] = bPieces[i].scaled( QSize( size*11/8, size*11/8 ), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ).copy(size*3/16, size*3/16, size, size); }
 
         QPixmap boardPixmap(position->size());
         boardPixmap.fill(QColor(0, 0, 0, 0));
@@ -206,11 +190,9 @@ void StatWidget::updateBoard()
                 if ( type > 0 )
                     pa.drawImage( x*size, y*size, wScaled[type-1] );
                 else if ( type < 0 )
-                    pa.drawImage( x*size, y*size, bScaled[-type-1] );
-            }
+                    pa.drawImage( x*size, y*size, bScaled[-type-1] ); }
 
-        position->setPixmap(boardPixmap);
-    }
+        position->setPixmap(boardPixmap); }
 
     if (radioButtonPSQ->isChecked()) {
 #if defined(MYDEBUG) && defined(CALCULATE_MEAN_POSITIONAL_ERROR)
@@ -225,47 +207,44 @@ void StatWidget::updateBoard()
                     for ( int y=0; y<8; y++ ) {
                         double ee = 0;
                         for (int i=0; i<64; ++i) {
-                            const PositionalError& err = rb.pe[nPieces + c*p][i][x+(7-y)*8];
+                            const Game::PositionalError& err = rb.pe[nPieces + c*p][i][x+(7-y)*8];
                             if (err.n > 0.0) {
                                 double v = err.e2/err.n - err.e*err.e/(err.n*err.n);
                                 ASSERT(v >= 0.0);
                                 v = sqrt(v);
-                                if (v > ee) ee = v;
-                            }
-                        }
+                                if (v > ee) ee = v; } }
                         if (ee > 255.0) ee = 255.0;
                         pa.setBrush(QBrush(pal[int(ee)]));
-                        pa.drawRect(x*size,y*size,size,size);
-                    }
-                minipm[(1-c)/2][p]->setPixmap(pm);
-            }
+                        pa.drawRect(x*size,y*size,size,size); }
+                minipm[(1-c)/2][p]->setPixmap(pm); }
 #endif
-    } else {
+    }
+    else {
         //     size = (qMin(ww1->height(), ww1->width()))/8;
         size = ww1->width()/16;
         int hh = ww1->height();
         QPixmap pm(size*16, hh);
         QPainter pa( &pm );
         //     for (int c=-1; c<=1; c+=2)
-        #ifdef MYDEBUG
+#ifdef MYDEBUG
         for (int r=0; r<=1; ++r)
             for (int p=Rook; p<=King; ++p) {
-        pm.fill(QColor(192, 192, 192, 255));
-                 pa.setPen(Qt::NoPen);
-        /*            for ( int x=0; x<8; x++ )
-                    for ( int y=0; y<8; y++ ) {
-                        int ee;
-                        if (radioButtonPSQ->isChecked())
-                            ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard().material) - c*(int[]){0,450,300,925,300,100,0}[p]);
-                        else
-                            ee = rb.delta[nPieces + c*p][x+(7-y)*8][0];
+                pm.fill(QColor(192, 192, 192, 255));
+                pa.setPen(Qt::NoPen);
+                /*            for ( int x=0; x<8; x++ )
+                            for ( int y=0; y<8; y++ ) {
+                                int ee;
+                                if (radioButtonPSQ->isChecked())
+                                    ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard().material) - c*(int[]){0,450,300,925,300,100,0}[p]);
+                                else
+                                    ee = rb.delta[nPieces + c*p][x+(7-y)*8][0];
 
-                        if (ee > 127) ee = 127;
-                        if (ee<-128) ee = -128;
-                        pa.setBrush(QBrush(pal[ee+128]));
-                        pa.drawRect(x*size,y*size,size,size);
-                    }
-                minipm[(1-c)/2][p]->setPixmap(pm);*/
+                                if (ee > 127) ee = 127;
+                                if (ee<-128) ee = -128;
+                                pa.setBrush(QBrush(pal[ee+128]));
+                                pa.drawRect(x*size,y*size,size,size);
+                            }
+                        minipm[(1-c)/2][p]->setPixmap(pm);*/
 //                 uint64_t mobMax = 1;
 //                 for ( int x=0; x<16; x++ )
 //                     mobMax = std::max(mobMax, mobStat[0][p][r][x]);
@@ -277,22 +256,17 @@ void StatWidget::updateBoard()
 //                 }
 //                 minipm[r][p]->setPixmap(pm);
             }
-        #endif
-    }
-}
+#endif
+    } }
 
 void StatWidget::emptyTree() {
-    tree->init();
-}
+    tree->init(); }
 
-LockedTreeView::LockedTreeView(QWidget* w): QTreeView(w)
-{
+LockedTreeView::LockedTreeView(QWidget* w): QTreeView(w) {
 
 }
 
-void LockedTreeView::paintEvent(QPaintEvent* event)
-{
+void LockedTreeView::paintEvent(QPaintEvent* event) {
     std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
-    QTreeView::paintEvent(event);
-}
+    QTreeView::paintEvent(event); }
 #endif // QT_GUI_LIB

@@ -10,17 +10,14 @@
 
 #ifdef QT_GUI_LIB
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
+#include <QAbstractItemDelegate>
 
 class NodeDelegate: public QAbstractItemDelegate {
-Q_OBJECT
+    Q_OBJECT
 
 public:
-    virtual void paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const;
-    virtual QSize sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const;
-};
+    virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+    virtual QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const; };
 
 #endif
 #endif /* NODEDELEGATE_H_ */

@@ -11,22 +11,20 @@
 #include "nodedelegate.h"
 #include "nodeitem.h"
 
-void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index ) const
-{
-    const NodeItem *item = static_cast<NodeItem*>( index.internalPointer() );
+void NodeDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const {
+    const NodeItem* item = static_cast<NodeItem*>( index.internalPointer() );
     // painter->begin();
     QString str1, str2;
     if ( item->move.fromto() ) {
         str1 = QString().fromStdString(item->move.string());
 
-        str2 = QString( "D%3 [%1 %2]\n" ).arg( item->alpha ).arg( item->beta ).arg( (int)item->depth );
+        str2 = QString( "D%3 [%1 %2] GN%4 ER%5 PS%6 RE%7 P%8\n" ).arg( item->alpha ).arg( item->beta ).arg( (int)item->depth ).arg(item->gain).arg(item->error).arg(item->ps).arg(item->real).arg(item->pos);
         if (item->nodeType != NodeStart)
             str2 += QString( "%1 " ).arg( item->bestEval );
-        str2+=QString( " ply: %1 " ).arg( item->ply );
-    } else {
+        str2+=QString( " ply: %1 " ).arg( item->ply ); }
+    else {
         str1 = QString( "Depth %1" ).arg( item->ply );
-        str2 = "";
-    }
+        str2 = ""; }
 
     switch(item->nodeType) {
     case NodePrecut1:
@@ -64,8 +62,7 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
         break;
     default:
         str2 += "Full";
-        break;
-    }
+        break; }
     switch(item->searchType) {
     case root:
         str2 += "<Root>";
@@ -81,8 +78,7 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
         break;
     case vein:
         str2 += "<Vein>";
-        break;
-    }
+        break; }
     if (item->flags & Threatened)
         str2 += QString(" THR ");
     if (item->flags & Extend)
@@ -91,11 +87,11 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
     if (item->nodeType != NodeStart)
         str2 += QString( " size: %2" ).arg(item->nodes);
     str2 += QString( " thread: %3" ).arg((int)item->threadId);
-/*
-    if ( index.parent().isValid() )
-        if ( static_cast<NodeItem*>( index.parent().internalPointer() )->bestMove.fromto() == item->move.fromto() )
-            painter->setPen( Qt::red );
-*/
+    /*
+        if ( index.parent().isValid() )
+            if ( static_cast<NodeItem*>( index.parent().internalPointer() )->bestMove.fromto() == item->move.fromto() )
+                painter->setPen( Qt::red );
+    */
 
     QRect coor = option.rect;
     QColor col;
@@ -106,25 +102,20 @@ void NodeDelegate::paint ( QPainter * painter, const QStyleOptionViewItem & opti
     painter->setBrush(QBrush(col));
     painter->drawRect( option.rect );
     if (item->moveColor == White) {
-        painter->setPen(Qt::white);
-    } else {
-        painter->setPen(Qt::black);
-    }
+        painter->setPen(Qt::white); }
+    else {
+        painter->setPen(Qt::black); }
 
     painter->drawText( coor, Qt::AlignVCenter | Qt::AlignLeft, str1 );
     coor.setLeft( coor.left() + 50 );
     if (item->nodeColor == White) {
-        painter->setPen(Qt::white);
-    } else {
-        painter->setPen(Qt::black);
-    }
+        painter->setPen(Qt::white); }
+    else {
+        painter->setPen(Qt::black); }
     painter->drawText( coor, Qt::AlignTop | Qt::AlignLeft, str2 );
-    painter->setPen(col);
-}
+    painter->setPen(col); }
 
-QSize NodeDelegate::sizeHint ( const QStyleOptionViewItem& /*option*/, const QModelIndex& /*index*/ ) const
-{
-    return QSize( 200,40 );
-}
+QSize NodeDelegate::sizeHint ( const QStyleOptionViewItem& /*option*/, const QModelIndex& /*index*/ ) const {
+    return QSize( 200,40 ); }
 
 #endif

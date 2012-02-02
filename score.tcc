@@ -19,46 +19,40 @@
 #include "score.h"
 #include "workthread.h"
 
-template<Colors C> Score<C>::Score (const Score& a) { v = a.v; }
+template<Colors C> Score<C>::Score (const Score& a) {
+    v = a.v; }
 
-template<Colors C> Score<C>::Score (int a) { v = a; }
+template<Colors C> Score<C>::Score (int a) {
+    v = a; }
 
 template<Colors C> bool Score<C>::operator >= (int a) const {
     if ( C==White ) return v>=a;
-    else            return v<=a;
-}
+    else            return v<=a; }
 
 template<Colors C> bool Score<C>::operator <= (int a) const {
     if ( C==White ) return v<=a;
-    else            return v>=a;
-}
+    else            return v>=a; }
 
 template<Colors C> bool Score<C>::operator > (int a) const {
     if ( C==White ) return v>a;
-    else            return v<a;
-}
+    else            return v<a; }
 
 template<Colors C> bool Score<C>::operator < (int a) const {
     if ( C==White ) return v<a;
-    else            return v>a;
-}
+    else            return v>a; }
 
 template<Colors C> bool ScoreMove<C,Score<C> >::max(const int b, Move bm) {
     if (*this < b) {
         v = b;
         m = bm;
-        return true;
-    }
-    return false;
-}
+        return true; }
+    return false; }
 
 template<Colors C> bool Score<C>::max(const int b) {
     if (*this < b) {
         v = b;
-        return true;
-    } 
-    return false;
-}
+        return true; }
+    return false; }
 
 template<Colors C> std::string Score<C>::str(int v) {
     if (v == 0)
@@ -75,18 +69,19 @@ template<Colors C> std::string Score<C>::str(int v) {
     else {
         s << (sign > 0 ? "+M":"-M");
         s << abs(v)-infinity;
-        return s.str();
-    }
+        return s.str(); }
 
     s << std::fixed << std::setw(5) << std::setprecision(2) << abs(v)/100.0;
-    return s.str();
-}
+    return s.str(); }
 
-template<Colors C> Score<C>& Score<C>::unshared() { return *this; }
+template<Colors C> Score<C>& Score<C>::unshared() {
+    return *this; }
 
-template<Colors C> const Score<C>& Score<C>::unshared() const { return *this; }
+template<Colors C> const Score<C>& Score<C>::unshared() const {
+    return *this; }
 
-template<Colors C> unsigned int Score<C>::isNotReady() const { return 0; }
+template<Colors C> unsigned int Score<C>::isNotReady() const {
+    return 0; }
 
 template<Colors C>
 void SharedScore<C>::join() {
@@ -95,9 +90,7 @@ void SharedScore<C>::join() {
         WorkThread::idle(1);
         while (notReady)
             readyCond.wait(lock);
-        WorkThread::idle(-1);
-    }
-}
+        WorkThread::idle(-1); } }
 
 template<Colors C>
 bool  SharedScore<C>::max(const int b) {
@@ -105,10 +98,8 @@ bool  SharedScore<C>::max(const int b) {
     if (*this < b) {
         v = b;
         maximizeChildren(b);
-        return true;
-    }
-    return false;
-}
+        return true; }
+    return false; }
 
 template<Colors C>
 bool ScoreMove<C,SharedScore<C> >::max(const int b, Move bm) {
@@ -117,10 +108,8 @@ bool ScoreMove<C,SharedScore<C> >::max(const int b, Move bm) {
         v = b;
         m = bm;
         SharedScore<C>::maximizeChildren(b);
-        return true;
-    }
-    return false;    
-}
+        return true; }
+    return false; }
 
 template<Colors C>
 void SharedScore<C>::setReady() {
@@ -133,8 +122,7 @@ void SharedScore<C>::setReady() {
      * SharedScore variable, the setReady here executing in a different thread
      * may then try to notify a no longer existing condition
      */
-    readyCond.notify_one();
-}
+    readyCond.notify_one(); }
 
 template<Colors C>
 void SharedScore<C>::setNotReady() {
@@ -144,18 +132,17 @@ void SharedScore<C>::setNotReady() {
 }
 
 template<Colors C>
-void SharedScore<C>::addChild(SharedScore<C> *child) const {
+void SharedScore<C>::addChild(SharedScore<C>* child) const {
     LockGuard<Mutex> lock(childrenMutex);
     if (nChildren >= maxScoreChildren) return;
     ++nChildren;
     unsigned i;
     for (i=0; children[i]; ++i)
         ASSERT(i <= (unsigned)maxScoreChildren);
-    children[i] = child;        
-}
+    children[i] = child; }
 
 template<Colors C>
-void SharedScore<C>::deleteChild(SharedScore<C> *child) const {
+void SharedScore<C>::deleteChild(SharedScore<C>* child) const {
     LockGuard<Mutex> lock(childrenMutex);
     ASSERT(nChildren);
     unsigned i;
@@ -163,9 +150,7 @@ void SharedScore<C>::deleteChild(SharedScore<C> *child) const {
         if (children[i] == child) {
             --nChildren;
             children[i] = 0;
-            return;
-        }
-}
+            return; } }
 
 template<Colors C>
 void SharedScore<C>::maximizeChildren(const int b) const {
@@ -174,7 +159,4 @@ void SharedScore<C>::maximizeChildren(const int b) const {
         for (int i=0; i<maxScoreChildren; ++i) {
             if (SharedScore<C>* child = children[i]) {
                 child->max(b);
-                if (!--n) return;
-            }
-        }
-}
+                if (!--n) return; } } }

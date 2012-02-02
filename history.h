@@ -8,10 +8,6 @@
 #ifndef HISTORY_H_
 #define HISTORY_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
 #include "constants.h"
 #include "move.h"
 #include "score.h"
@@ -20,17 +16,7 @@
 
 class Eval;
 
-struct PositionalError {
-    RawScore v;
-    RawScore error;
-#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
-    float n;
-    float e;
-    float e2;
-#endif
-};
-
-class History {
+struct History {
     uint8_t v[nMaxGameLength+4][16][nSquares] ALIGN_XMM;
     int max[nColors][nMaxGameLength+4];
     static const __v16qi uinctab[16];
@@ -42,7 +28,6 @@ public:
     void init64(uint8_t v[nSquares]);
     template<Colors C> void good(Move, unsigned ply);
     template<Colors C> int get(Move, unsigned ply);
-    template<Colors C> void sort(Move* begin, unsigned n, unsigned ply, const PositionalError (&pe)[nPieces*2+1][nSquares][nSquares], const int material, const Eval& eval);
-};
+    template<Colors C> void sort(Move* begin, unsigned n, unsigned ply); };
 
 #endif /* HISTORY_H_ */

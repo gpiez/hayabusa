@@ -28,24 +28,22 @@
 class LockedTreeView: public QTreeView {
     Q_OBJECT
     //using QTreeView::QTreeView;
-public:    
+public:
     LockedTreeView(QWidget*);
-protected:    
-    void paintEvent(QPaintEvent* event);
-};
+protected:
+    void paintEvent(QPaintEvent* event); };
 
 #include "ui_stats.h"
 #include "nodemodel.h"
 
-class RootBoard;
+class Game;
 class NodeModel;
 
-class StatWidget: public QWidget, private Ui::Statsui
-{
+class StatWidget: public QWidget, private Ui::Statsui {
     Q_OBJECT
 
     int iRow;
-    const RootBoard& rb;
+    const Game& rb;
     QImage wPieces[6], bPieces[6];
     QColor pal[256];
     QLabel* minipm[2][7];
@@ -57,12 +55,11 @@ private slots:
 public:
     NodeModel* volatile tree;
     void setMoveTree();
-    StatWidget(const RootBoard&);
+    StatWidget(const Game&);
     virtual ~StatWidget();
 
 public slots:
-    void emptyTree();
-};
+    void emptyTree(); };
 
 #endif // QT_GUI_LIB
 #endif // STATWIDGET_H

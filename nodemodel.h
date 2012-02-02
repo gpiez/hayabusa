@@ -21,39 +21,34 @@
 #ifndef NODEMODEL_H
 #define NODEMODEL_H
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
 #ifdef QT_GUI_LIB
 
 #include "nodeitem.h"
+#include <QAbstractItemModel>
 
 class NodeModel: public QAbstractItemModel {
-Q_OBJECT
+    Q_OBJECT
 
 public:
     NodeModel( QObject* parent = 0);
     ~NodeModel();
 
-    QVariant data(const QModelIndex &index, int role) const;
-    Qt::ItemFlags flags(const QModelIndex &index) const;
+    QVariant data(const QModelIndex& index, int role) const;
+    Qt::ItemFlags flags(const QModelIndex& index) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const;
-    QModelIndex parent(const QModelIndex &index) const;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const;
+    QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const;
+    QModelIndex parent(const QModelIndex& index) const;
+    int rowCount(const QModelIndex& parent = QModelIndex()) const;
+    int columnCount(const QModelIndex& parent = QModelIndex()) const;
     NodeItem* root() const {
-        return rootItem;
-    }
+        return rootItem; }
     void newData(NodeItem* node);
     void init();
-    
-private:
-    void setupModelData(const QStringList &lines, NodeItem *parent);
 
-    NodeItem *rootItem;
-};
+private:
+    void setupModelData(const QStringList& lines, NodeItem* parent);
+
+    NodeItem* rootItem; };
 
 #endif
 

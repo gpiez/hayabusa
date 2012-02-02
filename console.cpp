@@ -18,37 +18,33 @@
 */
 #include <pch.h>
 
-#include <unistd.h>
-
 #include "console.h"
+#include "board.h"
+#include "eval.h"
 #include "workthread.h"
-#include "rootboard.h"
-#include "coloredboard.tcc"
-#include "options.h"
-#include "testpositions.h"
-#include "transpositiontable.tcc"
-#include "rootboard.tcc"
-#include "rootsearch.tcc"
-#include "stringlist.h"
-#include "selfgame.h"
+#include "parameters.h"
+#include "game.h"
 #include "evolution.h"
-#include "jobs.tcc"
-#include "score.tcc"
+#include "testpositions.h"
+#include "options.h"
+
+#include <unistd.h>
+#include <future>
 
 namespace Options {
-    unsigned int        splitDepth = 7;
-    int                 humanreadable = 0;
-    uint64_t            hash = 0x1000000;
-    uint64_t            pHash = 0x1000000;
-    bool                quiet = false;
-    bool                preCutIfNotThreatened = false;
-    bool                reduction = true;
-    bool                pruning = true;
-    unsigned            debug = 0;
-    bool                currline = false;
-#ifdef QT_NETWORK_LIB    
-    bool                server = false;
-#endif    
+unsigned int        splitDepth = 777;
+int                 humanreadable = 0;
+uint64_t            hash = 0x1000000;
+uint64_t            pHash = 0x1000000;
+bool                quiet = false;
+bool                preCutIfNotThreatened = false;
+bool                reduction = true;
+bool                pruning = true;
+unsigned            debug = 0;
+bool                currline = false;
+#ifdef QT_NETWORK_LIB
+bool                server = false;
+#endif
 }
 
 Console::Console(int& argc, char** argv)
@@ -59,7 +55,7 @@ Console::Console(int& argc, char** argv)
 #if defined(QT_NETWORK_LIB)
     :
     QCoreApplication(argc, argv)
-#endif    
+#endif
 #endif
 {
     args.resize(argc);
@@ -68,17 +64,18 @@ Console::Console(int& argc, char** argv)
         StringList debugParm;
         for (int i=1; i<argc; ++i)
             debugParm << args[i].c_str();
-        debug(debugParm);
-    }
+        debug(debugParm); }
 //     Options::debug = debugEval;
-    BoardBase::initTables();
+    Board::initTables();
     Eval::initTables();
     WorkThread::init();
     Parameters::init();
+#ifdef USE_GENETIC
     evolution = new Evolution(this);
     evolution->init();
-    board = new RootBoard(this, defaultParameters, Options::hash, Options::pHash);
-    board->setup();
+#endif
+    game = new Game(this, defaultParameters, Options::hash, Options::pHash);
+    game->setup();
 
     dispatcher["uci"] = &Console::uci;
     dispatcher["debug"] = &Console::debug;
@@ -96,33 +93,31 @@ Console::Console(int& argc, char** argv)
     dispatcher["divide"] = &Console::divide;
     dispatcher["ordering"] = &Console::ordering;
     dispatcher["eval"] = &Console::eval;
+#ifdef USE_GENETIC
     dispatcher["selfgame"] = &Console::selfgame;
     dispatcher["parmtest"] = &Console::parmtest;
     dispatcher["egtest"] = &Console::egtest;
-    
+#endif
+
 
 #if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
     connect(this, SIGNAL(signalSend(std::string)), this, SLOT(privateSend(std::string)));
 #endif
 }
 
-Console::~Console()
-{
-}
+Console::~Console() {}
 
 int Console::exec() {
     std::string argStr = args.join(" ");
     StringList cmdsList = split(argStr, ":");
     for(auto cmdStr = cmdsList.begin(); cmdStr != cmdsList.end(); ++cmdStr) {
-        parse(simplified(*cmdStr));
-    }
+        parse(simplified(*cmdStr)); }
 #if defined(QT_NETWORK_LIB)
     if (!Options::server) {
         stdinFile = new QFile(this);
         stdinFile->open(stdin, QIODevice::ReadOnly);
         notifier = new QSocketNotifier(stdinFile->handle(), QSocketNotifier::Read, this);
-        connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived()));
-    }
+        connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived())); }
 #endif
 #if defined(QT_GUI_LIB)
     return QApplication::exec();
@@ -136,13 +131,11 @@ int Console::exec() {
         std::getline(std::cin, str);
 //         f << str;
         if (str[str.length()-1] == 13 || str[str.length()-1] == 10) {
-            str.erase(str.length()-1);
-        }
-        parse(str);
-    }
+            str.erase(str.length()-1); }
+        parse(str); }
     return 0;
 #endif
-#endif    
+#endif
 }
 
 #if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
@@ -150,19 +143,15 @@ std::string Console::getAnswer() {
     answer = "";
     while(answer == "") {
         processEvents();
-        sleep(1);
-    }
-    return answer;
-}
+        sleep(1); }
+    return answer; }
 
 void Console::send(std::string str) {
-    emit signalSend(str);
-}
+    emit signalSend(str); }
 
 void Console::getResult(std::string result) {
     answer = result;
-    std::cout << result << std::endl;
-}
+    std::cout << result << std::endl; }
 
 void Console::dataArrived() {
     std::string temp;
@@ -173,12 +162,12 @@ void Console::dataArrived() {
         temp.append(buffer, lineLength);
 //        for (int i=0; i<lineLength; ++i) std::cout << (int)buffer[i] << std::endl;
 //        std::cout << temp << std::endl;
-    } else
-        std::getline(std::cin, temp);
-    
-    while (temp[temp.length()-1] == 13 || temp[temp.length()-1] == 10) {
-        temp.erase(temp.length()-1);
     }
+    else
+        std::getline(std::cin, temp);
+
+    while (temp[temp.length()-1] == 13 || temp[temp.length()-1] == 10) {
+        temp.erase(temp.length()-1); }
     parse(temp);
     if (Options::server && socket->canReadLine())
         dataArrived();
@@ -186,54 +175,43 @@ void Console::dataArrived() {
 }
 
 void Console::delayedEnable() { //TODO remove if not needed under windows
-    notifier->setEnabled(true);
-}
+    notifier->setEnabled(true); }
 
-void Console::newConnection()
-{
+void Console::newConnection() {
     socket = server->nextPendingConnection();
     connect(socket, SIGNAL(disconnected()), socket, SLOT(deleteLater()));
-    connect(socket, SIGNAL(readyRead()), this, SLOT(dataArrived()));    
-}
+    connect(socket, SIGNAL(readyRead()), this, SLOT(dataArrived())); }
 #else
 void Console::send(std::string str) {
-    privateSend(str);
-}
+    privateSend(str); }
 #endif
 
-void Console::privateSend(std::string str)
-{
+void Console::privateSend(std::string str) {
     if (Options::quiet) return;
 #if defined(QT_NETWORK_LIB)
     if (Options::server) {
         socket->write(str.c_str());
         socket->write("\n");
-        socket->flush();
-    } else
+        socket->flush(); }
+    else
 #endif
     {
-        std::cout << str << std::endl;
-    }
-    answer = str;
-}
+        std::cout << str << std::endl; }
+    answer = str; }
 
 void Console::parse(std::string str) {
     if (!str.empty()) {
         StringList cmds = split(str, " ");
         if (dispatcher.find(cmds[0]) != dispatcher.end()) {
-            (this->*(dispatcher[cmds[0]]))(cmds);
-        } else {
-            tryMove(cmds[0]);
-        }
-    }
-}
+            (this->*(dispatcher[cmds[0]]))(cmds); }
+        else {
+            tryMove(cmds[0]); } } }
 
 void Console::tryMove(std::string cmds) {
     std::string mstr = toLower(cmds);
     if (mstr.length() < 4 || mstr.length() > 5) {
         send("command '" + mstr + "' not understood");
-        return;
-    }
+        return; }
     int piece;
     bool special;
     if (mstr.length() == 5) {
@@ -254,25 +232,19 @@ void Console::tryMove(std::string cmds) {
             break;
         default:
             send("move '" + mstr + "' not understood");
-            return;
-        }
-    } else {
+            return; } }
+    else {
         piece = 0;
-        special = false;
-    }
+        special = false; }
     Move m(mstr[0] -'a' + (mstr[1]-'1')*8, mstr[2]-'a' + (mstr[3]-'1')*8, piece, 0, special);
-    if (board->doMove(m)) {
-        send("move '" + mstr + "' illegal");
-    }
-}
+    if (game->doMove(m)) {
+        send("move '" + mstr + "' illegal"); } }
 
 void Console::perft(StringList cmds) {
-    board->perft(convert(cmds[1]));
-}
+    game->perft(convert(cmds[1])); }
 
 void Console::divide(StringList cmds) {
-    board->divide(convert(cmds[1]));
-}
+    game->divide(convert(cmds[1])); }
 
 void Console::uci(StringList /*cmds*/) {
     send("id name hayabusa 0.11.7");
@@ -286,27 +258,23 @@ void Console::uci(StringList /*cmds*/) {
     send("option name Pruning type check default true");
     send("option name Clear Hash type button");
     send("option name UCI_ShowCurrLine type check default false");
-#if 0    
+#if 0
     for (auto i=Parameters::index.begin(); i!=Parameters::index.end(); ++i) { //FIXME this is overwhelming some UIs
         std::stringstream ss;
         ss << "option name " << i->first << " type spin default " << Parameters::base.at(i->second);
-        send(ss.str());
-    }
+        send(ss.str()); }
 #endif
-    send("uciok");
-}
+    send("uciok"); }
 
 void Console::debug(StringList cmds) {
     auto pos = cmds.parse(StringList() << "eval" << "mobility" << "search");
     if (pos.count("eval")) Options::debug |= debugEval;
     if (pos.count("mobility")) Options::debug |= debugMobility;
-    if (pos.count("search")) Options::debug |= debugSearch;
-}
+    if (pos.count("search")) Options::debug |= debugSearch; }
 
 // engine is always ready as soon as the command dispatcher is working.
 void Console::isready(StringList /*cmds*/) {
-    send("readyok");
-}
+    send("readyok"); }
 
 void Console::setoption(StringList cmds) {
     std::map<std::string, StringList> o = cmds.parse(StringList() << "name" << "value");
@@ -314,94 +282,84 @@ void Console::setoption(StringList cmds) {
     if (!name.empty()) {
         std::string data = toLower(o["value"].join(" "));
         if (name == "splitdepth") {
-            Options::splitDepth = convert(data);
-        } else if (name == "uci_showcurrline") {
-            Options::currline = convert<bool>(data);
-        } else if (name == "humanreadable") {
-            Options::humanreadable = convert<bool>(data);
-        } else if (name == "book") {
-            board->openBook(data);
-        } else if (name == "bookreset") {
-            board->resetBook(data);
-        } else if (name == "hash") {
+            Options::splitDepth = convert(data); }
+        else if (name == "uci_showcurrline") {
+            Options::currline = convert<bool>(data); }
+        else if (name == "humanreadable") {
+            Options::humanreadable = convert<bool>(data); }
+        else if (name == "book") {
+            ; }
+        else if (name == "bookreset") {
+            ; }
+        else if (name == "hash") {
             Options::hash = convert(data);
-            if (Options::hash) board->tt->setSize(Options::hash*0x100000ULL);
-        } else if (name == "quiet") {
-            Options::quiet = convert<bool>(data);
-        } else if (name == "reduction") {
-            Options::reduction = convert< bool >(data);
-        } else if (name == "pruning") {
-            Options::pruning = convert< bool >(data);
-        } else if (name == "clear hash") {
-            board->clearHash();
+            if (Options::hash) game->setHashSize(Options::hash*0x100000ULL); }
+        else if (name == "quiet") {
+            Options::quiet = convert<bool>(data); }
+        else if (name == "reduction") {
+            Options::reduction = convert< bool >(data); }
+        else if (name == "pruning") {
+            Options::pruning = convert< bool >(data); }
+        else if (name == "clear hash") {
+            game->clearHash();
 #ifdef QT_NETWORK_LIB
-        } else if (name == "server") {
+        }
+        else if (name == "server") {
             Options::server = true;
             server = new QTcpServer();
             server->listen(QHostAddress::Any, 7788);
             connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
 #endif
-        } else if (Parameters::exists(name)) {
-            defaultParameters[name] = convert<float>(data);
-            board->eval.init(defaultParameters);
-            board->clearEE();
-        } else {
-            std::cerr << "option " << name << " not understood";
         }
-    }
-}
+        else if (Parameters::exists(name)) {
+            defaultParameters[name] = convert<float>(data);
+            game->eval.init(defaultParameters);
+            game->clearEE(); }
+        else {
+            std::cerr << "option " << name << " not understood"; } } }
 
-void Console::reg(StringList /*cmds*/) {
-}
+void Console::reg(StringList /*cmds*/) {}
 
 void Console::ucinewgame(StringList /*cmds*/) {
     WorkThread::stopAll();
-    board->clearHash();
-}
+    game->clearHash(); }
 
 void Console::position(StringList cmds) {
     if (cmds.size() < 2) return;
     auto pos = cmds.parse(StringList() << "startpos" << "fen" << "test" << "moves");
     WorkThread::stopAll();
     if (pos.count("startpos"))
-        board->setup();
+        game->setup();
     else if (pos.count("fen")) {
-        board->setup(pos["fen"].join(" "));
-    } else if (pos.count("test")) {
+        game->setup(pos["fen"].join(" ")); }
+    else if (pos.count("test")) {
         if (cmds.size() < 3) return;
         std::string search = pos["test"].join(" ");
         for (unsigned int i = 0; testPositions[i]; ++i) {
             std::string pos(testPositions[i]);
             if (pos.find(search) != pos.npos) {
-                board->setup(pos);
-                break;
-            }
-        }
-    }
+                game->setup(pos);
+                break; } } }
 
     if (pos.count("moves")) {
         StringList moves = pos["moves"];
-        for (auto imove = moves.begin(); imove != moves.end(); ++imove) 
+        for (auto imove = moves.begin(); imove != moves.end(); ++imove)
             tryMove(*imove);
-        
-    }
-}
+
+    } }
 
 void Console::go(StringList cmds) {
     WorkThread::stopAll();
     std::map<std::string, StringList> subCmds = cmds.parse(StringList() << "searchmoves"
-    << "ponder" << "wtime" << "btime" << "winc" << "binc" << "movestogo" << "depth"
-    << "nodes" << "mate" << "movetime" << "infinite");
+            << "ponder" << "wtime" << "btime" << "winc" << "binc" << "movestogo" << "depth"
+            << "nodes" << "mate" << "movetime" << "infinite");
 
-    board->go(subCmds);
-}
+    game->go(subCmds); }
 
 void Console::stop(StringList /*cmds*/) {
-    WorkThread::stopAll();
-}
+    WorkThread::stopAll(); }
 
-void Console::ponderhit(StringList /*cmds*/) {
-}
+void Console::ponderhit(StringList /*cmds*/) {}
 
 void Console::quit(StringList /*cmds*/) {
 #ifdef QT_GUI_LIB
@@ -416,10 +374,10 @@ int nThread;
 int maxThread;
 double tested;
 std::condition_variable nThreadCond;
-std::vector<RootBoard*> prb;
+std::vector<Game*> prb;
 std::vector<std::future<uint64_t> > results;
 
-uint64_t orderingInit(RootBoard* board, int i) {
+uint64_t orderingInit(Game* board, int i) {
     int result;
     {
         board->maxSearchNodes = 5000000;
@@ -432,18 +390,15 @@ uint64_t orderingInit(RootBoard* board, int i) {
         if (stats.node < 5000000)
             result = 0;
         else
-            result = board->depth - board->eval.dMaxExt;
-    }
+            result = board->depth - board->eval.dMaxExt; }
     {
         std::lock_guard<std::mutex> lock(nThreadMutex);
         --nThread;
-        board->color = (Colors)0;
-    }
+        board->color = (Colors)0; }
     nThreadCond.notify_one();
-    return result;
-}
+    return result; }
 
-uint64_t orderingTest(RootBoard* board, int i) {
+uint64_t orderingTest(Game* board, int i) {
     uint64_t result;
     if (testDepths[i]) {
         board->maxSearchNodes = ~0;
@@ -455,36 +410,29 @@ uint64_t orderingTest(RootBoard* board, int i) {
             board->rootSearch<White>(testDepths[i]+ board->eval.dMaxExt-1);
         else
             board->rootSearch<Black>(testDepths[i]+ board->eval.dMaxExt-1);
-        result = stats.node;
-    } else {
-        result = 1;
-    }
+        result = stats.node; }
+    else {
+        result = 1; }
     {
         std::lock_guard<std::mutex> lock(nThreadMutex);
         --nThread;
-        board->color = (Colors)0;
-    }
+        board->color = (Colors)0; }
     nThreadCond.notify_one();
     std::cout << std::setw(4) << i << "(" << std::setw(2) << testDepths[i]  << "):" << std::setw(10) << result << std::endl;
-    return result;
-}
+    return result; }
 
-void tournament(uint64_t (*ordering)(RootBoard*, int)) {
+void tournament(uint64_t (*ordering)(Game*, int)) {
     for (unsigned int i = 0; testPositions[i]; ++i)  {
         {
             std::unique_lock<std::mutex> lock(nThreadMutex);
             while (nThread >= maxThread)
                 nThreadCond.wait(lock);
-            ++nThread;
-        }
-        RootBoard* free;
-        std::for_each(prb.begin(), prb.end(), [&free] (RootBoard* rb) {
-            if (!rb->color) free = rb;
-        });
+            ++nThread; }
+        Game* free;
+        std::for_each(prb.begin(), prb.end(), [&free] (Game* rb) {
+            if (!rb->color) free = rb; });
         free->color = (Colors)1;
-        results[i]=std::async(std::launch::async, ordering, free, i);
-    }
-}
+        results[i]=std::async(std::launch::async, ordering, free, i); } }
 
 void Console::ordering(StringList cmds) {
 
@@ -493,14 +441,13 @@ void Console::ordering(StringList cmds) {
     results.clear();
     for (int i = 0; testPositions[i]; ++i)
         results.push_back(std::future<uint64_t>());
-    
+
     for (int i=0; i<maxThread; ++i) {
-        board->infinite = true;
-        RootBoard* rb = new RootBoard(this, defaultParameters, 0x2000000, 0x100000);
+        game->infinite = true;
+        Game* rb = new Game(this, defaultParameters, 0x2000000, 0x100000);
         rb->infinite = true;
         rb->color = (Colors) 0;
-        prb.push_back(rb);
-    }
+        prb.push_back(rb); }
     Options::quiet = true;
     if (cmds.size() > 1 && cmds[1] == "init") {
         std::thread th(tournament, orderingInit);
@@ -509,60 +456,51 @@ void Console::ordering(StringList cmds) {
             while (!results[i].valid())
                 usleep(10000);
             if (!(i % 26)) std::cout << std::endl;
-            std::cout << std::setw(2) << results[i].get() << "," << std::flush;
-        }
-        std::cout << "0" << std::endl;
-    } else {
+            std::cout << std::setw(2) << results[i].get() << "," << std::flush; }
+        std::cout << "0" << std::endl; }
+    else {
         double sum=0.0;
         std::thread th(tournament, orderingTest);
         th.detach();
         for (int i = 0; testPositions[i]; ++i) {
             while (!results[i].valid())
                 usleep(10000);
-            sum += log(results[i].get());
-        }
-        std::cout << std::setw(20) << exp(sum/tested) << std::endl;
-    }
-}
+            sum += log(results[i].get()); }
+        std::cout << std::setw(20) << exp(sum/tested) << std::endl; } }
 
-void Console::eval(StringList)
-{
-    board->eval(board->currentBoard(), board->color);
-}
+void Console::eval(StringList) {
+    game->eval(game->currentBoard(), game->color); }
 
-void Console::selfgame(StringList )
-{
+#ifdef USE_GENETIC
+void Console::selfgame(StringList ) {
 //     Options::cpuTime = true;
     evolution->evolve();
 //     Parameters a;
-// 
+//
 //     SelfGame sf(this, a, a);
 //     sf.tournament();
 }
 
-void Console::egtest(StringList cmds)
-{
+void Console::egtest(StringList cmds) {
     Options::quiet = true;
     if (cmds.size() == 7)
         evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], cmds[6]);
     else
-        std::cerr << "expected \"egtest <name> <minimum value> <maximum value> <n> <pieces>\"" << std::endl;
-}
+        std::cerr << "expected \"egtest <name> <minimum value> <maximum value> <n> <pieces>\"" << std::endl; }
 
-void Console::parmtest(StringList cmds)
-{
+void Console::parmtest(StringList cmds) {
     Options::quiet = true;
-    if (cmds.size() == 5) 
+    if (cmds.size() == 5)
         evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), "20000", "");
-    else if (cmds.size() == 6) 
+    else if (cmds.size() == 6)
         evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], "");
-    else if (cmds.size() == 9) 
+    else if (cmds.size() == 9)
         evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]));
     else if (cmds.size() == 13)
         evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]),
-                   cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]),
-                   cmds[9], convert<float>(cmds[10]), convert<float>(cmds[11]), convert(cmds[12])
-                );
+                            cmds[5], convert<float>(cmds[6]), convert<float>(cmds[7]), convert(cmds[8]),
+                            cmds[9], convert<float>(cmds[10]), convert<float>(cmds[11]), convert(cmds[12])
+                           );
     else
-        std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> <n>\"" << std::endl;
-}
+        std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> <n>\"" << std::endl; }
+#endif

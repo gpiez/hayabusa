@@ -16,32 +16,29 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef EVOLUTION_H
 #define EVOLUTION_H
 
-#include <vector>
+#ifdef USE_GENETIC
+
 #include <future>
 #include "parameters.h"
 
 class Console;
 
-class Evolution
-{
+class Evolution {
     struct Individual {
         Parameters parm;
         int     score;
         bool operator < (const Individual& b) const {
-            return b.score < score;
-        }
-        Individual(const Parameters& parm): parm(parm) {};
-    };
+            return b.score < score; }
+        Individual(const Parameters& parm): parm(parm) {}; };
 
     Console* console;
     static unsigned nThread;
     static unsigned maxThread;
-    static std::mutex nThreadMutex;
-    static std::condition_variable nThreadCond;
+    static Mutex nThreadMutex;
+    static Condition nThreadCond;
     std::string nodes;
     void setCurrentParameters(Parameters& p);
     std::string endgame;
@@ -67,12 +64,12 @@ public:
     int nIndiFixed;
 
     int currentNGames;
-    
+
     std::vector< std::string > startPositions;
 
     std::vector< std::vector< std::future<int> > > results;
     std::mutex resultsMutex;
-    
+
     std::vector<Individual> indi;
     std::vector<Individual> indiFixed;
 
@@ -83,4 +80,5 @@ public:
 
 };
 
+#endif
 #endif // EVOLUTION_H

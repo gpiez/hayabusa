@@ -19,12 +19,8 @@
 #ifndef STATS_H_
 #define STATS_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
-#include <stdint.h>
 #include "constants.h"
+#include <cstdint>
 
 // This is thread local defined in workthread.cpp, because thread local storage
 // speeds up the program by a large factor.
@@ -47,10 +43,8 @@ union Stats {
         uint64_t    ptuse;
         uint64_t    ptcollision;
         uint64_t    jobs;
-        uint64_t    cancelJob;
-   };
-   uint64_t data[];
-};
+        uint64_t    cancelJob; };
+    uint64_t data[]; };
 
 extern __thread Stats stats;
 #ifdef MYDEBUG

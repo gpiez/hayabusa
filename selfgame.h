@@ -20,12 +20,11 @@
 #ifndef SELFGAME_H
 #define SELFGAME_H
 
-#include <pch.h>
-#include "rootboard.h"
+#ifdef USE_GENETIC
+#include "game.h"
 #include "parameters.h"
 
-class SelfGame
-{
+class SelfGame {
     uint64_t wtime;
     uint64_t btime;
     int decisiveScore;
@@ -38,16 +37,15 @@ class SelfGame
     std::string endgame;
     int numGames;
 public:
-    RootBoard   *wrb, *brb;
+    Game*   wrb, *brb;
     std::chrono::system_clock::time_point start;
     SelfGame(Console* c, const Parameters& wp, const Parameters& bp, const std::string& nodes, std::string endgame);
     ~SelfGame();
     int nTests();
-    int doGame(RootBoard*, RootBoard*);
-    template<Colors C> bool checkResult(const RootBoard&);
-    void setupRootBoard(RootBoard*);
+    int doGame(Game*, Game*);
+    template<Colors C> bool checkResult(const Game&);
+    void setupRootBoard(Game*);
     uint64_t cpuTime();
-    int tournament();
-};
-
+    int tournament(); };
+#endif
 #endif // SELFGAME_H

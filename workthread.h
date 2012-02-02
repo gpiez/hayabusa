@@ -25,7 +25,7 @@
 
 #include "coloredboard.h"
 class Job;
-class RootBoard;
+class Game;
 union Stats;
 
 extern __thread bool isMain;
@@ -33,7 +33,7 @@ extern __thread bool isMain;
 class WorkThread {
     static std::multimap<unsigned, Job*> jobs;
     static std::vector<WorkThread*> threads;
-    
+
     static Mutex runningMutex;
     Condition starting;        //locked by shared runningMutex
     Mutex stoppedMutex;
@@ -42,12 +42,12 @@ class WorkThread {
     static unsigned logWorkThreads;
     static unsigned nWorkThreads;
     static __thread unsigned reserved;
-    
+
     volatile bool isStopped;
 
     volatile bool keepRunning;
     volatile int result;
-    BoardBase board;
+    Board board;
     Colors color;
     Job* job;
     Key key;
@@ -65,14 +65,11 @@ public:
     virtual ~WorkThread();
     void run();
     const Stats* getStats() const {
-        return stats;
-    }
+        return stats; }
     Stats* getStats() {
-        return stats;
-    }
+        return stats; }
     unsigned& getThreadId() {
-        return *pThreadId;
-    }
+        return *pThreadId; }
     static unsigned findFreeChild(unsigned parent);
     static void stopAll();
     static void queueJob(unsigned, Job*);
@@ -86,7 +83,6 @@ public:
     static void printJobs();
     static void clearStats();
     static unsigned getReserved(unsigned);
-    static void reserve(unsigned);
-};
+    static void reserve(unsigned); };
 
 #endif /* WORKTHREAD_H_ */

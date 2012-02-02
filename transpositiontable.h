@@ -19,21 +19,16 @@
 #ifndef TRANSPOSITIONTABLE_H_
 #define TRANSPOSITIONTABLE_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
 #include "move.h"
 #include "ttentry.h"
 
 template<Colors C> class ColoredBoard;
-class RootBoard;
+class Game;
 class Eval;
 
 template<typename Entry, unsigned int assoc>
 struct Sub {
-    Entry entries[assoc];
-};
+    Entry entries[assoc]; };
 
 /* Hashtable for storing diagrams which are visited twice and for move ordering
  * The assoc parameter gives the number of different keys stored at the same
@@ -60,40 +55,32 @@ public:
     Key nextKey(Key k, Move m);
     SubTable* getSubTable( Key k, Mutex*& l) {
 //        l = lock + ((k>>4) & (nTTLocks-1));
-        return &table[k & mask];
-    }
+        return &table[k & mask]; }
     SubTable* getSubTable( Key k ) {
-        return &table[k & mask];
-    }
+        return &table[k & mask]; }
     void prefetchSubTable( Key k ) {
-        _mm_prefetch(&table[k & mask], _MM_HINT_NTA);
-    }
+        _mm_prefetch(&table[k & mask], _MM_HINT_NTA); }
 
     bool retrieve(const SubTable* subTable, Key k, Entry& ret, bool&) const ;
     bool retrieve(const SubTable* subTable, Key k, Entry& ret) const ;
     void store(SubTable* subTable, Entry entry);
     void unmark(SubTable* subTable) {
-        subTable->entries[0].visited.reset();
-    }
+        subTable->entries[0].visited.reset(); }
     void mark(SubTable* subTable) {
-        subTable->entries[0].visited |= true;
-    }
+        subTable->entries[0].visited |= true; }
     void freeMemory();
-    std::string bestLine(const RootBoard& );
-    template<Colors C> std::string bestLineNext(const ColoredBoard<(Colors)-C>&, Move, std::set<Key>&, const RootBoard&);
+    std::string bestLine(const Game& );
+    template<Colors C> std::string bestLineNext(const ColoredBoard<(Colors)-C>&, Move, std::set<Key>&, const Game&);
     void clear();
     void agex();
     uint64_t getEntries() const {
-        return assoc*nEntries;
-    }
-};
+        return assoc*nEntries; } };
 
 template<typename Entry, unsigned assoc, typename Key>
 class TranspositionTable: public Table<Entry, assoc, Key> {
 public:
 //     TranspositionTable() {};
-    TranspositionTable(uint64_t size): Table<Entry, assoc, Key>(size) {};
-};
+    TranspositionTable(uint64_t size): Table<Entry, assoc, Key>(size) {}; };
 
 template<unsigned assoc, typename Key>
 class TranspositionTable<PawnEntry, assoc, Key>: public Table<PawnEntry, assoc, Key> {
@@ -101,8 +88,7 @@ public:
 //     TranspositionTable() {};
     TranspositionTable(uint64_t size): Table<PawnEntry, assoc, Key>(size) {};
     void store(Sub<PawnEntry, assoc>* subTable, PawnEntry entry);
-    bool retrieve(Sub<PawnEntry, assoc>* subTable, Key k, PawnEntry& entry);
-};
+    bool retrieve(Sub<PawnEntry, assoc>* subTable, Key k, PawnEntry& entry); };
 
 int score2tt(int s) __attribute__((noinline));
 int tt2Score(int s) __attribute__((noinline));

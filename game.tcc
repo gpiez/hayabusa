@@ -24,29 +24,38 @@
 #ifndef ROOTBOARD_TCC_
 #define ROOTBOARD_TCC_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
-#include <unistd.h>
-#include "rootboard.h"
+#include "game.h"
 #include "coloredboard.h"
+#include "options.h"
+#include "eval.tcc"
 #include "generateMoves.tcc"
 #include "coloredboard.tcc"
-#include "perft.h"
-#include "workthread.h"
-#include "jobs.h"
-#include "testgame.h"
 #include "transpositiontable.tcc"
-#include "movelist.h"
-#include "options.h"
-#include "repetition.tcc"
-#include "eval.tcc"
+/*
+ * search for an position repetition
+ * reverse search only the last b.fiftyMoves, skipping the first because it
+ * can't be a repetition. fiftyMoves may be given in a fen position, but the
+ * moves leading to the start position may not, so we need the second condition
+ */
+template<Colors C>
+inline bool Game::find(const ColoredBoard<C>& b, Key k, unsigned ply) const {
+    for (unsigned i = ply+rootPly; i+b.fiftyMoves >= ply+rootPly+4 && i>=4; i-=2) {
+        ASSERT(i<=nMaxGameLength);
+        if (keys[i-4] == k) return true; }
+    return false; }
+inline void Game::store(Key k, unsigned ply) {
+    keys[ply+rootPly] = k; }
+template<Colors C>
+inline void Game::clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const {
+    for (unsigned i = ply+rootPly; i+b.fiftyMoves >= ply+rootPly; --i) {
+        keys[i] = other[i];
+        if (!i) break; } }
 
 template<Colors C>
-uint64_t RootBoard::rootDivide(unsigned int depth) {
+uint64_t Game::rootDivide(unsigned int depth) {
     Move moveList[256];
 
+    pt = new TranspositionTable<PerftEntry, 1, Key>(Options::hash);
     const ColoredBoard<C>& b = currentBoard<C>();
     Move* good = moveList+192;
     Move* bad=good;
@@ -54,32 +63,28 @@ uint64_t RootBoard::rootDivide(unsigned int depth) {
         b.generateCheckEvasions(good, bad);
     else {
         b.template generateCaptureMoves<AllMoves>(good, bad);
-        b.generateNonCap(good, bad);
-    }
+        b.generateNonCap(good, bad); }
 
     uint64_t sum=0;
     for (Move* i = good; i<bad; ++i) {
         uint64_t n(0);
         if (depth == 1) {
-            n++;
-        } else {
-            perft<(Colors)-C, trunk>(n, b, *i, depth-1);
-        }
+            n++; }
+        else {
+            perft<(Colors)-C, trunk>(n, b, *i, depth-1); }
         std::cout << i->string() << " " << (uint64_t)n << std::endl;
-        sum += n;
-    }
-    return sum;
-}
+        sum += n; }
+    delete pt;
+    return sum; }
 
 void update(uint64_t& r, uint64_t v);
 
-template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth) {
+template<Colors C, Phase P, typename ResultType> void Game::perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth) {
     if (P == trunk && depth <= Options::splitDepth) {
         uint64_t n=0;
         perft<C, tree>(n, prev, m, depth);
         result += n;
-        return;
-    }
+        return; }
 
     __v8hi est = eval.estimate<(Colors)-C>(m, prev.keyScore);
     const ColoredBoard<C> b(prev, m, est);
@@ -90,8 +95,7 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
 
     if (pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
         result += subentry.value;
-        return;
-    }
+        return; }
     Move list[256];
     Move* good = list + 192;
     Move* bad = good;
@@ -99,17 +103,14 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
         b.generateCheckEvasions(good, bad);
     else {
         b.template generateCaptureMoves<AllMoves>(good, bad);
-        b.generateNonCap(good, bad);
-    }
+        b.generateNonCap(good, bad); }
     if (depth == 1) {
         result += bad-good;
-        return;
-    }
+        return; }
 
     ResultType n(0);
     for (Move* i = good; i<bad; ++i) {
-        perft<(Colors)-C, P>(n, b, *i, depth-1);
-    }
+        perft<(Colors)-C, P>(n, b, *i, depth-1); }
 
     PerftEntry stored;
     stored.zero();
@@ -117,13 +118,13 @@ template<Colors C, Phase P, typename ResultType> void RootBoard::perft(ResultTyp
     stored.upperKey |= z >> stored.upperShift;
     stored.value = (uint64_t)n;
     pt->store(pe, stored);
-    result += n;
-}
+    result += n; }
 
 template<Colors C>
-uint64_t RootBoard::rootPerft(unsigned int depth) {
+uint64_t Game::rootPerft(unsigned int depth) {
     Move moveList[256];
 
+    pt = new TranspositionTable<PerftEntry, 1, Key>(Options::hash);
     const ColoredBoard<C>& b = currentBoard<C>();
     Move* good = moveList+192;
     Move* bad=good;
@@ -131,23 +132,19 @@ uint64_t RootBoard::rootPerft(unsigned int depth) {
         b.generateCheckEvasions(good, bad);
     else {
         b.template generateCaptureMoves<AllMoves>(good, bad);
-        b.generateNonCap(good, bad);
-    }
+        b.generateNonCap(good, bad); }
 
     if (depth <= 1)
         return bad-good;
 
     uint64_t n(0);
     for (Move* i = good; i<bad; ++i) {
-        perft<(Colors)-C, trunk>(n, b, *i, depth-1);
-    }
-    return n;
-}
+        perft<(Colors)-C, trunk>(n, b, *i, depth-1); }
+    delete pt;
+    return n; }
 
 template<Colors C>
-bool RootBoard::isDraw(const ColoredBoard<C>& b) const
-{
-    return find(b, b.keyScore.key, 0) || b.fiftyMoves >= 100;
-}
+bool Game::isDraw(const ColoredBoard<C>& b) const {
+    return find(b, b.keyScore.key, 0) || b.fiftyMoves >= 100; }
 
 #endif

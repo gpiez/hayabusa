@@ -19,15 +19,14 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
+#include <cstdint>
 
 #define CALCULATE_MEAN_POSITIONAL_ERROR
 
 //#define static_assert(x) char __y[(x) ? 1 : -1 ] __attribute__((unused));
 
 #ifndef NDEBUG
+#include <iostream>
 #define ASSERT(x) do { if (!(x)) { \
                 std::cerr << std::endl << "Assertion " << #x << " failed." << std::endl\
                 <<  __FILE__ << __PRETTY_FUNCTION__ << __LINE__ << std::endl; \
@@ -57,7 +56,8 @@ enum Pieces { NoPiece = 0, Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5
 
 enum Colors { Black = -1, White = 1 };
 
-enum Square {
+namespace SquareIndex {
+enum {
     a1 = 0, b1, c1, d1, e1, f1, g1, h1,
     a2, b2, c2, d2, e2, f2, g2, h2,
     a3, b3, c3, d3, e3, f3, g3, h3,
@@ -65,214 +65,53 @@ enum Square {
     a5, b5, c5, d5, e5, f5, g5, h5,
     a6, b6, c6, d6, e6, f6, g6, h6,
     a7, b7, c7, d7, e7, f7, g7, h7,
-    a8, b8, c8, d8, e8, f8, g8, h8
-};
+    a8, b8, c8, d8, e8, f8, g8, h8 }; };
 
 enum Phase { root, trunk, tree, mate, leaf, vein };
 
 enum Sides { KSide, QSide, Middle };
 
 enum NodeType { NodeFailLow=-1, NodePV=0, NodeFailHigh=1, NodeFull, NodeTT,
-    NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile1, NodeFutile2,
-    NodeFutile3, NodeMate, NodePresearch, NodeIllegal, NodeRepetition,
-    NodeEndgameEval, NodeStandpat, NodeStart };
+                NodePrecut1, NodePrecut2, NodePrecut3, NodeNull, NodeFutile1, NodeFutile2,
+                NodeFutile3, NodeMate, NodePresearch, NodeIllegal, NodeRepetition,
+                NodeEndgameEval, NodeStandpat, NodeStart };
 
 enum NodeFlag { Threatened = 1, Extend = 2 };
 
 typedef uint64_t Key;
 typedef uint32_t PawnKey;
 
-static const int hashDefaultSize = 16ULL; //Mibibytes
-// tcp server incurs some lag
-static const std::chrono::milliseconds operatorTime = std::chrono::milliseconds(200);
-static const std::chrono::milliseconds minimumTime = std::chrono::milliseconds(100);
-static const int maxRows = 1000;
-static const unsigned int maxThreadId = 255;
-static const int maxHistory = 256;
-static const unsigned int nTTLocks = 1;
-static const unsigned int maxMoves = 256; // maximum possible moves in a position
-static const unsigned int goodMoves = 192; // maximum possible good moves in a position
-static const unsigned int nMaxGameLength = 5000; // maximum possible moves in a position
-static const int infinity = 8176;
-static const unsigned int maxDepth = 63;
-static const unsigned int transpositionTableAssoc = 2;
-static const unsigned int pawnTableAssoc = 4;
-static const unsigned int nPieces = 6;
-static const unsigned int nColors = 2;
-static const unsigned int nTotalPieces = nPieces*nColors + 1;   // -King,... -Pawn, 0, Pawn,... King
+static constexpr int hashDefaultSize = 16ULL; //Mibibytes
+static constexpr int maxRows = 1000;
+static constexpr unsigned int maxThreadId = 255;
+static constexpr int maxHistory = 256;
+static constexpr unsigned int nTTLocks = 1;
+static constexpr unsigned int maxMoves = 256; // maximum possible moves in a position
+static constexpr unsigned int goodMoves = 192; // maximum possible good moves in a position
+static constexpr unsigned int nMaxGameLength = 5000; // maximum possible moves in a position
+static constexpr int infinity = 8176;
+static constexpr unsigned int maxDepth = 63;
+static constexpr unsigned int transpositionTableAssoc = 2;
+static constexpr unsigned int pawnTableAssoc = 4;
+static constexpr unsigned int nPieces = 6;
+static constexpr unsigned int nColors = 2;
+static constexpr unsigned int nTotalPieces = nPieces*nColors + 1;   // -King,... -Pawn, 0, Pawn,... King
 
-static const unsigned int nDirs = 8;    //long range directions
-static const unsigned int nDirKinds = 2;//kinds of long range direction, horizontal/vertical vs diagonal
-static const unsigned int nFiles = 8;
-static const unsigned int nRows = 8;
-static const unsigned int nSquares = nFiles*nRows;
+static constexpr unsigned int nDirs = 8;    //long range directions
+static constexpr unsigned int nDirKinds = 2;//kinds of long range direction, horizontal/vertical vs diagonal
+static constexpr unsigned int nFiles = 8;
+static constexpr unsigned int nRows = 8;
+static constexpr unsigned int nSquares = nFiles*nRows;
 /*
  * The eight possible directions of movement for a
  * king in a [8][8] array
  */
-static const int dirOffsets[8] = { 1, 9, 8, 7, -1, -9, -8, -7 };
-static const int xOffsets[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
-static const int yOffsets[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
+static constexpr int dirOffsets[8] = { 1, 9, 8, 7, -1, -9, -8, -7 };
+static constexpr int xOffsets[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+static constexpr int yOffsets[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
 
-static const int materialRook = 5;
-static const int materialBishop = 2;
-static const int materialQueen = 10;
-static const int materialKnight = 2;
-static const int materialPawn = 0;
-static const int materialTab[nPieces+1] = { 0, materialRook, materialBishop, materialQueen, materialKnight, materialPawn, 0 };
-static const int maxScoreChildren = 16;
-/*
- * All popcount functions return int, because they are usually used in summing
- * up a score or multiplication with possibly negative values.
- */
-static inline int popcount(uint64_t x) {
-#if defined(__SSE4_2__) && defined(__x86_64__)
-    return __popcntq(x);
-#else
-    x -=  x>>1 & 0x5555555555555555;
-    x  = ( x>>2 & 0x3333333333333333 ) + ( x & 0x3333333333333333 );
-    x  = (( x>>4 )+x) & 0x0f0f0f0f0f0f0f0f;
-    x *= 0x0101010101010101;
-    return  x>>56;
-#endif
-}
+// For calculating opening...endgame scaling
+static constexpr int materialTab[nPieces+1] = { 0, 5, 2, 10, 2, 0, 0 };
+static constexpr int maxScoreChildren = 16;
 
-// popcount, which counts at most 15 ones, for counting pawns
-static inline int popcount15( uint64_t x )
-{
-#if defined(__SSE4_2__) && defined(__x86_64__)
-    return __popcntq(x);
-#else
-    x -=  x>>1 & 0x5555555555555555LL;
-    x  = ( x>>2 & 0x3333333333333333LL ) + ( x & 0x3333333333333333LL );
-    x *= 0x1111111111111111LL;
-    return  x>>60;
-#endif    
-}
-
-// popcount, which counts at most 15 ones, for counting pieces
-// this always returns values < 4, so for non relevant cases like 4 minor pieces
-// of the same kind this returns a wrong value.
-static inline int popcount3( uint64_t x )
-{
-#if defined(__SSE4_2__) && defined(__x86_64__)
-    return __popcntq(x);
-#else
-    x -=  x>>1 & 0x5555555555555555LL;
-    x *= 0x5555555555555555LL;
-    return  x>>62;
-#endif    
-}
-
-
-static __v2di inline pcmpeqq(__v2di a, __v2di b) __attribute__((__always_inline__));
-static __v2di inline pcmpeqq(__v2di a, __v2di b) {
-#ifdef __SSE4_1__
-    return _mm_cmpeq_epi64(a, b);
-#else
-/*
- * emulate a pcmpeqq instruction by comparing 32 bit wise, then swapping the
- * 32 bit halfes of each 64 bit operand. Only if both 32 bit halfes happen to
- * compare equal, the and operation will set all bits in one 64 bit half.
- */
-    a = _mm_cmpeq_epi32(a, b);
-    b = _mm_shuffle_epi32(a, 0b10110001);
-    return a & b;
-#endif
-}
-
-static inline uint64_t ror(uint64_t x, unsigned k) __attribute__((__always_inline__));
-static inline uint64_t ror(uint64_t x, unsigned k) {
-#if defined(__x86_64__)
-    return __rorq(x, k);
-#else
-    return x >> k | x << (64-k);
-#endif    
-}
-
-static inline uint64_t rol(uint64_t x, unsigned k) __attribute__((__always_inline__));
-static inline uint64_t rol(uint64_t x, unsigned k) {
-#if defined(__x86_64__)
-    return __rolq(x, k);
-#else
-    return x << k | x >> (64-k);
-#endif
-}
-
-static inline uint64_t bit(uint64_t x) __attribute__((__always_inline__));
-static inline uint64_t bit(uint64_t x) {
-#if defined(__x86_64__)    
-    uint64_t result;
-    asm(" bsfq %1, %0 \n"
-        : "=r"(result)
-        : "r"(x)
-    );
-    return result;
-#else
-    return __builtin_ctzll(x);
-#endif
-//     return __bsfq(x);        //this causes an additional 32 to 64 bit zero extension being emitted
-}
-
-static inline unsigned int bitr(uint64_t x) __attribute__((__always_inline__));
-static inline unsigned int bitr(uint64_t x) {
-#if defined(__x86_64__)
-    uint64_t result;
-    asm(" bsrq %1, %0 \n"
-	: "=r"(result)
-	: "r"(x)
-    );
-    return result;
-//     return __bsrq(x);
-#else
-    return 63-__builtin_clzll(x);
-#endif
-}
-
-static inline uint64_t btr(uint64_t x, uint64_t b) __attribute__((__always_inline__));
-static inline uint64_t btr(uint64_t x, uint64_t b) {
-    asm(" btrq %1, %0 \n"
-	: "=r"(x)
-	: "r"(b), "0"(x) 
-    );
-    return x;
-}
-
-static inline unsigned int bit(unsigned int x) __attribute__((__always_inline__));
-static inline unsigned int bit(unsigned int x) {
-    return __bsfd(x);
-}
-
-static inline uint64_t fold(__v2di hilo) __attribute__((__always_inline__));
-static inline uint64_t fold(__v2di hilo) {
-#ifdef __x86_64__
-    return _mm_cvtsi128_si64(_mm_unpackhi_epi64(hilo, hilo))
-        | _mm_cvtsi128_si64(hilo);
-#else
-    __v2di folded = _mm_unpackhi_epi64(hilo, hilo) | hilo;
-    return *(uint64_t*) &folded;
-#endif
-}
-
-template<int N> uint64_t shift(uint64_t b) __attribute__((__always_inline__));
-template<int N> uint64_t shift(uint64_t b) {
-    if (N > 0)
-        return b << (N & 0x3f);
-    else
-        return b >> (-N & 0x3f);
-}
-
-template<Colors C,int R> uint64_t rank() __attribute__((__always_inline__));
-template<Colors C,int R> uint64_t rank() {
-    static_assert( R>=1 && R<=8, "Wrong Rank" );
-    return 0xffULL << (C == White ? R*8-8:64-8*R);
-}
-
-template<char F> uint64_t file() __attribute__((__always_inline__));
-template<char F> uint64_t file() {
-    static_assert( F>='a' && F<='h', "Wrong File" );
-    return 0x0101010101010101ULL << (F-'a');
-}
-
-//extern "C" __m128i broadcastTab[256] ALIGN_XMM;
 #endif /* CONSTANTS_H_ */

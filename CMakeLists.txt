@@ -1,3 +1,41 @@
+MACRO(ADD_GCC_PRECOMPILED_HEADER PrecompiledSource SourcesVar)
+    SET(PrecompiledBinary "${CMAKE_CURRENT_BINARY_DIR}/${PrecompiledSource}.gch")
+    SET(Sources ${${SourcesVar}})
+    
+    SET(Flags ${COMPILE_DEFINITIONS})
+    GET_DIRECTORY_PROPERTY(_directory_flags DEFINITIONS)
+    LIST(APPEND Flags ${_directory_flags})
+    STRING(TOUPPER "COMPILE_DEFINITIONS_${CMAKE_BUILD_TYPE}" _defines_name)
+    GET_DIRECTORY_PROPERTY(_directory_flags ${_defines_name})
+    FOREACH(item ${_directory_flags})
+        LIST(APPEND Flags -D${item})
+    ENDFOREACH(item ${_directory_flags})
+    
+    LIST(APPEND Flags ${CMAKE_CXX_FLAGS} )
+    
+    STRING(TOUPPER "CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}" _flags_var_name)
+    LIST(APPEND Flags ${${_flags_var_name}})
+    
+    GET_DIRECTORY_PROPERTY(DIRINC INCLUDE_DIRECTORIES )
+    FOREACH(item ${DIRINC})
+        LIST(APPEND Flags "-I${item}")
+    ENDFOREACH(item)
+    
+    SEPARATE_ARGUMENTS(Flags)
+        
+    ADD_CUSTOM_COMMAND(OUTPUT ${PrecompiledBinary} 
+        COMMAND ${CMAKE_CXX_COMPILER} 
+        ARGS ${Flags} ${CMAKE_CURRENT_SOURCE_DIR}/${PrecompiledSource} 
+        -o ${PrecompiledBinary})
+    
+    SET_SOURCE_FILES_PROPERTIES(${PrecompiledSource}
+                                PROPERTIES OBJECT_OUTPUTS "${PrecompiledBinary}")
+    SET_SOURCE_FILES_PROPERTIES(${Sources}
+                                PROPERTIES OBJECT_DEPENDS "${PrecompiledBinary}")  
+    # Add precompiled header to SourcesVar
+    # LIST(APPEND ${SourcesVar} ${PrecompiledSource})
+ENDMACRO(ADD_GCC_PRECOMPILED_HEADER)
+
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DMYDEBUG -Wall -Wextra -Wno-missing-field-initializers -pipe" CACHE STRING "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG -march=native -Wuninitialized -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants" CACHE STRING "")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native -fno-keep-inline-functions -fno-keep-static-consts -fmerge-all-constants -flto --param max-inline-insns-single=2000" CACHE STRING "")
@@ -18,13 +56,12 @@ PROJECT (hayabusa)
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 #enable_language(ASM-FASM)
 
-#FIND_PACKAGE(PrecompiledHeaders)
-
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
-SET(common_SRCS console.cpp evolution.cpp parameters.cpp selfgame.cpp rootboard.cpp boardbase.cpp workthread.cpp eval.cpp testpositions.cpp
-    move.cpp stringlist.cpp history.cpp book.cpp evalinit.cpp)
+SET(common_SRCS console.cpp evolution.cpp parameters.cpp selfgame.cpp game.cpp 
+    board.cpp workthread.cpp eval.cpp testpositions.cpp
+    move.cpp stringlist.cpp history.cpp evalinit.cpp)
 
 SET(USE_QTGUI FALSE CACHE BOOL "Build the QT interface")
 SET(USE_GENETIC FALSE CACHE BOOL "Use genetic training algorithms")
@@ -34,7 +71,7 @@ if (USE_QTGUI)
     SET(hayabusa_MOC_H console.h)
     set(packages ${packages} QtGUI)
     SET(hayabusa_UIS stats.ui)
-    SET(hayabusa_MOC_H console.h rootboard.h jobs.h statwidget.h nodemodel.h nodedelegate.h)
+    SET(hayabusa_MOC_H console.h game.h statwidget.h nodemodel.h nodedelegate.h)
     SET(common_SRCS ${common_SRCS} statwidget.cpp  nodeitem.cpp nodemodel.cpp nodedelegate.cpp)
     FIND_PACKAGE(Qt4 COMPONENTS QtCore ${packages} REQUIRED)
 else(USE_QTGUI)
@@ -82,7 +119,6 @@ IF (USE_GENETIC)
     ADD_DEFINITIONS(-DUSE_GENETIC)
 ENDIF (USE_GENETIC)
 
-#if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
-#  add_precompiled_header(hayabusa pch.h)
-#  add_dependencies(hayabusa_gch constants.h)
-#endif()
+add_gcc_precompiled_header(pch.h common_SRCS)
+
+ADD_EXECUTABLE(mats mats.cpp)

@@ -19,7 +19,7 @@
 #ifndef TEST_H_
 #define TEST_H_
 
-class RootBoard;
+class Game;
 class Console;
 
 #include <QtCore>
@@ -27,27 +27,26 @@ class Console;
 
 class TestRootBoard: public QObject {
     Q_OBJECT
-    RootBoard *b;
-    Console *c;
+    Game* b;
+    Console* c;
     void cmpMates(std::string, std::string);
 private slots:
     void initTestCase();
     void generateMateMoves();
     void pieceList();
     void generateCaptures();
-    void perft();
-};
+    void perft(); };
 
 class TestBoardBase: public QObject {
     Q_OBJECT
-    RootBoard *b;
-    Console *c;
+    Game* b;
+    Console* c;
 
 private slots:
-/*	void setPiece();
-    void pieceList();
-    void generateCaptures();
-    void initTestCase();*/
+    /*	void setPiece();
+        void pieceList();
+        void generateCaptures();
+        void initTestCase();*/
 };
 
 #endif /* TEST_H_ */

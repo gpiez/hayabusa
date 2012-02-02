@@ -20,7 +20,6 @@
 #define GENMATES_TCC_
 
 #include "coloredboard.h"
-#include "emmintrin.h"
 
 static const __m128i zero = _mm_set1_epi64x(0);
 
@@ -28,7 +27,7 @@ template<Colors C>
 uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, uint64_t king, unsigned k) const {
     uint64_t rescape = getAttacks<-C,King>() & ~(occupied[EI] | blockedEscapes);
     rescape = ror(rescape, k-9);
-#if 0    
+#if 0
     uint64_t rmate = 0;
     if (!(rescape & 0x30003))
         rmate |= king << 1 & ~file<'a'>();
@@ -49,57 +48,54 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
         if (rescape & 0x60006)
             rmate &= ~(king>>1);
         if (rescape & 0x50500)
-            rmate &= ~(king>>8);
-    }
+            rmate &= ~(king>>8); }
 #endif
 
     if (!(rescape & 0x70007))
-    if (uint64_t p = kingIncoming[EI].d0 & checkingMoves & ~getAttacks<-C,All>()) {
-        uint64_t d04 = kingIncoming[EI].d0
-                &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                    | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                    | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                    | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                    | (getAttacks<-C,King>()   & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>() | getAttacks<-C,Knight>()))
-                    | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>()));
-        uint64_t d0 = d04 >> k;
-        d0   = d0<<1 | d0<<2;
-        d0  |= d0<<2 | d0<<4;
-        d0 <<= k;
-        uint64_t d4 = d04 << (077-k);
-        d4   = d4>>1 | d4>>2;
-        d4  |= d4>>2 | d4>>4;
-        d4 >>= 077-k;
-        rmate |=  p & ~d0 & ~d4; //TODO check if capture mate moves should be generated here
-    }
+        if (uint64_t p = kingIncoming[EI].d0 & checkingMoves & ~getAttacks<-C,All>()) {
+            uint64_t d04 = kingIncoming[EI].d0
+                           &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                 | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                 | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                 | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                 | (getAttacks<-C,King>()   & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>() | getAttacks<-C,Knight>()))
+                                 | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>()));
+            uint64_t d0 = d04 >> k;
+            d0   = d0<<1 | d0<<2;
+            d0  |= d0<<2 | d0<<4;
+            d0 <<= k;
+            uint64_t d4 = d04 << (077-k);
+            d4   = d4>>1 | d4>>2;
+            d4  |= d4>>2 | d4>>4;
+            d4 >>= 077-k;
+            rmate |=  p & ~d0 & ~d4; //TODO check if capture mate moves should be generated here
+        }
     if (!(rescape & 0x50505))
-    if (uint64_t p = kingIncoming[EI].d2 & checkingMoves & ~getAttacks<-C,All>()) {
-        uint64_t d26 = kingIncoming[EI].d2
-                &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                    | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                    | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                    | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                    | (getAttacks<-C,King>()   & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>() | getAttacks<-C,Knight>()))
-                    );
-        uint64_t d2 = d26 >> k;
-        d2   = d2<<010 | d2<<020;
-        d2  |= d2<<020 | d2<<040;
-        d2 <<= k;
-        uint64_t d6 = d26 << (077-k);
-        d6   = d6>>010 | d6>>020;
-        d6  |= d6>>020 | d6>>040;
-        d6 >>= 077-k;
-        rmate |= p & ~d2 & ~d6;
-    }
-    return rmate;
-}
+        if (uint64_t p = kingIncoming[EI].d2 & checkingMoves & ~getAttacks<-C,All>()) {
+            uint64_t d26 = kingIncoming[EI].d2
+                           &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                 | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                 | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                 | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                 | (getAttacks<-C,King>()   & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>() | getAttacks<-C,Knight>()))
+                               );
+            uint64_t d2 = d26 >> k;
+            d2   = d2<<010 | d2<<020;
+            d2  |= d2<<020 | d2<<040;
+            d2 <<= k;
+            uint64_t d6 = d26 << (077-k);
+            d6   = d6>>010 | d6>>020;
+            d6  |= d6>>020 | d6>>040;
+            d6 >>= 077-k;
+            rmate |= p & ~d2 & ~d6; }
+    return rmate; }
 
 #pragma GCC diagnostic ignored "-Wreturn-type"
 template<Colors C>
 template<bool AbortOnFirst, typename R>
 R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) const {
     uint64_t king = getPieces<-C,King>();
-    unsigned k = bit(king);
+    uint64_t k = bit(king);
     uint64_t attNotEnemyKing = getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Queen>() | getAttacks<-C,Pawn>();
     uint64_t mate;
     /*
@@ -121,8 +117,7 @@ R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) cons
                 uint64_t rook0 = getPieces<C,Rook>() & ~rook1;
                 __v2di isRook1Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(rook1), zero);
                 __v2di isRook0Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(rook0), zero);
-                rxray |= fold(isRook1Connected & rsingle[CI][1].d02) | fold(isRook0Connected & rsingle[CI][0].d02);
-            }
+                rxray |= fold(isRook1Connected & rsingle[CI][1].d02) | fold(isRook0Connected & rsingle[CI][0].d02); }
             uint64_t r0attacks = fold(rsingle[CI][0].d02); //TODO check if precalculating is cheaper, this is needed in mobility too
             uint64_t r1attacks = fold(rsingle[CI][1].d02); //TODO check if precalculating is cheaper, this is needed in mobility too
             uint64_t checkR0Moves = r0attacks & ~occupied[CI] & (kingIncoming[EI].d0 | kingIncoming[EI].d2);
@@ -130,24 +125,22 @@ R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) cons
             if (checkR0Moves && checkR1Moves) {
                 mate = generateRookMates(checkR0Moves, attNotRook | r1attacks | rxray, (attNotRook|rxray) & ~attNotEnemyKing, king, k);
                 mate|= generateRookMates(checkR1Moves, attNotRook | r0attacks | rxray, (attNotRook|rxray) & ~attNotEnemyKing, king, k);
-                goto haveMate;
-            } else if (checkR0Moves) {
+                goto haveMate; }
+            else if (checkR0Moves) {
                 attNotSelfRook = attNotRook | r1attacks;
-                checkingMoves = checkR0Moves;
-            } else if (checkR1Moves) {
+                checkingMoves = checkR0Moves; }
+            else if (checkR1Moves) {
                 attNotSelfRook = attNotRook | r0attacks;
-                checkingMoves = checkR1Moves;
-            } else goto haveNoMate; // irrelevant case where only the third rook checks
+                checkingMoves = checkR1Moves; }
+            else goto haveNoMate;   // irrelevant case where only the third rook checks
             attNotRook |= rxray;
-            attNotSelfRook |= rxray;
-        } else {
+            attNotSelfRook |= rxray; }
+        else {
             if (getAttacks<C,Queen>()) {
                 __v2di isRook0Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(getPieces<C,Rook>()), zero);
                 uint64_t rxray = fold(isRook0Connected & rsingle[CI][0].d02);
-                attNotRook |= rxray;
-            }
-            attNotSelfRook = attNotRook;
-        }
+                attNotRook |= rxray; }
+            attNotSelfRook = attNotRook; }
 
         mate = generateRookMates(checkingMoves, attNotSelfRook, attNotRook & ~attNotEnemyKing, king, k);
 haveMate:
@@ -161,28 +154,24 @@ haveMate:
                 if (AbortOnFirst) return (R)true;
                 Move n;
                 n.data = rs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
-                *--*good = n;
-            }
+                *--*good = n; }
             if (!AbortOnFirst) for (uint64_t a = fold(pin02) & checkingMoves & ~mate & ~attNotEnemyKing
-                                               & ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotRook)); a; a&=a-1) {
-                Move n;
-                n.data = rs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
-                *(*bad)++ = n;
-            }
-        }
-    }
+                                                     & ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotRook)); a; a&=a-1) {
+                    Move n;
+                    n.data = rs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
+                    *(*bad)++ = n; } } }
 haveNoMate:
     // promotion moves, always assuming queen promotions are counted as queen moves.
     // pawn promotions may only move if not pinned at all.
     uint64_t pMoves = getPieces<C,Pawn>() & pins[CI];
-    pMoves  = ( (shift<C*8  >(pMoves)                & ~occupied1)
-              | (shift<C*8+1>(pMoves) & ~file<'a'>() &  occupied[EI])
-              | (shift<C*8-1>(pMoves) & ~file<'h'>() &  occupied[EI])
+    pMoves  = ( (shift<C* 8  >(pMoves)                & ~occupied1)
+                | (shift<C*8+1>(pMoves) & ~file<'a'>() &  occupied[EI])
+                | (shift<C*8-1>(pMoves) & ~file<'h'>() &  occupied[EI])
               )
-            & rank<8>();
+              & rank<8>();
     if (uint64_t checkingMoves  = (getAttacks<C,Queen>() | pMoves)
-                                & ~occupied[CI]
-                                & (kingIncoming[EI].d0 | kingIncoming[EI].d1 | kingIncoming[EI].d2 | kingIncoming[EI].d3)) {
+                                  & ~occupied[CI]
+                                  & (kingIncoming[EI].d0 | kingIncoming[EI].d1 | kingIncoming[EI].d2 | kingIncoming[EI].d3)) {
         uint64_t attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
         uint64_t xprot=0;
         if (getAttacks<C,Queen>()) {
@@ -197,11 +186,11 @@ haveNoMate:
             __v2di isQEQConnected02  = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(getPieces<-C,Queen>()), zero);
             __v2di isQEQConnected13  = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(getPieces<-C,Queen>()), zero);
             xprot = fold( (isQER1Connected & qsingle[CI][0].d02)
-                                | (isQER0Connected & qsingle[CI][0].d02)
-                                | (isQEQConnected02 & qsingle[CI][0].d02)
-                                | (isQEB1Connected & qsingle[CI][0].d13)
-                                | (isQEB0Connected & qsingle[CI][0].d13)
-                                | (isQEQConnected13 & qsingle[CI][0].d13));
+                          | (isQER0Connected & qsingle[CI][0].d02)
+                          | (isQEQConnected02 & qsingle[CI][0].d02)
+                          | (isQEB1Connected & qsingle[CI][0].d13)
+                          | (isQEB0Connected & qsingle[CI][0].d13)
+                          | (isQEQConnected13 & qsingle[CI][0].d13));
             uint64_t rook1 = getPieces<C,Rook>() & (getPieces<C,Rook>()-1);
             uint64_t bishop1 = getPieces<C,Bishop>() & (getPieces<C,Bishop>()-1);
             uint64_t rook0 = getPieces<C,Rook>() & ~rook1;
@@ -211,14 +200,13 @@ haveNoMate:
             __v2di isQR0Connected = ~pcmpeqq(qsingle[CI][0].d02 & _mm_set1_epi64x(rook0), zero);
             __v2di isQB0Connected = ~pcmpeqq(qsingle[CI][0].d13 & _mm_set1_epi64x(bishop0), zero);
             uint64_t xray = fold( (isQR1Connected & qsingle[CI][0].d02)
-                                | (isQR0Connected & qsingle[CI][0].d02)
-                                | (isQB1Connected & qsingle[CI][0].d13)
-                                | (isQB0Connected & qsingle[CI][0].d13));
-            attNotQueen |= xray;
-        }
+                                  | (isQR0Connected & qsingle[CI][0].d02)
+                                  | (isQB1Connected & qsingle[CI][0].d13)
+                                  | (isQB0Connected & qsingle[CI][0].d13));
+            attNotQueen |= xray; }
         // if a queen promotion delivers check, the original queen may disable
         // the king escape squares, but pawns no longer may
-        if (checkingMoves & pMoves) {   
+        if (checkingMoves & pMoves) {
             attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Queen>() | getAttacks<C,King>();
             // backtrack original pawn position and see if it gives a discovered
             // check. In that case other pieces defending the king are irrelevant
@@ -226,11 +214,9 @@ haveNoMate:
             origPawn |= shift<-C*8+1>(pMoves & occupied[EI] & ~file<'h'>());
             origPawn |= shift<-C*8>(pMoves & ~occupied1);
             origPawn &= getPieces<C,Pawn>() & pins[CI];
-            ASSERT(origPawn);            
+            ASSERT(origPawn);
             if (origPawn & ~pins[EI]) {
-                attNotEnemyKing = xprot = 0;
-            }
-        }
+                attNotEnemyKing = xprot = 0; } }
         uint64_t qescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
         qescape = ror(qescape, k-9);
         uint64_t qmate = checkingMoves & attNotQueen & ~(attNotEnemyKing | xprot) & getAttacks<-C,King>();
@@ -251,9 +237,7 @@ haveNoMate:
                     qmate &= ~(king<<9);
                 else {
                     uint64_t qse1 = qe1 & -qe1;
-                    if (qse1 == qe1) qsingle |= qe1;
-                }
-            }
+                    if (qse1 == qe1) qsingle |= qe1; } }
 
             if (qmate & king<<7) {
                 uint64_t k2 = ror((king << 8) & ~occupied1, k-9);
@@ -263,9 +247,7 @@ haveNoMate:
                     qmate &= ~(king<<7);
                 else {
                     uint64_t qse3 = qe3 & -qe3;
-                    if (qse3 == qe3) qsingle |= qe3;
-                }
-            }
+                    if (qse3 == qe3) qsingle |= qe3; } }
 
             if (qmate & king>>9) {
                 uint64_t k4 = ror((king >> 1) & ~occupied1, k-9);
@@ -275,9 +257,7 @@ haveNoMate:
                     qmate &= ~(king>>9);
                 else {
                     uint64_t qse5 = qe5 & -qe5;
-                    if (qse5 == qe5) qsingle |= qe5;
-                }
-            }
+                    if (qse5 == qe5) qsingle |= qe5; } }
 
             if (qmate & king>>7) {
                 uint64_t k0 = ror((king << 1) & ~occupied1, k-9);
@@ -287,9 +267,7 @@ haveNoMate:
                     qmate &= ~(king>>7);
                 else {
                     uint64_t qse7 = qe7 & -qe7;
-                    if (qse7 == qe7) qsingle |= qe7;
-                }
-            }
+                    if (qse7 == qe7) qsingle |= qe7; } }
 
             if (qmate & king<<1) {
                 uint64_t qe0 = qescape & 0x10001;
@@ -297,9 +275,7 @@ haveNoMate:
                     qmate &= ~(king<<1);
                 else {
                     uint64_t qse0 = qe0 & -qe0;
-                    if (qse0 == qe0) qsingle |= qe0;
-                }
-            }
+                    if (qse0 == qe0) qsingle |= qe0; } }
 
             if (qmate & king<<8) {
                 uint64_t qe2 = qescape & 0x00005;
@@ -307,9 +283,7 @@ haveNoMate:
                     qmate &= ~(king<<8);
                 else {
                     uint64_t qse2 = qe2 & -qe2;
-                    if (qse2 == qe2) qsingle |= qe2;
-                }
-            }
+                    if (qse2 == qe2) qsingle |= qe2; } }
 
             if (qmate & king>>1) {
                 uint64_t qe4 = qescape & 0x40004;
@@ -317,9 +291,7 @@ haveNoMate:
                     qmate &= ~(king>>1);
                 else {
                     uint64_t qse4 = qe4 & -qe4;
-                    if (qse4 == qe4) qsingle |= qe4;
-                }
-            }
+                    if (qse4 == qe4) qsingle |= qe4; } }
 
             if (qmate & king>>8) {
                 uint64_t qe6 = qescape & 0x50000;
@@ -327,10 +299,7 @@ haveNoMate:
                     qmate &= ~(king>>8);
                 else {
                     uint64_t qse6 = qe6 & -qe6;
-                    if (qse6 == qe6) qsingle |= qe6;
-                }
-            }
-        }
+                    if (qse6 == qe6) qsingle |= qe6; } } }
 
         uint64_t qmate2 = 0;
         if (!(qescape & 0x30003))
@@ -345,131 +314,119 @@ haveNoMate:
         qmate |= qmate2;
 
         if (!(qescape & 0x70007))
-        if (uint64_t p=kingIncoming[EI].d0 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
-            uint64_t d04 = kingIncoming[EI].d0
-                &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                    | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                    | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                    | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                    | (getAttacks<-C,King>()   & attNotEnemyKing)
-                    | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
-                    );
-            uint64_t d0 = d04 >> k;
-            d0   = d0<<1 | d0<<2;
-            d0  |= d0<<2 | d0<<4;
-            d0 <<= k;
-            uint64_t d4 = d04 << (077-k);
-            d4   = d4>>1 | d4>>2;
-            d4  |= d4>>2 | d4>>4;
-            d4 >>= 077-k;
-            qmate |= p & ~d0 & ~d4;
-        }
+            if (uint64_t p=kingIncoming[EI].d0 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
+                uint64_t d04 = kingIncoming[EI].d0
+                               &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                     | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                     | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                     | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                     | (getAttacks<-C,King>()   & attNotEnemyKing)
+                                     | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
+                                   );
+                uint64_t d0 = d04 >> k;
+                d0   = d0<<1 | d0<<2;
+                d0  |= d0<<2 | d0<<4;
+                d0 <<= k;
+                uint64_t d4 = d04 << (077-k);
+                d4   = d4>>1 | d4>>2;
+                d4  |= d4>>2 | d4>>4;
+                d4 >>= 077-k;
+                qmate |= p & ~d0 & ~d4; }
         if (!(qescape & 0x50505))
-        if (uint64_t p=kingIncoming[EI].d2 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
-            uint64_t d26 = kingIncoming[EI].d2
-                &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                    | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                    | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                    | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                    | (getAttacks<-C,King>()   & attNotEnemyKing)
-                    );
-            uint64_t d2 = d26 >> k;
-            d2   = d2<<010 | d2<<020;
-            d2  |= d2<<020 | d2<<040;
-            d2 <<= k;
-            uint64_t d6 = d26 << (077-k);
-            d6   = d6>>010 | d6>>020;
-            d6  |= d6>>020 | d6>>040;
-            d6 >>= 077-k;
-            qmate |= p & ~d2 & ~d6;
-        }
+            if (uint64_t p=kingIncoming[EI].d2 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
+                uint64_t d26 = kingIncoming[EI].d2
+                               &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                     | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                     | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                     | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                     | (getAttacks<-C,King>()   & attNotEnemyKing)
+                                   );
+                uint64_t d2 = d26 >> k;
+                d2   = d2<<010 | d2<<020;
+                d2  |= d2<<020 | d2<<040;
+                d2 <<= k;
+                uint64_t d6 = d26 << (077-k);
+                d6   = d6>>010 | d6>>020;
+                d6  |= d6>>020 | d6>>040;
+                d6 >>= 077-k;
+                qmate |= p & ~d2 & ~d6; }
 
         if (!(qescape & 0x30506))
-        if (uint64_t p=kingIncoming[EI].d1 & checkingMoves & ~getAttacks<-C,All>()) {
-            uint64_t d15 = kingIncoming[EI].d1
-                &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                    | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                    | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                    | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                    | (getAttacks<-C,King>()   & attNotEnemyKing)
-                    | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
-                    );
-            uint64_t d1 = d15 >> k;
-            d1   = d1<<011 | d1<<022;
-            d1  |= d1<<022 | d1<<044;
-            d1 <<= k;
-            uint64_t d5 = d15 << (077-k);
-            d5   = d5>>011 | d5>>022;
-            d5  |= d5>>022 | d5>>044;
-            d5 >>= 077-k;
-            qmate |= p & ~d1 & ~d5;
-        }
+            if (uint64_t p=kingIncoming[EI].d1 & checkingMoves & ~getAttacks<-C,All>()) {
+                uint64_t d15 = kingIncoming[EI].d1
+                               &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                     | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                     | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                     | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                     | (getAttacks<-C,King>()   & attNotEnemyKing)
+                                     | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
+                                   );
+                uint64_t d1 = d15 >> k;
+                d1   = d1<<011 | d1<<022;
+                d1  |= d1<<022 | d1<<044;
+                d1 <<= k;
+                uint64_t d5 = d15 << (077-k);
+                d5   = d5>>011 | d5>>022;
+                d5  |= d5>>022 | d5>>044;
+                d5 >>= 077-k;
+                qmate |= p & ~d1 & ~d5; }
 
         if (!(qescape & 0x60503))
-        if (uint64_t p=kingIncoming[EI].d3 & checkingMoves & ~getAttacks<-C,All>()) {
-            uint64_t d37 = kingIncoming[EI].d3
-                &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                    | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                    | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                    | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                    | (getAttacks<-C,King>()   & attNotEnemyKing)
-                    | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
-                    );
-            uint64_t d3 = d37 >> k;
-            d3   = d3<<7 | d3<<14;
-            d3  |= d3<<14 | d3<<28;
-            d3 <<= k;
-            uint64_t d7 = d37 << (077-k);
-            d7   = d7>>7 | d7>>14;
-            d7  |= d7>>14 | d7>>28;
-            d7 >>= 077-k;
-            qmate |= p & ~d3 & ~d7;
-        }
+            if (uint64_t p=kingIncoming[EI].d3 & checkingMoves & ~getAttacks<-C,All>()) {
+                uint64_t d37 = kingIncoming[EI].d3
+                               &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                     | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                     | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                     | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                     | (getAttacks<-C,King>()   & attNotEnemyKing)
+                                     | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
+                                   );
+                uint64_t d3 = d37 >> k;
+                d3   = d3<<7 | d3<<14;
+                d3  |= d3<<14 | d3<<28;
+                d3 <<= k;
+                uint64_t d7 = d37 << (077-k);
+                d7   = d7>>7 | d7>>14;
+                d7  |= d7>>14 | d7>>28;
+                d7 >>= 077-k;
+                qmate |= p & ~d3 & ~d7; }
 
 //         if (qmate & getAttacks<C,Queen>()) {
-            for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
-                __v2di a02 = qs->d02;
-                __v2di a13 = qs->d13;
-                __v2di from2 = bits[qs->move.from()].doublebits;
-                __v2di pin02 = from2 & dpins[CI].d02;
-                __v2di pin13 = from2 & dpins[CI].d13;
-                pin02 = pcmpeqq(pin02, zero);
-                pin13 = pcmpeqq(pin13, zero);
-                pin02 = ~pin02 & a02;
-                pin13 = ~pin13 & a13;
-                for (uint64_t a=fold(pin02|pin13) & qmate; a; a&=a-1) {
-                    if (AbortOnFirst) return (R)true;
+        for(const MoveTemplateQ* qs = qsingle[CI]; qs->move.data; qs++) {
+            __v2di a02 = qs->d02;
+            __v2di a13 = qs->d13;
+            __v2di from2 = bits[qs->move.from()].doublebits;
+            __v2di pin02 = from2 & dpins[CI].d02;
+            __v2di pin13 = from2 & dpins[CI].d13;
+            pin02 = pcmpeqq(pin02, zero);
+            pin13 = pcmpeqq(pin13, zero);
+            pin02 = ~pin02 & a02;
+            pin13 = ~pin13 & a13;
+            for (uint64_t a=fold(pin02|pin13) & qmate; a; a&=a-1) {
+                if (AbortOnFirst) return (R)true;
+                Move n;
+                ASSERT((a ^ (a & (a-1))) == (a & -a));
+                n.data = qs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
+                *--*good = n; }
+            if (!AbortOnFirst) for (uint64_t a = fold(pin02|pin13) & checkingMoves & ~qmate & ~attNotEnemyKing
+                                                     & ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotQueen)); a; a&=a-1) {
                     Move n;
                     ASSERT((a ^ (a & (a-1))) == (a & -a));
                     n.data = qs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
-                    *--*good = n;
-                }
-                if (!AbortOnFirst) for (uint64_t a = fold(pin02|pin13) & checkingMoves & ~qmate & ~attNotEnemyKing
-                                                   & ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotQueen)); a; a&=a-1) {
-                    Move n;
-                    ASSERT((a ^ (a & (a-1))) == (a & -a));
-                    n.data = qs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
-                    *(*bad)++ = n;
-                }
-            }
+                    *(*bad)++ = n; } }
 //         }
         for (uint64_t p = qmate & pMoves; p; p &= p-1) {
             if (AbortOnFirst) return (R)true;
-            unsigned to = bit(p);
+            uint64_t to = bit(p);
             if (p & -p & ~occupied1) {
                 ASSERT((getPieces<C,Pawn>() & shift<-C*8>(p & -p) & pins[CI]));
-                *--*good = Move(to-C*8, to, Queen, 0, true);
-            } else {
+                *--*good = Move(to-C*8, to, Queen, 0, true); }
+            else {
                 ASSERT(p & -p & occupied[EI]);
                 if (getPieces<C,Pawn>() & shift<-C*8-1>(p & -p) & ~file<'h'>() & pins[CI]) {
-                    *--*good = Move(to-C*8-1, to, Queen, getPieceKind(p & -p), true);
-                }
+                    *--*good = Move(to-C*8-1, to, Queen, getPieceKind(p & -p), true); }
                 if (getPieces<C,Pawn>() & shift<-C*8+1>(p & -p) & ~file<'a'>() & pins[CI]) {
-                    *--*good = Move(to-C*8+1, to, Queen, getPieceKind(p & -p), true);
-                }
-            }
-        }
-    }
+                    *--*good = Move(to-C*8+1, to, Queen, getPieceKind(p & -p), true); } } } }
 
     if (uint64_t checkingMoves = getAttacks<C,Bishop>() & ~occupied[CI] & (kingIncoming[EI].d1 | kingIncoming[EI].d3)) {
         uint64_t bescape0246 = getAttacks<-C,King>() & ~(occupied[EI] | getAttacks<C,All>());
@@ -481,63 +438,57 @@ haveNoMate:
             bescape1357 = ror(bescape1357, k-9);
             uint64_t bmate = checkingMoves & attNotBishop & ~attNotEnemyKing & getAttacks<-C,King>();
             if (bescape1357 & 0x10004) {
-                bmate &= ~kingIncoming[EI].d1;
-            }
+                bmate &= ~kingIncoming[EI].d1; }
             if (bescape1357 & 0x40001) {
-                bmate &= ~kingIncoming[EI].d3;
-            }
+                bmate &= ~kingIncoming[EI].d3; }
 #ifdef MYDEBUG
             uint64_t bmate2 = 0;
             if (!(bescape1357 & 0x10004)) {
                 uint64_t b1 = kingIncoming[EI].d1 & getAttacks<-C,King>();
-                bmate2 = b1;
-            }
+                bmate2 = b1; }
             if (!(bescape1357 & 0x40001)) {
                 uint64_t b1 = kingIncoming[EI].d3 & getAttacks<-C,King>();
-                bmate2 |= b1;
-            }
+                bmate2 |= b1; }
             bmate2 &= checkingMoves & attNotBishop & ~attNotEnemyKing;
             ASSERT(bmate == bmate2);
 #endif
             if (!(bescape1357 & 0x10004))
-            if (uint64_t p=kingIncoming[EI].d1 & checkingMoves & ~getAttacks<-C,All>()) {
-                uint64_t d15 = kingIncoming[EI].d1
-                    &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                        | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                        | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                        | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                        | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
-                        );
-                uint64_t d1 = d15 >> k;
-                d1   = d1<<011 | d1<<022;
-                d1  |= d1<<022 | d1<<044;
-                d1 <<= k;
-                uint64_t d5 = d15 << (077-k);
-                d5   = d5>>011 | d5>>022;
-                d5  |= d5>>022 | d5>>044;
-                d5 >>= 077-k;
-                bmate |= p & ~d1 & ~d5;
-            }
+                if (uint64_t p=kingIncoming[EI].d1 & checkingMoves & ~getAttacks<-C,All>()) {
+                    uint64_t d15 = kingIncoming[EI].d1
+                                   &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                         | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                         | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                         | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                         | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
+                                       );
+                    uint64_t d1 = d15 >> k;
+                    d1   = d1<<011 | d1<<022;
+                    d1  |= d1<<022 | d1<<044;
+                    d1 <<= k;
+                    uint64_t d5 = d15 << (077-k);
+                    d5   = d5>>011 | d5>>022;
+                    d5  |= d5>>022 | d5>>044;
+                    d5 >>= 077-k;
+                    bmate |= p & ~d1 & ~d5; }
 
             if (!(bescape1357 & 0x40001))
-            if (uint64_t p=kingIncoming[EI].d3 & checkingMoves & ~getAttacks<-C,All>()) {
-                uint64_t d37 = kingIncoming[EI].d3
-                    &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                        | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                        | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                        | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                        | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
-                        );
-                uint64_t d3 = d37 >> k;
-                d3   = d3<<7 | d3<<14;
-                d3  |= d3<<14 | d3<<28;
-                d3 <<= k;
-                uint64_t d7 = d37 << (077-k);
-                d7   = d7>>7 | d7>>14;
-                d7  |= d7>>14 | d7>>28;
-                d7 >>= 077-k;
-                bmate |= p & ~d3 & ~d7;
-            }
+                if (uint64_t p=kingIncoming[EI].d3 & checkingMoves & ~getAttacks<-C,All>()) {
+                    uint64_t d37 = kingIncoming[EI].d3
+                                   &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                         | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                         | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                         | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                         | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
+                                       );
+                    uint64_t d3 = d37 >> k;
+                    d3   = d3<<7 | d3<<14;
+                    d3  |= d3<<14 | d3<<28;
+                    d3 <<= k;
+                    uint64_t d7 = d37 << (077-k);
+                    d7   = d7>>7 | d7>>14;
+                    d7  |= d7>>14 | d7>>28;
+                    d7 >>= 077-k;
+                    bmate |= p & ~d3 & ~d7; }
 
             for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
                 __v2di a13 = bs->d13;
@@ -551,18 +502,14 @@ haveNoMate:
                     if (AbortOnFirst) return (R)true;
                     Move n;
                     n.data = bs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
-                    *--*good = n;
-                }
+                    *--*good = n; }
                 if (!AbortOnFirst) for (uint64_t a = fold(pin13) & checkingMoves & ~bmate & ~attNotEnemyKing &
-                                                   ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotBishop)); a; a&=a-1) {
-                    Move n;
-                    n.data = bs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
-                    *(*bad)++ = n;
-                }
+                                                         ( ~getAttacks<-C,King>() | (getAttacks<-C,King>() & attNotBishop)); a; a&=a-1) {
+                        Move n;
+                        n.data = bs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
+                        *(*bad)++ = n; }
 
-            }
-        }
-    }
+            } } }
 
     if (uint64_t checkingMoves = getAttacks<C,Knight>() & ~occupied[CI] & knightAttacks[k] & ~getAttacks<-C,All>() ) {
         unsigned n0 = bit(getPieces<C,Knight>());
@@ -575,24 +522,20 @@ haveNoMate:
             uint64_t checkN1Moves = n1attacks & checkingMoves;
             if (checkN0Moves) mate = checkN0Moves & generateKnightMates(attNotKnight | n1attacks, king, k);
             else mate = 0;
-            if (checkN1Moves) mate|= checkN1Moves & generateKnightMates(attNotKnight | n0attacks, king, k);
-        } else
+            if (checkN1Moves) mate|= checkN1Moves & generateKnightMates(attNotKnight | n0attacks, king, k); }
+        else
             mate = checkingMoves & generateKnightMates(attNotKnight, king, k);
 
-            for (; mate; mate &= mate-1 ) {
-                unsigned to = bit(mate);
-                for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1) {
-                    if (AbortOnFirst) return (R)true;
-                    *--*good = Move(bit(f), to, Knight, getPieceKind(1ULL << to));
-                }
-        }
-    }
+        for (; mate; mate &= mate-1 ) {
+            uint64_t to = bit(mate);
+            for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1) {
+                if (AbortOnFirst) return (R)true;
+                *--*good = Move(bit(f), to, Knight, getPieceKind(1ULL << to)); } } }
 
-/*    if (uint64_t checkingMoves = shift<C*8>(getPieces<C,Pawn>()) & ~occupied1 & shift<-C*8>((king>>1 & ~file<'h'>()) | (king<<1 & ~file<'a'>()))) {
+    /*    if (uint64_t checkingMoves = shift<C*8>(getPieces<C,Pawn>()) & ~occupied1 & shift<-C*8>((king>>1 & ~file<'h'>()) | (king<<1 & ~file<'a'>()))) {
 
-        }*/
-    return (R)false;
-}
+            }*/
+    return (R)false; }
 
 template<Colors C>
 template<bool AbortOnFirst, typename R>
@@ -608,9 +551,7 @@ R ColoredBoard<C>::generateDiscoveredCheck( Move** const good)  const {
             if (AbortOnFirst) return (R)true;
             Move n;
             n.data = rs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
-            *--*good = n;
-        }
-    }
+            *--*good = n; } }
 
     for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
         __v2di a13 = bs->d13;
@@ -622,20 +563,15 @@ R ColoredBoard<C>::generateDiscoveredCheck( Move** const good)  const {
             if (AbortOnFirst) return (R)true;
             Move n;
             n.data = bs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
-            *--*good = n;
-        }
-    }
+            *--*good = n; } }
 
     for (uint64_t p = getPieces<C, Knight>() & pins[CI] & ~pins[EI]; p; p &= p-1) {
-        unsigned from = bit(p);
+        uint64_t from = bit(p);
         for (uint64_t q = knightAttacks[from] & ~getOcc<C>(); q; q &= q-1) {
             if (AbortOnFirst) return (R)true;
-            unsigned to = bit(q);
-            *--*good = Move(from, to, Knight, getPieceKind(1ULL << to));
-        }
-    }
-    return (R)false;
-}
+            uint64_t to = bit(q);
+            *--*good = Move(from, to, Knight, getPieceKind(1ULL << to)); } }
+    return (R)false; }
 #pragma GCC diagnostic warning "-Wreturn-type"
 
 template<Colors C>
@@ -650,21 +586,16 @@ uint64_t ColoredBoard<C>::generateKnightMates(uint64_t block, uint64_t king, uns
     uint64_t nmate = 0;
     if (!(nescape1357 & 0x50004)) {
         nmate |= king << 6 & ~file<'h'>() & ~file<'g'>();
-        nmate |= king >> 15 & ~file<'a'>();
-    }
+        nmate |= king >> 15 & ~file<'a'>(); }
     if (!(nescape1357 & 0x10005)) {
         nmate |= king << 15 & ~file<'h'>();
-        nmate |= king >> 6 & ~file<'a'>() & ~file<'b'>();
-    }
+        nmate |= king >> 6 & ~file<'a'>() & ~file<'b'>(); }
     if (!(nescape1357 & 0x50001)) {
         nmate |= king >> 17 & ~file<'h'>();
-        nmate |= king << 10 & ~file<'a'>() & ~file<'b'>();
-    }
+        nmate |= king << 10 & ~file<'a'>() & ~file<'b'>(); }
     if (!(nescape1357 & 0x40005)) {
         nmate |= king >> 10 & ~file<'h'>() & ~file<'g'>();
-        nmate |= king << 17 & ~file<'a'>();
-    }
-    return nmate;
-}
+        nmate |= king << 17 & ~file<'a'>(); }
+    return nmate; }
 
 #endif

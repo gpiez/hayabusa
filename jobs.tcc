@@ -21,13 +21,13 @@
 
 #include "jobs.h"
 template<Colors C, typename A, typename B, typename T>
-SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, bool doNull,
+SearchJob<C,A,B,T>::SearchJob(Game& rb, const T& b, bool doNull,
                               unsigned reduction, Move m, unsigned int depth, A& alpha, const B& beta, ScoreMove<C,A>& retval,
                               unsigned ply, unsigned parent, const RepetitionKeys& rep, NodeType nt
 #ifdef QT_GUI_LIB
-    , NodeItem* node
+                              , NodeItem* node
 #endif
-    ): rb(rb), b(b), doNull(doNull), reduction(reduction), m(m), depth(depth),
+                             ): game(rb), b(b), doNull(doNull), reduction(reduction), m(m), depth(depth),
     alpha(alpha), beta(beta), retval(retval), ply(ply), parent(parent), rep(rep), nt(nt)
 #ifdef QT_GUI_LIB
     , node(node)
@@ -35,9 +35,9 @@ SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, bool doNull,
 {
     alpha.setNotReady();
     retval.setNotReady();
-#ifdef QT_GUI_LIB    
+#ifdef QT_GUI_LIB
     if (NodeItem::nNodes < MAX_NODES && node) {
-        NodeData data = {};
+        NodeData data = { };
         data.alpha = alpha.v;
         data.beta = beta.v;
         data.move = m;
@@ -53,8 +53,8 @@ SearchJob<C,A,B,T>::SearchJob(RootBoard& rb, const T& b, bool doNull,
         NodeItem::m.lock();
         startnode = new NodeItem(data, node);
         NodeItem::nNodes++;
-        NodeItem::m.unlock();
-    } else
+        NodeItem::m.unlock(); }
+    else
         startnode = nullptr;
 #endif
 
@@ -64,34 +64,45 @@ template<Colors C, typename A, typename B, typename T>
 void SearchJob<C,A,B,T>::job() {
 #ifdef QT_GUI_LIB
     if (startnode) startnode->threadId = WorkThread::threadId;
-#endif    
+#endif
     if (alpha < beta.v) {
-        rb.clone(b, rep, ply);
-        int ret = rb.search9<(Colors)-C,trunk>(doNull, reduction, b, m, depth, beta, alpha, ply,
-                                      ExtNot, nt
-    #ifdef QT_GUI_LIB
-                           , node
-    #endif
-                           );
+        game.clone(b, rep, ply);
+        int ret = game.search9<(Colors)-C,trunk>(doNull, reduction, b, m, depth, beta, alpha, ply,
+                  ExtNot, nt
+#ifdef QT_GUI_LIB
+                  , node
+#endif
+                                                );
         alpha.max(ret);
-        retval.max(ret, m);
-    } else
+        retval.max(ret, m); }
+    else
         ++stats.cancelJob;
     alpha.setReady();
-    retval.setReady();
-}
+    retval.setReady(); }
 #endif
 
 template<Colors C>
-RootSearchJob<C>::RootSearchJob(RootBoard& rb, const RepetitionKeys& rep, unsigned depth): rb(rb), rep(rep), depth(depth) {};
+void RootPerftJob<C>::job() {
+    uint64_t n=game.rootPerft<C>(depth);
+    std::ostringstream temp;
+    temp << n;
+    game.console->send(temp.str()); }
+
+template<Colors C>
+void RootDivideJob<C>::job() {
+    uint64_t n=game.rootDivide<C>(depth);
+    std::ostringstream temp;
+    temp << n;
+    game.console->send(temp.str()); }
+
+template<Colors C>
+RootSearchJob<C>::RootSearchJob(Game& rb, const RepetitionKeys& rep, unsigned depth): game(rb), rep(rep), depth(depth) {};
 
 template<Colors C>
 void RootSearchJob<C>::job() {
-    rb.clone<C>(rb.currentBoard<C>(), rep, 0);
-    rb.rootSearch<C>(depth);
-}
+    game.clone<C>(game.currentBoard<C>(), rep, 0);
+    game.rootSearch<C>(depth); }
 
 template<Colors C>
 void RootSearchJob<C>::stop() {
-    rb.stop();
-}
+    game.stop(); }

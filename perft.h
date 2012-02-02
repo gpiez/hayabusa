@@ -19,15 +19,10 @@
 #ifndef PERFT_H
 #define PERFT_H
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
 #include "coloredboard.h"
 
 template<Colors C, unsigned int Depth>
-struct Perft
-{
+struct Perft {
     static uint64_t perft(const ColoredBoard<(Colors)-C>* prev, const Move m) {
         const ColoredBoard<C> b(prev, m);
         Move list[256];
@@ -36,27 +31,20 @@ struct Perft
 
         uint64_t n=0;
         for (Move* i = list; i<end; ++i) {
-            n += Perft<(Colors)-C, Depth-1>::perft(&b, *i);
-        }
-        return n;
-    }
+            n += Perft<(Colors)-C, Depth-1>::perft(&b, *i); }
+        return n; }
     static uint64_t perft(const ColoredBoard<(Colors)-C>* prev, const Move m, unsigned int depth) {
         if (depth == Depth)
             return perft(prev, m);
         else
-            return Perft<C, Depth-1>::perft(prev, m, depth);
-    }
-};
+            return Perft<C, Depth-1>::perft(prev, m, depth); } };
 
 template<Colors C>
-struct Perft<C,1>
-{
+struct Perft<C,1> {
     static uint64_t perft(const ColoredBoard<(Colors)-C>* prev, const Move m, unsigned int=0) {
         const ColoredBoard<C> b(prev, m);
         Move list[256];
         Move* end = b.generateMoves(list);
-        return end-list;
-    }
-};
+        return end-list; } };
 
 #endif // PERFT_H

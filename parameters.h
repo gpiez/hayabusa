@@ -20,10 +20,11 @@
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
+#include "constants.h"
+#include "packedscore.h"
 #include <string>
 #include <map>
 #include <vector>
-#include "constants.h"
 
 template<typename T>
 struct Parm {
@@ -41,66 +42,53 @@ struct Parm {
 
     Parm(T value, T var):
         value(value),
-        var(var)
-    {
+        var(var) {
         if (value >= 0.0) {
             min = 0.0;
-            max = 2.0*value;
-        } else {
+            max = 2.0*value; }
+        else {
             max = 0.0;
-            min = 2.0*value;            
-        }
-    }
-    
+            min = 2.0*value; } }
+
     Parm(T value):
         value(value),
-        var(value/8)
-    {
+        var(value/8) {
         if (value >= 0.0) {
             min = 0.0;
-            max = 2.0*value;
-        } else {
+            max = 2.0*value; }
+        else {
             max = 0.0;
-            min = 2.0*value;
-        }
-    }
+            min = 2.0*value; } }
 
     Parm() {}
 
 //     void operator = (T value)
 };
 
-class Parameters
-{
+class Parameters {
     static unsigned maxIndex;
     static bool parmsLocked;
     static std::map< std::string, unsigned > index;
     static std::vector<Parm<float> > base;
-    
+
 public:
-    struct Phase {
-        float opening;
-        float endgame;
-    };
     struct Piece {
         template<int N>
         struct Direction {
-            Phase value;
-            Phase inflection;
+            PackedScore<float> value;
+            PackedScore<float> inflection;
             int opening[N];
-            int endgame[N];
-        };
-        Phase value;
-        Phase corner;
+            int endgame[N]; };
+        PackedScore<float> value;
+        PackedScore<float> corner;
         Direction<4> hor;
         Direction<8> vert;
-        Phase vcenter;
-        Phase mobility;
-        Phase pair;
-        Phase mobslope;
+        PackedScore<float> vcenter;
+        PackedScore<float> mobility;
+        PackedScore<float> pair;
+        PackedScore<float> mobslope;
         float attack;
-        float defense;
-    };
+        float defense; };
     Parameters();
     Parameters(const Parameters&);
     ~Parameters();
@@ -117,9 +105,7 @@ public:
     void mutate(float mutationRate = 0.05);
     Parameters combine(const Parameters& father) const;
     std::map< std::string, unsigned > getIndex() const {
-        return index;
-    }
-};
+        return index; } };
 
 extern Parameters defaultParameters;
 

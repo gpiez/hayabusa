@@ -16,9 +16,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <random>
 #include "parameters.h"
 #include "stringlist.h"
+#include <random>
 
 unsigned Parameters::maxIndex = 0;
 bool Parameters::parmsLocked = false;
@@ -29,8 +29,7 @@ std::vector<Parm<float> > Parameters::base;
 
 Parameters defaultParameters;
 
-void Parameters::mutate(float mutationRate)
-{
+void Parameters::mutate(float mutationRate) {
     for(unsigned i = 0; i < maxIndex; ++i) {
         if (std::bernoulli_distribution(mutationRate)(mt)) {
             std::normal_distribution<float> ndist(base[i].value, base[i].var);
@@ -38,59 +37,45 @@ void Parameters::mutate(float mutationRate)
             parms[i].value = std::min(parms[i].value, parms[i].max);
             parms[i].value = std::max(parms[i].value, parms[i].min);
 //             if (base[i].value != parms[i].value)
-//             for (auto j=Parameters::index.begin(); j!=Parameters::index.end(); ++j) { 
+//             for (auto j=Parameters::index.begin(); j!=Parameters::index.end(); ++j) {
 //                 if (j->second == i) {
 //                     std::cout << "Parameter " << std::setw(20) << j->first << ":" << std::setw(5) <<  base[i].value << "->" << std::setw(5) << parms[i].value << std::endl;
 //                 }
 //             }
-        }
-    }
-}
+        } } }
 
-Parameters Parameters::combine(const Parameters& father) const
-{
+Parameters Parameters::combine(const Parameters& father) const {
     Parameters ret = *this;
     for (unsigned i=0; i<maxIndex; ++i) {
-        ret.parms[i].value = (parms[i].value + father.parms[i].value) / 2;
-    }
-    return ret;
-}
+        ret.parms[i].value = (parms[i].value + father.parms[i].value) / 2; }
+    return ret; }
 
 Parameters::Parameters() {}
 
-Parameters::Parameters(const Parameters& p)
-{
+Parameters::Parameters(const Parameters& p) {
 #ifdef MYDEBUG
     parmsLocked = true;
 #endif
     parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i) {
-        parms[i] = p.parms[i];
-    }
-}
+        parms[i] = p.parms[i]; } }
 
-void Parameters::add(std::string s, float value)
-{
+void Parameters::add(std::string s, float value) {
     s = toLower(s);
 #ifdef MYDEBUG
     if (parmsLocked) {
-        std::cerr << "Parameter list modified after created" << std::endl;
-    }
-#endif    
+        std::cerr << "Parameter list modified after created" << std::endl; }
+#endif
     if (index.find(s) == index.end()) {
         index[s] = maxIndex++;
-        base.resize(maxIndex);
-    }
-    base[ index[s] ] = Parm<float>(value);
-}
+        base.resize(maxIndex); }
+    base[ index[s] ] = Parm<float>(value); }
 
-void Parameters::add(std::string s, float opening, float endgame)
-{
+void Parameters::add(std::string s, float opening, float endgame) {
     s = toLower(s);
 #ifdef MYDEBUG
     if (parmsLocked) {
-        std::cerr << "Parameter list modified after created" << std::endl;
-    }
+        std::cerr << "Parameter list modified after created" << std::endl; }
 #endif
     std::string so = s + ".opening";
     std::string se = s + ".endgame";
@@ -98,26 +83,20 @@ void Parameters::add(std::string s, float opening, float endgame)
     ASSERT(index.find(se) == index.end());
     base.resize(maxIndex+2);
     base[ index[so] = maxIndex++ ] = Parm<float>(opening);
-    base[ index[se] = maxIndex++ ] = Parm<float>(endgame);
-}
+    base[ index[se] = maxIndex++ ] = Parm<float>(endgame); }
 
-void Parameters::add(std::string s, float value, float var, float max, float min)
-{
+void Parameters::add(std::string s, float value, float var, float max, float min) {
     s = toLower(s);
 #ifdef MYDEBUG
     if (parmsLocked) {
-        std::cerr << "Parameter list modified after created" << std::endl;
-    }
+        std::cerr << "Parameter list modified after created" << std::endl; }
 #endif
     if (index.find(s) == index.end()) {
         index[s] = maxIndex++;
-        base.resize(maxIndex);
-    }
-    base[ index[s] ] = Parm<float>(value, var, max, min);
-}
+        base.resize(maxIndex); }
+    base[ index[s] ] = Parm<float>(value, var, max, min); }
 
-void Parameters::init()
-{
+void Parameters::init() {
     Parameters::add("bishop.attack", 60);
     Parameters::add("bishop.corner.endgame", -8);
     Parameters::add("bishop.corner.opening", 0);
@@ -226,14 +205,14 @@ void Parameters::init()
     Parameters::add("rook.vert.inflection.opening", 1.2);
     Parameters::add("rook.vert.value.endgame", 0);
     Parameters::add("rook.vert.value.opening", 12);
-    
+
     Parameters::add("knightBlockPasser", 10, 10);
-    Parameters::add("knightPair", -30, -30);
+    Parameters::add("knightPair", -30, 0);
     Parameters::add("bishopBlockPasser", 15, 15);
     Parameters::add("bishopPair", 28, 28);
     Parameters::add("bishopOwnPawn", 0, 0);
-    Parameters::add("bishopOppPawn", 0, 0);
-    Parameters::add("bishopNotOwnPawn", 2, 2);
+    Parameters::add("bishopOppPawn", 0, -8);
+    Parameters::add("bishopNotOwnPawn", 2, 5);
     Parameters::add("bishopNotOppPawn", 1, 1);
 
     Parameters::add("endgameMaterial", 32);
@@ -241,12 +220,12 @@ void Parameters::init()
     Parameters::add("rookTrapped", -50, -50);
     Parameters::add("rookOpen2", 18, 16);
     Parameters::add("rookOpenSlope", -8, -10);
-    Parameters::add("rookHalfOpen2", 7, 7);
+    Parameters::add("rookHalfOpen2", 7, 8);
     Parameters::add("rookHalfOpenSlope", -4, -4);
     Parameters::add("rookWeakPawn", 24, 24);
     Parameters::add("rookOwnPasser", 5, 10);
     Parameters::add("rookOppPasser", 5, 12);
-    
+
     Parameters::add("pawnBackward", -1, -1);
     Parameters::add("pawnBackwardOpen", -10, -10);
     Parameters::add("pawnIsolatedCenter", 0, 0);
@@ -258,9 +237,9 @@ void Parameters::init()
     Parameters::add("pawnPasser7", 150, 150);
     Parameters::add("pawnPasserSlope", 1.0, 1.0);
     Parameters::add("pawnConnPasser", 36, 36 );
-    Parameters::add("pawnCandidate", 20, 20);
+    Parameters::add("pawnCandidate", 12, 12);
     Parameters::add("pawnPiece", -40, -40);
-    
+
     Parameters::add("dMaxCapture", 8, 4, 20, 2);
     Parameters::add("standardError", 30);
     Parameters::add("standardSigma", 2.0);
@@ -287,14 +266,14 @@ void Parameters::init()
     Parameters::add("dMinMateExt", 4);
     Parameters::add("dMinPawnExt", 4);
 
-    Parameters::add("oppKingOwnPawn2", 14);  // only 1..7 used
-    Parameters::add("ownKingOwnPawn2", 8);
-    Parameters::add("oppKingOwnPasser2",  40);  // only 1..7 used
+    Parameters::add("oppKingOwnPawn2", 20);  // only 1..7 used
+    Parameters::add("ownKingOwnPawn2", 24);
+    Parameters::add("oppKingOwnPasser2", 40);  // only 1..7 used
     Parameters::add("ownKingOwnPasser2", 32);
     Parameters::add("kingPawnRankFactor", 4.0);
     Parameters::add("kingPawnRankSlope", 2.0);
-    Parameters::add("kingPawnDistSlope", 2.0);
-    
+    Parameters::add("kingPawnDistSlope", 1.5);
+
     Parameters::add("calcMeanError", 1);
 
     Parameters::add("prune1", 10);
@@ -346,21 +325,23 @@ void Parameters::init()
     Parameters::add("attackTotal", 200);
 
     Parameters::add("castlingTempo", 5);
+    Parameters::add("noEvalLimit", 5);
+//    Parameters::add("matFlag", 0xff);
+    Parameters::add("allowLazyRoot", 1);
 
-    
 
     defaultParameters.parms.resize(maxIndex);
-    for (unsigned i=0; i<maxIndex; ++i) 
+    for (unsigned i=0; i<maxIndex; ++i)
         defaultParameters.parms[i] = Parm<float>(base[i]);
 
 #ifdef MYDEBUG
     std::multimap<float, std::string> sortedList;
     for (auto i=index.begin(); i!=index.end(); ++i)
         sortedList.insert ( std::pair<float, std::string>( fabs(base[i->second].value) , i->first ));
-    
+
     for (auto i=sortedList.rbegin(); i!=sortedList.rend(); ++i)
         std::cout << std::setw(40) << std::left << i->second << i->first << std::endl;
-    
+
 #endif
 }
 
@@ -369,29 +350,22 @@ Parm<float> Parameters::operator [] (std::string s) const {
     ASSERT(index.find(s) != index.end());
     ASSERT(index.find(s)->second < maxIndex);
     if (!index.count(s)) {
-        std::cerr << "unknown paramter " << s << std::endl;
-    }
+        std::cerr << "unknown paramter " << s << std::endl; }
 //         std::cerr << index.find(s)->second << std::endl;
 //         std::cerr << parms.size() << std::endl;
 //         std::cerr << maxIndex << std::endl;
-    return parms.at(index.find(s)->second);
-}
+    return parms.at(index.find(s)->second); }
 
 Parm<float>& Parameters::operator [] (std::string s) {
     s = toLower(s);
     std::map< std::string, unsigned >::iterator i = index.find(s);
     if (i == index.end()) {
-        std::cerr << "unknown parameter" << std::endl;
-    }
-    return parms[i->second];
-}
+        std::cerr << "unknown parameter" << std::endl; }
+    return parms[i->second]; }
 
-bool Parameters::exists(const std::string s)
-{
-    return index.find(s) != index.end();
-}
+bool Parameters::exists(const std::string s) {
+    return index.find(s) != index.end(); }
 
-Parameters::~Parameters()
-{
+Parameters::~Parameters() {
 
 }

@@ -29,15 +29,12 @@ std::string StringList::join(const char* str) {
     std::string sum = *i++;
     while (i!=end()) {
         sum += str + *i;
-        ++i;
-    }
-    return sum;
-}
+        ++i; }
+    return sum; }
 
 StringList& StringList::operator << (const char* str) {
     push_back(std::string(str));
-    return *this;
-}
+    return *this; }
 
 StringList split(std::string str, std::string delims) {
     using namespace std;
@@ -49,27 +46,22 @@ StringList split(std::string str, std::string delims) {
     // output vector
     StringList tokens;
 
-    while (string::npos != pos || string::npos != lastPos)
-    {
+    while (string::npos != pos || string::npos != lastPos) {
         // Found a token, add it to the vector.
         tokens.push_back(str.substr(lastPos, pos - lastPos));
         // Skip delims.  Note the "not_of". this is beginning of token
         lastPos = str.find_first_not_of(delims, pos);
         // Find next delimiter at end of token.
-        pos     = str.find_first_of(delims, lastPos);
-    }
+        pos     = str.find_first_of(delims, lastPos); }
 
-    return tokens;
-}
+    return tokens; }
 
 std::string simplified(std::string str) {
-    return str;
-}
+    return str; }
 
 std::string toLower(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-    return str;
-}
+    return str; }
 
 std::map<std::string, StringList> StringList::parse(const StringList& tokens) const {
     typedef StringList::const_iterator I;
@@ -77,8 +69,7 @@ std::map<std::string, StringList> StringList::parse(const StringList& tokens) co
     for(auto token = tokens.begin(); token != tokens.end(); ++token) {
         I tp=std::find(begin(), end(), *token);
         if (tp != end())
-            tokenPositions[tp] = *token;
-    }
+            tokenPositions[tp] = *token; }
     tokenPositions[end()] = "";
     std::map<std::string, StringList> tokenValues;
     for(auto i=tokenPositions.begin(); (*i).first != end(); ++i) {
@@ -87,19 +78,15 @@ std::map<std::string, StringList> StringList::parse(const StringList& tokens) co
         ++j;
 //        std::cout << "parse:" << (*i).second << ":" << *((*i).first+1) << std::endl;
         tokenValues[(*i).second].resize((*j).first - (*i).first - 1);
-        std::copy ((*i).first+1, (*j).first, tokenValues[(*i).second].begin());
-    }
-    return tokenValues;
-}
+        std::copy ((*i).first+1, (*j).first, tokenValues[(*i).second].begin()); }
+    return tokenValues; }
 
 template<>
-bool convert<bool>(std::string str) 
-{
+bool convert<bool>(std::string str) {
     str = toLower(str);
     if (str == "true" || str == "1" || str == "on" || str == "enabled")
         return true;
     if (str == "false" || str == "0" || str == "off" || str == "disabled")
         return false;
     std::cerr << "unexpected boolean value " << str << std::endl;
-    return false;
-}
+    return false; }

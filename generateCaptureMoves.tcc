@@ -21,20 +21,18 @@
 
 #include "coloredboard.h"
 
-static const int val[nPieces+1] = { 0, 5, 3, 9, 3, 1, 100 };
+static constexpr int val[nPieces+1] = { 0, 5, 3, 9, 3, 1, 100 };
 
 template<Colors C>
 template<MoveType MT>
-void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d, unsigned cap) const {
+void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d, unsigned cap) const {
     if (MT != NoKingPawn) {
         /*
          * King captures something.
          */
         for ( uint64_t p = getAttacks<C,King>() & d & ~getAttacks<-C,All>(); p; p &= p-1 ) {
             unsigned from = bit(getPieces<C,King>());
-            *--good = Move(from, bit(p), King, cap);
-        }
-    }
+            *--good = Move(from, bit(p), King, cap); } }
     const __v2di zero = _mm_set1_epi64x(0);
     const __v2di d2 = _mm_set1_epi64x(d);
     /*
@@ -64,23 +62,21 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
                 Move n;
                 n.data = m.data + Move(0, bit(a), 0, cap).data;
                 if ( cap==Pawn
-                     &&  (
-                           a & -a & getAttacks<-C,Pawn>()
-/*                           || a & -a & getAttacks<-C,All>() &
-                                         ~( getAttacks<C,Rook>()
-                                          | getAttacks<C,Queen>()
-                                          | getAttacks<C,King>()
-                                          | getAttacks<C,Knight>()
-                                          | getAttacks<C,Pawn>()
-                                          )*/
-                         )
+                        &&  (
+                            a & -a & getAttacks<-C,Pawn>()
+                            /*                           || a & -a & getAttacks<-C,All>() &
+                                                                     ~( getAttacks<C,Rook>()
+                                                                      | getAttacks<C,Queen>()
+                                                                      | getAttacks<C,King>()
+                                                                      | getAttacks<C,Knight>()
+                                                                      | getAttacks<C,Pawn>()
+                                                                      )*/
+                        )
                    ) *bad++ = n;
-                else *--good = n;
-            }
+                else *--good = n; }
             m = (++bs)->move;
-            a13 = bs->d13;
-        } while (m.data);
-    }
+            a13 = bs->d13; }
+        while (m.data); }
 
     if (getAttacks<C,Rook>() & d) {
         const MoveTemplateR* rs = rsingle[CI];
@@ -88,7 +84,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
 #ifdef __SSE_4_1__
         while (_mm_testz_si128(d2, a02))
             a02 = (++rs)->d02;
-#endif        
+#endif
         Move m = rs->move;
         ASSERT (m.data);
         do {
@@ -101,23 +97,21 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
                 Move n;
                 n.data = m.data + Move(0, bit(a), 0, cap).data;
                 if ( val[cap] < val[Rook]
-                     &&  (
-                           a & -a & attPKB
-        /*                           || a & -a & getAttacks<-C,All>() &
-                                         ~( getAttacks<C,Bishop>()
-                                          | getAttacks<C,Queen>()
-                                          | getAttacks<C,King>()
-                                          | getAttacks<C,Knight>()
-                                          | getAttacks<C,Pawn>()
-                                          )*/
-                         )
+                        &&  (
+                            a & -a & attPKB
+                            /*                           || a & -a & getAttacks<-C,All>() &
+                                                             ~( getAttacks<C,Bishop>()
+                                                              | getAttacks<C,Queen>()
+                                                              | getAttacks<C,King>()
+                                                              | getAttacks<C,Knight>()
+                                                              | getAttacks<C,Pawn>()
+                                                              )*/
+                        )
                    ) *bad++ = n;
-                else *--good = n;
-            }
+                else *--good = n; }
             m = (++rs)->move;
-            a02 = rs->d02;
-        } while (m.data);
-    }
+            a02 = rs->d02; }
+        while (m.data); }
 
     if (getAttacks<C,Queen>() & d) {
         const MoveTemplateQ* qs = qsingle[CI];
@@ -135,77 +129,69 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
             pin13 = ~pin13 & a13;
             for (uint64_t a=fold((pin02|pin13) & d2); a; a&=a-1) {
                 uint64_t attPKBR = getAttacks<-C,Pawn>()
-                                    | getAttacks<-C,Knight>()
-                                    | getAttacks<-C,Bishop>()
-                                    | getAttacks<-C,Rook>();
+                                   | getAttacks<-C,Knight>()
+                                   | getAttacks<-C,Bishop>()
+                                   | getAttacks<-C,Rook>();
                 uint64_t att2 = getAttacks<-C,All>() &
-                                         ~( getAttacks<C,Rook>()
-                                          | getAttacks<C,Bishop>()
-                                          | getAttacks<C,King>()
-                                          | getAttacks<C,Knight>()
-                                          | getAttacks<C,Pawn>()
-                                          );
+                                ~( getAttacks<C,Rook>()
+                                   | getAttacks<C,Bishop>()
+                                   | getAttacks<C,King>()
+                                   | getAttacks<C,Knight>()
+                                   | getAttacks<C,Pawn>()
+                                 );
                 Move n;
                 n.data = m.data + Move(0, bit(a), 0, cap).data;
                 if ( val[cap] < val[Queen]
-                     &&  (
-                           a & -a & ( attPKBR | att2 )
-                         )
+                        &&  (
+                            a & -a & ( attPKBR | att2 )
+                        )
                    ) *bad++ = n;
-                else *--good = n;
-            }
-            m = (++qs)->move;
-        } while (m.data);
-    }
-            // Knight captures something. Can't move at all if pinned.
+                else *--good = n; }
+            m = (++qs)->move; }
+        while (m.data); }
+    // Knight captures something. Can't move at all if pinned.
     for ( uint64_t p = getAttacks<C,Knight>() & d; p; p &= p-1 ) {
-        unsigned to = bit(p);
+        uint64_t to = bit(p);
         for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1)
             if (cap==Pawn && (p & -p & getAttacks<-C,Pawn>()
-                // there are no x-ray defenses for capturing knights, so capturing
-                // a defended pawn is very likely bad
-                             || p & -p & getAttacks<-C,All>()& ~( getAttacks<C,Rook>()
-                                                                | getAttacks<C,Bishop>()
-                                                                | getAttacks<C,Queen>()
-                                                                | getAttacks<C,Pawn>()
-                                                                | getAttacks<C,King>()
-                                                                )
-                               )
+                              // there are no x-ray defenses for capturing knights, so capturing
+                              // a defended pawn is very likely bad
+                              || p & -p & getAttacks<-C,All>()& ~( getAttacks<C,Rook>()
+                                      | getAttacks<C,Bishop>()
+                                      | getAttacks<C,Queen>()
+                                      | getAttacks<C,Pawn>()
+                                      | getAttacks<C,King>()
+                                                                 )
+                             )
                ) *bad++ = Move(bit(f), to, Knight, cap);
-            else *--good = Move(bit(f), to, Knight, cap);
-    }
+            else *--good = Move(bit(f), to, Knight, cap); }
 
     // pawn capture to the absolute right, dir = 1 for white and 3 for black
-    for(uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & shift<-C*8-1>(d) & getPins<C,2-C>();p ;p &= p-1) {
-        unsigned from = bit(p);
-        unsigned to = from + C*8+1;
+    for(uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & shift<-C*8-1>(d) & getPins<C,2-C>(); p ; p &= p-1) {
+        uint64_t from = bit(p);
+        uint64_t to = from + C*8+1;
 //         if (C==White && from >= 48 || C==Black && from <16) {
         if (MT != NoKingPawn && rank<7>() & (p&-p)) {
             if (MT == AllMoves) {
                 *--good = Move(from, to, Knight, cap, true);
                 *--good = Move(from, to, Rook, cap, true);
-                *--good = Move(from, to, Bishop, cap, true);
-            }
-            *--good = Move(from, to, Queen, cap, true);
-        } else
-            *--good = Move(from, to, Pawn, cap);
-    }
+                *--good = Move(from, to, Bishop, cap, true); }
+            *--good = Move(from, to, Queen, cap, true); }
+        else
+            *--good = Move(from, to, Pawn, cap); }
     // left
-    for (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & shift<-C*8+1>(d) & getPins<C,2+C>();p ;p &= p-1) {
-        unsigned from = bit(p);
-        unsigned to = from + C*8-1;
+    for (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & shift<-C*8+1>(d) & getPins<C,2+C>(); p ; p &= p-1) {
+        uint64_t from = bit(p);
+        uint64_t to = from + C*8-1;
 //         if (C==White && from >= 48 || C==Black && from <16) {
         if (MT != NoKingPawn && rank<7>() & (p&-p)) {
             if (MT == AllMoves) {
                 *--good = Move(from, to, Knight, cap, true);
                 *--good = Move(from, to, Rook, cap, true);
-                *--good = Move(from, to, Bishop, cap, true);
-            }
-            *--good = Move(from, to, Queen, cap, true);
-        } else
-            *--good = Move(from, to, Pawn, cap);
-    }
-}
+                *--good = Move(from, to, Bishop, cap, true); }
+            *--good = Move(from, to, Queen, cap, true); }
+        else
+            *--good = Move(from, to, Pawn, cap); } }
 /*
  * Generate all pawn to queen promotions and capture moves for each kind of piece.
  * A pinned piece may only move on the line between king and pinning piece.
@@ -213,7 +199,7 @@ void ColoredBoard<C>::generateTargetCapture(Move* &good, Move* &bad, uint64_t d,
  */
 template<Colors C>
 template<MoveType MT>
-void ColoredBoard<C>::generateCaptureMoves( Move* &good, Move* &bad) const {
+void ColoredBoard<C>::generateCaptureMoves( Move*& good, Move*& bad) const {
     /*
      * Generate non-capturing queen promotions. Capturing promotions are handled in
      * generateTargetCaptures().
@@ -233,25 +219,21 @@ void ColoredBoard<C>::generateCaptureMoves( Move* &good, Move* &bad) const {
     if (uint64_t p = getPieces<-C,Queen>() & getAttacks<C,All>())
         generateTargetCapture<MT>(good, bad, p, Queen);
 
-    uint8_t to, sq;
     for (uint64_t p = getPieces<C,Pawn>() & rank<7>() & shift<-C*8>(~occupied1) & pins[CI]; p; p &= p-1) {
-        sq = bit(p);
-        to = sq + C*dirOffsets[2];
+        uint64_t sq = bit(p);
+        uint64_t to = sq + C*dirOffsets[2];
         if (MT == AllMoves) {
             *--good = Move(sq, to, Knight, 0, true);
             *--good = Move(sq, to, Rook, 0, true);
-            *--good = Move(sq, to, Bishop, 0, true);
-        }
-        *--good = Move(sq, to, Queen, 0, true);
-    }
-}
+            *--good = Move(sq, to, Bishop, 0, true); }
+        *--good = Move(sq, to, Queen, 0, true); } }
 
 template<Colors C>
 bool ColoredBoard<C>::isForked() const {
 //     // TODO use information already available in pins[]
-/*    if (getPieces<C,Queen>() & ~pins) {
-        
-    }*/
+    /*    if (getPieces<C,Queen>() & ~pins) {
+
+        }*/
     if (!qsingle[CI][0].move.data) return false;
     const __v2di zero = _mm_set1_epi64x(0);
     if (getAttacks<-C,Rook>() & getPieces<C,Queen>()) {
@@ -261,8 +243,7 @@ bool ColoredBoard<C>::isForked() const {
         uint64_t r = fold(kq & _mm_set1_epi64x(getPieces<-C,Rook>()));
         if (r & getAttacks<-C,All>())
             if (r & ~(getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>()))
-                return true;
-    }
+                return true; }
     if (getAttacks<-C,Bishop>() & getPieces<C,Queen>()) {
         __v2di kq = (kingIncoming[CI].d13 & _mm_set1_epi64x(getPieces<C,Queen>()));
         kq = pcmpeqq(kq, zero);
@@ -270,10 +251,8 @@ bool ColoredBoard<C>::isForked() const {
         uint64_t r = fold(kq & _mm_set1_epi64x(getPieces<-C,Bishop>()));
         if (r & getAttacks<-C,All>())
             if (r & ~(getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>()))
-                return true;
-    }
-    return false;
-}
+                return true; }
+    return false; }
 
 template<Colors C>
 bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
@@ -292,17 +271,17 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
     if (uint64_t forks = getAttacks<C,Rook>() & getAttacks<-C,Queen>()) {
         if(kingIncoming[EI].d0 & getPieces<-C,Queen>()) {
             forks &= (((const uint64_t*)&bits[k].mask02)[0]
-                & ~occupied[CI]
-                & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
-                & (getAttacks<C,Bishop>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
-                );
-        } else if (kingIncoming[EI].d2 & getPieces<-C,Queen>()) {
+                      & ~occupied[CI]
+                      & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
+                      & (getAttacks<C,Bishop>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
+                     ); }
+        else if (kingIncoming[EI].d2 & getPieces<-C,Queen>()) {
             forks &= (((const uint64_t*)&bits[k].mask02)[1]
-                & ~occupied[CI]
-                & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
-                & (getAttacks<C,Bishop>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
-                );
-        } else
+                      & ~occupied[CI]
+                      & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
+                      & (getAttacks<C,Bishop>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
+                     ); }
+        else
             forks=0;
         if (forks) {
             for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
@@ -316,30 +295,25 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
                     n.data = rs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                     if (good) {
                         *--*good = n;
-                        found = true;
-                    }
-                    else return true;
-                }
-            }
-        }
-    }
+                        found = true; }
+                    else return true; } } } }
     /*
      * Bishop skewers
      */
     if (uint64_t skewers = getAttacks<C,Bishop>() & getAttacks<-C,Queen>()) {
         if (kingIncoming[EI].d1 & getPieces<-C,Queen>()) {
             skewers &= (((const uint64_t*)&bits[k].mask13)[0] //TODO use unions
-                & ~occupied[CI]
-                & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
-                & (getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
-                );
-        } else if (kingIncoming[EI].d3 & getPieces<-C,Queen>()) {
+                        & ~occupied[CI]
+                        & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
+                        & (getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
+                       ); }
+        else if (kingIncoming[EI].d3 & getPieces<-C,Queen>()) {
             skewers &= (((const uint64_t*)&bits[k].mask13)[1]
-                & ~occupied[CI]
-                & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
-                & (getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
-                );
-        } else
+                        & ~occupied[CI]
+                        & ~(getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Pawn>())
+                        & (getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>())
+                       ); }
+        else
             skewers = 0;
         if (skewers) {
             for(const MoveTemplateB* bs = bsingle[CI]; bs->move.data; bs++) {
@@ -353,19 +327,12 @@ bool ColoredBoard<C>::generateSkewers( Move** const good ) const {
                     n.data = bs->move.data + Move(0, bit(a), 0, getPieceKind(a & -a)).data;
                     if (good) {
                         *--*good = n;
-                        found = true;
-                    }
-                    else return true;
-                }
-            }
-        }
-    }
-    return found;
-}
+                        found = true; }
+                    else return true; } } } }
+    return found; }
 
 template<Colors C>
 bool ColoredBoard<C>::generateForks( Move** const good ) const {
-    return false;
-}
+    return false; }
 
 #endif /* GENERATECAPTUREMOVES_TCC_ */

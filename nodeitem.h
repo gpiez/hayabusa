@@ -10,11 +10,9 @@
 
 #ifdef QT_GUI_LIB
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
 #include "move.h"
+#include <mutex>
+#include <QList>
 
 #define MIN_NODES 0
 #define MAX_NODES 50000000
@@ -24,15 +22,14 @@ struct NodeData {
     Move move;
     int id;
     int nodes;
-    short int alpha, beta, bestEval;
+    short int alpha, beta, bestEval, gain, error, ps, real, pos;
     char nodeType;
     char searchType;
     char depth;
     char moveColor, nodeColor;
     char flags;
     char threadId;
-    int8_t ply;
-};
+    int8_t ply; };
 
 class NodeItem: public NodeData {
 public:

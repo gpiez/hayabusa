@@ -16,116 +16,117 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef USE_GENETIC
+
 #include "selfgame.h"
-#include "rootboard.tcc"
+#include "game.tcc"
 
 std::vector<std::string> endgamePosition = {
 
-"2nr4/4b1pp/1pn1kp2/p1p1p3/P3P2P/N1P1B1P1/1P1N1P2/R5K1 w - - 0 24",
-"7r/pp1kb1pp/2p1bp2/4p3/2P1P3/PPN2PP1/1B4KP/2R5 w - - 0 23",
-"5r1k/2R5/7p/1p6/3p3P/5pP1/4P1QK/4q3 w - - 0 52",
-"6k1/pp3p1p/4b1p1/8/1P4P1/7P/P2p1K2/5R2 b - - 0 40",
-"3r3r/ppk3p1/6pp/4p3/6P1/2PnB2P/PP3P2/R4RK1 w - - 0 22",
-"3rr1k1/2p2pbp/6p1/pPp5/8/B3P3/P5PP/4RRK1 w - - 0 28",
-"1n1r2k1/5p2/p5pp/2p1N3/P7/4P1P1/5P1P/1R4K1 b - - 0 30",
-"1k2rr2/ppp5/7p/2P1nBp1/1P1pP3/3P2P1/P4PK1/R1R5 b - - 0 30",
-"1nk5/8/1p2P3/pPpBP3/P4r2/3P3P/2P4K/8 b - - 0 43",
-"8/3n1pk1/3p2p1/2pP3p/4P3/5PP1/r3B2P/4RK2 w - - 0 40",
-"1r4k1/4n1bp/1p4p1/5p2/NPRPpP2/4P1P1/3B3P/6K1 b - - 0 30",
-"6k1/5pp1/4p1bp/8/4PP2/q4BP1/P2Q2KP/8 b - - 0 30",
-"6k1/4b1pp/4p3/p3P3/P1rP1P2/8/2p3PP/N1R3K1 w - - 0 33",
-"6k1/1p2qp1p/3pb1p1/1P2p3/2P1P2P/4Q1P1/5PB1/6K1 b - - 0 33",
-"3r1r2/pp3k2/2p1p3/2n1Pp1p/5Pp1/4K1P1/PP2P1BP/R2R4 b - - 0 26",
-"3r2k1/p2rn1pp/1p3p2/6PP/R2pP3/1P3N2/P1R2PK1/8 w - - 0 34",
-"3r2k1/4p2p/4p1pB/1p2P3/8/6P1/p4P1P/2R3K1 w - - 0 40",
-"3r2k1/Bp2bppp/8/8/8/1P4P1/1P3P1P/2R3K1 b - - 0 24",
-"4r1k1/pp3p2/3p2p1/8/3b2PP/3r3P/PP4B1/2R2R1K b - - 0 32",
-"8/6k1/4p3/p1qP4/5p1b/PP1Q1P2/4B1K1/8 w - - 0 57",
-"4rrk1/pp3p2/2p5/2Pp2p1/1P4P1/P2BPR1P/1b4K1/3R4 w - - 0 29",
-"5rk1/6pp/R2B1p2/b7/8/6PP/5P2/6K1 b - - 0 36",
-"4r2k/4r2p/6p1/pR6/P7/2b2PP1/6KP/3R2N1 w - - 0 51",
-"6k1/8/2b1q2p/3p1p2/2pP3P/1pN1PQ2/1P3P2/6K1 b - - 0 49",
-"8/p4p2/1pp3k1/2n1p1q1/P1N1P1p1/2P3P1/1P2QP2/6K1 w - - 0 45",
-"r7/1p1n1k1p/p1p5/6R1/3PKB2/P7/1P5P/8 b - - 0 50",
-"r4rk1/p1p3p1/1bR4p/5p2/4pP2/8/PP2PPBP/5RK1 b - - 0 23",
-"5n2/4q2k/3p2pp/p2P4/1pPp1PQ1/1P4P1/2B3K1/8 w - - 0 50",
-"r5k1/ppp4p/3p2p1/4n3/4B1b1/2PP2P1/P1P4P/1RB2K2 b - - 0 17",
-"6k1/4rp2/p7/Pp2r2p/4n1pP/3RP3/2P1N1P1/5RK1 w - - 0 41",
-"3rk3/1p3p1p/1pb1p1p1/2p5/P1B1P3/1PP2P2/2K1R1PP/8 w - - 0 29",
-"3r4/p1n1p1bk/1p5p/2p1Pp2/5P2/2P1BK2/PP3N1P/R7 w - - 0 29",
-"4r1k1/1pn1ppb1/1pp3pp/4Pb2/1BP1NP2/PP4PP/6BK/3R4 w - - 0 29",
-"k7/pp2rb2/2p4p/3p2bP/6B1/2NP1P2/PPK5/3R4 w - - 0 34",
-"5r2/1p4k1/n1p1p1bp/p2pP1p1/P5P1/1P1P2K1/2P3BP/R5N1 w - - 0 29",
-"6k1/6b1/2p1bn1p/2p1p3/7N/3P2P1/2RBP1BK/r7 w - - 0 38",
-"4r3/p4k1p/1pp2Pp1/3p4/P4n1P/2N3N1/1PP2B2/5K2 b - - 0 28",
-"7r/1ppkbpp1/6np/1P1p4/3Pp3/4P2P/2P2PP1/BN3RK1 w - - 0 18",
-"r4rk1/1p3ppp/4p3/8/1n1P4/4PN1P/5PP1/R4RK1 w - - 0 23",
-"r4rk1/ppp2p2/5p1p/1R6/2B1b2P/8/PPP2PP1/2K4R w - - 0 22",
-"2b1r1k1/1p1p2pp/2p5/8/2P1P3/B1n3P1/P4PBP/5R1K w - - 0 23",
-"2kr3r/ppp2ppp/4b3/4p3/4P3/1P1P1P2/P2NK1PP/1R5R b - - 0 17",
-"5nk1/2p2pb1/bp3npp/pN2p3/P3P3/4BPPB/1PPN3P/6K1 b - - 0 23",
-"8/4q1k1/2p4p/2P2Qp1/8/Pp3RPP/3r1P1K/8 w - - 0 45",
-"6k1/5pn1/pp2p1pp/3pP3/3P2P1/1P2P2P/P3q3/1Q1N2K1 w - - 0 35",
-"3rr1k1/p3pp2/3n2p1/3P2P1/1Pp5/2P1R2P/6BK/4R3 b - - 0 38",
-"4r2r/pp1k4/2np2p1/5p2/5N2/3PP3/PP2P1Kp/R4R2 w - - 0 24",
-"2br2k1/1pn4p/2p3p1/3P1p2/1P1R1P2/4PB2/2N3PP/6K1 b - - 0 28",
-"6k1/pq1r3p/1p2p1p1/3pPp2/3P4/QP4P1/P4P1P/2R3K1 w - - 0 33",
-"3r2k1/pp2bpp1/5n1p/2p1p3/PnN1P3/1P3BP1/2P1RPKP/B7 b - - 0 18",
-"5rk1/1pN5/p1np3p/3P1pp1/2P1r3/1P4P1/PR5P/5RK1 b - - 0 32",
-"6k1/6bp/1p2r1p1/pPp2p2/P2pP3/B4PP1/2P4P/4R1K1 b - - 0 28",
-"r1r5/p3ppkp/6p1/3p4/4n3/1P2P1P1/P3NPKP/2R2R2 w - - 0 21",
-"8/8/1p1kb3/p3p2p/P1PpPp1P/1P3Pr1/4KN2/3R4 w - - 0 59",
-"3r1nk1/4bppp/2B1p3/p1p1P3/8/PN4P1/1Bb2P1P/4R1K1 w - - 0 27",
-"6k1/2r2bpp/p4p2/1p2pP2/1n2P1P1/1P1B4/P2K3P/1N2R3 w - - 0 29",
-"3r1rk1/1p1npp1p/p2p2p1/2pP4/2P1PP2/1P4PB/PR5P/5RK1 b - - 0 19",
-"6k1/3b1ppp/2nb1n2/1pp1p3/3pP3/1P1P1NPP/2PN1PBK/B7 b - - 0 24",
-"1rr1nk2/5ppp/1p6/p4P2/P1P5/2NR2PP/6K1/3R4 w - - 0 34",
-"1n5r/p1p2p2/1p3kpp/4p3/bP2P3/1BP5/PK1N1PPP/3R4 b - - 0 22",
-"3r2k1/pp3pbp/4b1p1/1P1P4/2p5/4B1P1/1P3PBP/R5K1 b - - 0 20",
-"3r2k1/5pp1/p1Rp4/1p1Pp2p/nP2P3/P4BPb/5b1P/B1N4K w - - 0 28",
-"8/3n1pkp/3p2p1/2pP4/8/1P4PP/q4PB1/4Q1K1 w - - 0 30",
-"6k1/1b1n1ppp/pn1p4/1p1Pp3/4P3/P1N3PP/1P1N1PB1/6K1 b - - 0 24",
-"8/3b3r/1p3nk1/pNpPp1p1/P1P1P3/1P1B4/5RK1/8 w - - 0 36",
-"8/1p1r1pk1/2npb3/2p4p/2P1P1p1/1P2N1P1/5PP1/3R1BK1 b - - 0 27",
-"r5k1/r3pp1p/3p2p1/1npP4/1p2PP2/6P1/P2R2KP/1RN5 b - - 0 30",
-"r1b5/4nkn1/3p4/2pP1p1p/2P1pP1N/4N1P1/1R3K1P/5B2 b - - 0 45",
-"4q1k1/1pQb1p1p/6p1/P3p3/4P2P/5PP1/4B3/6K1 b - - 0 44",
-"3r3k/1p3pnp/p1n1b1p1/2p1p3/P1P1P3/1PN3PP/4NPB1/5RK1 w - - 0 21",
-"1q6/2kb2Q1/p2p1p2/2pPpp2/2B1P3/P1P5/K5P1/8 w - - 0 36",
-"6k1/5nbp/pp1p2p1/2pP1b2/2P3P1/1PN4P/P3N3/4B2K b - - 0 28",
-"r4rk1/6pp/3p4/1ppP1P1R/2P1P1n1/2N3PR/1PK5/8 w - - 0 31",
-"8/1p3bpk/2p5/2P2p1p/1P2nP2/3B2P1/7P/B4K2 w - - 0 33",
-"2b5/pp2r3/2p2kp1/2p4p/2P5/3PNNP1/P4KB1/8 b - - 0 30",
-"r7/pp6/n1p1kn1p/5pp1/N1P1p3/6P1/PP1RPPBP/6K1 b - - 0 21",
-"r6k/2p1p2p/1p1p1b1B/pR6/P1P3r1/6P1/4PP1P/2R3K1 w - - 0 29",
-"r4rk1/1p4bp/p3p1p1/2Pp1p2/3P1P2/2N1P3/PP5P/R3R2K w - - 0 23",
-"5k2/p4p2/2r5/2Ppp1p1/Pp1P1qPp/1P5P/1Q3P2/3R2K1 w - - 0 42",
-"2kr4/pp2pp1p/2p1b1nb/2P1P3/5P2/P1P1BN1P/4NK2/7R b - - 0 25",
-"3r1rk1/p1p2ppp/4N3/4P3/5P2/1P6/n4RPP/4R1K1 b - - 0 30",
-"8/pp4pk/2nr1pp1/8/1PB1r3/P7/6PP/R4RK1 w - - 0 29",
-"r4rk1/ppp1pp1p/8/2P3P1/3n4/5P2/PP5P/R3KB1R w KQ - 0 17",
-"2kr1b1r/p1p1pppp/2p5/4P3/8/4BP2/PP3P1P/2R2RK1 b - - 0 15",
-"7r/1p4k1/5bp1/pN1P2p1/P1PNp1P1/1P1nBn2/7P/1R5K w - - 0 29",
-"4r1k1/pp2rppp/2p5/1PPp4/P2Pn3/2N1P1PP/4RK2/1R6 w - - 0 30",
-"1r1b1k2/2p2pp1/2n1p3/p1PpPn2/N2P1P2/P2R3P/5B1P/4N1K1 b - - 0 39",
-"2r3k1/pp3pbp/6p1/1PPp1p2/3P4/1N6/P3rPPP/R4RK1 w - - 0 26",
-"3qk3/1p3pp1/2p1p3/p1b1P2P/P1P5/1P3N2/4QPK1/8 w - - 0 30",
-"4b1k1/2n1ppb1/p2p1npp/2pP4/2P1P3/P1NN1P2/3BB1PP/6K1 b - - 0 29",
-"2b5/3k1p2/p2b2p1/1p1pn2p/3N4/BP1nPPPP/P3B1K1/5N2 w - - 0 42",
-"1n4k1/1BBn2bp/2p3p1/4p3/N1P5/1b2N1P1/5P1P/6K1 w - - 0 28",
-"3n4/6bk/6pp/2p1Np1n/P4P2/1bN1P2P/3B2BK/8 b - - 0 38",
-"2b2bn1/k4p2/7p/1P1pPB1N/1npP3N/2B4P/8/4K3 b - - 0 37",
-"5k2/1N6/1nn1b3/3pPp2/pP1P1b2/P2BNp2/1B1K4/8 w - - 0 39",
-"5bk1/1p6/1p2ppnP/4n3/6b1/2N3N1/PP2P1B1/2B4K w - - 0 36",
-"5k1b/p3nn2/3p4/1b3pP1/5B2/2P2BN1/P2K1N2/8 b - - 0 33",
-"8/2nbkn2/3p3p/2pP1P2/2N1BB2/2b4P/5K2/5N2 w - - 0 49",
-"8/2R4p/1r2k1p1/6R1/1p1P1P2/1K4P1/7r/8 w - - 0 53",
-"5r2/R7/1p3kp1/8/3p1r2/3P4/PP2R1K1/8 b - - 0 32",
-"8/p4R1p/4K3/pk2P2r/8/1P3R2/6r1/8 b - - 0 40",
-"3r2k1/pp2Rrpp/2p2p2/2Pp4/7P/5P2/PPP3P1/2K1R3 b - - 0 23",
-"5r2/ppp3kp/3p2p1/3P1p2/2P1r3/1P2PR2/P5PP/R5K1 w - - 0 23",
-"r2r4/2p3p1/2pppk1p/8/p1P1P3/1P3P2/P5PP/3R1RK1 w - - 0 24"
-};
+    "2nr4/4b1pp/1pn1kp2/p1p1p3/P3P2P/N1P1B1P1/1P1N1P2/R5K1 w - - 0 24",
+    "7r/pp1kb1pp/2p1bp2/4p3/2P1P3/PPN2PP1/1B4KP/2R5 w - - 0 23",
+    "5r1k/2R5/7p/1p6/3p3P/5pP1/4P1QK/4q3 w - - 0 52",
+    "6k1/pp3p1p/4b1p1/8/1P4P1/7P/P2p1K2/5R2 b - - 0 40",
+    "3r3r/ppk3p1/6pp/4p3/6P1/2PnB2P/PP3P2/R4RK1 w - - 0 22",
+    "3rr1k1/2p2pbp/6p1/pPp5/8/B3P3/P5PP/4RRK1 w - - 0 28",
+    "1n1r2k1/5p2/p5pp/2p1N3/P7/4P1P1/5P1P/1R4K1 b - - 0 30",
+    "1k2rr2/ppp5/7p/2P1nBp1/1P1pP3/3P2P1/P4PK1/R1R5 b - - 0 30",
+    "1nk5/8/1p2P3/pPpBP3/P4r2/3P3P/2P4K/8 b - - 0 43",
+    "8/3n1pk1/3p2p1/2pP3p/4P3/5PP1/r3B2P/4RK2 w - - 0 40",
+    "1r4k1/4n1bp/1p4p1/5p2/NPRPpP2/4P1P1/3B3P/6K1 b - - 0 30",
+    "6k1/5pp1/4p1bp/8/4PP2/q4BP1/P2Q2KP/8 b - - 0 30",
+    "6k1/4b1pp/4p3/p3P3/P1rP1P2/8/2p3PP/N1R3K1 w - - 0 33",
+    "6k1/1p2qp1p/3pb1p1/1P2p3/2P1P2P/4Q1P1/5PB1/6K1 b - - 0 33",
+    "3r1r2/pp3k2/2p1p3/2n1Pp1p/5Pp1/4K1P1/PP2P1BP/R2R4 b - - 0 26",
+    "3r2k1/p2rn1pp/1p3p2/6PP/R2pP3/1P3N2/P1R2PK1/8 w - - 0 34",
+    "3r2k1/4p2p/4p1pB/1p2P3/8/6P1/p4P1P/2R3K1 w - - 0 40",
+    "3r2k1/Bp2bppp/8/8/8/1P4P1/1P3P1P/2R3K1 b - - 0 24",
+    "4r1k1/pp3p2/3p2p1/8/3b2PP/3r3P/PP4B1/2R2R1K b - - 0 32",
+    "8/6k1/4p3/p1qP4/5p1b/PP1Q1P2/4B1K1/8 w - - 0 57",
+    "4rrk1/pp3p2/2p5/2Pp2p1/1P4P1/P2BPR1P/1b4K1/3R4 w - - 0 29",
+    "5rk1/6pp/R2B1p2/b7/8/6PP/5P2/6K1 b - - 0 36",
+    "4r2k/4r2p/6p1/pR6/P7/2b2PP1/6KP/3R2N1 w - - 0 51",
+    "6k1/8/2b1q2p/3p1p2/2pP3P/1pN1PQ2/1P3P2/6K1 b - - 0 49",
+    "8/p4p2/1pp3k1/2n1p1q1/P1N1P1p1/2P3P1/1P2QP2/6K1 w - - 0 45",
+    "r7/1p1n1k1p/p1p5/6R1/3PKB2/P7/1P5P/8 b - - 0 50",
+    "r4rk1/p1p3p1/1bR4p/5p2/4pP2/8/PP2PPBP/5RK1 b - - 0 23",
+    "5n2/4q2k/3p2pp/p2P4/1pPp1PQ1/1P4P1/2B3K1/8 w - - 0 50",
+    "r5k1/ppp4p/3p2p1/4n3/4B1b1/2PP2P1/P1P4P/1RB2K2 b - - 0 17",
+    "6k1/4rp2/p7/Pp2r2p/4n1pP/3RP3/2P1N1P1/5RK1 w - - 0 41",
+    "3rk3/1p3p1p/1pb1p1p1/2p5/P1B1P3/1PP2P2/2K1R1PP/8 w - - 0 29",
+    "3r4/p1n1p1bk/1p5p/2p1Pp2/5P2/2P1BK2/PP3N1P/R7 w - - 0 29",
+    "4r1k1/1pn1ppb1/1pp3pp/4Pb2/1BP1NP2/PP4PP/6BK/3R4 w - - 0 29",
+    "k7/pp2rb2/2p4p/3p2bP/6B1/2NP1P2/PPK5/3R4 w - - 0 34",
+    "5r2/1p4k1/n1p1p1bp/p2pP1p1/P5P1/1P1P2K1/2P3BP/R5N1 w - - 0 29",
+    "6k1/6b1/2p1bn1p/2p1p3/7N/3P2P1/2RBP1BK/r7 w - - 0 38",
+    "4r3/p4k1p/1pp2Pp1/3p4/P4n1P/2N3N1/1PP2B2/5K2 b - - 0 28",
+    "7r/1ppkbpp1/6np/1P1p4/3Pp3/4P2P/2P2PP1/BN3RK1 w - - 0 18",
+    "r4rk1/1p3ppp/4p3/8/1n1P4/4PN1P/5PP1/R4RK1 w - - 0 23",
+    "r4rk1/ppp2p2/5p1p/1R6/2B1b2P/8/PPP2PP1/2K4R w - - 0 22",
+    "2b1r1k1/1p1p2pp/2p5/8/2P1P3/B1n3P1/P4PBP/5R1K w - - 0 23",
+    "2kr3r/ppp2ppp/4b3/4p3/4P3/1P1P1P2/P2NK1PP/1R5R b - - 0 17",
+    "5nk1/2p2pb1/bp3npp/pN2p3/P3P3/4BPPB/1PPN3P/6K1 b - - 0 23",
+    "8/4q1k1/2p4p/2P2Qp1/8/Pp3RPP/3r1P1K/8 w - - 0 45",
+    "6k1/5pn1/pp2p1pp/3pP3/3P2P1/1P2P2P/P3q3/1Q1N2K1 w - - 0 35",
+    "3rr1k1/p3pp2/3n2p1/3P2P1/1Pp5/2P1R2P/6BK/4R3 b - - 0 38",
+    "4r2r/pp1k4/2np2p1/5p2/5N2/3PP3/PP2P1Kp/R4R2 w - - 0 24",
+    "2br2k1/1pn4p/2p3p1/3P1p2/1P1R1P2/4PB2/2N3PP/6K1 b - - 0 28",
+    "6k1/pq1r3p/1p2p1p1/3pPp2/3P4/QP4P1/P4P1P/2R3K1 w - - 0 33",
+    "3r2k1/pp2bpp1/5n1p/2p1p3/PnN1P3/1P3BP1/2P1RPKP/B7 b - - 0 18",
+    "5rk1/1pN5/p1np3p/3P1pp1/2P1r3/1P4P1/PR5P/5RK1 b - - 0 32",
+    "6k1/6bp/1p2r1p1/pPp2p2/P2pP3/B4PP1/2P4P/4R1K1 b - - 0 28",
+    "r1r5/p3ppkp/6p1/3p4/4n3/1P2P1P1/P3NPKP/2R2R2 w - - 0 21",
+    "8/8/1p1kb3/p3p2p/P1PpPp1P/1P3Pr1/4KN2/3R4 w - - 0 59",
+    "3r1nk1/4bppp/2B1p3/p1p1P3/8/PN4P1/1Bb2P1P/4R1K1 w - - 0 27",
+    "6k1/2r2bpp/p4p2/1p2pP2/1n2P1P1/1P1B4/P2K3P/1N2R3 w - - 0 29",
+    "3r1rk1/1p1npp1p/p2p2p1/2pP4/2P1PP2/1P4PB/PR5P/5RK1 b - - 0 19",
+    "6k1/3b1ppp/2nb1n2/1pp1p3/3pP3/1P1P1NPP/2PN1PBK/B7 b - - 0 24",
+    "1rr1nk2/5ppp/1p6/p4P2/P1P5/2NR2PP/6K1/3R4 w - - 0 34",
+    "1n5r/p1p2p2/1p3kpp/4p3/bP2P3/1BP5/PK1N1PPP/3R4 b - - 0 22",
+    "3r2k1/pp3pbp/4b1p1/1P1P4/2p5/4B1P1/1P3PBP/R5K1 b - - 0 20",
+    "3r2k1/5pp1/p1Rp4/1p1Pp2p/nP2P3/P4BPb/5b1P/B1N4K w - - 0 28",
+    "8/3n1pkp/3p2p1/2pP4/8/1P4PP/q4PB1/4Q1K1 w - - 0 30",
+    "6k1/1b1n1ppp/pn1p4/1p1Pp3/4P3/P1N3PP/1P1N1PB1/6K1 b - - 0 24",
+    "8/3b3r/1p3nk1/pNpPp1p1/P1P1P3/1P1B4/5RK1/8 w - - 0 36",
+    "8/1p1r1pk1/2npb3/2p4p/2P1P1p1/1P2N1P1/5PP1/3R1BK1 b - - 0 27",
+    "r5k1/r3pp1p/3p2p1/1npP4/1p2PP2/6P1/P2R2KP/1RN5 b - - 0 30",
+    "r1b5/4nkn1/3p4/2pP1p1p/2P1pP1N/4N1P1/1R3K1P/5B2 b - - 0 45",
+    "4q1k1/1pQb1p1p/6p1/P3p3/4P2P/5PP1/4B3/6K1 b - - 0 44",
+    "3r3k/1p3pnp/p1n1b1p1/2p1p3/P1P1P3/1PN3PP/4NPB1/5RK1 w - - 0 21",
+    "1q6/2kb2Q1/p2p1p2/2pPpp2/2B1P3/P1P5/K5P1/8 w - - 0 36",
+    "6k1/5nbp/pp1p2p1/2pP1b2/2P3P1/1PN4P/P3N3/4B2K b - - 0 28",
+    "r4rk1/6pp/3p4/1ppP1P1R/2P1P1n1/2N3PR/1PK5/8 w - - 0 31",
+    "8/1p3bpk/2p5/2P2p1p/1P2nP2/3B2P1/7P/B4K2 w - - 0 33",
+    "2b5/pp2r3/2p2kp1/2p4p/2P5/3PNNP1/P4KB1/8 b - - 0 30",
+    "r7/pp6/n1p1kn1p/5pp1/N1P1p3/6P1/PP1RPPBP/6K1 b - - 0 21",
+    "r6k/2p1p2p/1p1p1b1B/pR6/P1P3r1/6P1/4PP1P/2R3K1 w - - 0 29",
+    "r4rk1/1p4bp/p3p1p1/2Pp1p2/3P1P2/2N1P3/PP5P/R3R2K w - - 0 23",
+    "5k2/p4p2/2r5/2Ppp1p1/Pp1P1qPp/1P5P/1Q3P2/3R2K1 w - - 0 42",
+    "2kr4/pp2pp1p/2p1b1nb/2P1P3/5P2/P1P1BN1P/4NK2/7R b - - 0 25",
+    "3r1rk1/p1p2ppp/4N3/4P3/5P2/1P6/n4RPP/4R1K1 b - - 0 30",
+    "8/pp4pk/2nr1pp1/8/1PB1r3/P7/6PP/R4RK1 w - - 0 29",
+    "r4rk1/ppp1pp1p/8/2P3P1/3n4/5P2/PP5P/R3KB1R w KQ - 0 17",
+    "2kr1b1r/p1p1pppp/2p5/4P3/8/4BP2/PP3P1P/2R2RK1 b - - 0 15",
+    "7r/1p4k1/5bp1/pN1P2p1/P1PNp1P1/1P1nBn2/7P/1R5K w - - 0 29",
+    "4r1k1/pp2rppp/2p5/1PPp4/P2Pn3/2N1P1PP/4RK2/1R6 w - - 0 30",
+    "1r1b1k2/2p2pp1/2n1p3/p1PpPn2/N2P1P2/P2R3P/5B1P/4N1K1 b - - 0 39",
+    "2r3k1/pp3pbp/6p1/1PPp1p2/3P4/1N6/P3rPPP/R4RK1 w - - 0 26",
+    "3qk3/1p3pp1/2p1p3/p1b1P2P/P1P5/1P3N2/4QPK1/8 w - - 0 30",
+    "4b1k1/2n1ppb1/p2p1npp/2pP4/2P1P3/P1NN1P2/3BB1PP/6K1 b - - 0 29",
+    "2b5/3k1p2/p2b2p1/1p1pn2p/3N4/BP1nPPPP/P3B1K1/5N2 w - - 0 42",
+    "1n4k1/1BBn2bp/2p3p1/4p3/N1P5/1b2N1P1/5P1P/6K1 w - - 0 28",
+    "3n4/6bk/6pp/2p1Np1n/P4P2/1bN1P2P/3B2BK/8 b - - 0 38",
+    "2b2bn1/k4p2/7p/1P1pPB1N/1npP3N/2B4P/8/4K3 b - - 0 37",
+    "5k2/1N6/1nn1b3/3pPp2/pP1P1b2/P2BNp2/1B1K4/8 w - - 0 39",
+    "5bk1/1p6/1p2ppnP/4n3/6b1/2N3N1/PP2P1B1/2B4K w - - 0 36",
+    "5k1b/p3nn2/3p4/1b3pP1/5B2/2P2BN1/P2K1N2/8 b - - 0 33",
+    "8/2nbkn2/3p3p/2pP1P2/2N1BB2/2b4P/5K2/5N2 w - - 0 49",
+    "8/2R4p/1r2k1p1/6R1/1p1P1P2/1K4P1/7r/8 w - - 0 53",
+    "5r2/R7/1p3kp1/8/3p1r2/3P4/PP2R1K1/8 b - - 0 32",
+    "8/p4R1p/4K3/pk2P2r/8/1P3R2/6r1/8 b - - 0 40",
+    "3r2k1/pp2Rrpp/2p2p2/2Pp4/7P/5P2/PPP3P1/2K1R3 b - - 0 23",
+    "5r2/ppp3kp/3p2p1/3P1p2/2P1r3/1P2PR2/P5PP/R5K1 w - - 0 23",
+    "r2r4/2p3p1/2pppk1p/8/p1P1P3/1P3P2/P5PP/3R1RK1 w - - 0 24" };
 std::vector<std::string> testPosition = {
     "1r1q1rk1/ppp2ppp/2nbpn2/5b2/2QP4/2N1PN2/PP2BPPP/R1B2RK1 w - - pm Nb5; id Neutral.001;",
     "1rbq1rk1/5pp1/2nb1n1p/pp2p3/1PPp4/P2P1NP1/2N2PBP/1RBQ1RK1 w - - pm c5; id Neutral.002;",
@@ -804,31 +805,26 @@ std::vector<std::string> testPosition = {
     "rnbqkbnr/pppp1ppp/8/4p3/2P5/2N5/PP1PPPPP/R1BQKBNR b KQkq - pm Nf6; id Neutral.397;",
     "rnbqkbnr/pppp2pp/8/4pp2/2PP4/6P1/PP2PP1P/RNBQKBNR b KQkq - pm exd4; id Neutral.398;",
     "rnbqkbnr/pppppppp/8/8/8/2N5/PPPPPPPP/R1BQKBNR b KQkq - pm d5; id Neutral.399;",
-    "rq2kb1r/1b1n1ppp/p3pn2/1ppP4/8/1BN1PN2/PP2QPPP/R1BR2K1 b kq - pm c4; id Neutral.400;"    
-};
+    "rq2kb1r/1b1n1ppp/p3pn2/1ppP4/8/1BN1PN2/PP2QPPP/R1BR2K1 b kq - pm c4; id Neutral.400;" };
 
 SelfGame::SelfGame(Console* c, const Parameters& wp, const Parameters& bp, const std::string& nodes, std::string endgame):
     nodes(nodes),
-    endgame(endgame)
-{
-    wrb = new RootBoard(c, wp, 0x200000, 0x10000); //achtung possibly increased
-    brb = new RootBoard(c, bp, 0x200000, 0x10000); //collision probability
+    endgame(endgame) {
+    wrb = new Game(c, wp, 0x200000, 0x10000); //achtung possibly increased
+    brb = new Game(c, bp, 0x200000, 0x10000); //collision probability
 
     decisiveScore = 700;
     decisiveScoreMoves = 4;
-    drawScoreMoves = 6;
-}
+    drawScoreMoves = 6; }
 
 SelfGame::~SelfGame() {
     delete wrb;
-    delete brb;
-}
+    delete brb; }
 
 int SelfGame::nTests() {
-    return numGames;
-}
+    return numGames; }
 
-void SelfGame::setupRootBoard(RootBoard* rb) {
+void SelfGame::setupRootBoard(Game* rb) {
     std::map<std::string, StringList> p;
     wtime = 100000000;
     std::stringstream t;
@@ -841,11 +837,9 @@ void SelfGame::setupRootBoard(RootBoard* rb) {
 //     p["binc"] = StringList() << "10";
     p["infinite"] = StringList();
     p["nodes"] = StringList() << nodes.c_str();
-    rb->goReadParam(p);
-}
+    rb->goReadParam(p); }
 
-int SelfGame::doGame(RootBoard* rb1, RootBoard* rb2)
-{
+int SelfGame::doGame(Game* rb1, Game* rb2) {
 //     return floor((rand()*3.0)/(RAND_MAX+1.0))-1;
     setupRootBoard(rb1);
     setupRootBoard(rb2);
@@ -858,8 +852,7 @@ int SelfGame::doGame(RootBoard* rb1, RootBoard* rb2)
         m = rb1->bestMove;
         if (!m.data) {
             result = 0;
-            break;
-        }
+            break; }
 //        std::cerr << m.string() << " ";
         rb1->doMove(m);
         rb2->doMove(m);
@@ -869,32 +862,27 @@ black:
         m = rb2->bestMove;
         if (!m.data) {
             result = 0;
-            break;
-        }
+            break; }
 //        std::cerr << m.string() << " ";
         rb1->doMove(m);
         rb2->doMove(m);
-        if (checkResult<White>(*rb2)) break;
-    }
+        if (checkResult<White>(*rb2)) break; }
 //     std::cerr << std::endl;
 //     std::cerr << "Game finished in move " << rb1->getRootPly() << " with " << result << std::endl;
 //     rb1->currentBoard().print();
 //     std::cerr << std::endl;
-    return result;
-}
+    return result; }
 
-uint64_t SelfGame::cpuTime()
-{
+uint64_t SelfGame::cpuTime() {
 #ifdef __x86_64__
     std::chrono::nanoseconds t = std::chrono::system_clock::now() - start;
     start = std::chrono::system_clock::now();
     return t.count();
-#endif    
+#endif
 }
 
 template<Colors C>
-bool SelfGame::checkResult(const RootBoard& rb)
-{
+bool SelfGame::checkResult(const Game& rb) {
     if (abs(rb.getScore()) >= decisiveScore) {
         nDecisive++;
         if (nDecisive >= decisiveScoreMoves || abs(rb.getScore()) >= infinity) {
@@ -909,31 +897,25 @@ bool SelfGame::checkResult(const RootBoard& rb)
                 result = 1;
             else
                 result = -1;
-            return true;
-        }
-    } else
+            return true; } }
+    else
         nDecisive = 0;
 
     if (abs(rb.getScore()) == 0) {
         nDraw++;
         if (nDraw >= drawScoreMoves) {
             result = 0;
-            return true;
-        }
-    } else
+            return true; } }
+    else
         nDraw = 0;
-    
-    int v;
-    if (rb.eval.draw<C>(rb.currentBoard<C>(), v) || rb.isDraw(rb.currentBoard<C>())) {
+
+    if (rb.isDraw(rb.currentBoard<C>())) {
         result = 0;
-        return true;
-    }
+        return true; }
 
-    return false;
-}
+    return false; }
 
-int SelfGame::tournament()
-{
+int SelfGame::tournament() {
     int sum = 0;
     Options::splitDepth = 1000;
     Options::quiet = true;
@@ -953,10 +935,8 @@ int SelfGame::tournament()
             wrb->clearHash();
             brb->clearHash();
             sum -= doGame(brb, wrb);
-            numGames++;
-        }
-    }
+            numGames++; } }
     return sum;
 //     std::cerr << "Sum " << sum << std::endl;
 }
-
+#endif

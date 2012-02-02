@@ -16,79 +16,58 @@ std::recursive_mutex NodeItem::m;
 int NodeItem::nNodes = 0;
 
 NodeItem::NodeItem( const NodeData& nodeData_ ):
-        NodeData( nodeData_ ),
-        parent( 0 )
-{
+    NodeData( nodeData_ ),
+    parent( 0 ) {
     nNodes = 0; //TODO increase/decrease counter in ctor/dtor
 }
 
 NodeItem::NodeItem( const NodeData& nodeData_, NodeItem* parent_ ):
-        NodeData( nodeData_ ),
-        parent( parent_ )
-{
+    NodeData( nodeData_ ),
+    parent( parent_ ) {
     id = stats.node;
 //     std::lock_guard<std::recursive_mutex> lock(m);
     if (parent_)
         parent_->appendChild( this );
     else
-        delete this;
-}
+        delete this; }
 
-NodeItem::~NodeItem()
-{
+NodeItem::~NodeItem() {
     std::lock_guard<std::recursive_mutex> lock(m);
-    qDeleteAll( children );
-}
+    qDeleteAll( children ); }
 
-void NodeItem::appendChild( NodeItem* item )
-{
+void NodeItem::appendChild( NodeItem* item ) {
     std::lock_guard<std::recursive_mutex> lock(m);
-    children.append( item );
-}
+    children.append( item ); }
 
-const NodeItem *NodeItem::child( int row )
-{
+const NodeItem* NodeItem::child( int row ) {
 //    std::lock_guard<std::recursive_mutex> lock(m);
-    return children.value( row );
-}
+    return children.value( row ); }
 
-NodeItem *NodeItem::lastChild(  )
-{
+NodeItem* NodeItem::lastChild(  ) {
 //    std::lock_guard<std::recursive_mutex> lock(m);
-    return children.last();
-}
+    return children.last(); }
 
-int NodeItem::childCount() const
-{
+int NodeItem::childCount() const {
 //    std::lock_guard<std::recursive_mutex> lock(m);
-    return children.count();
-}
+    return children.count(); }
 
-int NodeItem::row()
-{
+int NodeItem::row() {
 //    std::lock_guard<std::recursive_mutex> lock(m);
     if ( parent )
         return parent->children.indexOf( this );
-    return 0;
-}
+    return 0; }
 
-const NodeData& NodeItem::data() const
-{
-    return ( const NodeData& )( *this );
-}
+const NodeData& NodeItem::data() const {
+    return ( const NodeData& )( *this ); }
 
-NodeItem* NodeItem::getParent() const
-{
+NodeItem* NodeItem::getParent() const {
 //    std::lock_guard<std::recursive_mutex> lock(m);
-    return parent;
-}
+    return parent; }
 
 #endif
 
-void NodeItem::moveToEnd(NodeItem* node)
-{
+void NodeItem::moveToEnd(NodeItem* node) {
     int i=children.indexOf(node);
     ASSERT(i != -1);
     children.removeAt(i);
-    children.append(node);
-}
+    children.append(node); }

@@ -19,10 +19,6 @@
 #ifndef ROOTBOARD_H_
 #define ROOTBOARD_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
 #include "eval.h"
 #include "coloredboard.h"
 #include "stats.h"
@@ -32,17 +28,18 @@
 #include "nodeitem.h"
 #endif
 #include "stringlist.h"
-#include "repetition.h"
-#include "book.h"
 
 class Parameters;
 class WorkThread;
 class Console;
-
-using namespace std::chrono;
-
+union TTEntry;
+class PerftEntry;
 template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
+
+typedef Key RepetitionKeys[100+nMaxGameLength];
+
+extern __thread RepetitionKeys keys;
 
 enum Extension {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
                 ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32,
@@ -56,10 +53,10 @@ enum Status { Running, Stopping, Stopped };
  */
 #ifdef QT_GUI_LIB
 
-class RootBoard: public QObject {
+class Game: public QObject {
     Q_OBJECT
-    
-private:    
+
+private:
     StatWidget* statWidget;
 signals:
     void createModel();
@@ -68,7 +65,7 @@ private:
 
 #else
 
-class RootBoard {
+class Game {
 
 #endif
 
@@ -77,13 +74,25 @@ class RootBoard {
 public:
     struct WBBoard {
         ColoredBoard<White> wb;
-        ColoredBoard<Black> bb;
-    };
+        ColoredBoard<Black> bb; };
+    struct PositionalError {
+        int16_t v;
+        int16_t error;
+#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
+        float n;
+        float e;
+        float e2;
+#endif
+        void init(int x); };
+private:
+
 private:
     WBBoard boards[nMaxGameLength];
     unsigned nullReduction[maxDepth+1];
     unsigned verifyReduction[maxDepth+1];
-    
+    TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt;
+    TranspositionTable<PerftEntry, 1, Key>* pt;
+
     unsigned int iMove;                // current half move index of game
 
     int currentMoveIndex;
@@ -93,7 +102,7 @@ private:
     unsigned rootPly;
     unsigned currentPly;
     std::string info;
-    system_clock::time_point start;
+    std::chrono::system_clock::time_point start;
     uint64_t stopTime;
     int wtime;
     int btime;
@@ -107,23 +116,28 @@ private:
     volatile Status stopSearch;
     Mutex stopSearchMutex;
     Condition stoppedCond;
-    
+
     TimedMutex infoTimerMutex;
     TimedMutex stopTimerMutex;
-    Book book;
-    RawScore bestScore;
+    int bestScore;
+    int whiteLimit;
+    int blackLimit;
     static Mutex allocMutex;
-    
+
     template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
-    std::string status(system_clock::time_point, int);
+    std::string status(std::chrono::system_clock::time_point, int);
+    template<int C> int limit() const {
+        if (C==White) return whiteLimit;
+        else return blackLimit; }
+    template<int C> int& limit() {
+        if (C==White) return whiteLimit;
+        else return blackLimit; }
 
 public:
     Eval eval ALIGN_XMM;
     static __thread History history;
     unsigned int depth;
-    TranspositionTable<TTEntry, transpositionTableAssoc, Key>* tt;
-    TranspositionTable<PerftEntry, 1, Key>* pt;
     Console* console;
     Colors color;
     Move bestMove;
@@ -132,48 +146,48 @@ public:
 
     PositionalError pe[nPieces*2+1][nSquares][nSquares];
 
-    RootBoard(Console* c, const Parameters& p, uint64_t, uint64_t);
+    Game(Console* c, const Parameters& p, uint64_t, uint64_t);
 #ifdef QT_GUI_LIB
     virtual
-#endif    
-    ~RootBoard();
+#endif
+    ~Game();
     void* operator new(size_t size);
     void operator delete(void*);
     void clearEE();
     template<Colors C> const ColoredBoard<C>& currentBoard() const;
     template<Colors C> ColoredBoard<(Colors)-C>& nextBoard();
-    const BoardBase& currentBoard() const;
+    const Board& currentBoard() const;
     void go(const std::map<std::string, StringList>&);
     void goReadParam(const std::map<std::string, StringList>&);
     void goExecute();
     void stop();
-    const BoardBase& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
+    const Board& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
     template<Colors C, Phase P, class A, class B, Colors PREVC>
     int search3(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
                 unsigned ply, Extension ext, bool& nextMaxDepth, NodeType nt
 #ifdef QT_GUI_LIB
-        , NodeItem*
+                , NodeItem*
 #endif
-        );
+               );
     template<Colors C, Phase P, class A, class B, Colors PREVC>
     int search4(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
                 unsigned ply, Extension ext, NodeType nt
 #ifdef QT_GUI_LIB
-        , NodeItem*
+                , NodeItem*
 #endif
-        ) __attribute__((always_inline));
+               ) __attribute__((always_inline));
     template<Colors C, Phase P, class A, class B>
     int search9(const bool doNull, const unsigned reduction, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
                 unsigned ply, Extension ext, NodeType nt
 #ifdef QT_GUI_LIB
-        , NodeItem*
+                , NodeItem*
 #endif
-        );
-    
+               );
+
     void perft(unsigned int depth);
     void divide(unsigned int depth);
     template<Colors C> uint64_t perft(const ColoredBoard<C>* b, unsigned int depth) const;
@@ -188,18 +202,18 @@ public:
     std::string getInfo() const;
     template<Colors C> inline void clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const;
     Move findMove(const std::string&) const;
-    void stopTimer(milliseconds hardlimit);
-    void infoTimer(milliseconds repeat);
+    void stopTimer(std::chrono::milliseconds hardlimit);
+    void infoTimer(std::chrono::milliseconds repeat);
     void clearHash();
     void ageHash();
+    void setHashSize(size_t s);
     template<Colors C> int calcReduction(const ColoredBoard<C>& b, int movenr, Move m, int depth);
     std::string commonStatus() const;
-    void openBook(std::string);
-    void resetBook(std::string);
     void setTime(uint64_t wnanoseconds, uint64_t bnanoseconds);
-    int getScore() const { return bestScore; }
+    int getScore() const {
+        return bestScore; }
     void goWait();
     template<Colors C> bool isDraw(const ColoredBoard<C>& b) const;
-    unsigned getRootPly() const { return rootPly; }
-};
+    unsigned getRootPly() const {
+        return rootPly; } };
 #endif

@@ -24,7 +24,7 @@
 					<folderInfo id="0.153824048." name="/" resourcePath="">
 						<toolChain id="org.eclipse.cdt.build.core.prefbase.toolchain.1979996415" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="org.eclipse.cdt.build.core.prefbase.toolchain.1979996415.171803079" name=""/>
-							<builder buildPath="${workspace_loc:/hayabusa/Debug}" id="org.eclipse.cdt.build.core.settings.default.builder.1567273717" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="3" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder buildPath="${workspace_loc:/hayabusa/Debug}" id="org.eclipse.cdt.build.core.settings.default.builder.1567273717" incrementalBuildTarget="hayabusa" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.libs.620596018" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.719600125" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<option id="org.eclipse.cdt.build.core.settings.holder.undef.incpaths.1086691014" name="Undefined Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.undef.incpaths"/>
@@ -34,8 +34,9 @@
 									<listOptionValue builtIn="false" value="/usr/include"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.277623117" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
+								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.277623117" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_C99_STDINT_TR1=1"/>
+									<listOptionValue builtIn="false" value="constexpr"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.240336676" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -45,8 +46,9 @@
 									<listOptionValue builtIn="false" value="/usr/include"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1092199513" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
+								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1092199513" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_C99_STDINT_TR1=1"/>
+									<listOptionValue builtIn="false" value="constexpr"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1337833022" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -58,22 +60,14 @@
 									<listOptionValue builtIn="false" value="/usr/include"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1557360035" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
+								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1557360035" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_C99_STDINT_TR1=1"/>
+									<listOptionValue builtIn="false" value="constexpr"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.726579559" languageId="org.eclipse.cdt.core.gcc" languageName="GNU C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="0.153824048.1497536949" name="testgame.cpp" rcbsApplicability="disable" resourcePath="testgame.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.2131848435">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.2131848435" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
-							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.2078386269" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-								<listOptionValue builtIn="false" value="/usr/include"/>
-								<listOptionValue builtIn="false" value="/usr/local/include"/>
-							</option>
-							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.622479477" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
-						</tool>
-					</fileInfo>
 					<fileInfo id="0.153824048.1380620436" name="move.cpp" rcbsApplicability="disable" resourcePath="move.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.2132487464">
 						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.2132487464" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
 							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.763627539" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
@@ -101,15 +95,6 @@
 							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.908918298" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 						</tool>
 					</fileInfo>
-					<fileInfo id="0.153824048.529587172" name="book.cpp" rcbsApplicability="disable" resourcePath="book.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.179362682">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.179362682" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
-							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.904250441" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-								<listOptionValue builtIn="false" value="/usr/include"/>
-								<listOptionValue builtIn="false" value="/usr/local/include"/>
-							</option>
-							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1103366466" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
-						</tool>
-					</fileInfo>
 					<fileInfo id="0.153824048.951811052" name="stringlist.cpp" rcbsApplicability="disable" resourcePath="stringlist.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.1434360853">
 						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.1434360853" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
 							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.754923723" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
@@ -135,15 +120,6 @@
 								<listOptionValue builtIn="false" value="/usr/local/include"/>
 							</option>
 							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1012358326" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
-						</tool>
-					</fileInfo>
-					<fileInfo id="0.153824048.1891490361" name="rootboard.cpp" rcbsApplicability="disable" resourcePath="rootboard.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.1018554695">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.1018554695" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
-							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1826447777" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-								<listOptionValue builtIn="false" value="/usr/include"/>
-								<listOptionValue builtIn="false" value="/usr/local/include"/>
-							</option>
-							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1553549543" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 						</tool>
 					</fileInfo>
 					<fileInfo id="0.153824048.359764966" name="main.cpp" rcbsApplicability="disable" resourcePath="main.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.1031112299">
@@ -182,15 +158,6 @@
 							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1193236795" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 						</tool>
 					</fileInfo>
-					<fileInfo id="0.153824048.1578682095" name="boardbase.cpp" rcbsApplicability="disable" resourcePath="boardbase.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.1251574183">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.1251574183" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
-							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1191726412" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-								<listOptionValue builtIn="false" value="/usr/include"/>
-								<listOptionValue builtIn="false" value="/usr/local/include"/>
-							</option>
-							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1197393401" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
-						</tool>
-					</fileInfo>
 					<fileInfo id="0.153824048.70740874" name="workthread.cpp" rcbsApplicability="disable" resourcePath="workthread.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.1359257874">
 						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.1359257874" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
 							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.175615775" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
@@ -200,15 +167,6 @@
 							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1253845751" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 						</tool>
 					</fileInfo>
-					<fileInfo id="0.153824048.600503438" name="nodemodel.cpp" rcbsApplicability="disable" resourcePath="nodemodel.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.1474458098">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.1474458098" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
-							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1820205428" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-								<listOptionValue builtIn="false" value="/usr/include"/>
-								<listOptionValue builtIn="false" value="/usr/local/include"/>
-							</option>
-							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1867975777" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
-						</tool>
-					</fileInfo>
 					<fileInfo id="0.153824048.577361155" name="nodeitem.cpp" rcbsApplicability="disable" resourcePath="nodeitem.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.1161687126">
 						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.1161687126" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
 							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.273708426" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
@@ -216,6 +174,15 @@
 								<listOptionValue builtIn="false" value="/usr/local/include"/>
 							</option>
 							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.182514880" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+						</tool>
+					</fileInfo>
+					<fileInfo id="0.153824048.600503438" name="nodemodel.cpp" rcbsApplicability="disable" resourcePath="nodemodel.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.1474458098">
+						<tool id="org.eclipse.cdt.build.core.settings.holder.843740602.1474458098" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.719600125">
+							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1820205428" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
+								<listOptionValue builtIn="false" value="/usr/include"/>
+								<listOptionValue builtIn="false" value="/usr/local/include"/>
+							</option>
+							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1867975777" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 						</tool>
 					</fileInfo>
 					<fileInfo id="0.153824048.1286732117" name="console.cpp" rcbsApplicability="disable" resourcePath="console.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.843740602.1436806962">
@@ -297,6 +264,7 @@
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.635417406" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_C99_STDINT_TR1=1"/>
+									<listOptionValue builtIn="false" value="constexpr"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1771430276" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/iostream"/>
@@ -313,6 +281,7 @@
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1835926065" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_C99_STDINT_TR1=1"/>
+									<listOptionValue builtIn="false" value="constexpr"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.156999100" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/iostream"/>
@@ -329,6 +298,7 @@
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1248131866" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__=1"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_C99_STDINT_TR1=1"/>
+									<listOptionValue builtIn="false" value="constexpr"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1379645430" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/include/g++-v4/iostream"/>
@@ -390,8 +360,9 @@
 									<listOptionValue builtIn="false" value="/usr/include"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.595702247" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
+								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.595702247" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_C99_STDINT_TR1=1"/>
+									<listOptionValue builtIn="false" value="constexpr"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.2054009832" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -401,8 +372,9 @@
 									<listOptionValue builtIn="false" value="/usr/include"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.932639533" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
+								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.932639533" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_C99_STDINT_TR1=1"/>
+									<listOptionValue builtIn="false" value="constexpr"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.807320524" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -414,22 +386,14 @@
 									<listOptionValue builtIn="false" value="/usr/include"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
-								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1529653415" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
+								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1529653415" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="_GLIBCXX_USE_C99_STDINT_TR1=1"/>
+									<listOptionValue builtIn="false" value="constexpr"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1436759769" languageId="org.eclipse.cdt.core.gcc" languageName="GNU C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="0.153824048.2014685202.testgame.cpp" name="testgame.cpp" rcbsApplicability="disable" resourcePath="testgame.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.963743141">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.963743141" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.1537303083">
-							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1795981829" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-								<listOptionValue builtIn="false" value="/usr/include"/>
-								<listOptionValue builtIn="false" value="/usr/local/include"/>
-							</option>
-							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1327897951" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
-						</tool>
-					</fileInfo>
 					<fileInfo id="0.153824048.2014685202.move.cpp" name="move.cpp" rcbsApplicability="disable" resourcePath="move.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.1137191768">
 						<tool id="org.eclipse.cdt.build.core.settings.holder.1137191768" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.1537303083">
 							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.501688931" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
@@ -457,15 +421,6 @@
 							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1020159738" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 						</tool>
 					</fileInfo>
-					<fileInfo id="0.153824048.2014685202.book.cpp" name="book.cpp" rcbsApplicability="disable" resourcePath="book.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.1519246192">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.1519246192" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.1537303083">
-							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.276763646" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-								<listOptionValue builtIn="false" value="/usr/include"/>
-								<listOptionValue builtIn="false" value="/usr/local/include"/>
-							</option>
-							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1823681857" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
-						</tool>
-					</fileInfo>
 					<fileInfo id="0.153824048.2014685202.stringlist.cpp" name="stringlist.cpp" rcbsApplicability="disable" resourcePath="stringlist.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.1150374803">
 						<tool id="org.eclipse.cdt.build.core.settings.holder.1150374803" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.1537303083">
 							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1447234039" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
@@ -491,15 +446,6 @@
 								<listOptionValue builtIn="false" value="/usr/local/include"/>
 							</option>
 							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1064722664" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
-						</tool>
-					</fileInfo>
-					<fileInfo id="0.153824048.2014685202.rootboard.cpp" name="rootboard.cpp" rcbsApplicability="disable" resourcePath="rootboard.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.1712160436">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.1712160436" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.1537303083">
-							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1113016394" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-								<listOptionValue builtIn="false" value="/usr/include"/>
-								<listOptionValue builtIn="false" value="/usr/local/include"/>
-							</option>
-							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1946768058" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 						</tool>
 					</fileInfo>
 					<fileInfo id="0.153824048.2014685202.main.cpp" name="main.cpp" rcbsApplicability="disable" resourcePath="main.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.1426634003">
@@ -536,15 +482,6 @@
 								<listOptionValue builtIn="false" value="/usr/local/include"/>
 							</option>
 							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.717076145" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
-						</tool>
-					</fileInfo>
-					<fileInfo id="0.153824048.2014685202.boardbase.cpp" name="boardbase.cpp" rcbsApplicability="disable" resourcePath="boardbase.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.1293071028">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.1293071028" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.1537303083">
-							<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.2105248537" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-								<listOptionValue builtIn="false" value="/usr/include"/>
-								<listOptionValue builtIn="false" value="/usr/local/include"/>
-							</option>
-							<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1064795576" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 						</tool>
 					</fileInfo>
 					<fileInfo id="0.153824048.2014685202.workthread.cpp" name="workthread.cpp" rcbsApplicability="disable" resourcePath="workthread.cpp" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.34840681">

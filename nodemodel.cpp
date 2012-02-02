@@ -25,30 +25,24 @@
 #include "nodeitem.h"
 
 NodeModel::NodeModel( QObject* parent ):
-        QAbstractItemModel( parent ),
-        rootItem(NULL)
-{
+    QAbstractItemModel( parent ),
+    rootItem(NULL) {
     std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
-    init();
-}
+    init(); }
 
 void NodeModel::init() {
     std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     beginResetModel();
     delete rootItem;
-    NodeData rootData = {};
+    NodeData rootData = { };
     rootItem = new NodeItem( rootData );
-    endResetModel();
-}
+    endResetModel(); }
 
-NodeModel::~NodeModel()
-{
+NodeModel::~NodeModel() {
     std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
-    delete rootItem;
-}
+    delete rootItem; }
 
-QModelIndex NodeModel::index( int row, int column, const QModelIndex& parent ) const
-{
+QModelIndex NodeModel::index( int row, int column, const QModelIndex& parent ) const {
     std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     NodeItem* parentItem;
 
@@ -61,11 +55,9 @@ QModelIndex NodeModel::index( int row, int column, const QModelIndex& parent ) c
     if ( childItem )
         return createIndex( row, column, (void*)childItem );
     else
-        return QModelIndex();
-}
+        return QModelIndex(); }
 
-QModelIndex NodeModel::parent( const QModelIndex &index ) const
-{
+QModelIndex NodeModel::parent( const QModelIndex& index ) const {
     std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     if ( !index.isValid() )
         return QModelIndex();
@@ -76,53 +68,40 @@ QModelIndex NodeModel::parent( const QModelIndex &index ) const
     if ( !parentItem || parentItem == rootItem )
         return QModelIndex();
 
-    return createIndex( parentItem->row(), 0, ( void* )parentItem );
-}
+    return createIndex( parentItem->row(), 0, ( void* )parentItem ); }
 
 
-int NodeModel::rowCount( const QModelIndex &parent ) const
-{
+int NodeModel::rowCount( const QModelIndex& parent ) const {
     std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
-    const NodeItem *parentItem;
+    const NodeItem* parentItem;
 
     if ( !parent.isValid() )
         parentItem = rootItem;
     else
         parentItem = static_cast<NodeItem*>( parent.internalPointer() );
 
-    return parentItem->childCount();
-}
+    return parentItem->childCount(); }
 
-int NodeModel::columnCount( const QModelIndex &/*parent*/ ) const
-{
-    return 1;
-}
+int NodeModel::columnCount( const QModelIndex& /*parent*/ ) const {
+    return 1; }
 
-Qt::ItemFlags NodeModel::flags( const QModelIndex &index ) const
-{
+Qt::ItemFlags NodeModel::flags( const QModelIndex& index ) const {
     if ( !index.isValid() )
         return Qt::ItemIsEnabled;
 
-    return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
-}
+    return Qt::ItemIsEnabled | Qt::ItemIsSelectable; }
 
-QVariant NodeModel::data(const QModelIndex& index, int role) const
-{
+QVariant NodeModel::data(const QModelIndex& index, int role) const {
     std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     if (role == Qt::ToolTipRole) {
-        return static_cast<NodeItem*>(index.internalPointer())->id;
-    }
-    return QVariant();
-}
+        return static_cast<NodeItem*>(index.internalPointer())->id; }
+    return QVariant(); }
 
-QVariant NodeModel::headerData( int /*section*/, Qt::Orientation /*orientation*/, int /*role*/ ) const
-{
-    return QVariant();
-}
+QVariant NodeModel::headerData( int /*section*/, Qt::Orientation /*orientation*/, int /*role*/ ) const {
+    return QVariant(); }
 
 void NodeModel::newData(NodeItem* node) {
     std::lock_guard<std::recursive_mutex> lock(NodeItem::m);
     QModelIndex i = createIndex( node->row(), 0, ( void* )node );
-    emit(dataChanged( i, i));
-}
+    emit(dataChanged( i, i)); }
 #endif

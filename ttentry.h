@@ -28,23 +28,21 @@
 
 template <unsigned int pos, unsigned int width, typename T>
 struct Bitfield {
-    static const unsigned int tBits = CHAR_BIT * sizeof(T);
-    static const unsigned int start = pos / tBits;
-    static const unsigned int startpos = pos % tBits;
-    static const unsigned int end = (pos+width-1)/ tBits;
+    static constexpr unsigned int tBits = CHAR_BIT* sizeof(T);
+    static constexpr unsigned int start = pos / tBits;
+    static constexpr unsigned int startpos = pos % tBits;
+    static constexpr unsigned int end = (pos+width-1)/ tBits;
 
     T data[end+1];
     operator T () const {
         static_assert(end == start, "Bitfield mismatch");
-/*        if (width == 1)        // T is a bool type
-            return data[start] & (T)1 << startpos;
-        else*/ {
+        /*        if (width == 1)        // T is a bool type
+                    return data[start] & (T)1 << startpos;
+                else*/ {
             T unmasked = data[start] >> startpos;
             if (width + startpos != tBits)
                 unmasked &= ((T)1 << width) - 1;
-            return unmasked;
-        }
-    }
+            return unmasked; } }
 
 //    void operator = (T value) {
 //        data &= (1ULL<<width)-1 << pos;
@@ -53,13 +51,10 @@ struct Bitfield {
 
     void operator |= (T value) {
         static_assert(end == start, "Bitfield mismatch");
-        data[start] |= value << startpos;
-    }
+        data[start] |= value << startpos; }
     void reset() {
         static_assert(end == start, "Bitfield mismatch");
-        data[start] &= ~ (((1<<width)-1) << startpos);
-    }
-};
+        data[start] &= ~ (((1<<width)-1) << startpos); } };
 
 /*
  * Transposition table entry. This assumes little endian order.
@@ -78,36 +73,34 @@ union TTEntry {
     enum { upperShift = 35 };
     uint64_t data;
 
-    void zero() { data = 0; };
-};
+    void zero() {
+        data = 0; }; };
 
 struct PawnEntry {
     enum { upperShift = 16 };
     uint64_t passers[nColors];          // 16
-    PackedScore score;                  //  4
+    PackedScore<> score;                  //  4
     uint16_t upperKey;                  //  2
     uint8_t openFiles[nColors];         //  2
     uint8_t weak[nColors];              //  2
     uint8_t dark[nColors];              //  2
     uint8_t light[nColors];             //  2
     int8_t shield2[nColors][nRows];     // 16
-    char fill[2];
-};
+    char fill[2]; };
 
 struct PerftEntry {
     union {
-    Bitfield<0, 6, uint8_t> depth;
-    Bitfield<6, 56, Key> upperKey;
-    Bitfield<62, 1, uint64_t> loBound;
-    Bitfield<63, 1, uint64_t> hiBound;
-    uint64_t data;
-    uint64_t aged; //dummy
-    uint64_t score;
-    };
+        Bitfield<0, 6, uint8_t> depth;
+        Bitfield<6, 56, Key> upperKey;
+        Bitfield<62, 1, uint64_t> loBound;
+        Bitfield<63, 1, uint64_t> hiBound;
+        uint64_t data;
+        uint64_t aged; //dummy
+        uint64_t score; };
     enum { upperShift = 6 };
     uint64_t value;
 
-    void zero() { data = 0; };
-};
+    void zero() {
+        data = 0; }; };
 
 #endif /* TTENTRY_H_ */

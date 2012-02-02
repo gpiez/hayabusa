@@ -19,11 +19,8 @@
 #ifndef COLOREDBOARD_H_
 #define COLOREDBOARD_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
-#include "boardbase.h"
+#include "board.h"
+#include "bits.h"
 
 class Eval;
 class TestRootBoard;
@@ -33,32 +30,31 @@ enum MoveType { AllMoves, NoUnderPromo, NoKingPawn };
  * Board with <color> to move. Serves as a common template for all color-dependant functions.
  */
 template<Colors C>
-class ColoredBoard: public BoardBase {
+class ColoredBoard: public Board {
 
     friend class TestRootBoard;
 //    static uint8_t diaPinTable[nDirs][256];
 
 public:
-    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-    static const uint8_t pov = CI*56;    //for xoring square values to the other side
+    static constexpr unsigned CI = C == White ? 0:1;
+    static constexpr unsigned EI = C == White ? 1:0;
+    static constexpr uint8_t pov = CI*56;    //for xoring square values to the other side
     static unsigned errorPieceIndex[7];
 
     ColoredBoard() = default;
     const ColoredBoard<(Colors)-C>& swapped() const {
         const union {
             const ColoredBoard<C>* const normal;
-            const ColoredBoard<(Colors)-C>* const swapped;
-        } swapper = { this };
-        return *(swapper.swapped);
-    }
+            const ColoredBoard<(Colors)-C>* const swapped; } swapper = { this };
+        return *(swapper.swapped); }
     template<typename T>
     inline ColoredBoard(const T& prev, Move m, __v8hi est);
     template<typename T>
     ColoredBoard(const T& prev, Move m, const Eval&);
     static void initTables();
     template<MoveType>
-    void generateCaptureMoves(Move* &list, Move* &bad) const __attribute__((noinline));
-    void generateCheckEvasions(Move* &list, Move* &bad) const __attribute__((noinline));
+    void generateCaptureMoves(Move*& list, Move*& bad) const __attribute__((noinline));
+    void generateCheckEvasions(Move*& list, Move*& bad) const __attribute__((noinline));
     template<bool AbortOnFirst, typename R>
     R generateMateMoves( Move** good = NULL, Move** bad = NULL) const __attribute__((noinline));
     template<bool AbortOnFirst, typename R>
@@ -66,26 +62,24 @@ public:
     bool generateSkewers( Move** good) const __attribute__((noinline));
     bool generateForks( Move** good) const __attribute__((noinline));
     void generateNonCap(Move*& good, Move*& bad) const __attribute__((noinline));
-    void doMove(BoardBase* next, Move m) const;
-    void doMove(BoardBase* next, Move m, const Eval&) const;
-    void doSpecialMove(BoardBase* next, Move m, uint64_t from, uint64_t to) const;
-    void doSpecialMove(BoardBase* next, Move m, uint64_t from, uint64_t to, const Eval&) const;
+    void doMove(Board* next, Move m) const;
+    void doMove(Board* next, Move m, const Eval&) const;
+    void doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to) const;
+    void doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to, const Eval&) const;
 
     bool isForked() const __attribute__((noinline));
     int isPieceHanging() const;
     inline Key getZobrist() const;
 private:
-    void generateTargetMove(Move* &good, Move* &bad, uint64_t tobit) const;
+    void generateTargetMove(Move*& good, Move*& bad, uint64_t tobit) const;
     template<MoveType>
-    void generateTargetCapture(Move* &list, Move* &bad, uint64_t to, unsigned cap) const;
+    void generateTargetCapture(Move*& list, Move*& bad, uint64_t to, unsigned cap) const;
     uint64_t perft(unsigned int depth) const;
     void divide(unsigned int depth) const;
 
     template<int R>
     uint64_t rank() const {
-        return ::rank<C,R>();
-    }
+        return ::rank<C,R>(); }
     uint64_t generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, uint64_t king, unsigned k) const;
-    uint64_t generateKnightMates(uint64_t block, uint64_t king, unsigned k) const;
-};
+    uint64_t generateKnightMates(uint64_t block, uint64_t king, unsigned k) const; };
 #endif /* COLOREDBOARD_H_ */

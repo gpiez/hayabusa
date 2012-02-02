@@ -23,6 +23,7 @@
 #endif
 #include "workthread.h"
 #include "jobs.h"
+#include "stats.h"
 
 std::multimap<unsigned,Job*>    WorkThread::jobs;
 Mutex                           WorkThread::runningMutex;
@@ -37,42 +38,35 @@ __thread Stats stats;
 __thread unsigned WorkThread::threadId;
 __thread bool isMain = false;
 __thread int lastPositionalEval = 0;
-__thread RepetitionKeys keys;
 __thread WorkThread* workThread;
 __thread unsigned WorkThread::reserved;
 
 #ifdef __WIN32__
 namespace boost {
-    void tss_cleanup_implemented(void) {}
-}
+void tss_cleanup_implemented(void) {} }
 #endif
 
 WorkThread::WorkThread():
     isStopped(false),
     keepRunning(true),
-    job(NULL)
-{
-    board.init();
-}
+    job(NULL) {
+    board.init(); }
 
-WorkThread::~WorkThread()
-{
-}
+WorkThread::~WorkThread() {}
 
 void WorkThread::run() {
     lastPositionalEval = 0;
     reserved = 0;
     stats = &::stats;
     pThreadId = &threadId;
-    RootBoard::history.init();
+    Game::history.init();
     workThread = this;
 
     UniqueLock <Mutex> lock(runningMutex);
     {
         LockGuard<Mutex> stoplock(stoppedMutex);
         isStopped = true;
-        stopped.notify_one();
-    }
+        stopped.notify_one(); }
 #ifdef __linux__
     std::stringstream name;
     name << "WorkThread " << std::find(threads.begin(), threads.end(), this) - threads.begin();
@@ -87,8 +81,7 @@ void WorkThread::run() {
             parent = (*last).first;
             job = (*last).second;
             jobs.erase(last);
-            ++running;
-        }
+            ++running; }
         if (!job) {
             isStopped = true;
             stopped.notify_one();    //wake stop() function
@@ -102,13 +95,11 @@ void WorkThread::run() {
         runningMutex.lock();
         delete job;
         job = NULL;
-        --running;
-    }
-}
+        --running; } }
 
 // Queue a job from a parent. This allows the parent later to start only its
 // own jobs.
-void WorkThread::queueJob(unsigned parent, Job *j) {
+void WorkThread::queueJob(unsigned parent, Job* j) {
     UniqueLock<Mutex> lock(runningMutex);
     if (reserved > 0) --reserved;
     if (running < nThreads)
@@ -120,12 +111,9 @@ void WorkThread::queueJob(unsigned parent, Job *j) {
                 ++running;
                 (*th)->parent = parent;
                 (*th)->starting.notify_one();
-                return;
-            }
-        }
+                return; } }
 
-    jobs.insert(std::pair<unsigned, Job*>(parent, j));
-}
+    jobs.insert(std::pair<unsigned, Job*>(parent, j)); }
 
 void WorkThread::idle(int n) {
 //  TODO decreasing the number of running threads should only allow to start new
@@ -147,27 +135,22 @@ void WorkThread::idle(int n) {
                 (*th)->isStopped = false;
                 ++running;
                 (*th)->starting.notify_one();
-                return;
-            }
-}
+                return; } }
 
 void WorkThread::stop() {
     UniqueLock<Mutex> lock(stoppedMutex);
     if (job) job->stop();
     while (!isStopped) {
         stopped.wait(lock);    //waits until the end of the run loop is reached.
-    }
-}
+    } }
 
 void WorkThread::stopAll() {
     for (auto th = threads.begin(); th !=threads.end(); ++th)
-        (*th)->stop();
-}
+        (*th)->stop(); }
 
 Job* WorkThread::getJob(unsigned parent, unsigned ply) {
     UniqueLock<Mutex> lock(runningMutex);
-    return findJob(parent, ply);
-}
+    return findJob(parent, ply); }
 
 Job* WorkThread::findJob(unsigned parent, unsigned ply) {
     ASSERT(!runningMutex.try_lock());
@@ -177,36 +160,29 @@ Job* WorkThread::findJob(unsigned parent, unsigned ply) {
         Job* j = (*wjob).second;
         if (j->getPly() >= ply && j->getPly() > bestPly) {
             bestPly = j->getPly();
-            ij = wjob;
-        }
-    }
+            ij = wjob; } }
 
     if (ij != jobs.end() ) {
         jobs.erase(ij);
-        return ij->second;
-    }
-    
-    return 0;
-}
+        return ij->second; }
+
+    return 0; }
 
 bool WorkThread::canQueued(unsigned /*parent*/, int ) {
     UniqueLock<Mutex> lock(runningMutex);
 //     if (parent && getReserved(threads[parent]->parent) + running >= nThreads) return false;
-    return running < nThreads;
-}
+    return running < nThreads; }
 
 void WorkThread::printJobs() {
     for (auto i=jobs.begin(); i!=jobs.end(); ++i) {
-        std::cout << (*i).first << ": " << (*i).second << std::endl;
-    }
-}
+        std::cout << (*i).first << ": " << (*i).second << std::endl; } }
 
 void WorkThread::init() {
 #ifdef __WIN32__
     nThreads = 4;
-#else    
+#else
     nThreads = sysconf(_SC_NPROCESSORS_ONLN);
-#endif    
+#endif
     if (nThreads == 0) nThreads = 1;
     for (logWorkThreads = 0; 1U<<logWorkThreads < nThreads; ++logWorkThreads)
         ;
@@ -219,9 +195,7 @@ void WorkThread::init() {
         UniqueLock<Mutex> lock(th->stoppedMutex);
         while (!th->isStopped)
             th->stopped.wait(lock);    //waits until initialized
-        th->getThreadId() = i;
-    }
-}
+        th->getThreadId() = i; } }
 
 
 WorkThread* WorkThread::findFree() {
@@ -231,27 +205,19 @@ WorkThread* WorkThread::findFree() {
         if (!(*th)->isStopped)
             ASSERT(!"still running jobs");
 #endif
-    return threads.front();
-}
+    return threads.front(); }
 
 
 const std::vector< WorkThread* >& WorkThread::getThreads() {
-    return threads;
-}
+    return threads; }
 
-void WorkThread::clearStats()
-{
+void WorkThread::clearStats() {
     for (unsigned int i=0; i<nWorkThreads; ++i) {
-        threads[i]->getStats()->node = 0;
-    }
-}
+        threads[i]->getStats()->node = 0; } }
 
 unsigned int WorkThread::getReserved(unsigned i) {
     ASSERT(i<nWorkThreads);
-    return threads[i]->reserved;
-}
+    return threads[i]->reserved; }
 
-void WorkThread::reserve(unsigned int n)
-{
-    reserved = std::min(nThreads/2, n);
-}
+void WorkThread::reserve(unsigned int n) {
+    reserved = std::min(nThreads/2, n); }

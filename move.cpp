@@ -17,15 +17,12 @@
 
 */
 #include "move.h"
-#include "constants.h"
 
-std::string Move::string() const
-{
+std::string Move::string() const {
     std::string temp;
     if (!data) {
-        return "null";
-    }
-    temp += (const char*[]) {"","R","B","Q","N","","K"}[piece() & 7];
+        return "null"; }
+    temp += (const char*[]) {"","R","B","Q","N","","K" }[piece() & 7];
     temp += (from() & 7) + 'a';
     temp += (from() >> 3) + '1';
     temp += capture() ? 'x' : '-';
@@ -34,33 +31,26 @@ std::string Move::string() const
     if (isSpecial()) {
         if ((piece() & 7) < Pawn) {
             temp += " RBQN"[piece() & 7];
-            temp = temp.substr(1);
-        } else if ((piece() & 7) == King) {
+            temp = temp.substr(1); }
+        else if ((piece() & 7) == King) {
             if ((to() & 7) == 6)
                 return "O-O";
             else
-                return "O-O-O";
-        } else
-            temp += " ep";
-    }
-    return temp;
-}
+                return "O-O-O"; }
+        else
+            temp += " ep"; }
+    return temp; }
 
-std::string Move::algebraic() const
-{
+std::string Move::algebraic() const {
     std::string temp;
     if (!data) {
-        return "0000";
-    }
+        return "0000"; }
     temp += (from() & 7) + 'a';
     temp += (from() >> 3) + '1';
     temp += (to() & 7) + 'a';
     temp += (to() >> 3) + '1';
     if (isSpecial()) {
         if ((piece() & 7) < Pawn) {
-            temp += " RBQN"[piece() & 7];
-        }
-    }
-    return temp;
-}
+            temp += " RBQN"[piece() & 7]; } }
+    return temp; }
 

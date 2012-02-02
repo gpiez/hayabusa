@@ -30,8 +30,7 @@ public:
     ~StringList();
     std::string join(const char* = "");
     StringList& operator << (const char*);
-    std::map<std::string, StringList> parse(const StringList&) const;
-};
+    std::map<std::string, StringList> parse(const StringList&) const; };
 
 StringList split(std::string str, std::string delims = std::string(" "));
 std::string simplified(std::string str);
@@ -41,8 +40,7 @@ T convert(std::string str) {
     std::stringstream ss(str);
     T x;
     ss >> x;
-    return x;
-}
+    return x; }
 template<>
 bool convert<bool>(std::string str);
 

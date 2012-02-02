@@ -19,32 +19,21 @@
 #ifndef CONSOLE_H_
 #define CONSOLE_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
-#ifdef QT_NETWORK_LIB
-#include <QtNetwork/QTcpServer>
-#include <QtNetwork/QTcpSocket>
-#endif
-
-#include "move.h"
-#include "score.h"
 #include "stringlist.h"
 
 class WorkThread;
-class RootBoard;
+class Game;
 class Evolution;
 
 class Console
 #if defined(QT_GUI_LIB)
-    : public QApplication {
+        : public QApplication {
     Q_OBJECT
 #else
 #if defined(QT_NETWORK_LIB)
-    : public QCoreApplication {
+        : public QCoreApplication {
     Q_OBJECT
-#else    
+#else
 {
 #endif
 #endif
@@ -66,19 +55,23 @@ class Console
     void ordering(StringList);
     void parse(std::string);
     void eval(StringList);
+#ifdef USE_GENETIC
     void selfgame(StringList);
     void parmtest(StringList);
     void egtest(StringList);
-private
+#endif
+    private
 #if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
     slots
 #endif
-             :
+:
     void privateSend(std::string);
 
 private:
-    RootBoard* board;
+    Game* game;
+#ifdef USE_GENETIC
     Evolution* evolution;
+#endif
     StringList args;
     std::string answer;
     bool debugMode;
@@ -86,8 +79,8 @@ private:
     std::map<std::string, void (Console::*)(StringList)> dispatcher;
 
 public:
-#ifdef QT_NETWORK_LIB
-    QSocketNotifier *notifier;
+#if defined(QT_GUI_LIB)
+    QSocketNotifier* notifier;
     QTcpServer* server;
     QTcpSocket* socket;
 #endif
@@ -96,7 +89,7 @@ public:
     int exec();
     void send(std::string);
 
-#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
+#if defined(QT_GUI_LIB)
     QFile* stdinFile;
 public slots:
     void dataArrived();
@@ -107,7 +100,7 @@ public slots:
 
 signals:
     void signalSend(std::string);
-#endif    
+#endif
 };
 
 #endif /* CONSOLE_H_ */

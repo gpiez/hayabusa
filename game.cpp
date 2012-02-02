@@ -16,45 +16,50 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-#include <pch.h>
-#include <memory>
-#include "rootboard.h"
-#include "rootboard.tcc"
-#include "workthread.h"
-#include "console.h"
-#include "boardbase.tcc"
+#include "game.h"
+#include "game.tcc"
 #include "rootsearch.tcc"
 #include "jobs.tcc"
 #include "score.tcc"
-#include "transpositiontable.tcc"
-#include "book.h"
 
-__thread History RootBoard::history;
+using namespace std::chrono;
+
+__thread History Game::history;
+__thread RepetitionKeys keys;
+
 std::map<void*, void*> allocs;
-Mutex RootBoard::allocMutex;
+Mutex Game::allocMutex;
 
-void RootBoard::stopTimer(milliseconds hardlimit) {
-    UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
-/*#ifdef __WIN32__    
-    Sleep(hardlimit.count()*1000);
-#else
-    timespec ts = { hardlimit.count()/1000, (hardlimit.count()%1000)*1000000 };
-    nanosleep(&ts, NULL);
-#endif    */
-    stopSearch = Stopping;
+void Game::PositionalError::init(int x) {
+    v = 0;
+    error = x;
+#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
+    n = 0.0;
+    e = 0.0;
+    e2 = 0.0;
+#endif
 }
 
-std::string RootBoard::commonStatus() const {
+void Game::stopTimer(milliseconds hardlimit) {
+    UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
+    /*#ifdef __WIN32__
+        Sleep(hardlimit.count()*1000);
+    #else
+        timespec ts = { hardlimit.count()/1000, (hardlimit.count()%1000)*1000000 };
+        nanosleep(&ts, NULL);
+    #endif    */
+    stopSearch = Stopping; }
+
+std::string Game::commonStatus() const {
     std::stringstream g;
     g.imbue(std::locale("de_DE"));
     g << "D" << std::setfill('0') << std::setw(2) << depth-(eval.dMaxExt)
-        << " " << std::setfill(' ') << std::fixed << std::setprecision(1) << std::showpoint << std::setw(9) << duration_cast<milliseconds>(system_clock::now()-start).count()/1000.0
-        << "s " << std::setw(13) << getStats().node
-        << " ";
-    return g.str();
-}
+      << " " << std::setfill(' ') << std::fixed << std::setprecision(1) << std::showpoint << std::setw(9) << duration_cast<milliseconds>(system_clock::now()-start).count()/1000.0
+      << "s " << std::setw(13) << getStats().node
+      << " ";
+    return g.str(); }
 
-void RootBoard::infoTimer(milliseconds repeat) {
+void Game::infoTimer(milliseconds repeat) {
     static int lastCurrentMoveIndex = 0;
     while(!infoTimerMutex.try_lock()) {
         UniqueLock<TimedMutex> lock(infoTimerMutex, repeat);
@@ -64,19 +69,17 @@ void RootBoard::infoTimer(milliseconds repeat) {
         std::stringstream g;
         if (!Options::humanreadable && !Options::quiet && (currentMoveIndex != lastCurrentMoveIndex)) {
             g << "info currmove " << currentMove.algebraic() << " currmovenumber " << currentMoveIndex << std::endl;
-            lastCurrentMoveIndex = currentMoveIndex;
-        }
+            lastCurrentMoveIndex = currentMoveIndex; }
         if (Options::currline) {
-            g << "info currline " << getLine() << std::endl;
-        }
+            g << "info currline " << getLine() << std::endl; }
         if (Options::humanreadable) {
-            g << commonStatus() 
-            << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t*1000+1.0) << "/s "
-            << getLine();
+            g << commonStatus()
+              << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t*1000+1.0) << "/s "
+              << getLine();
             std::string str = g.str();
             str.resize(80,' ');
-            std::cout << str << "\015" << std::flush;
-        } else {
+            std::cout << str << "\015" << std::flush; }
+        else {
             g   << "info"
                 << " nodes " << ntemp
                 << " nps " << (1000*ntemp)/(t+1)
@@ -84,20 +87,18 @@ void RootBoard::infoTimer(milliseconds repeat) {
                 ;
             console->send(g.str());
 #ifdef MYDEBUG
-#if 0        
-        g << std::endl;
-        g << "info string ";
-        g << " bmob1 " << eval.bmob1 / (eval.bmobn+0.1);
-        g << " bmob2 " << eval.bmob2 / (eval.bmobn+0.1);
-        g << " bmob3 " << eval.bmob3 / (eval.bmobn+0.1);
-#endif        
-#endif            
-        }
-    }
-    infoTimerMutex.unlock();
-}
+#if 0
+            g << std::endl;
+            g << "info string ";
+            g << " bmob1 " << eval.bmob1 / (eval.bmobn+0.1);
+            g << " bmob2 " << eval.bmob2 / (eval.bmobn+0.1);
+            g << " bmob3 " << eval.bmob3 / (eval.bmobn+0.1);
+#endif
+#endif
+        } }
+    infoTimerMutex.unlock(); }
 
-RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_t phashSize):
+Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSize):
     iMove(0),
     currentPly(0),
     wtime(300000),
@@ -108,8 +109,7 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
     stopSearch(Stopped),
     eval(phashSize, p),
     console(c),
-    color(White)
-{
+    color(White) {
 //     eval.setParameters(p);
     int null = 2;
     int verify = 2;
@@ -118,15 +118,13 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
     for (unsigned i=eval.dMaxExt+2; i<=maxDepth; ++i) {
         while (nullIncr & 1) {
             null++;
-            nullIncr >>= 1;
-        }
+            nullIncr >>= 1; }
         nullReduction[i] = i-null;
         nullIncr >>= 1;
-        
+
         while (verifyIncr & 1) {
             verify++;
-            verifyIncr >>= 1;
-        }
+            verifyIncr >>= 1; }
         verifyReduction[i] = i-verify;
         verifyIncr >>= 1;
 //         if (i>eval.dMaxExt) std::cout << std::setw(2) << i-eval.dMaxExt << ": " << nullReduction[i]-eval.dMaxExt << std::endl;
@@ -140,98 +138,77 @@ RootBoard::RootBoard(Console *c, const Parameters& p, uint64_t hashSize, uint64_
 #endif
 }
 
-RootBoard::~RootBoard() {
-    delete tt;
-}
+Game::~Game() {
+    delete tt; }
 
-void* RootBoard::operator new(size_t size)
-{
+void* Game::operator new(size_t size) {
     const size_t alignment = 64;
     const size_t space = size + alignment - 1;
     void* allocp = malloc(space);
-    
+
     void* p = (void*) (((size_t)allocp + alignment - 1) & -(size_t)64);
     allocMutex.lock();
     allocs[p] = allocp;
     allocMutex.unlock();
-    return p;
-}
+    return p; }
 
-void RootBoard::operator delete(void* p)
-{
+void Game::operator delete(void* p) {
     allocMutex.lock();
     ASSERT(allocs.find(p) != allocs.end());
-    void* allocp = allocs.at(p); 
+    void* allocp = allocs.at(p);
     allocs.erase(p);
     allocMutex.unlock();
-    free(allocp);
-}
+    free(allocp); }
 
-std::string RootBoard::status(system_clock::time_point now, int score)
-{
+std::string Game::status(system_clock::time_point now, int score) {
     unsigned d = depth - eval.dMaxExt;
     std::stringstream g;
     milliseconds t = duration_cast<milliseconds>(now-start);
     if (Options::humanreadable) {
-        g << commonStatus() 
-            << Score<White>::str(score) << " " << tt->bestLine(*this);
-    } else {
+        g << commonStatus()
+          << Score<White>::str(score) << " " << tt->bestLine(*this); }
+    else {
         g   << "info depth " << d << " time " << t.count()
-            << " nodes " << getStats().node 
+            << " nodes " << getStats().node
             << " pv " << tt->bestLine(*this)
-            << " score cp " << score*color
+            << " score cp " << score* color
             << " nps " << (1000*getStats().node)/(t.count()+1)
-            ;
-    }
+            ; }
 #ifdef QT_GUI_LIB
     emit(signalInfo(d, (uint64_t)(now-start).count(), getStats().node, QString::fromUtf8(Score<White>::str(score).c_str()), QString::fromStdString(tt->bestLine(*this))));
 #endif
-    return g.str();
-}
+    return g.str(); }
 
-void RootBoard::clearEE() {
+void Game::clearEE() {
     for (int p=-(int)nPieces; p<=(int)nPieces; ++p)
         for (unsigned int sq1=0; sq1<nSquares; ++sq1)
-        for (unsigned int sq=0; sq<nSquares; ++sq) {
-            PositionalError& pe = this->pe[p+nPieces][sq1][sq];
-            pe.v = 0;
-            pe.error = eval.standardError;
-#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
-            pe.n = 0.0;
-            pe.e = 0.0;
-            pe.e2 = 0.0;
-#endif            
-        }
-}
+            for (unsigned int sq=0; sq<nSquares; ++sq)
+                pe[p+nPieces][sq1][sq].init(eval.standardError); }
 
 template<>
-const ColoredBoard<White>& RootBoard::currentBoard<White>() const {
-    return boards[iMove].wb;
-}
+const ColoredBoard<White>& Game::currentBoard<White>() const {
+    return boards[iMove].wb; }
 
 template<>
-const ColoredBoard<Black>& RootBoard::currentBoard<Black>() const {
-    return boards[iMove].bb;
-}
+const ColoredBoard<Black>& Game::currentBoard<Black>() const {
+    return boards[iMove].bb; }
 
 template<>
-ColoredBoard<Black>& RootBoard::nextBoard<White>() {
-    return boards[iMove].bb;
-}
+ColoredBoard<Black>& Game::nextBoard<White>() {
+    return boards[iMove].bb; }
 
 template<>
-ColoredBoard<White>& RootBoard::nextBoard<Black>() {
-    return boards[iMove+1].wb;
-}
+ColoredBoard<White>& Game::nextBoard<Black>() {
+    return boards[iMove+1].wb; }
 
-const BoardBase& RootBoard::currentBoard() const {
+const Board& Game::currentBoard() const {
     if (color == White)
         return currentBoard<White>();
     else
-        return currentBoard<Black>();
-}
+        return currentBoard<Black>(); }
 
-const BoardBase& RootBoard::setup(const std::string& str) {
+const Board& Game::setup(const std::string& str) {
+    using namespace SquareIndex;
     static const StringList tokens = StringList() << "fen" << "bm" << "am" << "id" << "pm";
     auto tl = split("fen " + str, "; ").parse(tokens);
     if (tl.find("fen") == tl.end()) return currentBoard();
@@ -253,10 +230,9 @@ const BoardBase& RootBoard::setup(const std::string& str) {
     case 'w':
     case 'W':
         color = White;
-        break;
-    }
+        break; }
 
-    BoardBase& board = color == White ? (BoardBase&)currentBoard<White>() : (BoardBase&)currentBoard<Black>();
+    Board& board = color == White ? (Board&)currentBoard<White>() : (Board&)currentBoard<Black>();
 
     board.init();
     board.fiftyMoves = fiftyTemp;
@@ -277,8 +253,7 @@ const BoardBase& RootBoard::setup(const std::string& str) {
             break;
         case 'p':
             if (y==0 || y==7) {
-                std::cerr << "Illegal pawn position" << std::endl;
-            }
+                std::cerr << "Illegal pawn position" << std::endl; }
             board.setPiece<Black>( Pawn, square, eval);
             bp++;
             break;
@@ -304,8 +279,7 @@ const BoardBase& RootBoard::setup(const std::string& str) {
             break;
         case 'P':
             if (y==0 || y==7) {
-                std::cerr << "Illegal pawn position" << std::endl;
-            }
+                std::cerr << "Illegal pawn position" << std::endl; }
             board.setPiece<White>( Pawn, square, eval);
             wp++;
             break;
@@ -330,9 +304,7 @@ const BoardBase& RootBoard::setup(const std::string& str) {
             y--;
             break;
         default:
-            std::cerr << "Unknown char " << piecePlacement[p] << " in FEN import";
-        }
-    }
+            std::cerr << "Unknown char " << piecePlacement[p] << " in FEN import"; } }
 
     for ( unsigned int p=0; p<(unsigned int)castling.length(); p++ )
         switch ( castling[p] ) {
@@ -359,8 +331,7 @@ const BoardBase& RootBoard::setup(const std::string& str) {
                 board.cep.castling.color[1].k = true;
             else
                 std::cerr << "Illegal black castling" << std::endl;
-            break;
-        }
+            break; }
 
     if ( enPassant.length() == 2 && enPassant[0] >= 'a' && enPassant[0] <= 'h' && ( enPassant[1] == '3' || enPassant[1] == '6' ) )
         board.cep.enPassant = 1ULL << (8 * ((enPassant[1] - '3' )/3 + 3) + enPassant[0] - 'a');
@@ -381,38 +352,31 @@ const BoardBase& RootBoard::setup(const std::string& str) {
 
     if (std::max(wq,1)-1 + std::max(wr,2)-2 + std::max(wb,2)-2 + std::max(wn,2)-2 + wp > 8)
         std::cerr << "To many promoted white pieces" << std::endl;
-    
+
     if (std::max(bq,1)-1 + std::max(br,2)-2 + std::max(bb,2)-2 + std::max(bn,2)-2 + bp > 8)
         std::cerr << "To many promoted black pieces" << std::endl;
-        
+
     if (tl.find("bm") != tl.end()) {
         Move m = findMove(tl["bm"].front());
         if (m.data) {
-            std::cerr << "Move " << tl["bm"].front() << " not recognized" << std::endl;
-        }
-        bm = m;
-    }
+            std::cerr << "Move " << tl["bm"].front() << " not recognized" << std::endl; }
+        bm = m; }
     if (getStats().ttuse) tt->agex();
-    
+
     rootPly = 0;
     board.positionalScore = eval(board, color);
     board.isExact = true;
-    return board;
-}
+    return board; }
 
-Move RootBoard::findMove(const std::string& ) const {
-    return Move(0,0,0);
-}
+Move Game::findMove(const std::string& ) const {
+    return Move(0,0,0); }
 
 
-void RootBoard::go(const std::map<std::string, StringList>& param )
-{
+void Game::go(const std::map<std::string, StringList>& param ) {
     goReadParam(param);
-    goExecute();
-}
+    goExecute(); }
 
-void RootBoard::goReadParam(const std::map<std::string, StringList>& param )
-{
+void Game::goReadParam(const std::map<std::string, StringList>& param ) {
     infinite = param.count("infinite");
 
     if (param.find("wtime") != param.end())
@@ -450,69 +414,58 @@ void RootBoard::goReadParam(const std::map<std::string, StringList>& param )
     if (param.find("movetime") != param.end())
         movetime = convert((*param.find("movetime")).second.front());
     else
-        movetime = 0;
-}
+        movetime = 0; }
 
-void RootBoard::goExecute()
-{
+void Game::goExecute() {
     Job* job;
     if (color == White)
         job = new RootSearchJob<White>(*this, keys, maxSearchDepth);
     else
         job = new RootSearchJob<Black>(*this, keys, maxSearchDepth);
-    WorkThread::findFree()->queueJob(0U, job);
-}
+    WorkThread::findFree()->queueJob(0U, job); }
 
-void RootBoard::stop() {
+void Game::stop() {
     UniqueLock<Mutex> l(stopSearchMutex);
     if (stopSearch == Running) stopSearch = Stopping;
     while (stopSearch != Stopped)
-        stoppedCond.wait(l);
-}
+        stoppedCond.wait(l); }
 
-void RootBoard::perft(unsigned int depth) {
+void Game::perft(unsigned int depth) {
     if (color == White)
         WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*this, depth));
     else
-        WorkThread::findFree()->queueJob(0U, new RootPerftJob<Black>(*this, depth));
-}
+        WorkThread::findFree()->queueJob(0U, new RootPerftJob<Black>(*this, depth)); }
 
-void RootBoard::divide(unsigned int depth) {
+void Game::divide(unsigned int depth) {
     if (color == White)
         WorkThread::findFree()->queueJob(0U, new RootDivideJob<White>(*this, depth));
     else
-        WorkThread::findFree()->queueJob(0U, new RootDivideJob<Black>(*this, depth));
-}
+        WorkThread::findFree()->queueJob(0U, new RootDivideJob<Black>(*this, depth)); }
 
-Stats RootBoard::getStats() const {
+Stats Game::getStats() const {
     auto& threads = WorkThread::getThreads();
     Stats sum = * (* threads.begin() )->getStats();
     for (auto th = threads.begin() + 1; th !=threads.end(); ++th) {
         for (unsigned int i=0; i<sizeof(Stats)/sizeof(uint64_t); ++i)
-            sum.data[i] += (*th)->getStats()->data[i];
-    }
-    return sum;
-}
+            sum.data[i] += (*th)->getStats()->data[i]; }
+    return sum; }
 
-std::string RootBoard::getLine() const {
+std::string Game::getLine() const {
     std::stringstream ss;
     ss << std::setw(2) << currentMoveIndex << "/" << std::setw(2) << nMoves << " ";
     std::string temp(ss.str());
     for (unsigned i=1; i<=currentPly; ++i) {
-        temp += line[i].string() + " ";
-    }
-    return temp;
-}
+        temp += line[i].string() + " "; }
+    return temp; }
 
-bool RootBoard::doMove(Move m) {
+bool Game::doMove(Move m) {
     if (color == White)
         return doMove<White>(m);
     else
-        return doMove<Black>(m);
-}
+        return doMove<Black>(m); }
 // returns true on error
 template<Colors C>
-bool RootBoard::doMove(Move m) {
+bool Game::doMove(Move m) {
     WorkThread::stopAll();
     MoveList ml(currentBoard<C>());
 
@@ -530,53 +483,44 @@ bool RootBoard::doMove(Move m) {
                 if (C == Black) iMove++;
                 color = (Colors)-C;
                 rootPly++;
-                return false;
-            }
-        }
-    }
-    return true;
-}
+                return false; } } }
+    return true; }
 
-std::string RootBoard::getInfo() const {
-    return info;
-}
+std::string Game::getInfo() const {
+    return info; }
 
-void RootBoard::clearHash()
-{
+void Game::clearHash() {
     tt->clear();        //FIXME needs locking
     eval.ptClear();
     history.init();
-    clearEE();
-}
+    clearEE(); }
 
-void RootBoard::openBook(std::string bstr)
-{
-    book.read(bstr);
-}
+void Game::setHashSize(size_t s) {
+    tt->setSize(s); }
 
-void RootBoard::resetBook(std::string bstr)
-{
-    book.read(bstr);
-    book.resetWeights();
-    book.write(bstr);
-}
-
+//void RootBoard::openBook(std::string bstr)
+//{
+//    book.read(bstr);
+//}
+//
+//void RootBoard::resetBook(std::string bstr)
+//{
+//    book.read(bstr);
+//    book.resetWeights();
+//    book.write(bstr);
+//}
+//
 int score2tt(int s) {
-    return inline_score2tt(s);
-}
+    return inline_score2tt(s); }
 
 int tt2Score(int s) {
-    return inline_tt2Score(s);
-}
+    return inline_tt2Score(s); }
 
-void RootBoard::setTime(uint64_t w, uint64_t b)
-{
+void Game::setTime(uint64_t w, uint64_t b) {
     wtime = w / 1000000;
-    btime = b / 1000000;
-}
+    btime = b / 1000000; }
 
-void RootBoard::goWait()
-{
+void Game::goWait() {
     Job* job;
     stats.node = 0;
     if (color == White)
@@ -584,5 +528,4 @@ void RootBoard::goWait()
     else
         job = new RootSearchJob<Black>(*this, keys, maxSearchDepth);
     job->job();
-    delete job;
-}
+    delete job; }

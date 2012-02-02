@@ -22,24 +22,12 @@
 #ifndef PCH_H_
 #include <pch.h>
 #endif
-
 #include "constants.h"
 #include "move.h"
 
-typedef int16_t RawScore;
-class BoardBase;
+class Board;
 
-// struct PlainScore {
-//     int         v;
-// };
-// 
-// struct MoveScore {
-//     int         v;
-//     Move        m;
-// };
-
-template<Colors C> struct Score
-{
+template<Colors C> struct Score {
     int v; //Absolute score. Less is good for black, more is good for white.
 
     enum { isNotShared = true };
@@ -61,15 +49,12 @@ template<Colors C> struct Score
     unsigned int isNotReady() const __attribute__((__always_inline__));
     void join() const {};
     void setReady() {};
-    void setNotReady() {};
-};
+    void setNotReady() {}; };
 
 template<Colors C> struct VolatileScore {
-     typedef volatile Score<C> Type;
-};
+    typedef volatile Score<C> Type; };
 
-template<Colors C> struct SharedScore: public VolatileScore<C>::Type
-{
+template<Colors C> struct SharedScore: public VolatileScore<C>::Type {
     using Score<C>::v;
 
     typedef Score<C> Base;
@@ -91,13 +76,12 @@ public:
         notReady(0),
         nChildren(0),
         parent(nullptr),
-        children({nullptr})
+        children( {nullptr })
     {}
     ~SharedScore() {
         ASSERT(!notReady);
         ASSERT(!nChildren);
-        if (parent) parent->deleteChild(this);
-    }
+        if (parent) parent->deleteChild(this); }
 
     // construct a shared score depending on the parameter
     // if the parameter score gets a better value, a new
@@ -108,42 +92,35 @@ public:
         notReady(0),
         nChildren(0),
         parent(&a),
-        children({nullptr})
+        children( {nullptr })
 
     {
-        a.addChild(this);
-    }
+        a.addChild(this); }
 
     explicit SharedScore(int a):
         Score<C>(a),
         notReady(0),
         nChildren(0),
         parent(nullptr),
-        children({nullptr})
-    {
-    }
+        children( {nullptr }) {}
 
     const Score<C>& unshared() const {
-        return *this;
-    }
-    
+        return *this; }
+
     Score<C>& unshared() {
-        return *this;
-    }
+        return *this; }
 
     void join();
 
     unsigned int isNotReady() const {
-        return notReady;
-    }
+        return notReady; }
 
     bool max(const int b);
     void setReady();
     void setNotReady();
     void addChild(SharedScore<C>*) const;
     void deleteChild(SharedScore<C>*) const;
-    void maximizeChildren(int) const;
-};
+    void maximizeChildren(int) const; };
 
 /*
  * "abstract" forward template for Score with bestMove, not used
@@ -155,13 +132,11 @@ template<Colors C> struct ScoreMove<C, Score<C> >: public Score<C> {
     using Score<C>::v;
     Move m;
     using Score<C>::max;
-    bool max(const int b, Move bm);
-};
+    bool max(const int b, Move bm); };
 
 template<Colors C> struct ScoreMove<C, SharedScore<C> >: public  SharedScore<C> {
     using SharedScore<C>::v;
     Move m;
     using SharedScore<C>::max;
-    bool max(const int b, Move bm);
-};
+    bool max(const int b, Move bm); };
 #endif // SCORE_H

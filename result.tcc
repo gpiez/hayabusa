@@ -23,30 +23,25 @@
 
 template<typename T>
 Result<T>::Result(T x):
-    notReady(0)
-{
-    value = x;
-}
+    notReady(0) {
+    value = x; }
 template<typename T>
 Result<T>::operator T () {
     UniqueLock<Mutex> lock(readyMutex);
     while (notReady)
         readyCond.wait(lock);
-    return value;
-}
+    return value; }
 
 template<typename T>
 void Result<T>::update(Result<T>& data) {
     T dataValue = data;
     UniqueLock<Mutex> lock(valueMutex);
-    value += dataValue;
-}
+    value += dataValue; }
 
 template<typename T>
 void Result<T>::update(T data) {
     UniqueLock<Mutex> lock(valueMutex);
-    value += data;
-}
+    value += data; }
 
 template<typename T>
 void Result<T>::setReady() {
@@ -60,7 +55,6 @@ template<typename T>
 void Result<T>::setNotReady() {
     readyMutex.lock();
     ++notReady;
-    readyMutex.unlock();
-}
+    readyMutex.unlock(); }
 
 #endif // RESULT_TCC_

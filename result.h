@@ -23,8 +23,7 @@
 #include <pch.h>
 #endif
 
-template< typename T > class Result
-{
+template< typename T > class Result {
     T value;
     volatile unsigned int notReady;
     Mutex valueMutex;
@@ -40,7 +39,6 @@ public:
     void update(Result<T>& data);
     void update(T data);
     void setReady();
-    void setNotReady();
-};
+    void setNotReady(); };
 
 #endif // RESULT_H

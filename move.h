@@ -19,11 +19,8 @@
 #ifndef MOVE_H_
 #define MOVE_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
 #include "constants.h"
+#include <string>
 
 struct Move {
     int32_t data;
@@ -34,27 +31,19 @@ struct Move {
         ASSERT(to < 64);
         ASSERT(capture < King);
         ASSERT(piece <= King);
-        data = from + (to << 8) + (capture << 16) + (piece << 24) + (special << 31);
-    }
+        data = from + (to << 8) + (capture << 16) + (piece << 24) + (special << 31); }
     unsigned int from() const {
-        return (uint8_t)data;
-    }
+        return (uint8_t)data; }
     unsigned int to() const {
-        return (uint8_t)(data >> 8);
-    }
+        return (uint8_t)(data >> 8); }
     unsigned int fromto() const {
-        return (uint16_t)data;
-    }
+        return (uint16_t)data; }
     unsigned int capture() const {
-        return (uint8_t)(data >> 16);
-    }
+        return (uint8_t)(data >> 16); }
     unsigned int piece() const {
-        return (uint32_t)data >> 24;
-    }
+        return (uint32_t)data >> 24; }
     bool isSpecial() const {
-        return data<0;
-    }
+        return data<0; }
     std::string string() const;
-    std::string algebraic() const;
-};
+    std::string algebraic() const; };
 #endif /* MOVE_H_ */

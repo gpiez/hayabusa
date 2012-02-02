@@ -19,16 +19,14 @@
 #ifndef JOBS_H_
 #define JOBS_H_
 
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
-#include "rootboard.h"
-#include "console.h"
-#include "boardbase.h"
-#include "workthread.h"
-#include "nodeitem.h"
+#include "game.h"
+#include "coloredboard.h"
+#include "move.h"
 #include "options.h"
+
+#ifdef QT_GUI_LIB
+#include "nodeitem.h"
+#endif
 
 // Abstract base class for functions called to be executed by a different thread
 // To execute a function in a different thread, create a ***Job object with the
@@ -40,12 +38,12 @@ struct Job {
     virtual ~Job() {};            // the for calling destructor of QObject in signalJob
     virtual void job() = 0;
     virtual void stop() {};
-    virtual unsigned getPly() { return 0; };
-};
+    virtual unsigned getPly() {
+        return 0; }; };
 
 template<Colors C, typename A, typename B, typename T>
 class SearchJob: public Job {
-    RootBoard& rb;
+    Game& game;
     const T& b;
     bool doNull;
     unsigned reduction;
@@ -63,79 +61,59 @@ class SearchJob: public Job {
     NodeItem* startnode;
 #endif
 public:
-    SearchJob(RootBoard& rb, const T& b, bool, unsigned, Move m, unsigned int depth, A& alpha, const B& beta,
+    SearchJob(Game& rb, const T& b, bool, unsigned, Move m, unsigned int depth, A& alpha, const B& beta,
               ScoreMove<C,A>& retval, unsigned ply, unsigned parent, const RepetitionKeys& rep, NodeType nt
 #ifdef QT_GUI_LIB
-        , NodeItem* node
+              , NodeItem* node
 #endif
-        );
+             );
     void job();
     unsigned getPly() {
-        return ply;
-    }
-};
+        return ply; } };
 
 template<Colors C>
 class RootSearchJob: public Job {
-    RootBoard& rb;
+    Game& game;
     const RepetitionKeys& rep;//TODO really needed? This should be always thread-local keys
     unsigned depth;
 
 public:
-    RootSearchJob(RootBoard& rb, const RepetitionKeys& rep, unsigned depth);
+    RootSearchJob(Game& rb, const RepetitionKeys& rep, unsigned depth);
     void job();
-    void stop();
-};
+    void stop(); };
 
 template<Colors C, typename T>
 class PerftJob: public Job {
-    RootBoard& rb;
+    Game& rb;
     T& n;
     const ColoredBoard<(Colors)-C>& b;
     Move m;
     unsigned int depth;
 public:
-    PerftJob(RootBoard& rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {
+    PerftJob(Game& rb, T& n, const ColoredBoard<(Colors)-C>& b, Move m, unsigned int depth): rb(rb), n(n), b(b), m(m), depth(depth) {
 //         setNotReady(n);
     };
     void job() {
         rb.perft<C, trunk>(n, b, m, depth);
 //         setReady(n);
-    }
-};
+    } };
 
 template<Colors C>
 class RootPerftJob: public Job {
-    RootBoard& rb;
+    Game& game;
     unsigned int depth;
 
 public:
-    RootPerftJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
-    void job() {
-        rb.pt = new TranspositionTable<PerftEntry, 1, Key>(Options::hash);
-        uint64_t n=rb.rootPerft<C>(depth);
-        std::ostringstream temp;
-        temp << n;
-        rb.console->send(temp.str());
-        delete rb.pt;
-    }
-};
+    RootPerftJob(Game& rb, unsigned int depth): game(rb), depth(depth) {};
+    void job(); };
 
 template<Colors C>
 class RootDivideJob: public Job {
-    RootBoard& rb;
+    Game& game;
     unsigned int depth;
 
 public:
-    RootDivideJob(RootBoard& rb, unsigned int depth): rb(rb), depth(depth) {};
-    void job() {
-        rb.pt = new TranspositionTable<PerftEntry, 1, Key>(Options::hash);
-        uint64_t n=rb.rootDivide<C>(depth);
-        std::ostringstream temp;
-        temp << n;
-        rb.console->send(temp.str());
-        delete rb.pt;
-    }
-};
+    RootDivideJob(Game& rb, unsigned int depth): game(rb), depth(depth) {};
+    void job(); };
 
 #endif /* JOBS_H_ */

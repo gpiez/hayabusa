@@ -20,12 +20,18 @@
 
 #include "search.tcc"
 #include "sortedmovelist.h"
+#include "console.h"
+
+// tcp server incurs some lag FEATURE move to search parameters
+static const std::chrono::milliseconds operatorTime = std::chrono::milliseconds(200);
+static const std::chrono::milliseconds minimumTime = std::chrono::milliseconds(100);
 
 template<Colors C>
-Move RootBoard::rootSearch(unsigned int endDepth) {
+Move Game::rootSearch(unsigned int endDepth) {
+    using namespace std::chrono;
     stopSearch = Running;
     start = system_clock::now();
-    
+
 #ifdef QT_GUI_LIB
     while (!statWidget->tree);
     statWidget->emptyTree();
@@ -39,19 +45,19 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 
     milliseconds time( C==White ? wtime : btime );
     milliseconds inc( C==White ? winc : binc );
-    
+
     if (movestogo == 0) movestogo = 20;
-    
+
     if (time > operatorTime) time -= operatorTime;
     else time = milliseconds(0);
-    
+
     time = std::max(minimumTime, time);
-    
+
     system_clock::time_point softLimit = start + (time + inc*movestogo)/(2*movestogo);
     milliseconds hardBudget = std::min(time/2, (2*time + 2*inc*movestogo)/(movestogo+1));
     stopTimerMutex.lock();
     Thread* stopTimerThread = NULL;
-    if (!infinite/* && Options::cpuTime*/) stopTimerThread = new Thread(&RootBoard::stopTimer, this, hardBudget); //TODO resuse existing thread
+    if (!infinite/* && Options::cpuTime*/) stopTimerThread = new Thread(&Game::stopTimer, this, hardBudget); //TODO resuse existing thread
 //     if (Options::cpuTime) {
 //         boost::chrono::time_point<boost::chrono::process_cpu_clock::times, boost::chrono::nanoseconds> t = boost::chrono::process_cpu_clock::now();
 //         stopTime = t.time_since_epoch().count() + hardBudget.count()*1000000;
@@ -59,63 +65,72 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
 
     infoTimerMutex.lock();
     Thread* infoTimerThread = NULL;
-    if (!Options::quiet) infoTimerThread = new Thread(&RootBoard::infoTimer, this, milliseconds(1000));
+    if (!Options::quiet) infoTimerThread = new Thread(&Game::infoTimer, this, milliseconds(1000));
 
     print_debug(debugSearch, "dMaxExt %d\n", eval.dMaxExt);
     print_debug(debugSearch, "dMaxCapture %d\n", eval.dMaxCapture);
     print_debug(debugSearch, "dMinDualExt %d\n", eval.dMinDualExt);
-    
-    nMoves = ml.count();
-    if (nMoves == 0) {
-        bestMove.data = 0;
-        stopSearch = Stopping;
-    } else {
-        ml.begin();
-        bestMove = *ml;
-        if (nMoves == 1) stopSearch = Stopping;
-        #ifdef QT_GUI_LIB
-            NodeData data;
-            data.move.data = 0;
-            data.ply = 1;
-            data.threadId = WorkThread::threadId;
-            data.nodes = 1;
-            NodeItem::m.lock();
-            NodeItem* node=0;
-            if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
-                node = new NodeItem(data, statWidget->tree->root());
-                NodeItem::nNodes++;
-            }
-            NodeItem::m.unlock();
-        #endif
 
+    nMoves = ml.count();
+    ml.begin();
+    bestMove = *ml;
+    if (nMoves <= 1) {
+        if (nMoves == 0) bestMove.data = 0;
+        stopSearch = Stopping; }
+    else {
+#ifdef QT_GUI_LIB
+        NodeData data;
+        data.move.data = 0;
+        data.ply = 1;
+        data.threadId = WorkThread::threadId;
+        data.nodes = 1;
+        NodeItem::m.lock();
+        NodeItem* node=0;
+        if (NodeItem::nNodes < MAX_NODES && NodeItem::nNodes >= MIN_NODES) {
+            node = new NodeItem(data, statWidget->tree->root());
+            NodeItem::nNodes++; }
+        NodeItem::m.unlock();
+#endif
+        /*
+         * First iteration
+         */
         SharedScore<C> alpha0; alpha0.v = -infinity*C;
         SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
+        Score<C> value;
         uint64_t subnode = stats.node;
-        int dummy __attribute__((unused));
-        alpha0.v = search4<(Colors)-C, tree, SharedScore<(Colors)-C>, SharedScore<C>, C>(b, *ml, eval.dMaxExt, beta, alpha0, ply+1, ExtNot, NodePV NODE);
+        limit<-C>() = alpha0.v;
+        limit<C>() = beta.v;
+        /*
+         * First move of first Iteration
+         */
+        alpha0.v = search4<(Colors)-C, tree>(b, *ml, eval.dMaxExt, beta, alpha0, ply+1, ExtNot, NodePV NODE);
         ml.nodesCount(stats.node - subnode);
         for (++ml; ml.isValid() && stopSearch == Running; ++ml) {
-            uint64_t subnode = stats.node;
-            Score<C> value;
+            subnode = stats.node;
+            /*
+             * Other moves in first Iteration. The lower limit stays at -infinity,
+             * meaning we allow lazy eval/pruning for each value, because they will fail low
+             * here and not be propagated.
+             */
             value.v = search4<(Colors)-C, tree>(b, *ml, eval.dMaxExt, beta, alpha0, ply+1, ExtNot, NodeFailHigh NODE);
             if (value > alpha0.v) {
                 alpha0.v = value.v;
                 bestMove = *ml;
-#ifdef USE_GENETIC                
+#ifdef USE_GENETIC
                 if (Options::quiet) bestScore = value.v;
-#endif                
+#endif
                 ml.nodesCount(stats.node - subnode);
-                ml.currentToFront();
-            }
-        }
-    #ifdef QT_GUI_LIB
-        if (node) {
+                ml.currentToFront(); } }
+#ifdef QT_GUI_LIB
+        if (node)
             for (int i=0; i<node->childCount(); ++i)
                 node->nodes += node->child(i)->nodes;
-        }
-    #endif
+#endif
 
         unsigned bestMovesLimit = 1;
+        /*
+         * Other iterations
+         */
         for (depth=eval.dMaxExt+2; depth<=endDepth; depth++) {
             ml.begin();
 //             ml.sort(bestMovesLimit);
@@ -124,9 +139,8 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             if (!Options::humanreadable && !Options::quiet) {
                 std::stringstream g;
                 g << "info depth " << depth-eval.dMaxExt;
-                console->send(g.str());
-            }
-        #ifdef QT_GUI_LIB
+                console->send(g.str()); }
+#ifdef QT_GUI_LIB
             NodeData data;
             data.move.data = 0;
             data.ply = depth-eval.dMaxExt;
@@ -136,13 +150,12 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             NodeItem* node=0;
             if (NodeItem::nNodes < MAX_NODES && stats.node >= MIN_NODES) {
                 node = new NodeItem(data, statWidget->tree->root());
-                NodeItem::nNodes++;
-            }
+                NodeItem::nNodes++; }
             NodeItem::m.unlock();
-        #endif
+#endif
 
-            SharedScore<        C>  alpha; alpha.v = -infinity*C;
-            SharedScore<(Colors)-C> beta;  beta.v  =  infinity*C;    //both alpha and beta are lower limits, viewed from th color to move
+            SharedScore<        C>  alpha(-infinity*C);
+            const SharedScore<(Colors)-C> beta(infinity*C);
             SharedScore<(Colors)-C> beta2;
             Score<C>            value;
             uint64_t subnode = stats.node;
@@ -150,29 +163,42 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
             if (alpha0.v != -infinity*C && abs(alpha0.v) < 1024) {
                 SharedScore<         C> alpha2;
                 alpha.v = alpha0.v;
-                alpha2.v = alpha.v - eval.aspirationLow*C;
-                beta2.v  = alpha.v + eval.aspirationHigh*C;
+                /*
+                 * Set limits to aspiration window, so that no lazy scores
+                 * outside this window will be propagated back.
+                 */
+                limit<-C>() = alpha2.v = alpha.v - eval.aspirationLow*C;
+                limit<C>() = beta2.v  = alpha.v + eval.aspirationHigh*C;
                 value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, alpha2, ply+1, ExtNot, NodePV NODE);
                 if (stopSearch) break;
                 if (value <= alpha2.v) {
-                    // Fail-Low at first root, research with low bound = alpha and high bound = old low bound
-                    //TODO check if trying other moves first is an better option
+                    /*
+                     *  Fail-Low at first root, research with low bound = alpha and high bound = old low bound
+                     *
+                     */
+//TODO check if trying other moves first is an better option
                     now = system_clock::now();
                     if (!Options::quiet) console->send(status(now, value.v) + " upperbound");
                     beta2.v = value.v;
                     alpha.v = value.v;
                     SharedScore<C> neginf(-infinity*C);
+                    limit<C>() = infinity*C;
+                    limit<-C>() = alpha.v;
                     value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta2, neginf, ply+1, ExtNot, NodePV NODE);
                     if (stopSearch) break;
-                    alpha.v = value.v;
-                } else if (value >= beta2.v) {
-                    // Fail-High at first root, research with high bound = beta and low bound = old high bound
+                    alpha.v = value.v; }
+                else if (value >= beta2.v) {
+                    /*
+                     * Fail-High at first root, research with high bound = beta and low bound = old high bound
+                     */
                     now = system_clock::now();
                     if (!Options::quiet) console->send(status(now, value.v) + " lowerbound");
                     alpha.v = value.v;
                     if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                     SharedScore<(Colors)-C> beta3;
                     beta3.v  = alpha.v + eval.aspirationHigh2*C;
+                    limit<-C>() = -infinity*C;
+                    limit<C>() = beta3.v;
                     value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta3, alpha, ply+1, ExtNot, NodePV NODE);
                     if (stopSearch) break;
                     if (value >= beta3.v) {
@@ -180,21 +206,22 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                         if (!Options::quiet) console->send(status(now, value.v) + " lowerbound");
                         alpha.v = value.v;
                         if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
+                        limit<-C>() = -infinity*C;
+                        limit<C>() = beta.v;
                         value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, NodePV NODE);
-                        if (stopSearch) break;
-                    }
-                    alpha.v = value.v;
-                } else {
-                    alpha.v = value.v;
-                }
-            } else {
+                        if (stopSearch) break; }
+                    alpha.v = value.v; }
+                else {
+                    alpha.v = value.v; } }
+            else {
+                limit<-C>() = alpha.v;
+                limit<C>() = beta.v;
                 value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, NodePV NODE);
-#ifdef USE_GENETIC                
+#ifdef USE_GENETIC
                 if (Options::quiet) bestScore = value.v;
-#endif                
+#endif
                 if (stopSearch) break;
-                alpha.v = value.v;
-            }
+                alpha.v = value.v; }
             ml.nodesCount(stats.node - subnode);
 
             now = system_clock::now();
@@ -214,10 +241,12 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                 currentMove = *ml;
                 uint64_t subnode = stats.node;
                 bool doNull = alpha.v != -infinity*C
-                    && depth > eval.dMinReduction
-                    && b.material
-                    && stopSearch == Running;
+                              && depth > eval.dMinReduction
+                              && eval.material[b.matIndex].doNull
+                              && stopSearch == Running;
                 if (stopSearch == Running) {
+                    limit<-C>() = -infinity*C;
+                    limit<C>() = beta2.v;
                     value.v = search9<(Colors)-C,trunk>(doNull, 0, b, *ml, depth-1, beta2, alpha, ply+1, ExtNot, NodeFailHigh NODE);
                     ml.nodesCount(stats.node - subnode);
                     if (stopSearch || value <= alpha.v) continue;
@@ -230,6 +259,7 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                         if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                         SharedScore<(Colors)-C> beta3;
                         beta3.v  = alpha.v + eval.aspirationHigh2*C;
+                        limit<C>() = beta3.v;
                         value.v = search4<(Colors)-C, trunk>(b, bestMove, depth-1, beta3, alpha, ply+1, ExtNot, NodePV NODE);
                         if (stopSearch) break;
                         alpha.v = value.v;
@@ -237,11 +267,10 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                             now = system_clock::now();
                             if (!Options::quiet) console->send(status(now, value.v) + " lowerbound");
                             if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
+                            limit<C>() = beta.v;
                             value.v = search4<(Colors)-C, trunk>(b, *ml, depth-1, beta, alpha, ply+1, ExtNot, NodePV NODE);
                             if (stopSearch) break;
-                            alpha.v = value.v;
-                        }
-                    }
+                            alpha.v = value.v; } }
                     ml.nodesCount(stats.node - subnode);
                     ml.currentToFront();
                     beta2.v = alpha.v + eval.aspirationHigh*C;
@@ -249,43 +278,38 @@ Move RootBoard::rootSearch(unsigned int endDepth) {
                     if (!Options::quiet) console->send(status(now, alpha.v));
 #ifdef USE_GENETIC
                     else bestScore = alpha.v;
-#endif                    
-                } 
+#endif
+                }
 
                 if (alpha >= infinity*C) break;
                 if (!infinite) {
                     system_clock::time_point now = system_clock::now();
-                    if (now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) stopSearch = Stopping;
-                }
-            } // for ml
-    //         now = system_clock::now();
-    //         console->send(status(now, alpha.v) + " done");
+                    if (now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) stopSearch = Stopping; } } // for ml
+            //         now = system_clock::now();
+            //         console->send(status(now, alpha.v) + " done");
 
-    #ifdef QT_GUI_LIB
-        if (node) {
-            for (int i=0; i<node->childCount(); ++i)
-                node->nodes += node->child(i)->nodes;
-        }
-    #endif
+#ifdef QT_GUI_LIB
+            if (node) {
+                for (int i=0; i<node->childCount(); ++i)
+                    node->nodes += node->child(i)->nodes; }
+#endif
             if (alpha >= infinity*C) break;
             if (alpha <= -infinity*C) break;
             alpha0.v = alpha.v;
-            if (stopSearch) break;
-        } // for depth
+            if (stopSearch) break; } // for depth
     } // if nMoves
-    
+
     infoTimerMutex.unlock();
     if (infoTimerThread) infoTimerThread->join();
     delete infoTimerThread;
-    
+
     stopTimerMutex.unlock();
     if (stopTimerThread) stopTimerThread->join();
     delete stopTimerThread;
-    
+
     console->send("bestmove "+bestMove.algebraic());
     UniqueLock<Mutex> l(stopSearchMutex);
     stopSearch = Stopped;
     stoppedCond.notify_one();
-    return bestMove;
-}
+    return bestMove; }
 #endif

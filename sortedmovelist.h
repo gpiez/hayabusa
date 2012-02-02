@@ -29,63 +29,16 @@
 #ifndef SORTEDMOVELIST_H
 #define SORTEDMOVELIST_H
 
-#include <cstring>
 #include "movelist.h"
 
-static const int rows[] = {111, 41, 13, 4, 1};
-
-class SortedMoveList : public MoveList
-{
+class SortedMoveList : public MoveList {
     uint64_t nodes[maxMoves];
-    
 public:
     template<Colors C>
     SortedMoveList(const ColoredBoard<C>& b): MoveList(b) {
-        memset(nodes, 0, sizeof(nodes));
-    }
-
-    void nodesCount(uint64_t n) {
-        return;
-        nodes[current] += n;
-    }
-
-    void currentToFront() {
-        MoveList::currentToFront();
-        uint64_t temp = nodes[current];
-        memmove(nodes+first+1, nodes+first, sizeof(uint64_t) * (current-first));
-        nodes[first] = temp;
-    }
-
-    void sort(unsigned bm) { //FIXME move bm into class
-//         return;
-        ASSERT(bm >= 1 && bm <= last);
-//         bm = 1;
-
-        for (unsigned k=0; k<5; k++)
-        {
-            unsigned h = rows[k];
-            
-            for (unsigned i = h+first+bm; i<last; i++)
-            {
-                Move tm = list[i];
-                uint64_t tn = nodes[i];
-                unsigned j=i;
-                while (j>=h+first+bm && nodes[j-h]<tn)
-                {
-                    list[j]=list[j-h];
-                    nodes[j]=nodes[j-h];
-                    j=j-h;
-                }
-                list[j]=tm;
-                nodes[j]=tn;
-            }
-        }
-/*        for (int i=first; i<last; ++i) {
-            std::cout << std::setw(2) << i-first << " " << list[i].algebraic() << ": " << std::setw(10) << nodes[i] << std::endl;
-        }
-        std::cout << std::endl;*/
-    }
-
-};
+        memset(nodes, 0, sizeof(nodes)); }
+    void nodesCount(uint64_t n);
+    void currentToFront();
+    void sort(unsigned bm); };
 
 #endif // SORTEDMOVELIST_H

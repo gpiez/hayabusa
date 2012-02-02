@@ -20,12 +20,13 @@
 #define COLOREDBOARD_TCC_
 
 #include "coloredboard.h"
-#include "boardbase.tcc"
-#include "rootboard.h"
+#include "eval.h"
+#include "board.tcc"
+
 
 template<Colors PREVC>
 unsigned ColoredBoard<PREVC>::errorPieceIndex[7] =
-  { 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+1*PREVC, 6+5*PREVC, 6+6*PREVC };
+{ 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+1*PREVC, 6+5*PREVC, 6+6*PREVC };
 
 /*
  * Construct a board with color C to move
@@ -39,8 +40,7 @@ ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
     if (prev.CI == (unsigned)CI)
         fiftyMoves = 0;
     keyScore.vector = est;
-    buildAttacks();
-}
+    buildAttacks(); }
 
 template<Colors C>
 template<typename T>
@@ -50,13 +50,12 @@ ColoredBoard<C>::ColoredBoard(const T& prev, Move m, const Eval& eval) {
     if (prev.CI == (unsigned)CI)
         fiftyMoves = 0;
     ASSERT(!_mm_testz_si128(keyScore.vector, eval.estimate<C>(m, prev.keyScore)));
-    buildAttacks();
-}
+    buildAttacks(); }
 /*
  * Execute a move and put result in next
  */
 template<Colors C>
-void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
+void ColoredBoard<C>::doMove(Board* next, Move m) const {
     uint64_t from = 1ULL << m.from();
     uint64_t to = 1ULL << m.to();
     ASSERT(m.piece());
@@ -64,43 +63,14 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m) const {
     next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
 
     if (m.isSpecial()) {
-        doSpecialMove(next, m, from, to);
-    } else {
+        doSpecialMove(next, m, from, to); }
+    else {
         // standard move, e. p. is handled by captureOffset
         next->fiftyMoves = (!m.capture() & (m.piece() != Pawn)) * (fiftyMoves+1); //(m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
         // Do only fill in the enpPassant field, if there is really a pawn which
         // can capture besides the target square. This is because enpassant goes
         // into the zobrist key.
-        next->cep.enPassant = shift<C*16>(getPieces<C,Pawn>() & from) & to & shift<C*8>(getAttacks<-C,Pawn>());
-	ASSERT(occupied[CI] & from);
-	ASSERT(~occupied[CI] & to);
-	ASSERT(from != to);
-        next->occupied[CI] = occupied[CI] - from + to;
-        next->occupied[EI] = occupied[EI] & ~to;
-        next->getPieces<C>(m.piece()) += to - from;
-        next->getPieces<-C>(m.capture()) -= to;
-        next->material = material - materialTab[m.capture()];
-    }
-    next->occupied1 = next->occupied[CI] | next->occupied[EI];
-}
-
-template<Colors C>
-void ColoredBoard<C>::doMove(BoardBase* next, Move m, const Eval& eval) const {
-    uint64_t from = 1ULL << m.from();
-    uint64_t to = 1ULL << m.to();
-    ASSERT(m.piece());
-
-    next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
-
-    if (m.isSpecial()) {
-        doSpecialMove(next, m, from, to, eval);
-    } else {
-        // standard move, e. p. is handled by captureOffset
-        next->fiftyMoves = (!m.capture() & (m.piece() != Pawn)) * (fiftyMoves+1); //(m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
-        // Do only fill in the enpPassant field, if there is really a pawn which
-        // can capture besides the target square. This is because enpassant goes
-        // into the zobrist key.
-        next->cep.enPassant = shift<C*16>(getPieces<C,Pawn>() & from) & to & shift<C*8>(getAttacks<-C,Pawn>());
+        next->cep.enPassant = shift<C* 16>(getPieces<C,Pawn>() & from) & to & shift<C* 8>(getAttacks<-C,Pawn>());
         ASSERT(occupied[CI] & from);
         ASSERT(~occupied[CI] & to);
         ASSERT(from != to);
@@ -108,16 +78,42 @@ void ColoredBoard<C>::doMove(BoardBase* next, Move m, const Eval& eval) const {
         next->occupied[EI] = occupied[EI] & ~to;
         next->getPieces<C>(m.piece()) += to - from;
         next->getPieces<-C>(m.capture()) -= to;
-        next->material = material - materialTab[m.capture()];
-        next->keyScore.vector = keyScore.vector - eval.getKSVector(C*m.piece(), m.from())
-            + eval.getKSVector(C*m.piece(), m.to())
-            - eval.getKSVector(-C*m.capture(), m.to());
-    }
-    next->occupied1 = next->occupied[CI] | next->occupied[EI];
-}
+        next->matIndex = matIndex - ::matIndex[EI][m.capture()]; }
+    next->occupied1 = next->occupied[CI] | next->occupied[EI]; }
 
 template<Colors C>
-void ColoredBoard<C>::doSpecialMove(BoardBase* next, Move m, uint64_t from, uint64_t to) const {
+void ColoredBoard<C>::doMove(Board* next, Move m, const Eval& eval) const {
+    uint64_t from = 1ULL << m.from();
+    uint64_t to = 1ULL << m.to();
+    ASSERT(m.piece());
+
+    next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
+
+    if (m.isSpecial()) {
+        doSpecialMove(next, m, from, to, eval); }
+    else {
+        // standard move, e. p. is handled by captureOffset
+        next->fiftyMoves = (!m.capture() & (m.piece() != Pawn)) * (fiftyMoves+1); //(m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
+        // Do only fill in the enpPassant field, if there is really a pawn which
+        // can capture besides the target square. This is because enpassant goes
+        // into the zobrist key.
+        next->cep.enPassant = shift<C* 16>(getPieces<C,Pawn>() & from) & to & shift<C* 8>(getAttacks<-C,Pawn>());
+        ASSERT(occupied[CI] & from);
+        ASSERT(~occupied[CI] & to);
+        ASSERT(from != to);
+        next->occupied[CI] = occupied[CI] - from + to;
+        next->occupied[EI] = occupied[EI] & ~to;
+        next->getPieces<C>(m.piece()) += to - from;
+        next->getPieces<-C>(m.capture()) -= to;
+        next->matIndex = matIndex - ::matIndex[EI][m.capture()];
+        next->keyScore.vector = keyScore.vector - eval.getKSVector(C*m.piece(), m.from())
+                                + eval.getKSVector(C*m.piece(), m.to())
+                                - eval.getKSVector(-C*m.capture(), m.to()); }
+    next->occupied1 = next->occupied[CI] | next->occupied[EI]; }
+
+template<Colors C>
+void ColoredBoard<C>::doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to) const {
+    using namespace SquareIndex;
     next->fiftyMoves = 0;
     next->cep.enPassant = 0;
     unsigned int piece = m.piece() & 7;
@@ -125,37 +121,38 @@ void ColoredBoard<C>::doSpecialMove(BoardBase* next, Move m, uint64_t from, uint
         ASSERT(m.capture() == 0);
         next->getPieces<C,King>() ^= from + to;
         next->occupied[EI] = occupied[EI];
-        next->material = material;
+        next->matIndex = matIndex;
         if (m.to() == (pov^g1)) {
             // short castling
             next->occupied[CI] = occupied[CI] ^ 0b1111ULL << m.from();
-            next->getPieces<C,Rook>() ^= (from + to) << 1;
-        } else {
+            next->getPieces<C,Rook>() ^= (from + to) << 1; }
+        else {
             // long castling
             next->occupied[CI] = occupied[CI] ^ 0b11101ULL << (m.to() & 070);
-            next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4);
-        }
-        ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>()));
-    } else if (piece == Pawn) {
+            next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4); }
+        ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>())); }
+    else if (piece == Pawn) {
         // en passant
         next->occupied[CI] = occupied[CI] - from + to;
         next->occupied[EI] = occupied[EI] - shift<-C*8>(to);
         next->getPieces<C,Pawn>() += to - from;
         next->getPieces<-C,Pawn>() -= shift<-C*8>(to);
-        next->material = material - materialTab[Pawn];
-    } else {
+        next->matIndex = matIndex - ::matIndex[EI][Pawn]; }
+    else {
         // promotion
         next->occupied[CI] = occupied[CI] - from + to;
         next->occupied[EI] = occupied[EI] & ~to;
         next->getPieces<C,Pawn>() -= from;
         next->getPieces<C>(piece) += to;
         next->getPieces<-C>(m.capture()) -= to;
-        next->material = material - materialTab[m.capture()] + materialTab[piece] - materialTab[Pawn];
-    }
-}
+        next->matIndex = matIndex - ::matIndex[EI][m.capture()] + ::matIndex[CI][piece]
+                         - ::matIndex[CI][Pawn];
+
+    } }
 
 template<Colors C>
-void ColoredBoard<C>::doSpecialMove(BoardBase* next, Move m, uint64_t from, uint64_t to, const Eval& eval) const {
+void ColoredBoard<C>::doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to, const Eval& eval) const {
+    using namespace SquareIndex;
     next->fiftyMoves = 0;
     next->cep.enPassant = 0;
     unsigned int piece = m.piece() & 7;
@@ -163,52 +160,49 @@ void ColoredBoard<C>::doSpecialMove(BoardBase* next, Move m, uint64_t from, uint
         ASSERT(m.capture() == 0);
         next->getPieces<C,King>() ^= from + to;
         next->occupied[EI] = occupied[EI];
-        next->material = material;
-            __v8hi estKing = keyScore.vector
-                - eval.getKSVector(C*King, m.from())
-                + eval.getKSVector(C*King, m.to());
+        next->matIndex = matIndex;
+        __v8hi estKing = keyScore.vector
+                         - eval.getKSVector(C*King, m.from())
+                         + eval.getKSVector(C*King, m.to());
         if (m.to() == (pov^g1)) {
             // short castling
             next->occupied[CI] = occupied[CI] ^ 0b1111ULL << m.from();
             next->getPieces<C,Rook>() ^= (from + to) << 1;
             next->keyScore.vector = estKing - eval.getKSVector(C*Rook, pov^h1)
-                               + eval.getKSVector(C*Rook, pov^f1);
-        } else {
+                                    + eval.getKSVector(C*Rook, pov^f1); }
+        else {
             // long castling
             next->occupied[CI] = occupied[CI] ^ 0b11101ULL << (m.to() & 070);
             next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4);
             next->keyScore.vector = estKing - eval.getKSVector(C*Rook, pov^a1)
-                               + eval.getKSVector(C*Rook, pov^d1);
-        }
-        ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>()));
-    } else if (piece == Pawn) {
+                                    + eval.getKSVector(C*Rook, pov^d1); }
+        ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>())); }
+    else if (piece == Pawn) {
         // en passant
         next->occupied[CI] = occupied[CI] - from + to;
         next->occupied[EI] = occupied[EI] - shift<-C*8>(to);
         next->getPieces<C,Pawn>() += to - from;
         next->getPieces<-C,Pawn>() -= shift<-C*8>(to);
-        next->material = material - materialTab[Pawn];
+        next->matIndex = matIndex - ::matIndex[EI][Pawn];
         next->keyScore.vector = keyScore.vector - eval.getKSVector(C*Pawn, m.from())
-                                   + eval.getKSVector(C*Pawn, m.to())
-                                   - eval.getKSVector(-C*Pawn, m.to()-C*8);
-    } else {
+                                + eval.getKSVector(C*Pawn, m.to())
+                                - eval.getKSVector(-C*Pawn, m.to()-C*8); }
+    else {
         // promotion
         next->occupied[CI] = occupied[CI] - from + to;
         next->occupied[EI] = occupied[EI] & ~to;
         next->getPieces<C,Pawn>() -= from;
         next->getPieces<C>(piece) += to;
         next->getPieces<-C>(m.capture()) -= to;
-        next->material = material - materialTab[m.capture()] + materialTab[piece] - materialTab[Pawn];
+        next->matIndex = matIndex - ::matIndex[EI][m.capture()] + ::matIndex[CI][piece]
+                         - ::matIndex[CI][Pawn];
         next->keyScore.vector = keyScore.vector - eval.getKSVector(C*Pawn, m.from())
-                                   + eval.getKSVector(C*piece, m.to())
-                                   - eval.getKSVector(-C*m.capture(), m.to());        
-    }
-}
+                                + eval.getKSVector(C*piece, m.to())
+                                - eval.getKSVector(-C*m.capture(), m.to()); } }
 
 template<Colors C>
 Key ColoredBoard<C>::getZobrist() const {
-    return keyScore.key + cep.castling.data4 + cep.enPassant*0x123456789abcdef + (C+1);
-}
+    return keyScore.key + cep.castling.data4 + cep.enPassant*0x123456789abcdef + (C+1); }
 
 template<Colors C>
 int ColoredBoard<C>::isPieceHanging() const {
@@ -222,6 +216,5 @@ int ColoredBoard<C>::isPieceHanging() const {
     ownPieces &= ~getPieces<C,Rook>();
     if (ownPieces & oppAtt) return true;
 
-    return false;
-}
+    return false; }
 #endif /* COLOREDBOARD_TCC_ */

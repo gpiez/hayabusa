@@ -28,15 +28,16 @@
 #ifndef MOVELIST_H
 #define MOVELIST_H
 
+#include "move.h"
 #include "coloredboard.h"
+#include <cstring>
 
-class MoveList
-{        
-protected:    
+class MoveList {
+protected:
     Move list[maxMoves];
     unsigned first;
     unsigned last;
-    
+
 public:
     unsigned current;
     template<Colors C>
@@ -48,132 +49,123 @@ public:
             b.generateCheckEvasions(pfirst, plast);
         else {
             b.generateNonCap(pfirst, plast);
-            b.template generateCaptureMoves<AllMoves>(pfirst, plast);
-        }
+            b.template generateCaptureMoves<AllMoves>(pfirst, plast); }
         first = pfirst - list;
-        last = plast - list;
-    }
-/*    
-    MoveList(const ColoredBoard<C>& b) {
-        Move* pfirst = list+goodMoves;
-        Move* plast = pfirst;
-        Move* badCaptures = pfirst;
-        Move *captures, *threats, *nonCaptures;
+        last = plast - list; }
+    /*
+        MoveList(const ColoredBoard<C>& b) {
+            Move* pfirst = list+goodMoves;
+            Move* plast = pfirst;
+            Move* badCaptures = pfirst;
+            Move *captures, *threats, *nonCaptures;
 
-        if (b.template inCheck<C>()) {
-            nonCaptures = pfirst;
-            b.generateCheckEvasions(pfirst, last);
-            if (pfirst == plast) {
-#ifdef QT_GUI_LIB
-                if (node) node->nodeType = NodeMate;
-                if (node) node->bestEval = -infinity*C;
-#endif
-                current.v = -infinity*C;
-                break;
-            }
-            captures = good;
-            threats = good;
-            if (P==vein) {
-                Move* j;
-                for (Move* i = j = good; i<bad; ++i)
-                    if (i->capture())
-                        *j++ = *i;
-                bad = j;
-                goto nosort;
-            }
-
-        } else {    // not in check
-            if (P==vein || (P==leaf && !threatened)) {
-                if ( P==leaf && extend & (ExtDualReply|ExtSingleReply)) b.template generateNonCap(good, bad); //FIXME should generate k-threat increasing moves only
-                nonCaptures = good;
-                if ( P==leaf ) b.generateSkewers(&good);
-                threats = good;
-                b.template generateCaptureMoves<NoUnderPromo>(good, bad);
+            if (b.template inCheck<C>()) {
+                nonCaptures = pfirst;
+                b.generateCheckEvasions(pfirst, last);
+                if (pfirst == plast) {
+    #ifdef QT_GUI_LIB
+                    if (node) node->nodeType = NodeMate;
+                    if (node) node->bestEval = -infinity*C;
+    #endif
+                    current.v = -infinity*C;
+                    break;
+                }
                 captures = good;
-                if ( P==leaf ) {
+                threats = good;
+                if (P==vein) {
+                    Move* j;
+                    for (Move* i = j = good; i<bad; ++i)
+                        if (i->capture())
+                            *j++ = *i;
+                    bad = j;
+                    goto nosort;
+                }
+
+            } else {    // not in check
+                if (P==vein || (P==leaf && !threatened)) {
+                    if ( P==leaf && extend & (ExtDualReply|ExtSingleReply)) b.template generateNonCap(good, bad); //FIXME should generate k-threat increasing moves only
+                    nonCaptures = good;
+                    if ( P==leaf ) b.generateSkewers(&good);
+                    threats = good;
+                    b.template generateCaptureMoves<NoUnderPromo>(good, bad);
+                    captures = good;
+                    if ( P==leaf ) {
+                        b.template generateMateMoves<false, void>(&good, &bad);
+                        if (good < captures)
+                            for (Move* removing = good; removing<captures; ++removing)
+                                for (Move* removed = captures; removed<bad; ++removed)
+                                    if (removing->data == removed->data) {
+                                        memmove(removed, removed+1, sizeof(Move) * (bad-removed-1));
+                                        --bad;
+                                        break;
+                                    }
+                    }
+                    goto nosort;
+                } else {
+                    b.template generateNonCap(good, bad);
+                    nonCaptures = good;
+                    b.template generateCaptureMoves<AllMoves>(good, bad);
+                    captures = good;
+                    if (bad == good) {
+    #ifdef QT_GUI_LIB
+                        if (node) node->nodeType = NodeMate;
+                        if (node) node->bestEval = 0;
+    #endif
+                        current.v = 0;
+                        break;
+                    }
+                    // FIXME not thread safe
+    //                 if ( P == leaf && alpha < 0 && ply>2 && b.fiftyMoves>2) {
+    //                     if (line[ply].from() == line[ply-2].to() && line[ply].to() == line[ply-2].from()) {
+    //                         ASSERT(line[ply-1].capture() == 0);
+    //                         *--good = Move(line[ply-1].to(), line[ply-1].from(), line[ply-1].piece());
+    //                     }
+    //                 }
+                    b.template generateSkewers(&good);
+                    threats = good;
                     b.template generateMateMoves<false, void>(&good, &bad);
-                    if (good < captures)
-                        for (Move* removing = good; removing<captures; ++removing)
-                            for (Move* removed = captures; removed<bad; ++removed)
+                    if (good < threats) {
+                        for (Move* removing = good; removing<threats; ++removing) {
+                            for (Move* removed = threats; ; ++removed) {
+                                ASSERT(removed<bad);
                                 if (removing->data == removed->data) {
                                     memmove(removed, removed+1, sizeof(Move) * (bad-removed-1));
                                     --bad;
                                     break;
                                 }
-                }
-                goto nosort;
-            } else {
-                b.template generateNonCap(good, bad);
-                nonCaptures = good;
-                b.template generateCaptureMoves<AllMoves>(good, bad);
-                captures = good;
-                if (bad == good) {
-#ifdef QT_GUI_LIB
-                    if (node) node->nodeType = NodeMate;
-                    if (node) node->bestEval = 0;
-#endif
-                    current.v = 0;
-                    break;
-                }
-                // FIXME not thread safe
-//                 if ( P == leaf && alpha < 0 && ply>2 && b.fiftyMoves>2) {
-//                     if (line[ply].from() == line[ply-2].to() && line[ply].to() == line[ply-2].from()) {
-//                         ASSERT(line[ply-1].capture() == 0);
-//                         *--good = Move(line[ply-1].to(), line[ply-1].from(), line[ply-1].piece());
-//                     }
-//                 }
-                b.template generateSkewers(&good);
-                threats = good;
-                b.template generateMateMoves<false, void>(&good, &bad);
-                if (good < threats) {
-                    for (Move* removing = good; removing<threats; ++removing) {
-                        for (Move* removed = threats; ; ++removed) {
-                            ASSERT(removed<bad);
-                            if (removing->data == removed->data) {
-                                memmove(removed, removed+1, sizeof(Move) * (bad-removed-1));
-                                --bad;
-                                break;
                             }
                         }
+                        if (bad < badCaptures) badCaptures = bad;
+    //                    goto nosort;
                     }
-                    if (bad < badCaptures) badCaptures = bad;
-//                    goto nosort;
                 }
             }
-        }
-        if (badCaptures > nonCaptures+1) {
-            ASSERT(badCaptures <= bad);
-            history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply + rootPly);
-        }
+            if (badCaptures > nonCaptures+1) {
+                ASSERT(badCaptures <= bad);
+                history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply + rootPly);
+            }
 
-nosort:
-    }*/
-    
+    nosort:
+        }*/
+
     const Move& operator * () const {
-        return list[current];
-    }
+        return list[current]; }
 
     void operator ++ () {
-        ++current;
-    }
+        ++current; }
 
     bool isValid() const {
-        return current < last;
-    }
+        return current < last; }
 
     unsigned count() const {
-        return last-first;
-    }
+        return last-first; }
 
     void begin() {
-        current = first;
-    }
-    
+        current = first; }
+
     void currentToFront() {
         Move temp = list[current];
         memmove(list+first+1, list+first, sizeof(Move) * (current-first));
-        list[first] = temp;
-    }
-};
+        list[first] = temp; } };
 
 #endif // MOVELIST_H

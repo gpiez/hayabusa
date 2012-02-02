@@ -16,33 +16,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-#ifndef LENGTH_H_
-#define LENGTH_H_
+#ifndef PACKEDSCORE_H
+#define PACKEDSCORE_H
 
-#ifndef PCH_H_
-#include <pch.h>
+template<typename T=int16_t>
+struct PackedScore {
+    T    opening;
+    T    endgame; };
 #endif
-
-#include "constants.h"
-/*
- * Structure which hold attacking ray length for the eight long
- * range directions. The target piece is always counted in.
- * Only three bits for right to have a continuous range from 0-63
- * if the structure is interpreted a a byte, five bits for left to make sure
- * the upper bits are always set to zero.
- */
-union Length {
-    struct {
-    uint8_t    right:3;
-    uint8_t    left:5;
-    };
-    uint8_t data;
-    operator const uint8_t& () const {
-        return data;
-    }
-};
-static const unsigned int nLengths = 64;
-
-extern "C" Length masks[nLengths][nSquares][nDirs/2][nSquares];
-
-#endif /* LENGTH_H_ */

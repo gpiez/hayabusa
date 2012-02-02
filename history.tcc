@@ -4,17 +4,13 @@
  *  Created on: Aug 20, 2010
  *      Author: gpiez
  */
-#ifndef PCH_H_
-#include <pch.h>
-#endif
-
 #include "history.h"
 #include "coloredboard.h"
 
 template<Colors C>
 void History::good(Move m, unsigned ply) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
-    ASSERT((m.piece() & 7) <= 6);    
+    ASSERT((m.piece() & 7) <= 6);
     ASSERT((m.piece() & 7));
     ASSERT((m.from() != m.to()));
     {
@@ -31,13 +27,8 @@ void History::good(Move m, unsigned ply) {
                 for (unsigned p=1; p<=nPieces; ++p)
                     for (unsigned sq=0; sq<nSquares; sq += 16) {
                         __v16qi* v16 = (__v16qi*)&v[ply+2][C*p + nPieces][sq];
-                        *v16 = _mm_subs_epu8(*v16, mh2);
-                }
-                h = maxHistory/2;
-            }
-        }
-    }
-}
+                        *v16 = _mm_subs_epu8(*v16, mh2); }
+                h = maxHistory/2; } } } }
 
 template<Colors C>
 int History::get(Move m, unsigned ply) {
@@ -47,15 +38,13 @@ int History::get(Move m, unsigned ply) {
         int value3 = v[ply][C*(m.piece() & 7) + nPieces][m.to()] - max[CI][ply];
         int value4 = ply >= 2 ? v[ply-2][C*(m.piece() & 7) + nPieces][m.to()] - max[CI][ply-2] : -maxHistory/2;
         value = std::max(value, value3-16);
-        value = std::max(value, value4-16);
-    }
+        value = std::max(value, value4-16); }
     value += maxHistory-1;
     ASSERT(value >= 0);
-    return value;
-}
+    return value; }
 
 template<Colors C>
-void History::sort(Move* list, unsigned n, unsigned ply, const PositionalError (&/*pe*/)[nPieces*2+1][nSquares][nSquares], const int /*material*/, const Eval& /*eval*/) {
+void History::sort(Move* list, unsigned n, unsigned ply) {
     /*
      * Four groups of 16 counters for the 4 fourbit digits, which are the
      * keys for sorting. Counter group 3 is for the most significant nibble,
@@ -63,16 +52,14 @@ void History::sort(Move* list, unsigned n, unsigned ply, const PositionalError (
      */
     union {
         uint8_t parts[16];
-        __v16qi whole;
-    } count0, count1/*, count2, count3*/;
+        __v16qi whole; } count0, count1/*, count2, count3*/;
 
     __v16qi c0, c1/*, c2, c3*/;
     c0 = c1 = /*c2 = c3 = */_mm_set1_epi8(0);
 
     struct MoveScore {
         Move m;
-        uint8_t score[4];
-    };
+        uint8_t score[4]; };
 
     MoveScore mList0[maxMoves], mList1[maxMoves];
 
@@ -99,17 +86,17 @@ void History::sort(Move* list, unsigned n, unsigned ply, const PositionalError (
 //     count3.whole = c3;
 
     for (unsigned i=0; i<n; ++i)
-       mList1[count0.parts[mList0[i].score[0]]++] = mList0[i];
+        mList1[count0.parts[mList0[i].score[0]]++] = mList0[i];
 
     for (unsigned i=0; i<n; ++i)
-       list[count1.parts[mList1[i].score[1]]++] = mList1[i].m;
+        list[count1.parts[mList1[i].score[1]]++] = mList1[i].m;
 
-/*    for (unsigned i=0; i<n; ++i)
-       mList0[count1.parts[mList1[i].score[1]]++] = mList1[i];
+    /*    for (unsigned i=0; i<n; ++i)
+           mList0[count1.parts[mList1[i].score[1]]++] = mList1[i];
 
-    for (unsigned i=0; i<n; ++i)
-       mList1[count2.parts[mList0[i].score[2]]++] = mList0[i];
+        for (unsigned i=0; i<n; ++i)
+           mList1[count2.parts[mList0[i].score[2]]++] = mList0[i];
 
-    for (unsigned i=0; i<n; ++i)
-       list[count3.parts[mList1[i].score[3]]++] = mList1[i].m;*/
+        for (unsigned i=0; i<n; ++i)
+           list[count3.parts[mList1[i].score[3]]++] = mList1[i].m;*/
 }

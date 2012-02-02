@@ -29,20 +29,18 @@
 static inline uint64_t readtsc() {
     uint64_t a, d;
     asm volatile("rdtsc" : "=a" (a), "=d" (d) :: "%rbx", "%rcx");
-    return a + (d << 32);
-}
+    return a + (d << 32); }
 
 void TestRootBoard::initTestCase() {
     qRegisterMetaType<std::string>("std::string");
-    BoardBase::initTables();
+    Board::initTables();
     StringList args;
     char* unittest = new char[9];
     strcpy(unittest, "unittest");
     static char* argv[] = { unittest, NULL };
     static int argc = 1;
     c = new Console(argc, argv);
-    b = c->board;
-}
+    b = c->game; }
 
 void TestRootBoard::cmpMates(std::string bstr, std::string mstr) {
     Move ml[256];
@@ -57,12 +55,9 @@ void TestRootBoard::cmpMates(std::string bstr, std::string mstr) {
         if (i!=mstrl.end())
             mstrl.erase(i);
         else
-            std::cerr << bstr << ": " << res << " missing mate" << std::endl;
-    }
+            std::cerr << bstr << ": " << res << " missing mate" << std::endl; }
     for (StringList::iterator i = mstrl.begin(); i != mstrl.end(); ++i) {
-        std::cerr << bstr << ": " << *i << " wrong mate" << std::endl;
-    }
-}
+        std::cerr << bstr << ": " << *i << " wrong mate" << std::endl; } }
 
 void TestRootBoard::generateMateMoves() {
     cmpMates("6k/R/1R/////K w - -", "b6b8");
@@ -78,11 +73,9 @@ void TestRootBoard::generateMateMoves() {
     cmpMates("6k/6pp/4Q/////K w - -", "e6e8");
     cmpMates("6k/5ppp/4Q/////K w - -", "e6e8 e6c8");
     cmpMates("6k/5pbp/4Q/////K w - -", "");
-    cmpMates("7k/4r1p1/5p1p/1pp2Q2/1b2B1P1/1P2P2P/5PK1/q7 w - -", "f5c8 f5h7"); 
-}
+    cmpMates("7k/4r1p1/5p1p/1pp2Q2/1b2B1P1/1P2P2P/5PK1/q7 w - -", "f5c8 f5h7"); }
 
-void TestRootBoard::pieceList() {
-}
+void TestRootBoard::pieceList() {}
 
 void TestRootBoard::generateCaptures() {
     QTextStream xout(stderr);
@@ -114,19 +107,17 @@ void TestRootBoard::generateCaptures() {
         b->setup(testPositions[i]);
         color[i] = b->color;
         if (i) {
-            b->boards[i] = b->boards[0];
-        }
+            b->boards[i] = b->boards[0]; }
         movetimes[i].reserve(iter*2);
         times[i].reserve(iter*2);
-        captimes[i].reserve(iter*2);
-    }
+        captimes[i].reserve(iter*2); }
     unsigned op = 1;
     const unsigned int iter2 = 10000000;
     __v2di res = _mm_set1_epi64x(0);
     uint64_t time=0;
 #ifdef NDEBUG
     for (unsigned int i = 0; i < iter2; ++i) {
-        BoardBase& bb = b->boards[i & 0xf].wb;
+        Board& bb = b->boards[i & 0xf].wb;
         tsc = readtsc();
         res = bb.build02Attack(op);
         op = _mm_cvtsi128_si64(res) & 0x3f;
@@ -148,10 +139,10 @@ void TestRootBoard::generateCaptures() {
 //        op = fold(res) & 0x3f;
     }
     std::cout << "build02(pos): " << time/iter2 << " clocks" << std::endl;
-    
+
     time=0;
     for (unsigned int i = 0; i < iter2; ++i) {
-        BoardBase& bb = b->boards[i & 0xf].wb;
+        Board& bb = b->boards[i & 0xf].wb;
         tsc = readtsc();
         res = bb.build13Attack(op);
         op = _mm_cvtsi128_si64(res) & 0x3f;
@@ -169,10 +160,9 @@ void TestRootBoard::generateCaptures() {
         op = _mm_cvtsi128_si64(res) & 0x3f;
         res = bb.build13Attack(op);
         op = _mm_cvtsi128_si64(res) & 0x3f;
-        time += readtsc() - tsc;
-    }
+        time += readtsc() - tsc; }
     std::cout << "build13(pos): " << time/iter2 << " clocks" << std::endl;
-    
+
 //     time=0;
 //     for (unsigned int i = 0; i < iter2; ++i) {
 //         BoardBase& bb = b->boards[i & 0xf].wb;
@@ -184,7 +174,7 @@ void TestRootBoard::generateCaptures() {
 
     time=0;
     for (unsigned int i = 0; i < iter2; ++i) {
-        BoardBase& bb = b->boards[i & 0xf].wb;
+        Board& bb = b->boards[i & 0xf].wb;
         tsc = readtsc();
         res = b->boards[0].wb.build13Attack(res);
         res = b->boards[1].wb.build13Attack(res);
@@ -194,14 +184,13 @@ void TestRootBoard::generateCaptures() {
         res = b->boards[5].wb.build13Attack(res);
         res = b->boards[6].wb.build13Attack(res);
         res = b->boards[7].wb.build13Attack(res);
-        time += readtsc() - tsc;
-    }
+        time += readtsc() - tsc; }
     std::cout << "build13(vector): " << time/iter2 << " clocks" << std::endl;
 
     time=0;
     uint64_t op64=0x1234556789abcdef;
     for (unsigned int i = 0; i < iter2; ++i) {
-        BoardBase& bb = b->boards[i & 0xf].wb;
+        Board& bb = b->boards[i & 0xf].wb;
         tsc = readtsc();
         op64 = b->boards[0].wb.build02Attack(op64);
         op64 = b->boards[1].wb.build02Attack(op64);
@@ -211,13 +200,12 @@ void TestRootBoard::generateCaptures() {
         op64 = b->boards[5].wb.build02Attack(op64);
         op64 = b->boards[6].wb.build02Attack(op64);
         op64 = b->boards[7].wb.build02Attack(op64);
-        time += readtsc() - tsc;
-    }
+        time += readtsc() - tsc; }
     std::cout << "build02(bit): " << time/iter2 << " clocks" << std::endl;
 
     time=0;
     for (unsigned int i = 0; i < iter2; ++i) {
-        BoardBase& bb = b->boards[i & 0xf].wb;
+        Board& bb = b->boards[i & 0xf].wb;
         tsc = readtsc();
         op64 = b->boards[0].wb.build13Attack(op64);
         op64 = b->boards[1].wb.build13Attack(op64);
@@ -227,8 +215,7 @@ void TestRootBoard::generateCaptures() {
         op64 = b->boards[5].wb.build13Attack(op64);
         op64 = b->boards[6].wb.build13Attack(op64);
         op64 = b->boards[7].wb.build13Attack(op64);
-        time += readtsc() - tsc;
-    }
+        time += readtsc() - tsc; }
     std::cout << "build13(bit): " << time/iter2 << " clocks" << std::endl;
 
     for (int j = 0; j < iter; ++j) {
@@ -272,34 +259,28 @@ void TestRootBoard::generateCaptures() {
                 if (color[i] == White) {
                     __v8hi est = b->boards[i].wb.estimatedEval(*k, b->eval);
                     ColoredBoard<Black> bb(b->boards[i].wb, *k, est);
-                    blah += bb.getZobrist();
-                } else {
+                    blah += bb.getZobrist(); }
+                else {
                     __v8hi est = b->boards[i].bb.estimatedEval(*k, b->eval);
                     ColoredBoard<White> bb(b->boards[i].bb, *k, est);
-                    blah += bb.getZobrist();
-                }
-                movetimes[i][j] += readtsc() - tsc - overhead;
-            }
+                    blah += bb.getZobrist(); }
+                movetimes[i][j] += readtsc() - tsc - overhead; }
 //                      std::string empty;
 //                      std::cin >> empty;
-        }
-    }
+        } }
     for (QVector<Sample>::Iterator i = times.begin(); i != times.end(); ++i) {
         qSort(*i);
-        sum += (*i)[iter / 2];
-    }
+        sum += (*i)[iter / 2]; }
     uint64_t capsum=0;
     for (QVector<Sample>::Iterator i = captimes.begin(); i != captimes.end(); ++i) {
         qSort(*i);
-        capsum += (*i)[iter / 2];
-    }
+        capsum += (*i)[iter / 2]; }
     for (QVector<Sample>::Iterator i = movetimes.begin(); i != movetimes.end(); ++i) {
         qSort(*i);
-        movesum += (*i)[iter / 2];
-    }
+        movesum += (*i)[iter / 2]; }
 
-    xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << cpufreq*nmoves/sum << " generated Mmoves/s, " << cpufreq*nmoves/movesum << " executed Mmoves/s" << endl;
-    xout << ncap << " Captures, " << capsum/ncap << " Clocks, " << cpufreq*ncap/capsum << " generated Mmoves/s, " /*<< cpufreq*ncap/movesum << " executed Mmoves/s" */<< endl;
+    xout << endl << nmoves << " Moves, " << sum/nmoves << " Clocks, " << cpufreq* nmoves/sum << " generated Mmoves/s, " << cpufreq* nmoves/movesum << " executed Mmoves/s" << endl;
+    xout << ncap << " Captures, " << capsum/ncap << " Clocks, " << cpufreq* ncap/capsum << " generated Mmoves/s, " /*<< cpufreq*ncap/movesum << " executed Mmoves/s" */<< endl;
     xout << blah + fold(res) + op64 << endl;
 #endif
 
@@ -333,7 +314,6 @@ void TestRootBoard::perft() {
 
     b->setup("4k2r/8/8/8/8/6nB/8/4K2R w Kk - 0 1");
     WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 8));
-    QCOMPARE( c->getAnswer(), std::string("9941334384"));
-}
+    QCOMPARE( c->getAnswer(), std::string("9941334384")); }
 
 QTEST_APPLESS_MAIN(TestRootBoard);

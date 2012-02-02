@@ -19,20 +19,20 @@
 #include "eval.h"
 #include "stringlist.h"
 #include "options.h"
+#include "bits.h"
 
 Eval::Init::Init(Eval& e):
     e(e) {}
-    
+
 template<typename T>
-void Eval::Init::sigmoid(T& p, Parameters::Phase start, Parameters::Phase end, Parameters::Phase dcenter, Parameters::Phase width, unsigned istart) {
+void Eval::Init::sigmoid(T& p, PackedScore<float> start, PackedScore<float> end, PackedScore<float> dcenter, PackedScore<float> width, unsigned istart) {
     const size_t n = sizeof(T)/sizeof(p[0]);
     int16_t o[n];
     int16_t e[n];
     sigmoid(o, start.opening, end.opening, dcenter.opening, width.opening, istart);
     sigmoid(e, start.endgame, end.endgame, dcenter.endgame, width.endgame, istart);
     for (unsigned int i = 0; i < n; ++i)
-        p[i] = PackedScore{ o[i], e[i] };
-}
+        p[i] = PackedScore<> { o[i], e[i] }; }
 
 template<typename T>
 void Eval::Init::sigmoid(T& p, double start, double end, double dcenter, double width, unsigned istart) {
@@ -49,19 +49,15 @@ void Eval::Init::sigmoid(T& p, double start, double end, double dcenter, double 
         p[i] = 0;
     for (unsigned int i = 0; i <= n; ++i) {
         double t = i - dcenter;
-        p[i+istart] = a + r/(1.0 + exp(-t/width));
-    }
-}
+        p[i+istart] = a + r/(1.0 + exp(-t/width)); } }
 
 template<typename T>
-void Eval::Init::mulTab(T& p, Parameters::Phase step) {
+void Eval::Init::mulTab(T& p, PackedScore<float> step) {
     const size_t n = sizeof(T)/sizeof(p[0]);
     CompoundScore cs(0,0);
     for (unsigned int i = 0; i < n; ++i) {
         p[i] = cs.packed();
-        cs = cs + CompoundScore( step.opening, step.endgame );
-    }
-}
+        cs = cs + CompoundScore( step.opening, step.endgame ); } }
 
 void Eval::Init::sigmoid(int n, int p[], double start, double end, double dcenter, double width) {
     double t0 = -dcenter;
@@ -73,9 +69,7 @@ void Eval::Init::sigmoid(int n, int p[], double start, double end, double dcente
     double a = start - l0*r;
     for (int i = 0; i <= n; ++i) {
         double t = i - dcenter;
-        p[i] = lrint(a + r/(1.0 + exp(-t/width)));
-    }
-}
+        p[i] = lrint(a + r/(1.0 + exp(-t/width))); } }
 
 template<typename T>
 void printSigmoid(T& p, std::string str, int offset=0) {
@@ -83,10 +77,8 @@ void printSigmoid(T& p, std::string str, int offset=0) {
     for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && !p[n]; --n);
     std::cout << std::setw(5) << str;
     for (unsigned int i = 0; i <= n; ++i) {
-        std::cout << std::setw(4) << std::right << p[i]-offset;
-    }
-    std::cout << std::endl;
-}
+        std::cout << std::setw(4) << std::right << p[i]-offset; }
+    std::cout << std::endl; }
 
 template<typename T>
 void printSigmoid2(T& p, std::string str, int offset=0) {
@@ -94,12 +86,10 @@ void printSigmoid2(T& p, std::string str, int offset=0) {
     for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && (!p[n].opening | !p[n].endgame); --n);
     std::cout << std::setw(5) << str;
     for (unsigned int i = 0; i <= n; ++i) {
-    	std::stringstream s;
-    	s << p[i].opening-offset << "/" << p[i].endgame-offset; 
-        std::cout << std::setw(8) << s.str(); 
-    }
-    std::cout << std::endl;
-}
+        std::stringstream s;
+        s << p[i].opening-offset << "/" << p[i].endgame-offset;
+        std::cout << std::setw(8) << s.str(); }
+    std::cout << std::endl; }
 
 void Eval::Init::initPS(Pieces pIndex, Parameters::Piece& piece) {
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
@@ -116,26 +106,24 @@ void Eval::Init::initPS(Pieces pIndex, Parameters::Piece& piece) {
             ye = 2*piece.vcenter.endgame - y;
         ye = std::max(0, std::min(7, ye));
         e.getPS( pIndex, sq) = { (short) (piece.value.opening + piece.hor.opening[xh] + piece.vert.opening[yo] + corner*piece.corner.opening),
-                               (short) (piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame) };
+                                 (short) (piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame) };
         e.getPS(-pIndex, sq ^ 070) = (-CompoundScore(e.getPS( pIndex, sq))).packed();
         print_debug(debugEval, "%4d %4d  ", e.getPS(pIndex, sq).opening, e.getPS(pIndex, sq).endgame);
-        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n');
-    }
+        if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n'); }
 
 }
 
 void Eval::Init::initPS() {
 
     for (unsigned int sq = 0; sq<nSquares; ++sq)
-        e.getPS( 0, sq) = PackedScore{0,0};
+        e.getPS( 0, sq) = PackedScore<> {0,0 };
 
     initPS(Rook, rook);
     initPS(Bishop, bishop);
     initPS(Queen, queen);
     initPS(Knight, knight);
     initPS(Pawn, pawn);
-    initPS(King, king);
-}
+    initPS(King, king); }
 
 void Eval::Init::initShield() {
     for (unsigned index=0; index<=0777; ++index) {
@@ -165,12 +153,10 @@ void Eval::Init::initShield() {
         if (index & 0400) score += kingShield.outer[2];
         ASSERT(score >= 0);
         score = std::min(INT8_MAX, score);
-        e.shieldMirrored[index] = score;
-    }
+        e.shieldMirrored[index] = score; }
 #ifdef MYDEBUG
     for (unsigned i=0; i<3; ++i) {
-            std::cout << "kingShield" << i << ": " << std::setw(3) << kingShield.inner[i] << std::setw(3) << kingShield.center[i] << std::setw(3) << kingShield.outer[i] << std::endl;
-    }
+        std::cout << "kingShield" << i << ": " << std::setw(3) << kingShield.inner[i] << std::setw(3) << kingShield.center[i] << std::setw(3) << kingShield.outer[i] << std::endl; }
 #endif
 }
 
@@ -182,8 +168,8 @@ void Eval::Init::zobrist() {
         for (unsigned int i = 0; i < nSquares; ++i) {
             uint64_t r;
             do {
-                r = rng() + ((uint64_t)rng() << 32);
-            } while (popcount(r) >= 29 && popcount(r) <= 36);
+                r = rng() + ((uint64_t)rng() << 32); }
+            while (popcount(r) >= 29 && popcount(r) <= 36);
 
             if (p)
                 e.zobristPieceSquare[p+nPieces][i].key = r;
@@ -193,39 +179,36 @@ void Eval::Init::zobrist() {
             if (abs(p) == Pawn)
                 e.zobristPieceSquare[p+nPieces][i].pawnKey = r ^ r >> 32;
             else
-                e.zobristPieceSquare[p+nPieces][i].pawnKey = 0;
-        }
+                e.zobristPieceSquare[p+nPieces][i].pawnKey = 0; }
 
 #ifdef MYDEBUG
     int collision=0;
     for (int p = -nPieces; p <= (signed int)nPieces; p++)
-    if (p)
-    for (unsigned int s = 0; s < nSquares; ++s)
-    for (unsigned int d = 0; d < nSquares; ++d)
-    if (d!=s) {
-        KeyScore z1, z2;
-        z1.vector = e.zobristPieceSquare[p+nPieces][d].vector - e.zobristPieceSquare[p+nPieces][s].vector;
-        z2.vector = e.zobristPieceSquare[p+nPieces][s].vector - e.zobristPieceSquare[p+nPieces][d].vector;
-        for (int cp = -nPieces; cp <= (signed int)nPieces; cp++)
-        if (cp)
-        for (unsigned int c = 0; c < nSquares; ++c)
-        if (e.zobristPieceSquare[cp+nPieces][c].key == z1.key || e.zobristPieceSquare[p+nPieces][c].key == z2.key)
-            ++collision;
-    }
+        if (p)
+            for (unsigned int s = 0; s < nSquares; ++s)
+                for (unsigned int d = 0; d < nSquares; ++d)
+                    if (d!=s) {
+                        KeyScore z1, z2;
+                        z1.vector = e.zobristPieceSquare[p+nPieces][d].vector - e.zobristPieceSquare[p+nPieces][s].vector;
+                        z2.vector = e.zobristPieceSquare[p+nPieces][s].vector - e.zobristPieceSquare[p+nPieces][d].vector;
+                        for (int cp = -nPieces; cp <= (signed int)nPieces; cp++)
+                            if (cp)
+                                for (unsigned int c = 0; c < nSquares; ++c)
+                                    if (e.zobristPieceSquare[cp+nPieces][c].key == z1.key || e.zobristPieceSquare[p+nPieces][c].key == z2.key)
+                                        ++collision; }
     if (collision)
         std::cerr << collision << " Zobrist collisions" << std::endl;
 #endif
 }
 
 void Eval::Init::scale() {
-    static_assert(56 == 4*(materialRook+materialBishop+materialKnight) + 2*materialQueen + 16*materialPawn, "Total material");
+    static_assert(56 == 4*(materialTab[Rook]+materialTab[Bishop]+materialTab[Knight]) + 2*materialTab[Queen] + 16*materialTab[Pawn], "Total material");
 
     for (unsigned i=0; i<sizeof(e.scale)/sizeof(*e.scale); ++i) {
         int openingScale = i - e.endgameMaterial + endgameTransitionSlope/2;
         openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
         e.scale[i].endgame = endgameTransitionSlope-openingScale;
-        e.scale[i].opening = openingScale;
-    }
+        e.scale[i].opening = openingScale; }
 
     e.evalHardBudget = -20;
 
@@ -234,20 +217,175 @@ void Eval::Init::scale() {
         printSigmoid(e.attackN, "attN");
         printSigmoid(e.attackTable2, "attTable2");
         printSigmoid2(e.pawnPasser22, "pass");
-        printSigmoid2(e.pawnConnPasser22, "cpass");
-    }
+        printSigmoid2(e.pawnConnPasser22, "cpass"); }
 #ifdef MYDEBUG
     printSigmoid2(e.pawnCandidate, "Cand");
     for (unsigned rank=1; rank<=6; ++rank) {
-    	std::stringstream s;
-    	s << rank << ":";
-		printSigmoid(e.oppKingOwnPasser[rank], "eKpass" + s.str());
-		printSigmoid(e.ownKingOwnPasser[rank], "mKpass" + s.str());
-		printSigmoid(e.oppKingOwnPawn[rank], "eKpawn" + s.str());
-		printSigmoid(e.ownKingOwnPawn[rank], "mKpawn" + s.str());
-    }
-#endif    
+        std::stringstream s;
+        s << rank << ":";
+        printSigmoid(e.oppKingOwnPasser[rank], "eKpass" + s.str());
+        printSigmoid(e.ownKingOwnPasser[rank], "mKpass" + s.str());
+        printSigmoid(e.oppKingOwnPawn[rank], "eKpawn" + s.str());
+        printSigmoid(e.ownKingOwnPawn[rank], "mKpawn" + s.str()); }
+#endif
 }
+
+template<Colors C>
+void Eval::Init::material(int r, int b, int q, int n, int p,
+                          int er, int eb, int eq, int en, int ep, Material& m) {
+    // Opponent has naked king
+
+    int mat = 5*r + 3*n + 10*q + 3*b + p;
+    int emat = 5*er + 3*en + 10*eq + 3*eb + ep;
+    if (mat<emat) return;
+
+    int scalemat = (r+er)*materialTab[Rook]
+                   + (b+eb)*materialTab[Bishop]
+                   + (q+eq)*materialTab[Queen]
+                   + (n+en)*materialTab[Knight]
+                   + (p+ep)*materialTab[Pawn];
+
+
+    m.opening = e.scale[scalemat].opening;
+
+    if (b >= 2)
+        m.bias += C*((bishopPair.opening*m.opening + bishopPair.endgame*(endgameTransitionSlope - m.opening)) >> logEndgameTransitionSlope);
+
+    if (b == 1 && eb == 1)
+        m.recognized = KB_kb_;
+
+    if (q+r+b+n + eq+er+eb+en)
+        m.doNull = true;
+
+    // Reduce material advantage in likely drawn endgames to a value -pawn..pawn
+    // If we have no winning chances at all (lone b or n), reduce to a negative
+    // value, otherwise positive.
+    if (!mat) {
+        ASSERT(emat==0);
+        m.draw = true;
+        return; }
+
+    // KPk
+    if (mat==1 && emat==0) {
+        m.recognized = C==White ? KPk : kpK; }
+    // N* B*
+    if (q+r+p == 0) {
+        if (b + n == 1) {
+            ASSERT(emat<=3);
+            // N B
+            if (emat==0) {
+                m.draw = true;
+                return; }
+            // Np Bp, reduce to -¼ pawn
+            if (emat==1) {
+                m.drawish = true;
+                m.bias = -225*C;
+                return; }
+            // Npp Bpp, reduce to -½ pawn
+            if (emat==2) {
+                m.drawish = true;
+                m.bias = -150*C;
+                return; }
+            ASSERT(emat=3);
+            // Nn Nb Bb Bn
+            if (en+eb==1) {
+                m.draw = true;
+                return; }
+            // Nppp Bppp, reduce to -¾ pawn
+            ASSERT(ep==3);
+            m.drawish = true;
+            m.bias = -75*C;
+            return; } }
+    // NP* BP*
+
+    if (q+r == 0 && p==1) {
+        if (b + n == 1 && emat <= 3) {
+            // N B
+            if (emat<=2) {
+                m.recognized = C==White ? KBPk : kpbK; }
+            // KBPkb KNPkN
+            if (emat==3 && en+eb==1) {
+                m.bias = -200*C;
+                m.drawish = true;
+                return; } } }
+
+    // KNNk KNNkp KNNk*
+    if (q + r + b + p == 0) {
+        if (n==2) {
+            if (emat==0) {
+                m.draw = true;
+                return; }
+            else if (emat==1) {
+                m.drawish = true;
+                m.bias = -400*C;
+                return; }
+            else if (emat==2) {
+                m.drawish = true;
+                m.bias = -300*C;
+                return; }
+            else if (emat==3 && eb+en==1) {
+                m.draw = true;
+                return; }
+            else if (emat==4 && eb+en==1) {
+                m.drawish = true;
+                m.bias = -100*C;
+                return; }
+            m.drawish = true;
+            return; } }
+
+    // KQk KRk KBNk KBBk
+    if (emat == 0) {
+        if (q || r || b+n>=2 || b>=2 || p>=3) {
+            m.won = true;
+            return; } }
+
+    // KRkb KRkn
+    if (q+b+n+p==0 && r==1 && eq+er+ep==0 && eb+en==1) {
+        m.bias = -100*C;
+        m.drawish = true;
+        return; }
+
+    if (mat-emat >= e.noEvalLimit && mat>2*emat)
+        m.reduce = true; }
+
+void Eval::Init::material() {
+    memset(e.material, 0, sizeof(e.material));
+    for (int wr=0; wr<=2; ++wr)
+        for (int br=0; br<=2; ++br)
+            for (int wn=0; wn<=2; ++wn)
+                for (int bn=0; bn<=2; ++bn)
+                    for (int wq=0; wq<=2; ++wq)
+                        for (int bq=0; bq<=2; ++bq)
+                            for (int wb=0; wb<=2; ++wb)
+                                for (int bb=0; bb<=2; ++bb)
+                                    for (int wp=0; wp<=8; ++wp)
+                                        for (int bp=0; bp<=8; ++bp) {
+                                            unsigned bi = bp*matIndex[0][Pawn]
+                                                          + bn*matIndex[0][Knight]
+                                                          + bq*matIndex[0][Queen]
+                                                          + bb*matIndex[0][Bishop]
+                                                          + br*matIndex[0][Rook]
+                                                          + wp*matIndex[1][Pawn]
+                                                          + wn*matIndex[1][Knight]
+                                                          + wq*matIndex[1][Queen]
+                                                          + wb*matIndex[1][Bishop]
+                                                          + wr*matIndex[1][Rook]
+                                                          - minIndex;
+                                            unsigned wi = bp*matIndex[1][Pawn]
+                                                          + bn*matIndex[1][Knight]
+                                                          + bq*matIndex[1][Queen]
+                                                          + bb*matIndex[1][Bishop]
+                                                          + br*matIndex[1][Rook]
+                                                          + wp*matIndex[0][Pawn]
+                                                          + wn*matIndex[0][Knight]
+                                                          + wq*matIndex[0][Queen]
+                                                          + wb*matIndex[0][Bishop]
+                                                          + wr*matIndex[0][Rook]
+                                                          - minIndex;
+                                            ASSERT(wi <= maxIndex-minIndex);
+                                            ASSERT(bi <= maxIndex-minIndex);
+                                            material<White>(wr, wb, wq, wn, wp, br, bb, bq, bn, bp, e.material[wi]);
+                                            material<Black>(wr, wb, wq, wn, wp, br, bb, bq, bn, bp, e.material[bi]); } }
 #define SETPARM(x) x = p[ #x ].value; \
                    ASSERT( e.control.erase(toLower( #x )) );
 #define SETPARM2(x) SETPARM(x.opening) \
@@ -256,11 +394,10 @@ void Eval::Init::scale() {
                    ASSERT( e.control.erase(toLower( #x )) );
 #define SETPARME2(x) SETPARME(x.opening) \
                      SETPARME(x.endgame)
-void Eval::Init::setEvalParameters(const Parameters& p)
-{
+void Eval::Init::setEvalParameters(const Parameters& p) {
 #ifdef MYDEBUG
     e.control = p.getIndex();
-#endif    
+#endif
     SETPARM2(pawn.value);
     SETPARM2(pawn.hor.value);
     SETPARM2(pawn.hor.inflection);
@@ -289,11 +426,11 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     SETPARM2(pawnPasser2);
     SETPARM2(pawnPasser7);
     SETPARM2(pawnPasserSlope);
-    sigmoid(e.pawnPasser22, pawnPasser2, pawnPasser7, Parameters::Phase{6,6}, pawnPasserSlope );
+    sigmoid(e.pawnPasser22, pawnPasser2, pawnPasser7, PackedScore<float> {6,6 }, pawnPasserSlope );
     SETPARM2(pawnConnPasser);
-    sigmoid(e.pawnConnPasser22, Parameters::Phase{0,0}, pawnConnPasser, Parameters::Phase{6,6}, pawnPasserSlope );
+    sigmoid(e.pawnConnPasser22, PackedScore<float> {0,0 }, pawnConnPasser, PackedScore<float> {6,6 }, pawnPasserSlope );
     SETPARM2(pawnCandidate);
-    sigmoid(e.pawnCandidate, Parameters::Phase{0,0}, pawnCandidate, Parameters::Phase{6,6}, pawnPasserSlope);
+    sigmoid(e.pawnCandidate, PackedScore<float> {0,0 }, pawnCandidate, PackedScore<float> {6,6 }, pawnPasserSlope);
     SETPARME2(pawnPiece);
     SETPARM2(knight.value);
     SETPARM2(knight.hor.value);
@@ -306,12 +443,12 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     sigmoid(knight.vcenter.opening, knight.vert.opening, -knight.vert.value.opening, knight.vert.value.opening, knight.vert.inflection.opening );
     sigmoid(knight.hor.endgame, -knight.hor.value.endgame, knight.hor.value.endgame, knight.hor.inflection.endgame );
     sigmoid(knight.vcenter.endgame, knight.vert.endgame, -knight.vert.value.endgame, knight.vert.value.endgame, knight.vert.inflection.endgame );
-    SETPARME2(knightPair);
+    SETPARM2(knightPair);
     SETPARM2(knightBlockPasser);
     mulTab(e.knightBlockPasser, knightBlockPasser);
     SETPARM2(knight.mobility);
     SETPARM2(knight.mobslope);
-    sigmoid(e.nm, Parameters::Phase{ -knight.mobility.opening,  -knight.mobility.endgame }, knight.mobility, Parameters::Phase{0,0}, knight.mobslope);
+    sigmoid(e.nm, PackedScore<float> { -knight.mobility.opening,  -knight.mobility.endgame }, knight.mobility, PackedScore<float> {0,0 }, knight.mobslope);
 
     SETPARM2(rook.value);
     SETPARM2(rook.hor.value);
@@ -333,20 +470,19 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     SETPARM2(rookOwnPasser);
     SETPARM2(rookOppPasser);
     for (int i=0; i<=8; ++i) {
-        Parameters::Phase ro;
+        PackedScore<float> ro;
         ro.opening = std::max(rookOpenSlope.opening*(i-2)/7.0 + rookOpen2.opening, 0.0);
         ro.endgame = std::max(rookOpenSlope.endgame*(i-2)/7.0 + rookOpen2.endgame, 0.0);
         mulTab(e.rookOpen[i], ro);
         ro.opening = std::max(rookHalfOpenSlope.opening*(i-2)/7.0 + rookHalfOpen2.opening, 0.0);
         ro.endgame = std::max(rookHalfOpenSlope.endgame*(i-2)/7.0 + rookHalfOpen2.endgame, 0.0);
-        mulTab(e.rookHalfOpen[i], ro);
-    }
+        mulTab(e.rookHalfOpen[i], ro); }
     mulTab(e.rookWeakPawn, rookWeakPawn);
     mulTab(e.rookOwnPasser, rookOwnPasser);
     mulTab(e.rookOppPasser, rookOppPasser);
     SETPARM2(rook.mobility);
     SETPARM2(rook.mobslope);
-    sigmoid(e.rm, Parameters::Phase{ -rook.mobility.opening,  -rook.mobility.endgame }, rook.mobility, Parameters::Phase{0,0}, rook.mobslope);
+    sigmoid(e.rm, PackedScore<float> { -rook.mobility.opening,  -rook.mobility.endgame }, rook.mobility, PackedScore<float> {0,0 }, rook.mobslope);
 
     SETPARM2(bishop.value);
     SETPARM2(bishop.hor.value);
@@ -359,7 +495,7 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     sigmoid(bishop.vcenter.opening, bishop.vert.opening, -bishop.vert.value.opening, bishop.vert.value.opening, bishop.vert.inflection.opening );
     sigmoid(bishop.hor.endgame, -bishop.hor.value.endgame, bishop.hor.value.endgame, bishop.hor.inflection.endgame );
     sigmoid(bishop.vcenter.endgame, bishop.vert.endgame, -bishop.vert.value.endgame, bishop.vert.value.endgame, bishop.vert.inflection.endgame );
-    SETPARME2(bishopPair);
+    SETPARM2(bishopPair);
     SETPARM2(bishopBlockPasser);
     mulTab(e.bishopBlockPasser, bishopBlockPasser);
     SETPARM2(bishopOwnPawn);
@@ -372,7 +508,7 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     mulTab(e.bishopNotOppPawn, bishopNotOppPawn);
     SETPARM2(bishop.mobility);
     SETPARM2(bishop.mobslope);
-    sigmoid(e.bm, Parameters::Phase{ -bishop.mobility.opening,  -bishop.mobility.endgame }, bishop.mobility, Parameters::Phase{0,0}, bishop.mobslope);
+    sigmoid(e.bm, PackedScore<float> { -bishop.mobility.opening,  -bishop.mobility.endgame }, bishop.mobility, PackedScore<float> {0,0 }, bishop.mobslope);
 
     SETPARM2(queen.value);
     SETPARM2(queen.hor.value);
@@ -387,7 +523,7 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     sigmoid(queen.vcenter.endgame, queen.vert.endgame, -queen.vert.value.endgame, queen.vert.value.endgame, queen.vert.inflection.endgame );
     SETPARM2(queen.mobility);
     SETPARM2(queen.mobslope);
-    sigmoid(e.qm, Parameters::Phase{ -queen.mobility.opening,  -queen.mobility.endgame }, queen.mobility, Parameters::Phase{0,0}, queen.mobslope);
+    sigmoid(e.qm, PackedScore<float> { -queen.mobility.opening,  -queen.mobility.endgame }, queen.mobility, PackedScore<float> {0,0 }, queen.mobslope);
 
     king.value.opening = 0;
     king.value.endgame = 0;
@@ -414,11 +550,10 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     float rankFactor[7];
     sigmoid(rankFactor, 1.0/sqrt(kingPawnRankFactor), sqrt(kingPawnRankFactor), 7, kingPawnRankSlope, 1);
     for (unsigned rank=1; rank<=6; ++rank) {
-		sigmoid( e.oppKingOwnPawn[rank],   -oppKingOwnPawn2*rankFactor[rank],   oppKingOwnPawn2*rankFactor[rank], 1, kingPawnDistSlope);  // only 1..7 used
-		sigmoid( e.ownKingOwnPawn[rank],    ownKingOwnPawn2*rankFactor[rank],  -ownKingOwnPawn2*rankFactor[rank], 1, kingPawnDistSlope);
-		sigmoid( e.oppKingOwnPasser[rank], -oppKingOwnPasser2*rankFactor[rank], oppKingOwnPasser2*rankFactor[rank], 1, kingPawnDistSlope);  // only 1..7 used
-		sigmoid( e.ownKingOwnPasser[rank],  ownKingOwnPasser2*rankFactor[rank],-ownKingOwnPasser2*rankFactor[rank], 1, kingPawnDistSlope);
-    }
+        sigmoid( e.oppKingOwnPawn[rank],   -oppKingOwnPawn2*rankFactor[rank],   oppKingOwnPawn2*rankFactor[rank], 1, kingPawnDistSlope);  // only 1..7 used
+        sigmoid( e.ownKingOwnPawn[rank],    ownKingOwnPawn2*rankFactor[rank],  -ownKingOwnPawn2*rankFactor[rank], 1, kingPawnDistSlope);
+        sigmoid( e.oppKingOwnPasser[rank], -oppKingOwnPasser2*rankFactor[rank], oppKingOwnPasser2*rankFactor[rank], 1, kingPawnDistSlope);  // only 1..7 used
+        sigmoid( e.ownKingOwnPasser[rank],  ownKingOwnPasser2*rankFactor[rank],-ownKingOwnPasser2*rankFactor[rank], 1, kingPawnDistSlope); }
 
     SETPARM(kingShield.base);
     SETPARM(kingShield.vdelta);
@@ -431,8 +566,7 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     for (unsigned i=0; i<2; ++i) {
         kingShield.center[i+1] = kingShield.center[i] * kingShield.vdelta;
         kingShield.outer[i+1]  = kingShield.outer[i]  * kingShield.vdelta;
-        kingShield.inner[i+1]  = kingShield.inner[i]  * kingShield.vdelta;
-    }
+        kingShield.inner[i+1]  = kingShield.inner[i]  * kingShield.vdelta; }
 
     SETPARME(kingShieldOpenFile);
     SETPARME(kingShieldHalfOpenFile);
@@ -524,9 +658,11 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     SETPARME(aspirationHigh);
     SETPARME(aspirationHigh2);
     SETPARME(tempo);
+    SETPARME(noEvalLimit);
+//    SETPARME(matFlag);
     for (unsigned i=8; i<=maxDepth; ++i) {
-        e.dRed[i] = e.dRed[7];
-    }
+        e.dRed[i] = e.dRed[7]; }
+    SETPARME(allowLazyRoot);
 #ifdef MYDEBUG
     ASSERT(!e.control.size());
 #endif
@@ -534,4 +670,4 @@ void Eval::Init::setEvalParameters(const Parameters& p)
     zobrist();
     initPS();
     this->scale();
-}
+    material(); }

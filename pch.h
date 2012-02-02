@@ -58,32 +58,32 @@
 #include <immintrin.h>
 
 #ifdef USE_BOOST
-    #define BOOST_USE_WINDOWS_H
-    #define BOOST_THREAD_USE_LIB
-    #include <boost/thread/mutex.hpp>
-    #include <boost/thread/recursive_mutex.hpp>
-    #include <boost/thread/condition_variable.hpp>
-    #include <boost/thread/thread.hpp>
-    #include <boost/date_time/posix_time/posix_time.hpp>
-    typedef boost::thread Thread;
-    typedef boost::mutex Mutex;
-    typedef boost::condition_variable Condition;
-    typedef boost::recursive_mutex RecursiveMutex;
-    typedef boost::timed_mutex TimedMutex;
+#define BOOST_USE_WINDOWS_H
+#define BOOST_THREAD_USE_LIB
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/recursive_mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+typedef boost::thread Thread;
+typedef boost::mutex Mutex;
+typedef boost::condition_variable Condition;
+typedef boost::recursive_mutex RecursiveMutex;
+typedef boost::timed_mutex TimedMutex;
 
-    #define LockGuard boost::lock_guard
-    #define UniqueLock boost::unique_lock
+#define LockGuard boost::lock_guard
+#define UniqueLock boost::unique_lock
 #else
-    #include <mutex>
-    #include <condition_variable>
-    #include <thread>
-    typedef std::mutex Mutex;
-    typedef std::condition_variable Condition;
-    typedef std::thread Thread;
-    typedef std::recursive_mutex RecursiveMutex;
-    typedef std::timed_mutex TimedMutex;
-    #define LockGuard std::lock_guard
-    #define UniqueLock std::unique_lock//*/
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+typedef std::mutex Mutex;
+typedef std::condition_variable Condition;
+typedef std::thread Thread;
+typedef std::recursive_mutex RecursiveMutex;
+typedef std::timed_mutex TimedMutex;
+#define LockGuard std::lock_guard
+#define UniqueLock std::unique_lock//*/
 #endif
 
 #endif /* PCH_H_ */
