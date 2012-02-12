@@ -189,19 +189,21 @@ CompoundScore Eval::pieces(const Board& b, const PawnEntry& p) const {
     int darkB = !!(b.getPieces<C,Bishop>() & darkSquares);
     int lightB = !!(b.getPieces<C,Bishop>() & ~darkSquares);
     value = value + bishopOwnPawn[ p.dark[CI] * darkB + p.light[CI] * lightB ];
-    value = value + bishopOppPawn[ p.dark[EI] * darkB + p.light[EI] * lightB ];
+	value = value + bishopOppPawn[ popcount(b.getPieces<-C,Pawn>() & b.getAttacks<-C,Pawn>() & darkSquares) * darkB 
+								 + popcount(b.getPieces<-C,Pawn>() & b.getAttacks<-C,Pawn>() & ~darkSquares) * lightB ];
 
     value = value + bishopNotOwnPawn[ p.dark[CI] * lightB + p.light[CI] * darkB ];
-    value = value + bishopNotOppPawn[ p.dark[EI] * lightB + p.light[EI] * darkB ];
+	value = value + bishopNotOppPawn[ popcount(b.getPieces<-C,Pawn>() & b.getAttacks<-C,Pawn>() & darkSquares) * lightB 
+									+ popcount(b.getPieces<-C,Pawn>() & b.getAttacks<-C,Pawn>() & ~darkSquares)* darkB ];
     return value; }
 
 template<Colors C>
 int Eval::evalShield2(uint64_t pawns, unsigned file) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
 
-    int bitrank2 = 28-20*C;
-    int bitrank3 = 28-12*C;
-    int bitrank4 = 28- 4*C;
+    constexpr int bitrank2 = 28-20*C;
+    constexpr int bitrank3 = 28-12*C;
+    constexpr int bitrank4 = 28- 4*C;
 
     // Shift pawns in a position in which they will directly used as part of an
     // index in a lookup table, add pawns left to a2 and right to h2 pawn
@@ -653,7 +655,7 @@ int Eval::attack2(const Board& b, const PawnEntry& p, int attackingPieces, int d
     print_debug(debugEval, "attack index%d: %3d\n", CI, attack);
     print_debug(debugEval, "attack value%d: %3d\n", CI, attackTable2[attack]);
 
-    return attackTable2[attack];
+    return attackTable2[attack]; //TODO add offset, attack should not be nagative because of the engame transition
 
 }
 
@@ -687,7 +689,7 @@ int Eval::endgame(const Board& b, const PawnEntry& pe, int /*sideToMove*/) const
         print_debug(debugEval, "%3d)", ownKingOwnPawn[rank][distance[king][pos]]); }
     print_debug(debugEval, "\nKing dist passer %d\n", CI);
     /*
-     * calculate king distance to promotion square
+     * calculate king distance to passer
      */
     for (uint64_t p = b.getPieces<C,Pawn>() & pe.passers[CI]; p; p &= p-1) {
         uint64_t pos = bit(p);
@@ -721,11 +723,11 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
     for (int p=Rook; p<=King; ++p) {
         for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
             uint64_t sq=bit(x);
-            print_debug(debugEval, "materialw%d     %d\n", p, calc(b.matIndex, CompoundScore( getPS( p, sq))));
+            print_debug(debugEval, "materialw%d %c%d    %4d%4d\n", p, (sq&7)+'a', sq/8+1, getPS( p, sq).opening, getPS( p, sq).endgame);
             value = value + getPS( p, sq); }
         for (uint64_t x=b.getPieces<Black>(p); x; x&=x-1) {
             uint64_t sq=bit(x);
-            print_debug(debugEval, "materialb%d     %d\n", p, calc(b.matIndex, CompoundScore( getPS(-p, sq))));
+            print_debug(debugEval, "materialb%d %c%d    %4d%4d\n", p, (sq&7)+'a', sq/8+1, getPS(-p, sq).opening, getPS(-p, sq).endgame);
             value = value + getPS(-p, sq); } }
     int v = calc(b.matIndex, value);
     if (v != cmp) asm("int3");
@@ -751,6 +753,16 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
         int o = material[b.matIndex].opening;
         int e = endgameTransitionSlope - material[b.matIndex].opening;
         int s = o*score.opening() + e*score.endgame();
+        s = s + endgameTransitionSlope/2 - (s<0);        
+        print_debug(debugEval, "piece:       %4d %4d\n", piece.opening(), piece.endgame());
+        print_debug(debugEval, "attack/endg: %4d %4d\n", attend.opening(), attend.endgame());
+        print_debug(debugEval, "mobility:    %4d %4d\n", mob.opening(), mob.endgame());
+        print_debug(debugEval, "pawn:        %4d %4d\n", pawn.opening(), pawn.endgame());
+        print_debug(debugEval, "mat.bias:    %4d\n", material[b.matIndex].bias);
+        print_debug(debugEval, "mat.drawish: %4d\n", material[b.matIndex].drawish);
+        print_debug(debugEval, "mat.opening: %4d\n", material[b.matIndex].opening);
+        print_debug(debugEval, "posScore:    %4d\n", s >> logEndgameTransitionSlope);
+        print_debug(debugEval, "PSScore:     %4d\n", calc(b.matIndex, CompoundScore(b.keyScore.score)));
         return s >> logEndgameTransitionSlope; }
     else {       // pawnless endgame
         int mat = b.keyScore.score.endgame;  //TODO use a simpler discriminator
@@ -771,7 +783,8 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap, int psVal
         posScore = realScore - psValue;
         return realScore;
     case KB_kb_:
-        realScore = psValue >> evalKB_kb_<Black>(b);
+        posScore = operator()(b, stm, wap, bap);
+        realScore = (psValue + posScore) >> evalKB_kb_<Black>(b);
         posScore = realScore - psValue;
         return realScore;
     case KPk:
@@ -791,10 +804,15 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap, int psVal
 void Eval::ptClear() {
     pt->clear(); }
 
+/*
+ * Calculate the final score from a CompoundScore, including the material table
+ * bias and draw chances
+ */
 int Eval::calc(unsigned matIndex, CompoundScore score) const {
     int o = material[matIndex].opening;
     int e = endgameTransitionSlope - material[matIndex].opening;
     int s = o*score.opening() + e*score.endgame();
+    s = s + endgameTransitionSlope/2 - (s<0);
 
     return ((s >> logEndgameTransitionSlope) + material[matIndex].bias) >> material[matIndex].drawish; }
 
