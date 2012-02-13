@@ -206,7 +206,6 @@ private:
         template<typename T>
         static void mulTab(T& p, PackedScore<float> step);
         void zobrist();
-        void scale();
         void material();
         template<Colors C>
         void material(int r, int b, int q, int n, int p,
@@ -269,9 +268,6 @@ public:
     int attackTable2[1024];
     int nAttackersTab[16];
     int allowLazyRoot;
-    struct {
-        int16_t opening;
-        int16_t endgame; } scale[128];  // FEATURE remove, its no longer needed
     int shield[01000], shieldMirrored[01000];       //indexed by 9 bits in front of the king
     Material material[maxIndex-minIndex+1];
 

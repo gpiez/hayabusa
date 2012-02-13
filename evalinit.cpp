@@ -21,8 +21,47 @@
 #include "options.h"
 #include "bits.h"
 
+template<typename T>
+void printSigmoid(T& p, std::string str, int offset=0) {
+    size_t n;
+    for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && !p[n]; --n);
+    std::cout << std::setw(5) << str;
+    for (unsigned int i = 0; i <= n; ++i) {
+        std::cout << std::setw(4) << std::right << p[i]-offset; }
+    std::cout << std::endl; }
+
+template<typename T>
+void printSigmoid2(T& p, std::string str, int offset=0) {
+    size_t n;
+    for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && (!p[n].opening | !p[n].endgame); --n);
+    std::cout << std::setw(5) << str;
+    for (unsigned int i = 0; i <= n; ++i) {
+        std::stringstream s;
+        s << p[i].opening-offset << "/" << p[i].endgame-offset;
+        std::cout << std::setw(8) << s.str(); }
+    std::cout << std::endl; }
+
 Eval::Init::Init(Eval& e):
-    e(e) {}
+    e(e) {
+    e.evalHardBudget = -20;
+
+    if (Options::debug & DebugFlags::debugEval) {
+        printSigmoid(e.nAttackersTab, "nAttackersTab");
+        printSigmoid(e.attackN, "attN");
+        printSigmoid(e.attackTable2, "attTable2");
+        printSigmoid2(e.pawnPasser22, "pass");
+        printSigmoid2(e.pawnConnPasser22, "cpass"); }
+#ifdef MYDEBUG
+    	printSigmoid2(e.pawnCandidate, "Cand");
+		for (unsigned rank=1; rank<=6; ++rank) {
+			std::stringstream s;
+			s << rank << ":";
+			printSigmoid(e.oppKingOwnPasser[rank], "eKpass" + s.str());
+			printSigmoid(e.ownKingOwnPasser[rank], "mKpass" + s.str());
+			printSigmoid(e.oppKingOwnPawn[rank], "eKpawn" + s.str());
+			printSigmoid(e.ownKingOwnPawn[rank], "mKpawn" + s.str()); }
+#endif
+}
 
 template<typename T>
 void Eval::Init::sigmoid(T& p, PackedScore<float> start, PackedScore<float> end, PackedScore<float> dcenter, PackedScore<float> width, unsigned istart) {
@@ -71,26 +110,6 @@ void Eval::Init::sigmoid(int n, int p[], double start, double end, double dcente
         double t = i - dcenter;
         p[i] = lrint(a + r/(1.0 + exp(-t/width))); } }
 
-template<typename T>
-void printSigmoid(T& p, std::string str, int offset=0) {
-    size_t n;
-    for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && !p[n]; --n);
-    std::cout << std::setw(5) << str;
-    for (unsigned int i = 0; i <= n; ++i) {
-        std::cout << std::setw(4) << std::right << p[i]-offset; }
-    std::cout << std::endl; }
-
-template<typename T>
-void printSigmoid2(T& p, std::string str, int offset=0) {
-    size_t n;
-    for (n = sizeof(T)/sizeof(p[0])-1; n > 0 && (!p[n].opening | !p[n].endgame); --n);
-    std::cout << std::setw(5) << str;
-    for (unsigned int i = 0; i <= n; ++i) {
-        std::stringstream s;
-        s << p[i].opening-offset << "/" << p[i].endgame-offset;
-        std::cout << std::setw(8) << s.str(); }
-    std::cout << std::endl; }
-
 void Eval::Init::initPS(Pieces pIndex, Parameters::Piece& piece) {
     for (unsigned int sq = 0; sq<nSquares; ++sq) {
         int xh = (sq & 7);
@@ -109,6 +128,7 @@ void Eval::Init::initPS(Pieces pIndex, Parameters::Piece& piece) {
                                  (short) (piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame) };
         e.getPS(-pIndex, sq ^ 070) = (-CompoundScore(e.getPS( pIndex, sq))).packed();
         print_debug(debugEval, "%4d %4d  ", e.getPS(pIndex, sq).opening, e.getPS(pIndex, sq).endgame);
+//        print_debug(debugEval, "%4d %4d  ", e.getPS(-pIndex, sq ^ 070).opening, e.getPS(-pIndex, sq ^ 070).endgame);
         if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n'); }
 
 }
@@ -201,35 +221,6 @@ void Eval::Init::zobrist() {
 #endif
 }
 
-void Eval::Init::scale() {
-    static_assert(56 == 4*(materialTab[Rook]+materialTab[Bishop]+materialTab[Knight]) + 2*materialTab[Queen] + 16*materialTab[Pawn], "Total material");
-
-    for (unsigned i=0; i<sizeof(e.scale)/sizeof(*e.scale); ++i) {
-        int openingScale = i - e.endgameMaterial + endgameTransitionSlope/2;
-        openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
-        e.scale[i].endgame = endgameTransitionSlope-openingScale;
-        e.scale[i].opening = openingScale; }
-
-    e.evalHardBudget = -20;
-
-    if (Options::debug & DebugFlags::debugEval) {
-        printSigmoid(e.nAttackersTab, "nAttackersTab");
-        printSigmoid(e.attackN, "attN");
-        printSigmoid(e.attackTable2, "attTable2");
-        printSigmoid2(e.pawnPasser22, "pass");
-        printSigmoid2(e.pawnConnPasser22, "cpass"); }
-#ifdef MYDEBUG
-    printSigmoid2(e.pawnCandidate, "Cand");
-    for (unsigned rank=1; rank<=6; ++rank) {
-        std::stringstream s;
-        s << rank << ":";
-        printSigmoid(e.oppKingOwnPasser[rank], "eKpass" + s.str());
-        printSigmoid(e.ownKingOwnPasser[rank], "mKpass" + s.str());
-        printSigmoid(e.oppKingOwnPawn[rank], "eKpawn" + s.str());
-        printSigmoid(e.ownKingOwnPawn[rank], "mKpawn" + s.str()); }
-#endif
-}
-
 template<Colors C>
 void Eval::Init::material(int r, int b, int q, int n, int p,
                           int er, int eb, int eq, int en, int ep, Material& m) {
@@ -239,6 +230,7 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
     int emat = 5*er + 3*en + 10*eq + 3*eb + ep;
     if (mat<emat) return;
 
+    static_assert(56 == 4*(materialTab[Rook]+materialTab[Bishop]+materialTab[Knight]) + 2*materialTab[Queen] + 16*materialTab[Pawn], "Total material");
     int scalemat = (r+er)*materialTab[Rook]
                    + (b+eb)*materialTab[Bishop]
                    + (q+eq)*materialTab[Queen]
@@ -246,12 +238,17 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
                    + (p+ep)*materialTab[Pawn];
 
 
-    m.opening = e.scale[scalemat].opening;
+    int openingScale = scalemat - e.endgameMaterial + endgameTransitionSlope/2;
+    openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
+    m.opening = openingScale;
 
-    if (b >= 2)
-        m.bias += C*((bishopPair.opening*m.opening + bishopPair.endgame*(endgameTransitionSlope - m.opening)) >> logEndgameTransitionSlope);
+    if (b >= 2) {
+    	int s = C*(bishopPair.opening*m.opening + bishopPair.endgame*(endgameTransitionSlope - m.opening));
+//    	ASSERT(m.bias == 0);
+        m.bias += (s + endgameTransitionSlope/2 - (s<0)) >> logEndgameTransitionSlope; //TODO use calc function
+    }
 
-    if (b == 1 && eb == 1)
+    if (b == 1 && eb == 1 && q+r+n+eq+er+en == 0)
         m.recognized = KB_kb_;
 
     if (q+r+b+n + eq+er+eb+en)
@@ -669,5 +666,4 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     initShield();
     zobrist();
     initPS();
-    this->scale();
     material(); }
