@@ -68,7 +68,7 @@ public:
     void doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to, const Eval&) const;
 
     bool isForked() const __attribute__((noinline));
-    int isPieceHanging() const;
+    uint64_t isPieceHanging() const;
     inline Key getZobrist() const;
 private:
     void generateTargetMove(Move*& good, Move*& bad, uint64_t tobit) const;

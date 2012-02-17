@@ -205,9 +205,10 @@ Key ColoredBoard<C>::getZobrist() const {
     return keyScore.key + cep.castling.data4 + cep.enPassant*0x123456789abcdef + (C+1); }
 
 template<Colors C>
-int ColoredBoard<C>::isPieceHanging() const {
+uint64_t ColoredBoard<C>::isPieceHanging() const {
     uint64_t oppAtt = getAttacks<-C,Pawn>();
     uint64_t ownPieces = getOcc<C>() & ~getPieces<C,Pawn>();
+#if 0    
     if (ownPieces & oppAtt) return true;
     oppAtt |= getAttacks<-C, Knight>() | getAttacks<-C, Bishop>();
     ownPieces &= ~(getPieces<C,Knight>() | getPieces<C,Bishop>());
@@ -215,6 +216,16 @@ int ColoredBoard<C>::isPieceHanging() const {
     oppAtt |= getAttacks<-C, Rook>();
     ownPieces &= ~getPieces<C,Rook>();
     if (ownPieces & oppAtt) return true;
+#else
+    uint64_t hanging = ownPieces & oppAtt;
+    oppAtt |= getAttacks<-C, Knight>() | getAttacks<-C, Bishop>();
+    ownPieces &= ~(getPieces<C,Knight>() | getPieces<C,Bishop>());
+    hanging |= ownPieces & oppAtt;
+    oppAtt |= getAttacks<-C, Rook>();
+    ownPieces &= ~getPieces<C,Rook>();
+    hanging |= ownPieces & oppAtt;
+    return hanging;
+#endif
 
     return false; }
 #endif /* COLOREDBOARD_TCC_ */
