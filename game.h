@@ -53,6 +53,9 @@ enum Status { Running, Stopping, Stopped };
  */
 #ifdef QT_GUI_LIB
 
+#define NODE ,node
+#define NODEDEF ,NodeItem* node
+
 class Game: public QObject {
     Q_OBJECT
 
@@ -64,6 +67,9 @@ signals:
 private:
 
 #else
+
+#define NODE
+#define NODEDEF
 
 class Game {
 
@@ -166,27 +172,15 @@ public:
     template<Colors C, Phase P, class A, class B, Colors PREVC>
     int search3(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, bool& nextMaxDepth, NodeType nt
-#ifdef QT_GUI_LIB
-                , NodeItem*
-#endif
-               );
+                unsigned ply, Extension ext, bool& nextMaxDepth, NodeType nt NODEDEF );
     template<Colors C, Phase P, class A, class B, Colors PREVC>
     int search4(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, NodeType nt
-#ifdef QT_GUI_LIB
-                , NodeItem*
-#endif
-               ) __attribute__((always_inline));
+                unsigned ply, Extension ext, NodeType nt NODEDEF ) __attribute__((always_inline));
     template<Colors C, Phase P, class A, class B>
     int search9(const bool doNull, const unsigned reduction, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, NodeType nt
-#ifdef QT_GUI_LIB
-                , NodeItem*
-#endif
-               );
+                unsigned ply, Extension ext, NodeType nt NODEDEF );
 
     void perft(unsigned int depth);
     void divide(unsigned int depth);
