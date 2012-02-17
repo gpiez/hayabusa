@@ -20,6 +20,7 @@
 
 #ifdef __linux__
 #include <sys/prctl.h>
+#include <unistd.h>
 #endif
 #include "workthread.h"
 #include "jobs.h"

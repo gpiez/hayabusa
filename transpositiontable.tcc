@@ -23,6 +23,7 @@
 #include "game.h"
 #include "coloredboard.tcc"
 #include "workthread.h"
+#include <unistd.h>
 
 template<typename Entry, unsigned int assoc, typename Key>
 Table<Entry, assoc, Key>::Table(uint64_t size) :
