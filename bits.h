@@ -16,7 +16,7 @@ namespace {
  * All popcount functions return int, because they are usually used in summing
  * up a score or multiplication with possibly negative values.
  */
-inline int popcount(uint64_t x) {
+inline int __attribute__((__always_inline__)) popcount(uint64_t x) {
 #if defined(__SSE4_2__) && defined(__x86_64__)
     return __popcntq(x);
 #else
@@ -53,8 +53,7 @@ inline int popcount3( uint64_t x ) {
 #endif
 }
 
-__v2di inline pcmpeqq(__v2di a, __v2di b) __attribute__((__always_inline__));
-__v2di inline pcmpeqq(__v2di a, __v2di b) {
+inline __v2di __attribute__((__always_inline__)) pcmpeqq(__v2di a, __v2di b) {
 #ifdef __SSE4_1__
     return _mm_cmpeq_epi64(a, b);
 #else
@@ -69,8 +68,7 @@ __v2di inline pcmpeqq(__v2di a, __v2di b) {
 #endif
 }
 
-inline uint64_t ror(uint64_t x, unsigned k) __attribute__((__always_inline__));
-inline uint64_t ror(uint64_t x, unsigned k) {
+inline uint64_t  __attribute__((__always_inline__)) ror(uint64_t x, unsigned k) {
 #if defined(__x86_64__)
     return __rorq(x, k);
 #else
@@ -78,8 +76,7 @@ inline uint64_t ror(uint64_t x, unsigned k) {
 #endif
 }
 
-inline uint64_t rol(uint64_t x, unsigned k) __attribute__((__always_inline__));
-inline uint64_t rol(uint64_t x, unsigned k) {
+inline uint64_t __attribute__((__always_inline__)) rol(uint64_t x, unsigned k) {
 #if defined(__x86_64__)
     return __rolq(x, k);
 #else
@@ -87,8 +84,7 @@ inline uint64_t rol(uint64_t x, unsigned k) {
 #endif
 }
 
-inline uint64_t bit(uint64_t x) __attribute__((__always_inline__));
-inline uint64_t bit(uint64_t x) {
+inline uint64_t __attribute__((__always_inline__)) bit(uint64_t x) {
 #if defined(__x86_64__)
     uint64_t result;
     asm(" bsfq %1, %0 \n"
@@ -102,8 +98,7 @@ inline uint64_t bit(uint64_t x) {
 //     return __bsfq(x);        //this causes an additional 32 to 64 bit zero extension being emitted
 }
 
-inline unsigned int bitr(uint64_t x) __attribute__((__always_inline__));
-inline unsigned int bitr(uint64_t x) {
+inline uint64_t __attribute__((__always_inline__)) bitr(uint64_t x) {
 #if defined(__x86_64__)
     uint64_t result;
     asm(" bsrq %1, %0 \n"
@@ -117,20 +112,7 @@ inline unsigned int bitr(uint64_t x) {
 #endif
 }
 
-inline uint64_t btr(uint64_t x, uint64_t b) __attribute__((__always_inline__));
-inline uint64_t btr(uint64_t x, uint64_t b) {
-    asm(" btrq %1, %0 \n"
-        : "=r"(x)
-        : "r"(b), "0"(x)
-       );
-    return x; }
-
-//inline unsigned int bit(unsigned int x) __attribute__((__always_inline__));
-//inline unsigned int bit(unsigned int x) {
-//    return __bsfd(x); }
-
-inline uint64_t fold(__v2di hilo) __attribute__((__always_inline__));
-inline uint64_t fold(__v2di hilo) {
+inline uint64_t __attribute__((__always_inline__)) fold(__v2di hilo) {
 #ifdef __x86_64__
     return _mm_cvtsi128_si64(_mm_unpackhi_epi64(hilo, hilo))
            | _mm_cvtsi128_si64(hilo);
@@ -140,20 +122,17 @@ inline uint64_t fold(__v2di hilo) {
 #endif
 }
 
-template<int N> uint64_t shift(uint64_t b) __attribute__((__always_inline__));
-template<int N> uint64_t shift(uint64_t b) {
+template<int N> inline uint64_t __attribute__((__always_inline__)) shift(uint64_t b) {
     if (N > 0)
         return b << (N & 0x3f);
     else
         return b >> (-N & 0x3f); }
 
-template<Colors C,int R> uint64_t rank() __attribute__((__always_inline__));
-template<Colors C,int R> uint64_t rank() {
+template<Colors C,int R> inline uint64_t __attribute__((__always_inline__)) rank() {
     static_assert( R>=1 && R<=8, "Wrong Rank" );
     return 0xffULL << (C == White ? R*8-8:64-8*R); }
 
-template<char F> uint64_t file() __attribute__((__always_inline__));
-template<char F> uint64_t file() {
+template<char F> inline uint64_t __attribute__((__always_inline__)) file() {
     static_assert( F>='a' && F<='h', "Wrong File" );
     return 0x0101010101010101ULL << (F-'a'); }
 

@@ -35,18 +35,18 @@ template<Colors C> struct Score {
 
     Score() {};
     /* No implicit int conversion operator and constructor, they allow wrong comparisons */
-    explicit Score (int a) __attribute__((__always_inline__));
-    explicit Score (const Score& a) __attribute__((__always_inline__));
-    bool operator >= (int a) const __attribute__((__always_inline__));
-    bool operator <= (int a) const __attribute__((__always_inline__));
-    bool operator > (int a) const __attribute__((__always_inline__));
-    bool operator < (int a) const __attribute__((__always_inline__));
-    bool max(const int b) __attribute__((__always_inline__));
+    inline explicit Score (int a) __attribute__((__always_inline__));
+    inline explicit Score (const Score& a) __attribute__((__always_inline__));
+    inline bool operator >= (int a) const __attribute__((__always_inline__));
+    inline bool operator <= (int a) const __attribute__((__always_inline__));
+    inline bool operator > (int a) const __attribute__((__always_inline__));
+    inline bool operator < (int a) const __attribute__((__always_inline__));
+    inline bool max(const int b) __attribute__((__always_inline__));
     static std::string str(int v);
 
-    Score<C>& unshared() __attribute__((__always_inline__));
-    const Score<C>& unshared() const __attribute__((__always_inline__));
-    unsigned int isNotReady() const __attribute__((__always_inline__));
+    inline Score<C>& unshared() __attribute__((__always_inline__));
+    inline const Score<C>& unshared() const __attribute__((__always_inline__));
+    inline unsigned int isNotReady() const __attribute__((__always_inline__));
     void join() const {};
     void setReady() {};
     void setNotReady() {}; };
@@ -76,7 +76,7 @@ public:
         notReady(0),
         nChildren(0),
         parent(nullptr),
-        children( {nullptr })
+        children{nullptr}
     {}
     ~SharedScore() {
         ASSERT(!notReady);
@@ -92,7 +92,7 @@ public:
         notReady(0),
         nChildren(0),
         parent(&a),
-        children( {nullptr })
+        children{nullptr}
 
     {
         a.addChild(this); }
@@ -102,7 +102,7 @@ public:
         notReady(0),
         nChildren(0),
         parent(nullptr),
-        children( {nullptr }) {}
+        children{nullptr} {}
 
     const Score<C>& unshared() const {
         return *this; }
