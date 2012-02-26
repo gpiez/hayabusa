@@ -53,8 +53,8 @@ static const __v16qi zero = _mm_set1_epi8(0);
 //
 void History::init() {
     for (unsigned d=0; d<nMaxGameLength/32+4; ++d) { //FIXME find some way to init this fast, clearing 5M which are 98% unsused is not good
-        max[0][d] = max[1][d] = maxHistory/2;   // initialize with this, to// avoid unused pos with a high
-        for (unsigned i=0; i<=2*nPieces; ++i)
+        max[d] = maxHistory/2;   // initialize with this, to// avoid unused pos with a high
+        for (unsigned i=1; i<=nPieces; ++i)
             init64(v[d][i]); } }
 
 void History::init64(uint8_t v[64]) {

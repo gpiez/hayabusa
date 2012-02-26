@@ -17,8 +17,8 @@
 class Eval;
 
 struct History {
-    uint8_t v[nMaxGameLength+4][16][nSquares] ALIGN_XMM;
-    int max[nColors][nMaxGameLength+4];
+    uint8_t v[nMaxGameLength+4][8][nSquares] ALIGN_XMM;
+    int max[nMaxGameLength+4];
     static const __v16qi uinctab[16];
     static const __v16qi sinctab[16];
 
@@ -26,8 +26,8 @@ public:
 //     History();
     void init();
     void init64(uint8_t v[nSquares]);
-    template<Colors C> void good(Move, unsigned ply);
-    template<Colors C> int get(Move, unsigned ply);
-    template<Colors C> void sort(Move* begin, unsigned n, unsigned ply); };
+    void good(Move, unsigned ply, const Eval&);
+    int get(Move, unsigned ply, const Eval&);
+    void sort(Move* begin, unsigned n, unsigned ply, const Eval&); };
 
 #endif /* HISTORY_H_ */
