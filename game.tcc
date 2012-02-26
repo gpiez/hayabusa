@@ -38,7 +38,7 @@
  * moves leading to the start position may not, so we need the second condition
  */
 template<Colors C>
-inline bool Game::find(const ColoredBoard<C>& b, Key k, unsigned ply) const {
+inline bool Game::findRepetition(const ColoredBoard<C>& b, Key k, unsigned ply) const {
     for (unsigned i = ply+rootPly; i+b.fiftyMoves >= ply+rootPly+4 && i>=4; i-=2) {
         ASSERT(i<=nMaxGameLength);
         if (keys[i-4] == k) return true; }
@@ -145,6 +145,6 @@ uint64_t Game::rootPerft(unsigned int depth) {
 
 template<Colors C>
 bool Game::isDraw(const ColoredBoard<C>& b) const {
-    return find(b, b.keyScore.key, 0) || b.fiftyMoves >= 100; }
+    return findRepetition(b, b.keyScore.key, 0) || b.fiftyMoves >= 100; }
 
 #endif

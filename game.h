@@ -130,7 +130,7 @@ private:
     int blackLimit;
     static Mutex allocMutex;
 
-    template<Colors C> inline bool find(const ColoredBoard<C>& b, Key k, unsigned ply) const;
+    template<Colors C> inline bool findRepetition(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
     std::string status(std::chrono::system_clock::time_point, int);
     template<int C> int limit() const {
