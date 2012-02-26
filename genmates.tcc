@@ -22,36 +22,47 @@
 #include "coloredboard.h"
 
 static const __m128i zero = _mm_set1_epi64x(0);
+typedef unsigned int uint128_t __attribute__ ((mode(TI)));
 
 template<Colors C>
-uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, uint64_t king, unsigned k) const {
+uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, /*uint64_t king, */unsigned k) const {
     uint64_t rescape = getAttacks<-C,King>() & ~(occupied[EI] | blockedEscapes);
-    rescape = ror(rescape, k-9);
-#if 0
-    uint64_t rmate = 0;
-    if (!(rescape & 0x30003))
-        rmate |= king << 1 & ~file<'a'>();
-    if (!(rescape & 0x00505))
-        rmate |= king << 8;
-    if (!(rescape & 0x60006))
-        rmate |= king >> 1 & ~file<'h'>();
-    if (!(rescape & 0x50500))
-        rmate |= king >> 8;
-    rmate &= checkingMoves & undefended;
-#else
     uint64_t rmate = checkingMoves & undefended & getAttacks<-C,King>();
-    if (rmate) {
-        if (rescape & 0x30003)
-            rmate &= ~(king<<1);
-        if (rescape & 0x00505)
-            rmate &= ~(king<<8);
-        if (rescape & 0x60006)
-            rmate &= ~(king>>1);
-        if (rescape & 0x50500)
-            rmate &= ~(king>>8); }
-#endif
-
-    if (!(rescape & 0x70007))
+    for (uint64_t possmate = rmate; unlikely(possmate); ) {
+        uint64_t bit = possmate & -possmate;
+        /*
+         * This multiplication and shift sets the bits around bit in this pattern:
+         * .X.X.
+         * XX.XX
+         * ..b..
+         * XX.XX
+         * .X.X.
+         * where b is the positition of the rook which should mate. The king sits
+         * at an adjacent position to b, and all bits further than one sqaure
+         * away from the king gets masked, so the result is either
+         * .X.X.  .XX
+         * .XkX.  rk.  or rotated further
+         * ..r..  .XX
+         * If one bit in an escape square X is set, the mate on r is not possible
+         */
+        uint128_t p = (uint128_t)bit * 0xa1b001b0a;
+        if ((uint64_t)(p >> 18) & rescape)
+            rmate -= bit;
+        possmate -= bit;
+    } 
+    //    if unlikely(rmate) {
+//            if (rescape & 0x30003)
+//                rmate &= ~(king<<1);
+//            if (rescape & 0x00505)
+//                rmate &= ~(king<<8);
+//            if (rescape & 0x60006)
+//                rmate &= ~(king>>1);
+//            if (rescape & 0x50500)
+//                rmate &= ~(king>>8); } }
+//        
+    
+    rescape = ror(rescape, k-9);
+    if unlikely(!(rescape & 0x70007))
         if (uint64_t p = kingIncoming[EI].d0 & checkingMoves & ~getAttacks<-C,All>()) {
             uint64_t d04 = kingIncoming[EI].d0
                            &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -70,7 +81,7 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
             d4 >>= 077-k;
             rmate |=  p & ~d0 & ~d4; //TODO check if capture mate moves should be generated here
         }
-    if (!(rescape & 0x50505))
+    if unlikely(!(rescape & 0x50505))
         if (uint64_t p = kingIncoming[EI].d2 & checkingMoves & ~getAttacks<-C,All>()) {
             uint64_t d26 = kingIncoming[EI].d2
                            &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
@@ -94,9 +105,7 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
 template<Colors C>
 template<bool AbortOnFirst, typename R>
 R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) const {
-    uint64_t king = getPieces<-C,King>();
-    uint64_t k = bit(king);
-    uint64_t attNotEnemyKing = getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Queen>() | getAttacks<-C,Pawn>();
+//    unsigned nescapes = popcount(getAttacks<-C,King>() & ~(occupied[EI] | getAttacks<C,All>()));
     uint64_t mate;
     /*
      * Rook mates: Generate all possible checking moves by rooks. Determine
@@ -105,7 +114,11 @@ R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) cons
      * can assist in blocking escape squares. X-ray attacks may assist in
      * defending the attacking rook.
      */
-    if (uint64_t checkingMoves = getAttacks<C,Rook>() & ~occupied[CI] & (kingIncoming[EI].d0 | kingIncoming[EI].d2)) {
+    if (uint64_t checkingMoves = unlikely((getAttacks<C,Rook>() & (kingIncoming[EI].d0 | kingIncoming[EI].d2))))
+    if (checkingMoves &= ~occupied[CI]) {
+        uint64_t king = getPieces<-C,King>();
+        uint64_t k = bit(king);
+        uint64_t attNotEnemyKing = getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Queen>() | getAttacks<-C,Pawn>();
         uint64_t attNotSelfRook;
         uint64_t attNotRook = getAttacks<C,Queen>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
         if (rsingle[CI][1].move.data) {
@@ -123,8 +136,8 @@ R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) cons
             uint64_t checkR0Moves = r0attacks & ~occupied[CI] & (kingIncoming[EI].d0 | kingIncoming[EI].d2);
             uint64_t checkR1Moves = r1attacks & ~occupied[CI] & (kingIncoming[EI].d0 | kingIncoming[EI].d2);
             if (checkR0Moves && checkR1Moves) {
-                mate = generateRookMates(checkR0Moves, attNotRook | r1attacks | rxray, (attNotRook|rxray) & ~attNotEnemyKing, king, k);
-                mate|= generateRookMates(checkR1Moves, attNotRook | r0attacks | rxray, (attNotRook|rxray) & ~attNotEnemyKing, king, k);
+                mate = generateRookMates(checkR0Moves, attNotRook | r1attacks | rxray, (attNotRook|rxray) & ~attNotEnemyKing, /*king, */k);
+                mate|= generateRookMates(checkR1Moves, attNotRook | r0attacks | rxray, (attNotRook|rxray) & ~attNotEnemyKing, /*king, */k);
                 goto haveMate; }
             else if (checkR0Moves) {
                 attNotSelfRook = attNotRook | r1attacks;
@@ -142,7 +155,7 @@ R ColoredBoard<C>::generateMateMoves( Move** const good, Move** const bad ) cons
                 attNotRook |= rxray; }
             attNotSelfRook = attNotRook; }
 
-        mate = generateRookMates(checkingMoves, attNotSelfRook, attNotRook & ~attNotEnemyKing, king, k);
+        mate = generateRookMates(checkingMoves, attNotSelfRook, attNotRook & ~attNotEnemyKing, /*king, */k);
 haveMate:
         for(const MoveTemplateR* rs = rsingle[CI]; rs->move.data; rs++) {
             __v2di a02 = rs->d02;
@@ -163,17 +176,21 @@ haveMate:
 haveNoMate:
     // promotion moves, always assuming queen promotions are counted as queen moves.
     // pawn promotions may only move if not pinned at all.
-    uint64_t pMoves = getPieces<C,Pawn>() & pins[CI];
-    pMoves  = ( (shift<C* 8  >(pMoves)                & ~occupied1)
+    uint64_t pMoves = getPieces<C,Pawn>() & rank<7>();
+    if unlikely(pMoves) { 
+        pMoves &= pins[CI];
+        pMoves  = (shift<C* 8  >(pMoves)                & ~occupied1)
                 | (shift<C*8+1>(pMoves) & ~file<'a'>() &  occupied[EI])
-                | (shift<C*8-1>(pMoves) & ~file<'h'>() &  occupied[EI])
-              )
-              & rank<8>();
-    if (uint64_t checkingMoves  = (getAttacks<C,Queen>() | pMoves)
+                | (shift<C*8-1>(pMoves) & ~file<'h'>() &  occupied[EI]);
+    }
+    if (uint64_t checkingMoves  = ((getAttacks<C,Queen>() | pMoves)
                                   & ~occupied[CI]
-                                  & (kingIncoming[EI].d0 | kingIncoming[EI].d1 | kingIncoming[EI].d2 | kingIncoming[EI].d3)) {
+                                  & (kingIncoming[EI].d0 | kingIncoming[EI].d1 | kingIncoming[EI].d2 | kingIncoming[EI].d3))) {
         uint64_t attNotQueen = getAttacks<C,Rook>() | getAttacks<C,Bishop>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
         uint64_t xprot=0;
+        uint64_t king = getPieces<-C,King>();
+        uint64_t k = bit(king);
+        uint64_t attNotEnemyKing = getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Queen>() | getAttacks<-C,Pawn>();
         if (getAttacks<C,Queen>()) {
             uint64_t erook1 = getPieces<-C,Rook>() & (getPieces<-C,Rook>()-1);
             uint64_t ebishop1 = getPieces<-C,Bishop>() & (getPieces<-C,Bishop>()-1);
@@ -217,8 +234,8 @@ haveNoMate:
             ASSERT(origPawn);
             if (origPawn & ~pins[EI]) {
                 attNotEnemyKing = xprot = 0; } }
-        uint64_t qescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
-        qescape = ror(qescape, k-9);
+        uint64_t oqescape = getAttacks<-C,King>() & ~(occupied[EI] | attNotQueen);
+        uint64_t qescape = ror(oqescape, k-9);
         uint64_t qmate = checkingMoves & attNotQueen & ~(attNotEnemyKing | xprot) & getAttacks<-C,King>();
         if (qmate) {
             // emptiness of near king squares in even directions
@@ -229,127 +246,144 @@ haveNoMate:
 
             uint64_t qsingle = 0;
 
-            if (qmate & king<<9) {
+            for (uint64_t possmate = qmate; unlikely(possmate); ) {
+                uint64_t bit = possmate & -possmate;
+                /*
+                 * This multiplication and shift sets the bits around qbit in this pattern:
+                 * .X.X.
+                 * X...X
+                 * ..q..
+                 * X...X
+                 * .X.X.
+                 * where q is the positition of the queen which should mate. The king sits
+                 * at an adjacent position to q, and all bits further than one square
+                 * away from the king gets masked, so the result is either
+                 * .X.X.  ..X
+                 * ..k..  qk.  or rotated further
+                 * ..q..  ..X
+                 * If one bit in an escape square X is set, the mate on q is not possible
+                 */
+                uint128_t p = (uint128_t)bit * 0xa1100110a;
+                if ((uint64_t)(p >> 18) & oqescape)
+                    qmate -= bit;
+                possmate -= bit;
+            }
+            
+            if unlikely(qmate & king<<9) {
                 uint64_t k0 = ror((king << 1) & ~occupied1, k-9);
                 uint64_t k2 = ror((king << 8) & ~occupied1, k-9);
                 uint64_t qe1 = qescape & 0x10106 & ~(k2>>1) & ~(k0>>8);
-                if (qe1)
-                    qmate &= ~(king<<9);
-                else {
-                    uint64_t qse1 = qe1 & -qe1;
-                    if (qse1 == qe1) qsingle |= qe1; } }
+                if (qe1) qmate -= king<<9; }
 
-            if (qmate & king<<7) {
+            if unlikely(qmate & king<<7) {
                 uint64_t k2 = ror((king << 8) & ~occupied1, k-9);
                 uint64_t k4 = ror((king >> 1) & ~occupied1, k-9);
                 uint64_t qe3 = qescape & 0x40403 & ~(k2<<1) & ~(k4>>8);
-                if (qe3)
-                    qmate &= ~(king<<7);
-                else {
-                    uint64_t qse3 = qe3 & -qe3;
-                    if (qse3 == qe3) qsingle |= qe3; } }
+                if (qe3) qmate -= king<<7; }
 
-            if (qmate & king>>9) {
+            if unlikely(qmate & king>>9) {
                 uint64_t k4 = ror((king >> 1) & ~occupied1, k-9);
                 uint64_t k6 = ror((king >> 8) & ~occupied1, k-9);
                 uint64_t qe5 = qescape & 0x30404 & ~(k6<<1) & ~(k4<<8);
-                if (qe5)
-                    qmate &= ~(king>>9);
-                else {
-                    uint64_t qse5 = qe5 & -qe5;
-                    if (qse5 == qe5) qsingle |= qe5; } }
+                if (qe5) qmate -= king>>9; }
 
-            if (qmate & king>>7) {
+            if unlikely(qmate & king>>7) {
                 uint64_t k0 = ror((king << 1) & ~occupied1, k-9);
                 uint64_t k6 = ror((king >> 8) & ~occupied1, k-9);
                 uint64_t qe7 = qescape & 0x60101 & ~(k6>>1) & ~(k0<<8);
-                if (qe7)
-                    qmate &= ~(king>>7);
-                else {
-                    uint64_t qse7 = qe7 & -qe7;
-                    if (qse7 == qe7) qsingle |= qe7; } }
+                if (qe7) qmate -= king>>7; }
 
-            if (qmate & king<<1) {
-                uint64_t qe0 = qescape & 0x10001;
-                if (qe0)
-                    qmate &= ~(king<<1);
-                else {
-                    uint64_t qse0 = qe0 & -qe0;
-                    if (qse0 == qe0) qsingle |= qe0; } }
+//            if unlikely(qmate & king<<1) {
+//                uint64_t qe0 = qescape & 0x10001;
+//                if (qe0)
+//                    qmate &= ~(king<<1);
+//                else {
+//                    uint64_t qse0 = qe0 & -qe0;
+//                    if (qse0 == qe0) qsingle |= qe0; } }
+//
+//            if unlikely(qmate & king<<8) {
+//                uint64_t qe2 = qescape & 0x00005;
+//                if (qe2)
+//                    qmate &= ~(king<<8);
+//                else {
+//                    uint64_t qse2 = qe2 & -qe2;
+//                    if (qse2 == qe2) qsingle |= qe2; } }
+//
+//            if unlikely(qmate & king>>1) {
+//                uint64_t qe4 = qescape & 0x40004;
+//                if (qe4)
+//                    qmate &= ~(king>>1);
+//                else {
+//                    uint64_t qse4 = qe4 & -qe4;
+//                    if (qse4 == qe4) qsingle |= qe4; } }
+//
+//            if unlikely(qmate & king>>8) {
+//                uint64_t qe6 = qescape & 0x50000;
+//                if (qe6)
+//                    qmate &= ~(king>>8);
+//                else {
+//                    uint64_t qse6 = qe6 & -qe6;
+//                    if (qse6 == qe6) qsingle |= qe6; } } 
+            }
 
-            if (qmate & king<<8) {
-                uint64_t qe2 = qescape & 0x00005;
-                if (qe2)
-                    qmate &= ~(king<<8);
-                else {
-                    uint64_t qse2 = qe2 & -qe2;
-                    if (qse2 == qe2) qsingle |= qe2; } }
-
-            if (qmate & king>>1) {
-                uint64_t qe4 = qescape & 0x40004;
-                if (qe4)
-                    qmate &= ~(king>>1);
-                else {
-                    uint64_t qse4 = qe4 & -qe4;
-                    if (qse4 == qe4) qsingle |= qe4; } }
-
-            if (qmate & king>>8) {
-                uint64_t qe6 = qescape & 0x50000;
-                if (qe6)
-                    qmate &= ~(king>>8);
-                else {
-                    uint64_t qse6 = qe6 & -qe6;
-                    if (qse6 == qe6) qsingle |= qe6; } } }
-
-        uint64_t qmate2 = 0;
-        if (!(qescape & 0x30003))
-            qmate2 |= king << 2 & ~attNotEnemyKing<<1 & ~file<'a'>() & ~file<'b'>();
-        if (!(qescape & 0x00505))
-            qmate2 |= king << 16 & ~attNotEnemyKing<<8;
-        if (!(qescape & 0x60006))
-            qmate2 |= king >> 2 & ~attNotEnemyKing>>1 & ~file<'h'>() & ~file<'g'>();
-        if (!(qescape & 0x50500))
-            qmate2 |= king >> 16 & ~attNotEnemyKing>>8;
-        qmate2 &= checkingMoves & (kingIncoming[EI].d0 | kingIncoming[EI].d2) & ~(getAttacks<-C,All>()|xprot);
-        qmate |= qmate2;
-
-        if (!(qescape & 0x70007))
-            if (uint64_t p=kingIncoming[EI].d0 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
-                uint64_t d04 = kingIncoming[EI].d0
-                               &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                                     | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                                     | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                                     | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                                     | (getAttacks<-C,King>()   & attNotEnemyKing)
-                                     | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
-                                   );
-                uint64_t d0 = d04 >> k;
-                d0   = d0<<1 | d0<<2;
-                d0  |= d0<<2 | d0<<4;
-                d0 <<= k;
-                uint64_t d4 = d04 << (077-k);
-                d4   = d4>>1 | d4>>2;
-                d4  |= d4>>2 | d4>>4;
-                d4 >>= 077-k;
-                qmate |= p & ~d0 & ~d4; }
-        if (!(qescape & 0x50505))
-            if (uint64_t p=kingIncoming[EI].d2 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
-                uint64_t d26 = kingIncoming[EI].d2
-                               &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
-                                     | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
-                                     | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
-                                     | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
-                                     | (getAttacks<-C,King>()   & attNotEnemyKing)
-                                   );
-                uint64_t d2 = d26 >> k;
-                d2   = d2<<010 | d2<<020;
-                d2  |= d2<<020 | d2<<040;
-                d2 <<= k;
-                uint64_t d6 = d26 << (077-k);
-                d6   = d6>>010 | d6>>020;
-                d6  |= d6>>020 | d6>>040;
-                d6 >>= 077-k;
-                qmate |= p & ~d2 & ~d6; }
+//        uint64_t qmate2 = 0;
+        if (!(qescape & 0x20002)) {
+            if (uint64_t p=kingIncoming[EI].d0 & checkingMoves & ~(getAttacks<-C,All>()|xprot))
+                if (!(qescape & 0x30003)) {
+                    qmate |= p & king << 2 & ~(attNotEnemyKing<<1);
+                    if (!(qescape & 0x60006)) {
+                        qmate |= p & king >> 2 & ~(attNotEnemyKing>>1);
+                            uint64_t d04 = kingIncoming[EI].d0
+                                           &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                                 | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                                 | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                                 | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                                 | (getAttacks<-C,King>()   & attNotEnemyKing)
+                                                 | (shift<-C*8>(getPieces<-C, Pawn>()) & getAttacks<-C,All>())
+                                               );
+                            uint64_t d0 = d04 >> k;
+                            d0   = d0<<1 | d0<<2;
+                            d0  |= d0<<2 | d0<<4;
+                            d0 <<= k;
+                            uint64_t d4 = d04 << (077-k);
+                            d4   = d4>>1 | d4>>2;
+                            d4  |= d4>>2 | d4>>4;
+                            d4 >>= 077-k;
+                            qmate |= p & ~d0 & ~d4; } } 
+                else
+                    if (!(qescape & 0x60006))
+                        qmate |= p & king >> 2 & ~(attNotEnemyKing>>1);
+        }
+        
+        if (!(qescape & 0x00500)) {
+            if (uint64_t p=kingIncoming[EI].d2 & checkingMoves & ~(getAttacks<-C,All>()|xprot))
+                if (!(qescape & 0x00505)) {
+                    qmate |= p & king<<020 & ~(attNotEnemyKing<<8);
+                    if (!(qescape & 0x50500)) {
+                        qmate |= p & king >> 020 & ~(attNotEnemyKing>>8);
+                            uint64_t d26 = kingIncoming[EI].d2
+                                           &   ( (getAttacks<-C,Rook>()   &  getAttacks<-C,Pawn>())
+                                                 | (getAttacks<-C,Bishop>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>()))
+                                                 | (getAttacks<-C,Queen>()  & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>()))
+                                                 | (getAttacks<-C,Knight>() & (getAttacks<-C,Pawn>() | getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Queen>()))
+                                                 | (getAttacks<-C,King>()   & attNotEnemyKing)
+                                               );
+                            uint64_t d2 = d26 >> k;
+                            d2   = d2<<010 | d2<<020;
+                            d2  |= d2<<020 | d2<<040;
+                            d2 <<= k;
+                            uint64_t d6 = d26 << (077-k);
+                            d6   = d6>>010 | d6>>020;
+                            d6  |= d6>>020 | d6>>040;
+                            d6 >>= 077-k;
+                            qmate |= p & ~d2 & ~d6; } } 
+                else
+                    if (!(qescape & 0x50500))
+                        qmate |= p & king >> 020 & ~(attNotEnemyKing>>8);
+        }
+        
+//        qmate2 &= checkingMoves & (kingIncoming[EI].d0 | kingIncoming[EI].d2) & ~(getAttacks<-C,All>()|xprot);
+//        qmate |= qmate2;
 
         if (!(qescape & 0x30506))
             if (uint64_t p=kingIncoming[EI].d1 & checkingMoves & ~getAttacks<-C,All>()) {
@@ -428,11 +462,14 @@ haveNoMate:
                 if (getPieces<C,Pawn>() & shift<-C*8+1>(p & -p) & ~file<'a'>() & pins[CI]) {
                     *--*good = Move(to-C*8+1, to, Queen, getPieceKind(p & -p), true); } } } }
 
-    if (uint64_t checkingMoves = getAttacks<C,Bishop>() & ~occupied[CI] & (kingIncoming[EI].d1 | kingIncoming[EI].d3)) {
+    if (uint64_t checkingMoves = unlikely((getAttacks<C,Bishop>() & ~occupied[CI] & (kingIncoming[EI].d1 | kingIncoming[EI].d3)))) {
         uint64_t bescape0246 = getAttacks<-C,King>() & ~(occupied[EI] | getAttacks<C,All>());
+        uint64_t king = getPieces<-C,King>();
+        uint64_t k = bit(king);
         bescape0246 = ror(bescape0246, k-9);
 
         if (!(bescape0246 & 0x20502)) {
+            uint64_t attNotEnemyKing = getAttacks<-C,Rook>() | getAttacks<-C,Bishop>() | getAttacks<-C,Knight>() | getAttacks<-C,Queen>() | getAttacks<-C,Pawn>();
             uint64_t attNotBishop = getAttacks<C,Rook>() | getAttacks<C,Queen>() | getAttacks<C,Knight>() | getAttacks<C,Pawn>() | getAttacks<C,King>();
             uint64_t bescape1357 = getAttacks<-C,King>() & ~(occupied[EI] | attNotBishop);
             bescape1357 = ror(bescape1357, k-9);
@@ -511,6 +548,8 @@ haveNoMate:
 
             } } }
 
+    uint64_t king = getPieces<-C,King>();
+    uint64_t k = bit(king);
     if (uint64_t checkingMoves = getAttacks<C,Knight>() & ~occupied[CI] & knightAttacks[k] & ~getAttacks<-C,All>() ) {
         unsigned n0 = bit(getPieces<C,Knight>());
         unsigned n1 = bitr(getPieces<C,Knight>());
