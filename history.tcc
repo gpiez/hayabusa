@@ -7,7 +7,7 @@
 #include "history.h"
 #include "coloredboard.h"
 
-void History::good(Move m, unsigned ply, const Eval& eval) {
+void History::good(Move m, unsigned ply) {
     ASSERT((m.piece() & 7) <= 6);
     ASSERT((m.piece() & 7));
     ASSERT((m.from() != m.to()));
@@ -28,12 +28,12 @@ void History::good(Move m, unsigned ply, const Eval& eval) {
                         *v16 = _mm_subs_epu8(*v16, mh2); }
                 h = maxHistory/2; } } } }
 
-int History::get(Move m, unsigned ply, const Eval& eval) {
+int History::get(Move m, unsigned ply) {
     int value = v[ply+2][m.piece() & 7][m.to()];
     ASSERT(value >= 0);
     return value; }
 
-void History::sort(Move* list, unsigned n, unsigned ply, const Eval& eval) {
+void History::sort(Move* list, unsigned n, unsigned ply) {
     /*
      * Four groups of 16 counters for the 4 fourbit digits, which are the
      * keys for sorting. Counter group 3 is for the most significant nibble,
@@ -55,7 +55,7 @@ void History::sort(Move* list, unsigned n, unsigned ply, const Eval& eval) {
     unsigned i;
     for (i = 0; i<n; ++i) {
         mList0[i].m = list[i];
-        int score = get(list[i], ply, eval);
+        int score = get(list[i], ply);
         unsigned nibble0 = score & 0xf;
         unsigned nibble1 = score >> 4 & 0xf;
 

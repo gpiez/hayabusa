@@ -26,8 +26,8 @@ public:
 //     History();
     void init();
     void init64(uint8_t v[nSquares]);
-    void good(Move, unsigned ply, const Eval&);
-    int get(Move, unsigned ply, const Eval&);
-    void sort(Move* begin, unsigned n, unsigned ply, const Eval&); };
+    void good(Move, unsigned ply);
+    int get(Move, unsigned ply);
+    void sort(Move* begin, unsigned n, unsigned ply); };
 
 #endif /* HISTORY_H_ */
