@@ -29,8 +29,7 @@ void History::good(Move m, unsigned ply, const Eval& eval) {
                 h = maxHistory/2; } } } }
 
 int History::get(Move m, unsigned ply, const Eval& eval) {
-    int value = v[ply+2][m.piece() & 7][m.to()] - max[ply+2];
-    value += maxHistory-1;
+    int value = v[ply+2][m.piece() & 7][m.to()];
     ASSERT(value >= 0);
     return value; }
 
