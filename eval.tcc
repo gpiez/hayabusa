@@ -19,11 +19,7 @@
 #include "eval.h"
 
 template<Colors C>
-__v8hi Eval::estimate(const Move m, const KeyScore k) const {
-    return inline_estimate<C>(m, k); }
-
-template<Colors C>
-__v8hi Eval::inline_estimate(const Move m, const KeyScore keyScore) const {
+__v8hi Eval::estimate(const Move m, const KeyScore keyScore) const {
     enum { pov = C == White ? 0:070 };
     using namespace SquareIndex;
     ASSERT(m.piece());
