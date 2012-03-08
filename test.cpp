@@ -17,13 +17,15 @@
 
 */
 #include "test.h"
-#include "rootboard.h"
+#include "game.h"
 #include "testpositions.h"
 #include "console.h"
-#include "rootboard.tcc"
+#include "jobs.h"
+#include "game.tcc"
 #include "generateMoves.tcc"
 #include "transpositiontable.tcc"
-#include "boardbase.tcc"
+#include "board.tcc"
+#include "sortedmovelist.h"
 #include <sched.h>
 
 static inline uint64_t readtsc() {
@@ -60,6 +62,7 @@ void TestRootBoard::cmpMates(std::string bstr, std::string mstr) {
         std::cerr << bstr << ": " << *i << " wrong mate" << std::endl; } }
 
 void TestRootBoard::generateMateMoves() {
+    cmpMates("/1kp/1p//Q/RK w - -", "a4a8");
     cmpMates("6k/R/1R/////K w - -", "b6b8");
     cmpMates("K/////1R/R/6k w - -", "b3b1");
     cmpMates("5nkn/RR//////K w - -","b7g7");

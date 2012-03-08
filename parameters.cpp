@@ -105,7 +105,7 @@ void Parameters::init() {
     Parameters::add("bishop.hor.inflection.opening", 0.6875);
     Parameters::add("bishop.hor.value.endgame", 0);
     Parameters::add("bishop.hor.value.opening", 12);
-    Parameters::add("bishop.mobility.endgame", 0);
+    Parameters::add("bishop.mobility.endgame", 10);
     Parameters::add("bishop.mobility.opening", 30);
     Parameters::add("bishop.mobslope.endgame", 5.0);
     Parameters::add("bishop.mobslope.opening", 5.0);
@@ -138,7 +138,7 @@ void Parameters::init() {
     Parameters::add("knight.hor.inflection.opening", 0.5);
     Parameters::add("knight.hor.value.endgame", 2);
     Parameters::add("knight.hor.value.opening", 10);
-    Parameters::add("knight.mobility.endgame", 18);
+    Parameters::add("knight.mobility.endgame", 6);
     Parameters::add("knight.mobility.opening", 30);
     Parameters::add("knight.mobslope.endgame", 3.0);
     Parameters::add("knight.mobslope.opening", 3.0);
@@ -193,7 +193,7 @@ void Parameters::init() {
     Parameters::add("rook.hor.inflection.opening", 1.2);
     Parameters::add("rook.hor.value.endgame", 0);
     Parameters::add("rook.hor.value.opening", 14);
-    Parameters::add("rook.mobility.endgame", 0);
+    Parameters::add("rook.mobility.endgame", 4);
     Parameters::add("rook.mobility.opening", 16);
     Parameters::add("rook.mobslope.endgame", 6.0);
     Parameters::add("rook.mobslope.opening", 6.0);
@@ -207,30 +207,29 @@ void Parameters::init() {
     Parameters::add("rook.vert.value.opening", 12);
 
     Parameters::add("knightBlockPasser", 10, 10);
-    Parameters::add("knightPair", -30, 0);
     Parameters::add("bishopBlockPasser", 15, 15);
     Parameters::add("bishopPair", 28, 28);
-    Parameters::add("bishopOwnPawn", 0, 0);
+    Parameters::add("bishopOwnPawn", 0, -2);
     Parameters::add("bishopOppPawn", 0, -8);
     Parameters::add("bishopNotOwnPawn", 2, 5);
-    Parameters::add("bishopNotOppPawn", 1, 1);
+    Parameters::add("bishopNotOppPawn", 1, 6);
 
     Parameters::add("endgameMaterial", 32);
 
     Parameters::add("rookTrapped", -50, -50);
-    Parameters::add("rookOpen2", 18, 16);
+    Parameters::add("rookOpen2", 16, 16);
     Parameters::add("rookOpenSlope", -8, -10);
-    Parameters::add("rookHalfOpen2", 7, 8);
+    Parameters::add("rookHalfOpen2", 6, 8);
     Parameters::add("rookHalfOpenSlope", -4, -4);
-    Parameters::add("rookWeakPawn", 24, 24);
+    Parameters::add("rookWeakPawn",  6, 8);
     Parameters::add("rookOwnPasser", 5, 10);
     Parameters::add("rookOppPasser", 5, 12);
 
     Parameters::add("pawnBackward", -1, -1);
     Parameters::add("pawnBackwardOpen", -10, -10);
-    Parameters::add("pawnIsolatedCenter", 0, 0);
+    Parameters::add("pawnIsolatedCenter", -8, -12);
     Parameters::add("pawnIsolatedEdge", 0, 0);
-    Parameters::add("pawnIsolatedOpen", -6, -6);
+    Parameters::add("pawnIsolatedOpen", -4, -6);
     Parameters::add("pawnDouble", -25, -30);
     Parameters::add("pawnShoulder", 1, 1);
     Parameters::add("pawnPasser2", 0, 0);
@@ -259,7 +258,7 @@ void Parameters::init() {
 //  2   462k
 //  1   539k
 //  0   427k
-    Parameters::add("dMaxExt", 6);
+    Parameters::add("dMaxCheckExt", 7);
     Parameters::add("dMinDualExt", 2);
     Parameters::add("dMinSingleExt", 6);
     Parameters::add("dMinForkExt", 4);
@@ -274,12 +273,12 @@ void Parameters::init() {
     Parameters::add("kingPawnRankSlope", 2.0);
     Parameters::add("kingPawnDistSlope", 1.5);
 
-    Parameters::add("calcMeanError", 1);
-
-    Parameters::add("prune1", 10);
-    Parameters::add("prune2", 110);
+    Parameters::add("prune1", 60);
+    Parameters::add("prune2", 140);
+    Parameters::add("prune3", 950);
     Parameters::add("prune1c", 60);
     Parameters::add("prune2c", 0);
+    Parameters::add("prune3c", 0);
     Parameters::add("dNullIncr", 0b10000100001010, 0, 0xffffff, 0);
     Parameters::add("dVerifyIncr", 0b10000100001010, 0, 0xffffff, 0);
     Parameters::add("dMinReduction", 2, 0, 10, 1);
@@ -297,14 +296,15 @@ void Parameters::init() {
     Parameters::add("dRedCapture", 5);
     Parameters::add("dRedCheck", 20);
 
-    Parameters::add("dMaxExtCheck", 3);
-    Parameters::add("dMaxExtPawn", 0);
-    Parameters::add("dMinExtDisco", 0);
+    Parameters::add("dMaxExtCheck", 6);
+//    Parameters::add("dMaxExtPawn", 0);
+//    Parameters::add("dMinExtDisco", 0);
 
     Parameters::add("aspirationLow", 40);
     Parameters::add("aspirationHigh", 5);
     Parameters::add("aspirationHigh2", 20);
-    Parameters::add("tempo", 10);
+    Parameters::add("tempo0", -4);
+    Parameters::add("tempo64", 40);
 
     // sum of shield pawns is capped at 127, so the 3*(base+vdelta) should be
     // smaller than 127
@@ -328,8 +328,11 @@ void Parameters::init() {
     Parameters::add("noEvalLimit", 5);
 //    Parameters::add("matFlag", 0xff);
     Parameters::add("allowLazyRoot", 1);
-
-
+    Parameters::add("endgameTransitionSlope", 36);
+    Parameters::add("rookSeventh", 40, 20);
+    Parameters::add("rookSeventh2", 0, 0);
+    Parameters::add("sortPrev", 0);
+    Parameters::add("sortNext", 128);
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i)
         defaultParameters.parms[i] = Parm<float>(base[i]);

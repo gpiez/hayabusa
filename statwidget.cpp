@@ -160,10 +160,11 @@ void StatWidget::update() {
 void StatWidget::updateBoard() {
     QPixmap pm(scaleWidget->width(), scaleWidget->height());
     QPainter pa( &pm );
-    for (int i=0; i<256; ++i) {
-        pa.setPen(Qt::NoPen);
-        pa.setBrush(QBrush(pal[i]));
-        pa.drawRect((i*scaleWidget->width())/256, 0, ((i+1)*scaleWidget->width())/256 - (i*scaleWidget->width())/256, scaleWidget->height()); }
+    if (pa.isActive())
+        for (int i=0; i<256; ++i) {
+            pa.setPen(Qt::NoPen);
+            pa.setBrush(QBrush(pal[i]));
+            pa.drawRect((i*scaleWidget->width())/256, 0, ((i+1)*scaleWidget->width())/256 - (i*scaleWidget->width())/256, scaleWidget->height()); }
     scaleWidget->setPixmap(pm);
     static int oldsize = 0;
     int size=qMin( position->width(), position->height() )/8;
@@ -180,18 +181,19 @@ void StatWidget::updateBoard() {
         QPixmap boardPixmap(position->size());
         boardPixmap.fill(QColor(0, 0, 0, 0));
         QPainter pa( &boardPixmap );
-        pa.setPen(Qt::NoPen);
-
-        for ( int x=0; x<8; x++ )
-            for ( int y=0; y<8; y++ ) {
-                int type = rb.currentBoard().getPiece(x+(7-y)*8);
-                pa.setBrush(QBrush((x^y)&1 ? QColor(128,128,128):QColor(192,192,192) ));
-                pa.drawRect(x*size, y*size, size, size);
-                if ( type > 0 )
-                    pa.drawImage( x*size, y*size, wScaled[type-1] );
-                else if ( type < 0 )
-                    pa.drawImage( x*size, y*size, bScaled[-type-1] ); }
-
+        if (pa.isActive()) {
+            pa.setPen(Qt::NoPen);
+    
+            for ( int x=0; x<8; x++ )
+                for ( int y=0; y<8; y++ ) {
+                    int type = rb.currentBoard().getPiece(x+(7-y)*8);
+                    pa.setBrush(QBrush((x^y)&1 ? QColor(128,128,128):QColor(192,192,192) ));
+                    pa.drawRect(x*size, y*size, size, size);
+                    if ( type > 0 )
+                        pa.drawImage( x*size, y*size, wScaled[type-1] );
+                    else if ( type < 0 )
+                        pa.drawImage( x*size, y*size, bScaled[-type-1] ); } }
+    
         position->setPixmap(boardPixmap); }
 
     if (radioButtonPSQ->isChecked()) {
@@ -199,63 +201,63 @@ void StatWidget::updateBoard() {
         size = (qMin(ww1->height(), ww1->width()))/8;
         QPixmap pm(size*8, size*8);
         QPainter pa( &pm );
-        for (int c=-1; c<=1; c+=2)
-            for (int p=Rook; p<=King; ++p) {
-                pm.fill(QColor(192, 192, 192, 255));
-                pa.setPen(Qt::NoPen);
-                for ( int x=0; x<8; x++ )
-                    for ( int y=0; y<8; y++ ) {
-                        double ee = 0;
-                        for (int i=0; i<64; ++i) {
-                            const Game::PositionalError& err = rb.pe[nPieces + c*p][i][x+(7-y)*8];
-                            if (err.n > 0.0) {
-                                double v = err.e2/err.n - err.e*err.e/(err.n*err.n);
-                                ASSERT(v >= 0.0);
-                                v = sqrt(v);
-                                if (v > ee) ee = v; } }
-                        if (ee > 255.0) ee = 255.0;
-                        pa.setBrush(QBrush(pal[int(ee)]));
-                        pa.drawRect(x*size,y*size,size,size); }
-                minipm[(1-c)/2][p]->setPixmap(pm); }
+        if (pa.isActive()) 
+            for (int c=-1; c<=1; c+=2)
+                for (int p=Rook; p<=King; ++p) {
+                    pm.fill(QColor(192, 192, 192, 255));
+                    pa.setPen(Qt::NoPen);
+                    for ( int x=0; x<8; x++ )
+                        for ( int y=0; y<8; y++ ) {
+                            double ee = 0;
+                            for (int i=0; i<64; ++i) {
+                                const int16_t& err = rb.pe[nPieces + c*p][i][x+(7-y)*8];
+                                ee = ee+err;
+                            }
+                            ee +=128;    
+                            if (ee > 255.0) ee = 255.0;
+                            pa.setBrush(QBrush(pal[int(ee)]));
+                            pa.drawRect(x*size,y*size,size,size); }
+                    minipm[(1-c)/2][p]->setPixmap(pm); }
 #endif
     }
     else {
         //     size = (qMin(ww1->height(), ww1->width()))/8;
+        //     for (int c=-1; c<=1; c+=2)
+#ifdef MYDEBUG
         size = ww1->width()/16;
         int hh = ww1->height();
         QPixmap pm(size*16, hh);
         QPainter pa( &pm );
-        //     for (int c=-1; c<=1; c+=2)
-#ifdef MYDEBUG
-        for (int r=0; r<=1; ++r)
-            for (int p=Rook; p<=King; ++p) {
-                pm.fill(QColor(192, 192, 192, 255));
-                pa.setPen(Qt::NoPen);
-                /*            for ( int x=0; x<8; x++ )
-                            for ( int y=0; y<8; y++ ) {
-                                int ee;
-                                if (radioButtonPSQ->isChecked())
-                                    ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard().material) - c*(int[]){0,450,300,925,300,100,0}[p]);
-                                else
-                                    ee = rb.delta[nPieces + c*p][x+(7-y)*8][0];
-
-                                if (ee > 127) ee = 127;
-                                if (ee<-128) ee = -128;
-                                pa.setBrush(QBrush(pal[ee+128]));
-                                pa.drawRect(x*size,y*size,size,size);
-                            }
-                        minipm[(1-c)/2][p]->setPixmap(pm);*/
-//                 uint64_t mobMax = 1;
-//                 for ( int x=0; x<16; x++ )
-//                     mobMax = std::max(mobMax, mobStat[0][p][r][x]);
-//                 for ( int x=0; x<16; x++ ) {
-//                     int y = (hh*mobStat[0][p][r][x])/mobMax;
-//                     pa.setBrush(QBrush(pal[x*16]));
-//         //                 pa.setBrush(QBrush(QColor(192,192,192)));
-//                     pa.drawRect(x*size,hh-y,size,y);
-//                 }
-//                 minipm[r][p]->setPixmap(pm);
-            }
+        if (pa.isActive())
+            for (int r=0; r<=1; ++r)
+                for (int p=Rook; p<=King; ++p) {
+                    pm.fill(QColor(192, 192, 192, 255));
+                    pa.setPen(Qt::NoPen);
+                    /*            for ( int x=0; x<8; x++ )
+                                for ( int y=0; y<8; y++ ) {
+                                    int ee;
+                                    if (radioButtonPSQ->isChecked())
+                                        ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard().material) - c*(int[]){0,450,300,925,300,100,0}[p]);
+                                    else
+                                        ee = rb.delta[nPieces + c*p][x+(7-y)*8][0];
+    
+                                    if (ee > 127) ee = 127;
+                                    if (ee<-128) ee = -128;
+                                    pa.setBrush(QBrush(pal[ee+128]));
+                                    pa.drawRect(x*size,y*size,size,size);
+                                }
+                            minipm[(1-c)/2][p]->setPixmap(pm);*/
+    //                 uint64_t mobMax = 1;
+    //                 for ( int x=0; x<16; x++ )
+    //                     mobMax = std::max(mobMax, mobStat[0][p][r][x]);
+    //                 for ( int x=0; x<16; x++ ) {
+    //                     int y = (hh*mobStat[0][p][r][x])/mobMax;
+    //                     pa.setBrush(QBrush(pal[x*16]));
+    //         //                 pa.setBrush(QBrush(QColor(192,192,192)));
+    //                     pa.drawRect(x*size,hh-y,size,y);
+    //                 }
+    //                 minipm[r][p]->setPixmap(pm);
+                }
 #endif
     } }
 

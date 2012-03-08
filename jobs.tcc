@@ -67,11 +67,9 @@ void SearchJob<C,A,B,T>::job() {
 #endif
     if (alpha < beta.v) {
         game.clone(b, rep, ply);
-        int ret = game.search9<(Colors)-C,trunk>(doNull, reduction, b, m, depth, beta, alpha, ply,
-                  ExtNot, nt
-#ifdef QT_GUI_LIB
-                  , node
-#endif
+        const ColoredBoard<(Colors)-C> nextboard(b, m, game);
+        int ret = game.search9<(Colors)-C,trunk>(doNull, reduction, nextboard, m, depth, beta, alpha, ply,
+                  ExtNot, nt NODE 
                                                 );
         alpha.max(ret);
         retval.max(ret, m); }

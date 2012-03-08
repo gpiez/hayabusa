@@ -19,4 +19,11 @@ union KeyScore {
         PawnKey        pawnKey;
         Key            key; }; };
 
+union KeyMaterialScore {
+    __v8hi vector;
+    struct {
+        PackedScore<>  score;
+        unsigned       matIndex;
+        Key            key; }; };
+
 #endif /* KEYSCORE_H_ */

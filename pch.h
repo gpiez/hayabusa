@@ -19,7 +19,8 @@
 #ifndef PCH_H_
 #define PCH_H_
 
-#define BITBOARD
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winline"
 
 #include <iostream>
 #include <sstream>
@@ -85,5 +86,7 @@ typedef std::timed_mutex TimedMutex;
 #define LockGuard std::lock_guard
 #define UniqueLock std::unique_lock//*/
 #endif
+
+#pragma GCC diagnostic pop
 
 #endif /* PCH_H_ */

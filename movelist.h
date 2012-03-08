@@ -37,9 +37,13 @@ protected:
     Move list[maxMoves];
     unsigned first;
     unsigned last;
+    unsigned badCaptures;
+    unsigned captures, threats, nonCaptures;
 
 public:
     unsigned current;
+    template<Colors C, typename T>
+    MoveList(const ColoredBoard<C>& b, T& value);
     template<Colors C>
     MoveList(const ColoredBoard<C>& b) {
         Move* pfirst = list+goodMoves;

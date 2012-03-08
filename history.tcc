@@ -12,24 +12,22 @@ void History::good(Move m, unsigned ply) {
     ASSERT((m.piece() & 7));
     ASSERT((m.from() != m.to()));
     {
-        uint8_t& h = v[ply+2][m.piece() & 7][m.to()];
-        int& m  = max[ply+2];
+        uint8_t& h = v[ply][m.piece() & 7][m.to()];
+        int& m  = max[ply];
 
         if (m != h) {
-
-            if (++m < maxHistory) h = m;
-
+            if likely(++m < maxHistory) h = m;
             else {
                 m = maxHistory/2;
                 __v16qi mh2 = _mm_set1_epi8(maxHistory/2);
                 for (unsigned p=1; p<=nPieces; ++p)
                     for (unsigned sq=0; sq<nSquares; sq += 16) {
-                        __v16qi* v16 = (__v16qi*)&v[ply+2][p][sq];
+                        __v16qi* v16 = (__v16qi*)&v[ply][p][sq];
                         *v16 = _mm_subs_epu8(*v16, mh2); }
                 h = maxHistory/2; } } } }
 
 int History::get(Move m, unsigned ply) {
-    int value = v[ply+2][m.piece() & 7][m.to()];
+    int value = v[ply][m.piece() & 7][m.to()];
     ASSERT(value >= 0);
     return value; }
 

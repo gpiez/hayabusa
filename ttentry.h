@@ -67,7 +67,7 @@ union TTEntry {
     Bitfield<19, 1, unsigned int> loBound;
     Bitfield<20, 12, int> score;
     Bitfield<32, 1, unsigned int> hiBound;
-    Bitfield<33, 1, unsigned int> visited;
+    Bitfield<33, 1, unsigned int> reduced;
     Bitfield<34, 1, unsigned int> aged;
     Bitfield<35, 29, Key> upperKey;
     enum { upperShift = 35 };
@@ -85,8 +85,14 @@ struct PawnEntry {
     uint8_t weak[nColors];              //  2
     uint8_t dark[nColors];              //  2
     uint8_t light[nColors];             //  2
+    uint8_t darkDef[nColors];              //  2
+    uint8_t lightDef[nColors];             //  2
     int8_t shield2[nColors][nRows];     // 16
-    char fill[2]; };
+#ifdef MYDEBUG
+    uint64_t wpawn;
+    uint64_t bpawn;
+#endif
+    };
 
 struct PerftEntry {
     union {
