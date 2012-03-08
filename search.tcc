@@ -51,44 +51,50 @@ int Game::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int dept
     return 0; }
 
 template<Colors C, Phase P, class A, class B>
-int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoard<(Colors)-C>& prev, const Move m, const unsigned newDepth,
+int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoard<C>& nextboard, const Move m, const unsigned newDepth,
                   const A& alpha, const B& beta,
-                  const unsigned ply, Extension, NodeType nextNT
-#ifdef QT_GUI_LIB
-                  , NodeItem* node
-#endif
-                 ) {
+                  const unsigned ply, Extension, NodeType nextNT NODEDEF ) {
     ASSERT(P!=vein);
     ASSERT(P!=leaf);
     Score<C> value;
+#ifdef QT_GUI_LIB    
+    NodeItem* node = parent;
+#endif
     if (doNull) {
         /*
          * Verify nullmove search. If it is <beta, dont't bother
          * with nullmove as the nullmove result will be even worse
          */
         const A alpha0(beta.v - C);
-        value.v = search4<C, P>(prev, m, verifyReduction[newDepth], alpha0, beta, ply+1, ExtNot, nextNT NODE);
+        value.v = search4<C, P>(nextboard, m, verifyReduction[newDepth], alpha0, beta, ply, ExtNot, nextNT NODE);
         /*
          * The actual null move search. Search returns true if the
          * result in beta1 comes down to alpha0, in that case prune
          */
-        if (value >= beta.v) {
+        if (value >= beta.v && !nextboard.template inCheck<C>()) {
             if (value >= infinity*C) return value.v;
-            Score<C> nullvalue(search4<(Colors)-C, P>(prev, m, nullReduction[newDepth], beta, alpha0, ply+2, ExtNot, nextNT NODE));
-            if (nullvalue >= beta.v) {
-                return value.v; } } }
-
+            if (isMain) line[ply].data = 0;            
+            int temp = nextboard.fiftyMoves;
+            nextboard.fiftyMoves = 0;
+            nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff;
+            Score<C> nullvalue(search4<(Colors)-C, P>(nextboard.swapped(), m, nullReduction[newDepth], beta, alpha0, ply+1, ExtNot, nextNT NODE ));
+            if (nullvalue >= beta.v) return value.v;
+            nextboard.fiftyMoves = temp;
+        } }
+    
     if (reduction) {
+        nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff; 
         const A alpha0(beta.v - C);
-        value.v = search4<C, P>(prev, m, newDepth-reduction, alpha0, beta, ply+1, ExtNot, nextNT NODE);
+        value.v = search4<C, P>(nextboard, m, newDepth-reduction, alpha0, beta, ply, ExtNot, nextNT NODE);
         if (value >= beta.v) {
             return value.v; } }
 
-    value.v = search4<C, P>(prev, m, newDepth, alpha, beta, ply+1, ExtNot, nextNT NODE);
+    nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff;
+    value.v = search4<C, P>(nextboard, m, newDepth, alpha, beta, ply, ExtNot, nextNT NODE);
 #ifdef QT_GUI_LIB
-    if (node) {
+    if (parent) {
         NodeItem::m.lock();
-        node->getParent()->moveToEnd(node);
+        parent->getParent()->moveToEnd(parent);
         NodeItem::m.unlock(); }
 #endif
     return value.v; }
@@ -97,52 +103,47 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
  * beta is the return value, it is updated at the end
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
-template<Colors C, Phase P, class A, class B, Colors PREVC>
-int Game::search4(const ColoredBoard<PREVC>& prev, const Move m, const unsigned depth,
+template<Colors C, Phase P, class A, class B>
+int Game::search4(const ColoredBoard<C>& nextboard, const Move m, const unsigned depth,
                   const A& a, const B& b,
-                  const unsigned ply, Extension extend, const NodeType nt
-#ifdef QT_GUI_LIB
-                  , NodeItem* node
-#endif
-                 ) {
+                  const unsigned ply, Extension extend, const NodeType nt NODEDEF ) {
     ASSERT(P!=vein);
     ASSERT(P!=leaf);
     ASSERT(!(depth <= eval.dMaxCapture));
+#ifdef QT_GUI_LIB    
+    NodeItem* node = parent;
+#endif
     bool unused;
 //     if (P == vein || depth <= eval.dMaxCapture)
 //         return search3<C,vein>(prev,m,depth,a.unshared(),b.unshared(),ply,extend,unused,nt NODE);
     if (/*P == leaf ||*/ depth <= eval.dMaxExt)
-        return search3<C,leaf>(prev,m,depth,a.unshared(),b.unshared(),ply,extend,unused,nt NODE);
+        return search3<C,leaf>(nextboard,m,depth,a.unshared(),b.unshared(),ply,extend,unused,nt NODE);
     if (P == tree || depth <= Options::splitDepth + eval.dMaxExt)
-        return search3<C,tree>(prev,m,depth,a.unshared(),b,ply,extend,unused,nt NODE);
+        return search3<C,tree>(nextboard,m,depth,a.unshared(),b,ply,extend,unused,nt NODE);
     ASSERT(P==trunk);
-    return search3<C,trunk>(prev,m,depth,a,b,ply,extend,unused,nt NODE); }
+    return search3<C,trunk>(nextboard,m,depth,a,b,ply,extend,unused,nt NODE); }
 /*
  * Search with color C to move, executing a -C colored move m from a board prev.
  * beta is the return value, it is updated at the end
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
-template<Colors C, Phase P, class A, class B, Colors PREVC>
-int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
+template<Colors C, Phase P, class A, class B>
+int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
                   const A& origAlpha, const B& origBeta,
-                  const unsigned ply, Extension extend, bool& nextMaxDepth, const NodeType nt
-#ifdef QT_GUI_LIB
-                  , NodeItem* parent
-#endif
-                 ) {
+                  const unsigned ply, Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     stats.node++;
+//    if (stats.node == 2398583) asm("int3");
+
 #ifdef MYDEBUG
-    uint64_t localnode = stats.node;
+    uint64_t __attribute__((unused)) localnode = stats.node;
 #endif
-    if (stats.node > maxSearchNodes) {
+    if unlikely( stats.node > maxSearchNodes ) {
         stopSearch = Stopping;
         return 0; }
     KeyScore estimate;
-    if (P == leaf || P == vein)
-        estimate.vector = eval.inline_estimate<PREVC>(m, prev.keyScore);
-    else
-        estimate.vector = eval.estimate<PREVC>(m, prev.keyScore);
+    estimate = b.keyScore;
+    
 #ifdef QT_GUI_LIB
     NodeItem* node = 0;
     if (NodeItem::nNodes < MAX_NODES && parent) {
@@ -155,7 +156,7 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
         data.key = estimate.key;
         data.searchType = P;
         data.depth = depth;
-        data.moveColor = prev.CI == 0 ? White:Black;
+        data.moveColor = -C;
         data.nodeColor = C;
         data.flags = 0;
         data.threadId = WorkThread::threadId;
@@ -183,30 +184,13 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
 //             if (t.count().system+t.count().user > stopTime)
 //                 stopSearch = Stopping;
 //         }
-        if (stopSearch != Running) return 0; }
-
-    unsigned iPiece = prev.errorPieceIndex[ m.piece() & 7 ];
-    PositionalError& diff = pe[iPiece][m.from()][m.to()];
-    int estPSValue = eval.calc(prev.matIndex, CompoundScore(estimate.vector));
-    int estimatedScore = estPSValue + prev.positionalScore + diff.v - C*diff.error;
+        if unlikely(stopSearch != Running) return 0; }
 #ifdef QT_GUI_LIB
-    if (node) node->gain = diff.v;
-    if (node) node->error = diff.error;
-    if (node) node->ps = estPSValue;
+//    if (node) node->gain = diff.v;
+//    if (node) node->error = diff.error;
+    if (node) node->ps = b.psValue;
     if (node) node->real = 0;
 #endif
-    if (P==vein && !(extend & ~ExtFirstMove)) {
-        Score<C> value(estimatedScore);
-        if (value >= origBeta.v) {
-#ifdef QT_GUI_LIB
-            if (node) node->bestEval = value.v;
-            if (node) node->nodeType = NodePrecut1;
-#endif
-            stats.leafcut++;
-            return value.v; } }
-    const ColoredBoard<C> b(prev, m, estimate.vector);
-    int psValue = eval.calc(b.matIndex, CompoundScore(b.keyScore.vector));
-    estimatedScore += psValue - estPSValue;
 
     /*
      * Extensions in leaf search
@@ -217,29 +201,36 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
      * ExtFork:         You are forking me. Generate ALL moves, NO standpat. Next iteration generates capures (leaf)
      */
 
-    Extension threatened = (extend & ExtTestMate || (depth > eval.dMaxCheckExt && P!=vein) ) && b.template inCheck<C>() ? ExtCheck : ExtNot;  //This is needed here because we might be in vein with ExtTestMate
-    if (P!=vein) {
-        if (!threatened && depth > eval.dMinForkExt && popcount(b.isPieceHanging()) > 1) {
+    Extension threatened = ExtNot;
+    // This is needed here because we might be in vein with ExtTestMate
+    if (P==vein) {
+    	if (extend & ExtTestMate && b.template inCheck<C>()) 
+    		threatened = ExtCheck; }
+    
+    else if (P==leaf || depth <= eval.dMaxExt+3 ) { // max pruning depth
+        uint64_t pMoves;
+    	if (unlikely(b.template inCheck<C>()) && likely(depth > eval.dMaxCheckExt)) 
+            threatened = ExtCheck;
+    	else if (likely(depth > eval.dMinForkExt) && unlikely(popcount(b.isPieceHanging(eval)) > 1))
         	threatened = ExtFork;
-        }
-        if (!threatened && depth > eval.dMinPawnExt) {
-            uint64_t pMoves = b.template getPieces<-C,Pawn>() & b.template getPins<(Colors)-C>();
-            pMoves = ( (  shift<-C*8  >(pMoves)               & ~b.occupied1)
-                       | (shift<-C*8+1>(pMoves) & ~file<'a'>() &  b.template getOcc<C>())
-                       | (shift<-C*8-1>(pMoves) & ~file<'h'>() &  b.template getOcc<C>()))
-                     & rank<C,1>() & ~b.template getAttacks<C,All>();
-            if (pMoves)
-                threatened = ExtPawnThreat; }
-        if (!threatened && depth > eval.dMinMateExt) {
-            if (b.swapped().template generateMateMoves<true, bool>())
-                threatened = ExtMateThreat; }
+    	else if (likely(depth > eval.dMinPawnExt) 
+    	    && unlikely((pMoves = b.template getPieces<-C,Pawn>() & b.template getPins<(Colors)-C>() & rank<C,2>()))
+    	    && ((pMoves = ( (  shift<-C*8  >(pMoves)               & ~b.occupied1)
+                           | (shift<-C*8+1>(pMoves) & ~file<'a'>() &  b.template getOcc<C>())
+                           | (shift<-C*8-1>(pMoves) & ~file<'h'>() &  b.template getOcc<C>()))
+                         & ~b.template getAttacks<C,All>())))
+            threatened = ExtPawnThreat;
+        else if (likely(depth > eval.dMinMateExt) && unlikely((b.swapped().template generateMateMoves<true, bool>()))) 
+            threatened = ExtMateThreat;
 //         if (eval.flags &1 && !threatened && depth > eval.dMinExtDisco)
 //             if (((ColoredBoard<(Colors)-C>*)&b) -> template generateDiscoveredCheck<true, bool>())
 //                 threatened = ExtDiscoveredCheck;
+        else if (depth > eval.dMinForkExt && !b.isPieceHanging(eval) && unlikely(b.isForked()))
+            threatened = ExtFork; }
+    // Only needed for check extension later
+    else if (unlikely(b.template inCheck<C>()) && likely(depth > eval.dMaxCheckExt)) 
+        threatened = ExtCheck; 
 
-        if (!threatened && depth > eval.dMinForkExt && !b.isPieceHanging()) { 
-            if (b.isForked())
-                threatened = ExtFork; } }
 
 #ifdef QT_GUI_LIB
     if (node && threatened) node->flags |= Threatened;
@@ -249,12 +240,11 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
     Key z;
     if (P!=vein) {
         z = b.getZobrist();
-        store(z, ply);          //TODO could be delayed?
     }
 
-    if ((P==vein && !(threatened && eval.flags & 8)) || (P==leaf && !threatened)) {
+    if ((P==vein || P==leaf) && !threatened) {
         Score<C> value(origAlpha);
-        value.max(estimatedScore);
+        value.max(b.estScore - C*eval.standardError);
         if (value >= origBeta.v && (value<limit<C>() || eval.allowLazyRoot)) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = value.v;
@@ -264,25 +254,13 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
             return value.v; } }
 
     if (isMain) {
-        if ((int)prev.CI == (int)b.CI) {
-            line[ply].data = 0;
-            line[ply-1] = m; }
-        else
-            line[ply] = m;
-
+        line[ply] = m;
         currentPly = ply; }
 
-    ASSERT(eval.calc(prev.matIndex, CompoundScore(b.keyScore.vector)) == eval.calc(prev.matIndex, CompoundScore(estimate.vector)));
+    ASSERT( CompoundScore(b.keyScore.vector).opening() == CompoundScore(estimate.vector).opening());
+    ASSERT( CompoundScore(b.keyScore.vector).endgame() == CompoundScore(estimate.vector).endgame());
     ASSERT(P == vein || z == b.getZobrist());
-    if ((int)prev.CI == (int)b.CI) {
-        if (b.template inCheck<(Colors)-C>()) {
-#ifdef QT_GUI_LIB
-            if (node) node->bestEval = infinity*C;
-            if (node) node->nodeType = NodeIllegal;
-#endif
-            return infinity*C; } }
-    else {
-        ASSERT(!b.template inCheck<(Colors)-C>()); }
+    ASSERT(!b.template inCheck<(Colors)-C>());
     TranspositionTable<TTEntry, transpositionTableAssoc, Key>::SubTable* st;
     TTEntry subentry;
 
@@ -301,14 +279,14 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
     current.v=(-infinity*C);
     current.m = {0,0,0 };
     if (P != vein) {
-        if (find(b, z, ply) || b.fiftyMoves >= 100) {
+        if (findRepetition(b, z, ply) || b.fiftyMoves >= 100) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = 0;
             if (node) node->nodeType = NodeRepetition;
 #endif
             return 0; }
         st = tt->getSubTable(z);
-        if (tt->retrieve(st, z, subentry)) {
+        if unlikely(tt->retrieve(st, z, subentry)) {
             stats.tthit++;
             ttDepth = subentry.depth;
             Score<C> ttScore;
@@ -316,31 +294,47 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
                 ttScore.v = inline_tt2Score(subentry.score);
             else
                 ttScore.v = tt2Score(subentry.score);
-            if (ttDepth >= depth || (ttScore>=infinity*C && subentry.loBound) || (ttScore<=-infinity*C && subentry.hiBound)) {
+            if unlikely (ttDepth >= depth 
+                || (ttScore>=infinity*C && subentry.loBound) 
+                || (ttScore<=-infinity*C && subentry.hiBound)) {
                 if (P == leaf && depth <= eval.dMaxExt) {
                     nextMaxDepth = true; }
-                if (subentry.loBound) {
-                    stats.ttalpha++;
-                    alpha.max(ttScore.v);
-                    current.max(ttScore.v); }
-                if (subentry.hiBound) {
-                    stats.ttbeta++;
-                    beta.max(ttScore.v); }
-                if (current >= beta.v) {
+                    if unlikely(subentry.loBound & subentry.hiBound) {
+
+//                        stats.ttexact++;
 #ifdef QT_GUI_LIB
-                    if (node) node->bestEval = ttScore.v;
-                    if (node) node->nodeType = NodeTT;
+                        if (node) node->bestEval = ttScore.v;
+                        if (node) node->nodeType = NodeTT;
 #endif
-                    return current.v; } }
+                        return ttScore.v; } 
+                    else if unlikely(subentry.loBound) {
+                        alpha.max(ttScore.v);
+                        stats.ttalpha++;
+                        if (alpha >= beta.v) {
+#ifdef QT_GUI_LIB
+                            if (node) node->bestEval = ttScore.v;
+                            if (node) node->nodeType = NodeTT;
+#endif
+                            return ttScore.v; }
+                        current.max(ttScore.v); }
+                    else if (subentry.hiBound) {
+                        stats.ttbeta++;
+                        beta.max(ttScore.v); 
+                        if (alpha >= beta.v) {
+#ifdef QT_GUI_LIB
+                            if (node) node->bestEval = ttScore.v;
+                            if (node) node->nodeType = NodeTT;
+#endif
+                            return ttScore.v; } } }
 
             current.m = Move(subentry.from, subentry.to, 0); } }
     bool leafMaxDepth;
     if (P == leaf) leafMaxDepth=false;
 
-    if (P==tree && Options::pruning && !threatened && nt != NodePV && !b.isPieceHanging()) {
-        if (depth == eval.dMaxExt + 1) {
+    if (P==tree && Options::pruning && !threatened && !b.isPieceHanging(eval)) {
+        if (depth == eval.dMaxExt + 1) { //TODO fall back to qsearch instead of hard prune
             Score<C> fScore;
-            fScore.v = estimatedScore - C*eval.prune1 - !!m.capture()*C*eval.prune1c;
+            fScore.v = b.estScore - C*eval.prune1 - !!m.capture()*C*eval.prune1c;
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile1;
@@ -350,82 +344,81 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
                 return fScore.v; } }
         if (depth == eval.dMaxExt + 2) {
             Score<C> fScore;
-            fScore.v = estimatedScore - C*eval.prune2 - !!m.capture()*C*eval.prune2c;
+            fScore.v = b.estScore - C*eval.prune2 - !!m.capture()*C*eval.prune2c;
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile2;
 #endif
             if (fScore >= beta.v && (fScore<limit<C>() || eval.allowLazyRoot)) {
                 return fScore.v; } }
-        /*            if (depth == dMaxCapture + dMaxThreat + 3) {
-                    Score<C> fScore;
-                    fScore.v = estimatedScore - C*1000;
-        #ifdef QT_GUI_LIB
-                    if (node) node->bestEval = fScore.v;
-                    if (node) node->nodeType = NodeFutile3;
-        #endif
-                    if (fScore >= beta.v) return false;
-                }*/
+        if (depth == eval.dMaxExt + 3) {
+            Score< C> alpha3(beta.v + C*(eval.prune3-1));
+            Score<(Colors)-C> beta3(beta.v + C*eval.prune3);
+            if (Score<C>(b.estScore) >= beta3.v) {
+                bool unused;
+                Score<C> v(search3<C, leaf>(b, m, eval.dMaxExt, alpha3, beta3, ply, ExtNot, unused, nt NODE));
+                if (v >= beta3.v) {
+                    stats.node--;
+                    return v.v;
+                }
+            }
+                 
+        }
+    }
+    
+    if (0 && P==tree && !(extend & ExtFutility) && eval.flags & 1) {
+        if (depth >= 3+eval.dMaxExt) {
+            int limit = -C*1000/(depth-eval.dMaxExt);
+            if (alpha > limit) {
+                Score< C> alpha3(limit);
+                Score<(Colors)-C> beta3(limit+C);
+                bool unused;
+                stats.node--;
+                Score<C> v(search3<C, tree>(b, m, (depth-eval.dMaxExt+1)/2 + eval.dMaxExt, alpha3, beta3, ply, ExtFutility, unused, nt NODE));
+                if (v <= alpha3.v) {
+                    stats.node--;
+                    return v.v;
+                }
+            }    
+        }
     }
 
-    int realScore;
-    if (0 && prev.isExact) {
-        realScore = estimatedScore;
-        b.positionalScore = prev.positionalScore + diff.v;
-        b.isExact = false; }
-    else {
-        stats.eval++;
-        int wattack, battack;
-        ASSERT(eval.calc(b.matIndex, CompoundScore(b.keyScore.score)) == psValue);
-        Eval::Material mat=eval.material[b.matIndex];
-        if (P != vein && P!=leaf) {
-            if (mat.reduce) {
+    int wattack, battack;
+    ASSERT(eval.calc(b.matIndex, CompoundScore(b.keyScore.score)) == b.psValue);
+    Eval::Material mat=eval.material[b.matIndex];
+    if (P != vein && P!=leaf) {
+        if (mat.reduce) {
 //                depth = eval.dMaxExt + (depth-eval.dMaxExt)/4;
-            } }
-        if (mat.draw) {
+        } }
+    if (mat.draw) {
 #ifdef QT_GUI_LIB
-            if (node) node->bestEval = 0;
-            if (node) node->nodeType = NodeEndgameEval;
+        if (node) node->bestEval = 0;
+        if (node) node->nodeType = NodeEndgameEval;
 #endif
-            return 0; }
-        b.isExact = true;
-//        if (localnode == 0x2f90075) asm("int3");
-//        if (stats.node >= 128 && stats.node < 2058) Options::debug = debugEval;
-        realScore = eval(b, C, wattack, battack, psValue, b.positionalScore);
-//        Options::debug = 0;
-#ifdef QT_GUI_LIB
-        if (node) node->real = realScore;
-        if (node) node->pos = b.positionalScore;
-#endif
-//        realScore = psValue + b.positionalScore;
+        return 0; }
 
-        if (isMain & !m.isSpecial()) {
-            int diff2 = b.positionalScore - prev.positionalScore;
-            if (eval.calcMeanError) {
-                diff.n++;
-                diff.e  += diff2;
-                diff.e2 += diff2*diff2;
-                if (diff.n >= 256) {
-                    diff.n *= 0.5;
-                    diff.e *= 0.5;
-                    diff.e2 *= 0.5; }
-                float invn = 1.0/diff.n;
-                float avg = diff.e*invn;
-                if (diff.n > 1) {
-                    float v = diff.e2*invn - avg*avg;
-                    v = sqrtf(v);
-                    diff.error = eval.standardSigma*v; }
-                else
-                    diff.error = eval.standardError*0.5;
-                diff.v = avg; }
-            else
-                diff.v = (diff2 + diff.v)/2; } }
     if (P==vein) {
         ASSERT(!(threatened & ~ExtCheck)); };
 
+
+    int realScore;
+    stats.eval++;
+    realScore = eval(b, wattack, battack, b.psValue, b.positionalScore);
+//        Options::debug = 0;
+#ifdef QT_GUI_LIB
+    if (node) node->real = realScore;
+    if (node) node->pos = b.positionalScore;
+#endif
+//        realScore = psValue + b.positionalScore;
+
+    if (isMain & !m.isSpecial()) {
+        int diff2 = b.positionalScore - b.prevPositionalScore;
+        *b.diff = (diff2 + *b.diff)/2; 
+    }
+
     if (P==vein || (P==leaf && !threatened)) {
-        alpha.max(realScore + C*eval.tempo);
-        current.max(realScore + C*eval.tempo);
+        alpha.max(realScore);
+        current.max(realScore);
         ASSERT(!threatened || (P == vein && extend & ExtTestMate && b.template inCheck<C>()));
         if (current >= beta.v && !threatened) {
             stats.leafcut++;
@@ -478,13 +471,13 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
 
         }
         else {      // not in check
-            if ((P==vein  && !(threatened && eval.flags & 4)) || (P==leaf && !threatened)) {
+            if ((P==vein  && !threatened) || (P==leaf && !threatened)) {
 //                 if ( P==leaf && extend & (ExtDualReply|ExtSingleReply)) b.template generateNonCap(good, bad); //FEATURE should generate k-threat increasing moves only
                 nonCaptures = first;
                 if ( P==leaf ) b.generateSkewers(&first);
                 if (P == leaf) b.template generateDiscoveredCheck<false, void>(&first);
                 threats = first;
-                b.template generateCaptureMoves<NoUnderPromo>(first, last);
+                b.template generateCaptureMoves<NoUnderPromo>(first, last); //TODO if in vein mask out low target pieces which can't score better than alpha if captured
                 captures = first;
                 if ( P==leaf ) {
 // mates -- captures -- threats -- skewers -- badcaptures -- bad (end)
@@ -540,7 +533,7 @@ int Game::search3(const ColoredBoard<PREVC>& prev, const Move m, unsigned depth,
                 } } }
         if (badCaptures > nonCaptures+1) {
             ASSERT(badCaptures <= last);
-            history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply + rootPly); }
+            history.sort(nonCaptures, badCaptures-nonCaptures, ply + rootPly); }
         ASSERT(first<last);
 #endif
 nosort:
@@ -559,6 +552,9 @@ nosort:
 				ASSERT(current.m.piece() || !current.m.fromto());
 				goto storeAndExit; } }
 		
+		// store key for repetitions
+        if (P!=vein) store(z, ply);
+
         // move best move from tt / history to front
         if (P != vein && current.m.data && first+1 < last && current.m.fromto() != first[0].fromto()) {
             for (Move* removed = first+1; removed<last; ++removed) {
@@ -586,6 +582,7 @@ nosort:
          * The inner move loop
          */
         NodeType nextNT = (NodeType)-nt;
+        PackedScore<> currentWeight = eval.scale[eval.material[b.matIndex].scaleIndex];
         for (Move* i = first; i<last && current < beta.v; ++i) {
             if (!origBeta.isNotShared) beta.max(origBeta.v);
             if (!origAlpha.isNotShared) alpha.max(origAlpha.v);
@@ -595,15 +592,65 @@ nosort:
 //             }
             Score<C> value;
             unsigned newDepth = depth - 1;
+            KeyScore estimate;
+            estimate.vector = eval.estimate<C>(*i, b.keyScore);
+           
+            if (P != vein) tt->prefetchSubTable(estimate.key - C+1);
+
+            if (P==vein || (P==leaf && ((i>=captures && i<threats) || i>=nonCaptures)
+                                    && !threatened
+                                    && !(extend & (ExtDualReply | ExtSingleReply)))
+                        || (P==leaf && newDepth <= eval.dMaxCapture && i>=captures)) {
+                int nextPSValue = eval.interpolate(currentWeight, CompoundScore(estimate.vector));
+                int nextEstimatedScore = nextPSValue + C*eval.standardError + b.positionalScore /*+ diff.v + C*diff.error*/;                
+                Score<C> value(nextEstimatedScore);
+                if (value <= alpha.v) {
+                    stats.node++;
+                    stats.leafcut++;
+                    current.max(value.v);
+#ifdef QT_GUI_LIB
+                    int16_t diff = pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
+                    if (NodeItem::nNodes < MAX_NODES && node) {
+                        NodeItem::m.lock();
+                        NodeData data = { };
+                        data.alpha = origAlpha.v;
+                        data.beta = origBeta.v;
+                        data.move = m;
+                        data.ply = ply;
+                        data.key = estimate.key;
+                        data.searchType = P;
+                        data.depth = depth;
+                        data.moveColor = -C;
+                        data.nodeColor = C;
+                        data.flags = 0;
+                        data.threadId = WorkThread::threadId;
+                        data.nodes = 1;
+                
+                        data.gain = diff;
+                        data.error = eval.standardError;
+                        data.ps = b.psValue;
+                        data.real = 0;
+                        data.bestEval = value.v;
+                        data.nodeType = NodePrecut1;
+
+                        new NodeItem(data, node);
+                        NodeItem::nNodes++;
+                        NodeItem::m.unlock(); }
+#endif
+                    continue; } }
+            const ColoredBoard<(Colors)-C> nextboard(b, *i, estimate.vector);
+            nextboard.psValue = eval.calc(nextboard.matIndex, CompoundScore(estimate.vector));
+            nextboard.diff = & pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
+            nextboard.prevPositionalScore = b.positionalScore;
+            nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff;
             /*
              * Quiescense search, only material changing moves, other moves
              * aren't even generated
              */
             if (P == vein)  {
-            	bool temp = b.template inCheck<C>();
             	ASSERT(i->capture() || i->isSpecial() || extend & ExtTestMate);
                 ASSERT(newDepth < eval.dMaxCapture);
-                value.v = search3<(Colors)-C, vein>(b, *i, newDepth, beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nextNT NODE);
+                value.v = search3<(Colors)-C, vein>(nextboard, *i, newDepth, beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nextNT NODE);
                 /*
                  * Transition from extended q search to pure q search for
                  * for non-tactical moves
@@ -614,7 +661,7 @@ nosort:
                      && !(extend & (ExtDualReply | ExtSingleReply)) //TODO replace by a condition "not checking move"
                     ) {
                 if (!i->capture() && !i->isSpecial()) continue;
-                value.v = search3<(Colors)-C, vein>(b, *i, std::min(newDepth, eval.dMaxCapture), beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nextNT NODE);
+                value.v = search3<(Colors)-C, vein>(nextboard, *i, std::min(newDepth, eval.dMaxCapture), beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nextNT NODE);
                 /*
                  * Transition from extended q search to pure q search for tactical
                  * moves, if the move is a possible mate, don't do a lazy eval in
@@ -624,16 +671,16 @@ nosort:
             else if (P == leaf && newDepth <= eval.dMaxCapture) {
                 ASSERT(newDepth == eval.dMaxCapture);
                 leafExt = (i<captures) ? ExtTestMate : ExtNot;
-                value.v = search3<(Colors)-C, vein>(b, *i, eval.dMaxCapture, beta.unshared(), alpha.unshared(), ply+1, leafExt, unused, nextNT NODE);
+                value.v = search3<(Colors)-C, vein>(nextboard, *i, eval.dMaxCapture, beta.unshared(), alpha.unshared(), ply+1, leafExt, unused, nextNT NODE);
                 leafMaxDepth = true; }
             else if ( P == leaf || newDepth <= eval.dMaxExt) {
-                value.v = search3<(Colors)-C, leaf>(b, *i, newDepth, beta.unshared(), alpha.unshared(), ply+1, leafExt, leafMaxDepth, nextNT NODE); }
+                value.v = search3<(Colors)-C, leaf>(nextboard, *i, newDepth, beta.unshared(), alpha.unshared(), ply+1, leafExt, leafMaxDepth, nextNT NODE); }
             else {   // possible null search in tree or trunk
                 ASSERT(P != leaf);
                 bool ninf = current.v == -C*infinity;
                 bool doNull = newDepth >= eval.dMinReduction
                               && !ninf
-                              && eval.material[b.matIndex].doNull; /*&& eval.flags & 4*/
+                              && eval.material[b.matIndex].doNull;
                 int reduction = !ninf && calcReduction(b, i-first, *i, depth);
                 if (P == trunk && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i > first) && WorkThread::canQueued(WorkThread::threadId, current.isNotReady())) {
                     WorkThread::queueJob(WorkThread::threadId,
@@ -642,7 +689,7 @@ nosort:
                     if (stopSearch != Running) break;
                     continue; }
                 else {
-                    value.v = search9<(Colors)-C, P>(doNull, reduction, b, *i, newDepth, beta, alpha, ply, ExtNot, nextNT NODE);
+                    value.v = search9<(Colors)-C, P>(doNull, reduction, nextboard, *i, newDepth, beta, alpha, ply+1, ExtNot, nextNT NODE);
                     WorkThread::reserve(last-i-1); } }
 
             if (stopSearch != Running) break;
@@ -685,7 +732,7 @@ storeAndExit:
         stored.loBound |= current > origAlpha.v;
         if (current > origAlpha.v && current.m.capture() == 0 && current.m.piece()/* && !current.m.isSpecial()*/) {
             ASSERT(current.m.fromto());
-            history.good<C>(current.m, ply + rootPly); }
+            history.good(current.m, ply + rootPly); }
         stored.hiBound |= (current < origBeta.v) & (stopSearch == Running);
         stored.from |= current.m.from();
         stored.to |= current.m.to();
