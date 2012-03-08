@@ -25,31 +25,31 @@
 #include "move.h"
 
 #define NEW_PAWN 1
-constexpr int logEndgameTransitionSlope = 5;
-constexpr int endgameTransitionSlope = 1<<logEndgameTransitionSlope; //16 pieces material between full endgame and full opening
-constexpr int ipw = 1;
-constexpr int inw = 9*ipw;
-constexpr int ibw = 3*inw;
-constexpr int irw = 3*ibw;
-constexpr int iqw = 3*irw;
+static constexpr uint64_t darkSquares = 0xaa55aa55aa55aa55;
 
-constexpr int iqb = 3*iqw;
-constexpr int irb = 3*iqb;
-constexpr int ibb = 3*irb;
-constexpr int inb = 3*ibb;
-constexpr int ipb = 3*inb;
+static constexpr int ipw = 1;
+static constexpr int inw = 9*ipw;
+static constexpr int ibw = 3*inw;
+static constexpr int irw = 3*ibw;
+static constexpr int iqw = 3*irw;		//243
 
-constexpr int matIndex[nColors][nPieces+1] = {
+static constexpr int iqb = 3*iqw;		//729
+static constexpr int irb = 3*iqb;		//2187
+static constexpr int ibb = 3*irb;		//6561
+static constexpr int inb = 3*ibb;		//19683
+static constexpr int ipb = 3*inb;
+
+static constexpr int matIndex[nColors][nPieces+1] = {
     {	0, -irb,    -ibb,    -iqb,    -inb,    -ipb,     0 },
     {	0,  irb-irw, ibb-ibw, iqb-iqw, inb-inw, ipb-ipw, 0 } };
 
-constexpr int minIndex = 9*matIndex[0][Pawn]
+static constexpr int minIndex = 9*matIndex[0][Pawn]
                          + 3*matIndex[0][Knight]
                          + 3*matIndex[0][Queen]
                          + 3*matIndex[0][Bishop]
                          + 3*matIndex[0][Rook];
 
-constexpr int maxIndex = 9*matIndex[1][Pawn]
+static constexpr int maxIndex = 9*matIndex[1][Pawn]
                          + 3*matIndex[1][Knight]
                          + 3*matIndex[1][Queen]
                          + 3*matIndex[1][Bishop]
@@ -57,6 +57,7 @@ constexpr int maxIndex = 9*matIndex[1][Pawn]
 class Parameters;
 class PieceList;
 class Board;
+template<Colors> class ColoredBoard;
 class PawnEntry;
 template<typename, unsigned, typename> class TranspositionTable;
 
@@ -65,7 +66,7 @@ enum Endgames { Unspecified, KBPk, kpbK, KB_kb_, KPk, kpK };
 class Eval {
 public:
     struct Material {
-        unsigned opening:6;     // 0..32 scaling factor for opening...endgame
+        unsigned scaleIndex:6;  // 0..egTSlope index in table of scaling factors
         int bias:10;            // -511..511
         unsigned draw:1;
         unsigned drawish:1;     // the position is likely a draw
@@ -94,6 +95,7 @@ private:
     PackedScore<> rookWeakPawn[5];
     PackedScore<> rookOwnPasser[5];
     PackedScore<> rookOppPasser[5];
+    PackedScore<> rookSeventh[5];
 
     PackedScore<> pawnBackward2[8];
     PackedScore<> pawnBackwardOpen2[8];
@@ -131,8 +133,10 @@ private:
     int kingShieldOpenFile;
     int kingShieldHalfOpenFile;
 
-    int endgameMaterial;
     int noEvalLimit;
+public:    
+    PackedScore<> scale[materialTotal+1];
+private:
 //    unsigned matFlag;
     static uint64_t ruleOfSquare[nColors][nSquares];
     static uint64_t keySquare[nColors][nSquares];
@@ -150,7 +154,6 @@ private:
         PackedScore<> bishopPair;
 
         PackedScore<float> knightBlockPasser;
-        PackedScore<> knightPair;
 
         PackedScore<float> rookOpen2;
         PackedScore<float> rookOpenSlope;
@@ -160,7 +163,9 @@ private:
         PackedScore<float> rookWeakPawn;
         PackedScore<float> rookOwnPasser;
         PackedScore<float> rookOppPasser;
-
+        PackedScore<> rookSeventh;
+        PackedScore<> rookSeventh2;
+        
         float oppKingOwnPawn2;
         float ownKingOwnPawn2;
         float oppKingOwnPasser2;
@@ -183,6 +188,9 @@ private:
         int attackFirst;
         int attackSlope;
         int attackTotal;
+
+        int endgameMaterial;
+        int endgameTransitionSlope;
 
         struct {
             int outer[3];
@@ -217,7 +225,7 @@ private:
     CompoundScore mobility(const Board& b, int& attackingPieces, int& defendingPieces) const /*__attribute__((__always_inline__))*/;
     int attackDiff(const Board& b, const PawnEntry& p, int wap, int bap, int wdp, int bdp) const __attribute__((noinline));
     template<Colors C> int attack2(const Board& b, const PawnEntry& p, int attackingPieces, int defendingPieces) const __attribute__((__always_inline__));
-    template<Colors C> CompoundScore pieces(const Board& b, const PawnEntry& p) const __attribute__((__always_inline__));
+    template<Colors C> CompoundScore pieces(const Board& b, const PawnEntry& p, uint64_t, uint64_t, uint64_t, uint64_t) const __attribute__((__always_inline__));
     PawnEntry pawns(const Board&) const;
     template<Colors C> void mobilityRestrictions(const Board& b, uint64_t (&restrictions)[nColors][nPieces+1]) const;
     template<Colors C> int kingSafety(const Board& b) const;
@@ -230,6 +238,7 @@ private:
 public:
     unsigned dMaxCapture;
     unsigned dMaxExt;
+    unsigned dMaxCheckExt;
     unsigned dMinSingleExt;
     unsigned dMinDualExt;
     unsigned dMinForkExt;
@@ -238,14 +247,13 @@ public:
     unsigned dNullIncr;
     unsigned dVerifyIncr;
     unsigned dMinReduction;
-    unsigned dMaxExtPawn;
-    unsigned dMinExtDisco;
+//    unsigned dMaxExtPawn;
+//    unsigned dMinExtDisco;
 //     unsigned dMaxExtDisco;
     int dRedCapture;
     int dRedCheck;
     int standardError;
     float standardSigma;
-    bool calcMeanError;
 
     int dRed[maxDepth+1];
     unsigned flags;
@@ -257,14 +265,19 @@ public:
     int evalHardBudget;
     int prune1;
     int prune2;
+    int prune3;
     int prune1c;
     int prune2c;
+    int prune3c;
     unsigned dMaxExtCheck;
-    int tempo;
     int castlingTempo;
     int pawnDefense;
     int pieceAttack;
     int pieceDefense;
+    int tempo0;
+    int tempo64;
+    int sortPrev;
+    int sortNext;
     int attackTable2[1024];
     int nAttackersTab[16];
     int allowLazyRoot;
@@ -281,7 +294,7 @@ public:
     void init(const Parameters& p);
     static void initTables();
     int operator () (const Board&, Colors sideToMove) const __attribute__((noinline));
-    int operator () (const Board&, Colors sideToMove, int&, int&, int, int&) const __attribute__((noinline));
+    template<Colors C> int operator () (const ColoredBoard<C>&, int&, int&, int, int&) const __attribute__((noinline));
     template<Colors C> Move evalMate(const Board&) const __attribute__((noinline));
     PackedScore<> getPS(int8_t piece, uint8_t square) const {
         ASSERT(square < nSquares);
@@ -308,6 +321,9 @@ public:
     __v8hi estimate(const Move m, const KeyScore keyScore) const;
     template<Colors C>
     __v8hi inline_estimate(const Move m, const KeyScore keyScore) const __attribute__((always_inline)) ;
-    int calc(unsigned matIndex, CompoundScore score) const; };
+    int calc(unsigned matIndex, CompoundScore score) const;
+    int calc(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const;
+	int interpolate(CompoundScore weights, CompoundScore score) const;
+	int interpolate(unsigned iScale, CompoundScore score) const; };
 
 #endif /* EVAL_H_ */

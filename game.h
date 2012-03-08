@@ -43,7 +43,7 @@ extern __thread RepetitionKeys keys;
 
 enum Extension {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
                 ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32,
-                ExtFork = 64, ExtTestMate = 128, ExtDiscoveredCheck = 256, ExtFirstMove = 512 };
+                ExtFork = 64, ExtTestMate = 128, ExtDiscoveredCheck = 256, ExtFirstMove = 512, ExtFutility = 1024 };
 
 enum Status { Running, Stopping, Stopped };
 
@@ -54,7 +54,7 @@ enum Status { Running, Stopping, Stopped };
 #ifdef QT_GUI_LIB
 
 #define NODE ,node
-#define NODEDEF ,NodeItem* node
+#define NODEDEF ,NodeItem* parent
 
 class Game: public QObject {
     Q_OBJECT
@@ -81,17 +81,6 @@ public:
     struct WBBoard {
         ColoredBoard<White> wb;
         ColoredBoard<Black> bb; };
-    struct PositionalError {
-        int16_t v;
-        int16_t error;
-#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
-        float n;
-        float e;
-        float e2;
-#endif
-        void init(int x); };
-private:
-
 private:
     WBBoard boards[nMaxGameLength];
     unsigned nullReduction[maxDepth+1];
@@ -150,7 +139,7 @@ public:
     bool infinite;
     uint64_t maxSearchNodes;
 
-    PositionalError pe[nPieces*2+1][nSquares][nSquares];
+    int16_t pe[nPieces*2+1][nSquares][nSquares];
 
     Game(Console* c, const Parameters& p, uint64_t, uint64_t);
 #ifdef QT_GUI_LIB
@@ -169,18 +158,18 @@ public:
     void stop();
     const Board& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
-    template<Colors C, Phase P, class A, class B, Colors PREVC>
-    int search3(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
+    template<Colors C, Phase P, class A, class B>
+    int search3(const ColoredBoard<C>& b, Move m, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, bool& nextMaxDepth, NodeType nt NODEDEF );
-    template<Colors C, Phase P, class A, class B, Colors PREVC>
-    int search4(const ColoredBoard<PREVC>& prev, Move m, unsigned depth,
+                unsigned ply, Extension ext, bool& nextMaxDepth, NodeType nt NODEDEF  );
+    template<Colors C, Phase P, class A, class B>
+    int search4(const ColoredBoard<C>& b, Move m, unsigned depth,
                 const A& alpha, const B& beta,
                 unsigned ply, Extension ext, NodeType nt NODEDEF ) __attribute__((always_inline));
     template<Colors C, Phase P, class A, class B>
-    int search9(const bool doNull, const unsigned reduction, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned depth,
+    int search9(const bool doNull, const unsigned reduction, const ColoredBoard<C>& b, Move m, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, NodeType nt NODEDEF );
+                unsigned ply, Extension ext, NodeType nt NODEDEF ) __attribute__((always_inline));
 
     void perft(unsigned int depth);
     void divide(unsigned int depth);

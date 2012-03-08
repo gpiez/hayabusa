@@ -50,6 +50,9 @@
 
 #define STR(x) #x
 
+#define likely(x) (__builtin_expect((x), 1))
+#define unlikely(x) (__builtin_expect((x), 0))
+
 enum GamePhase { Opening, Endgame };
 
 enum Pieces { NoPiece = 0, Rook = 1, Bishop = 2, Queen = 3, Knight = 4, Pawn = 5, King = 6, All = 7 };
@@ -88,7 +91,7 @@ static constexpr int maxHistory = 256;
 static constexpr unsigned int nTTLocks = 1;
 static constexpr unsigned int maxMoves = 256; // maximum possible moves in a position
 static constexpr unsigned int goodMoves = 192; // maximum possible good moves in a position
-static constexpr unsigned int nMaxGameLength = 5000; // maximum possible moves in a position
+static constexpr unsigned int nMaxGameLength = 1000; // maximum moves in a game
 static constexpr int infinity = 8176;
 static constexpr unsigned int maxDepth = 63;
 static constexpr unsigned int transpositionTableAssoc = 2;
@@ -112,6 +115,8 @@ static constexpr int yOffsets[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
 
 // For calculating opening...endgame scaling
 static constexpr int materialTab[nPieces+1] = { 0, 5, 2, 10, 2, 0, 0 };
+static constexpr int materialTotal = 4*(materialTab[Rook]+materialTab[Bishop]+materialTab[Knight]) + 4*materialTab[Queen] + 16*materialTab[Pawn];
+
 static constexpr int maxScoreChildren = 16;
 
 #endif /* CONSTANTS_H_ */

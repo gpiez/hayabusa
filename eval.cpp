@@ -29,7 +29,6 @@ uint64_t Eval::ruleOfSquare[nColors][nSquares];
 uint64_t Eval::keySquare[nColors][nSquares];
 
 static const __v2di zero = {0 };
-static constexpr uint64_t darkSquares = 0xaa55aa55aa55aa55;
 static constexpr int ksv[nSquares] = {
     0,  2,  4,  6,  6,  4,  2,  0,
     2, 10, 12, 14, 14, 12, 10,  2,
@@ -139,62 +138,62 @@ void Eval::initTables() {
                 keySquare[1][p] = b; } } } }
 
 template<Colors C>
-CompoundScore Eval::pieces(const Board& b, const PawnEntry& p) const {
+CompoundScore Eval::pieces(const Board& b, const PawnEntry& p, uint64_t own, uint64_t opp, uint64_t ownpasser, uint64_t opppasser) const {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     CompoundScore value(0,0);
-    if  (   (  b.getPieces<C, Rook>() & (file<'h'>()|file<'g'>()) & (rank<C,1>()|rank<C,2>())
-               && b.getPieces<C, Pawn>() & file<'h'>() & (rank<C,2>() | rank<C,3>())
-               &&  (   b.getPieces<C, King>() & file<'g'>() & rank<C,1>()
-                       || (b.getPieces<C, King>() & file<'f'>() & rank<C,1>() && b.getPieces<C, Pawn>() & file<'g'>() & (rank<C,2>() | rank<C,3>()))))
-            ||  (  b.getPieces<C, Rook>() & (file<'a'>()|file<'b'>()) & (rank<C,1>()|rank<C,2>())
-                   && b.getPieces<C, Pawn>() & file<'a'>() & (rank<C,2>() | rank<C,3>())
-                   &&  (   b.getPieces<C, King>() & file<'b'>() & rank<C,1>()
-                           || (b.getPieces<C, King>() & file<'c'>() & rank<C,1>() && b.getPieces<C, Pawn>() & file<'b'>() & (rank<C,2>() | rank<C,3>())))))
-        value = value + rookTrapped;
 
-    uint64_t own = p.openFiles[CI]; //TODO use lookuptable (2k) instead
-    own += own << 010;
-    own += own << 020;
-    own += own << 040;
+    if (uint64_t r = b.getPieces<C,Rook>()) {
+		if  (   (  r & (file<'h'>()|file<'g'>()) & (rank<C,1>()|rank<C,2>())
+				   && b.getPieces<C, Pawn>() & file<'h'>() & (rank<C,2>() | rank<C,3>())
+				   &&  (   b.getPieces<C, King>() & file<'g'>() & rank<C,1>()
+						   || (b.getPieces<C, King>() & file<'f'>() & rank<C,1>() && b.getPieces<C, Pawn>() & file<'g'>() & (rank<C,2>() | rank<C,3>()))))
+				||  (  r & (file<'a'>()|file<'b'>()) & (rank<C,1>()|rank<C,2>())
+					   && b.getPieces<C, Pawn>() & file<'a'>() & (rank<C,2>() | rank<C,3>())
+					   &&  (   b.getPieces<C, King>() & file<'b'>() & rank<C,1>()
+							   || (b.getPieces<C, King>() & file<'c'>() & rank<C,1>() && b.getPieces<C, Pawn>() & file<'b'>() & (rank<C,2>() | rank<C,3>())))))
+			value = value + rookTrapped;
 
-    uint64_t opp = p.openFiles[EI];
-    opp += opp << 010;
-    opp += opp << 020;
-    opp += opp << 040;
+		uint64_t weak = p.weak[EI];
+		weak += weak << 010;
+		weak += weak << 020;
+		weak += weak << 040;
 
-    uint64_t weak = p.weak[EI];
-    weak += weak << 010;
-    weak += weak << 020;
-    weak += weak << 040;
-
-    uint64_t wpasser = p.passers[0];
-    wpasser += wpasser >> 010;
-    wpasser += wpasser >> 020;
-    wpasser += wpasser >> 040;
-
-    uint64_t bpasser = p.passers[1];
-    bpasser += bpasser << 010;
-    bpasser += bpasser << 020;
-    bpasser += bpasser << 040;
-
-    value = value + rookHalfOpen [popcount(own & ~opp)>>3] [popcount3((b.getPieces<C,Rook>() & own & ~opp))];
-    value = value + rookOpen     [popcount(own &  opp)>>3] [popcount3((b.getPieces<C,Rook>() & own &  opp))];
-    value = value + rookWeakPawn[ popcount3((b.getPieces<C,Rook>() & weak)) ];
-    value = value + rookOwnPasser[ popcount3((b.getPieces<C,Rook>() & (C == White ? wpasser : bpasser) )) ];
-    value = value + rookOppPasser[ popcount3((b.getPieces<C,Rook>() & (C == White ? bpasser : wpasser) )) ];
+		if ((b.getPieces<-C,Pawn>() | shift<-C*010>(b.getPieces<-C,King>())) & rank<C,7>()) 
+		    value = value + rookSeventh[popcount(r & rank<C,7>())];
+        print_debug(debugEval, "after rook7: %4d %4d\n", value.opening(), value.endgame());
+		value = value + rookHalfOpen [popcount(own & ~opp)>>3] [popcount3((r & own & ~opp))];
+        print_debug(debugEval, "after rookHO: %4d %4d\n", value.opening(), value.endgame());
+		value = value + rookOpen     [popcount(own &  opp)>>3] [popcount3((r & own &  opp))];
+        print_debug(debugEval, "after rookO: %4d %4d\n", value.opening(), value.endgame());
+		value = value + rookWeakPawn[ popcount3((r & weak)) ];
+        print_debug(debugEval, "after rookWP: %4d %4d\n", value.opening(), value.endgame());
+		value = value + rookOwnPasser[ popcount3((r & ownpasser )) ];
+        print_debug(debugEval, "after rookOWNP: %4d %4d\n", value.opening(), value.endgame());
+		value = value + rookOppPasser[ popcount3((r & opppasser )) ];
+		print_debug(debugEval, "after rookOPPP: %4d %4d\n", value.opening(), value.endgame());
+    }
 
     value = value + knightBlockPasser [ popcount3((b.getPieces<C,Knight>() & shift<C* 8>(p.passers[EI]))) ];
-    value = value + bishopBlockPasser [ popcount3((b.getPieces<C,Bishop>() & shift<C* 8>(p.passers[EI]))) ];
-
-    int darkB = !!(b.getPieces<C,Bishop>() & darkSquares);
-    int lightB = !!(b.getPieces<C,Bishop>() & ~darkSquares);
-    value = value + bishopOwnPawn[ p.dark[CI] * darkB + p.light[CI] * lightB ];
-	value = value + bishopOppPawn[ popcount(b.getPieces<-C,Pawn>() & b.getAttacks<-C,Pawn>() & darkSquares) * darkB 
-								 + popcount(b.getPieces<-C,Pawn>() & b.getAttacks<-C,Pawn>() & ~darkSquares) * lightB ];
-
-    value = value + bishopNotOwnPawn[ p.dark[CI] * lightB + p.light[CI] * darkB ];
-	value = value + bishopNotOppPawn[ popcount(b.getPieces<-C,Pawn>() & b.getAttacks<-C,Pawn>() & darkSquares) * lightB 
-									+ popcount(b.getPieces<-C,Pawn>() & b.getAttacks<-C,Pawn>() & ~darkSquares)* darkB ];
+    print_debug(debugEval, "after knight: %4d %4d\n", value.opening(), value.endgame());
+    
+    if (uint64_t bishop = b.getPieces<C,Bishop>()) {
+        value = value + bishopBlockPasser [ popcount3(bishop & shift<C* 8>(p.passers[EI])) ];
+    
+        uint64_t dark = bishop & darkSquares;
+        uint64_t light = bishop & ~darkSquares;
+        unsigned darkp = p.dark[CI];
+        unsigned lightp = p.light[CI];
+        value = value + bishopOwnPawn[ (dark ? darkp:0) + (light ? lightp:0) ];
+        value = value + bishopNotOwnPawn[ (light ? darkp:0) + (dark ? lightp:0) ];
+        
+        unsigned ddef = p.darkDef[EI];
+        unsigned ldef = p.lightDef[EI];
+        
+        value = value + bishopOppPawn[ (dark ? ddef:0) + (light ? ldef:0) ];
+        value = value + bishopNotOppPawn[ (light ? ddef:0)+ (dark ? ldef:0) ];
+        print_debug(debugEval, "after bishop: %4d %4d\n", value.opening(), value.endgame());
+    }
+    
     return value; }
 
 template<Colors C>
@@ -223,15 +222,25 @@ PawnEntry Eval::pawns(const Board& b) const {
     Sub<PawnEntry, 4>* st = pt->getSubTable(k);
     PawnEntry pawnEntry;
     if (k >> PawnEntry::upperShift && pt->retrieve(st, k, pawnEntry)) {
-        stats.pthit++; }
+#ifdef MYDEBUG        
+    	if (pawnEntry.wpawn == b.getPieces<White,Pawn>() || pawnEntry.bpawn == b.getPieces<Black,Pawn>())
+            /*stats.pcollision++*/;
+#endif        
+        /*stats.pthit++*/; }
     else {
-        stats.ptmiss++;
+#ifdef MYDEBUG
+    	pawnEntry.wpawn = b.getPieces<White,Pawn>();
+    	pawnEntry.bpawn = b.getPieces<Black,Pawn>();
+#endif
+//        stats.ptmiss++;
         uint64_t wpawn = b.getPieces<White,Pawn>();
         uint64_t bpawn = b.getPieces<Black,Pawn>();
 
         CompoundScore score = pawnShoulder2[ popcount15(wpawn & wpawn<<1 & ~file<'a'>()) ];
         score = score - pawnShoulder2[ popcount15(bpawn & bpawn<<1 & ~file<'a'>()) ];
+        print_debug(debugEval, "After shoulder    %3d %3d\n", score.opening(), score.endgame());
 
+        // FEATURE the whole bit shift stuff can be done much fater using pshufb
         uint64_t wFront = wpawn << 8 | wpawn << 16;
         wFront |= wFront << 16 | wFront << 32;
         uint64_t wBack = wpawn >> 8 | wpawn >> 16;
@@ -244,6 +253,7 @@ PawnEntry Eval::pawns(const Board& b) const {
 
         score = score + pawnDouble2[popcount15(wpawn & wBack)];
         score = score - pawnDouble2[popcount15(bpawn & bBack)];
+        print_debug(debugEval, "After double     %3d %3d\n", score.opening(), score.endgame());
 
         // calculate squares which are or possibly are attacked by w and b pawns
         // take only the most advanced attacker and the most backward defender into account
@@ -266,6 +276,7 @@ PawnEntry Eval::pawns(const Board& b) const {
 
         score = score + pawnBackward2[popcount15(wBackward)];
         score = score - pawnBackward2[popcount15(bBackward)];
+        print_debug(debugEval, "After bward       %3d %3d\n", score.opening(), score.endgame());
 
         // backward pawns on open files, reduce to (uint8_t) for rooks later
         uint64_t wBackOpen = wBackward & ~bFront;
@@ -281,9 +292,9 @@ PawnEntry Eval::pawns(const Board& b) const {
         if(TRACE_DEBUG && Options::debug & debugEval) {
             printBit(wBack8);
             printBit(bBack8); }
-        //TODO scale pbwo with the number of rooks + queens
         score = score + pawnBackwardOpen2[popcount15(wBackOpen)];
         score = score - pawnBackwardOpen2[popcount15(bBackOpen)];
+        print_debug(debugEval, "After bwardopen   %3d %3d\n", score.opening(), score.endgame());
 
         // a white pawn is not passed, if he is below a opponent pawn or its attack squares
         // store positions of passers for later use in other eval functions
@@ -326,9 +337,9 @@ PawnEntry Eval::pawns(const Board& b) const {
             uint64_t y = pos >> 3;
             ASSERT(y>0 && y<7);
             score = score + pawnPasser22[y-1];
+            print_debug(debugEval, "After wpasser   %3d %3d\n", score.opening(), score.endgame());
             if (wPassedConnected & (1LL << pos)) score = score + pawnConnPasser22[y-1];
 
-//             print_debug(debugEval, "pawn wpasser:   %d\n", pawnPasser22[y-1]);
         }
 //		if (wCandidate) {
 //			printBit(wpawn, bpawn, wCandidate);
@@ -340,18 +351,22 @@ PawnEntry Eval::pawns(const Board& b) const {
         for (; wCandidate; wCandidate &= wCandidate-1)
             score = score + pawnCandidate[(bit(wCandidate)>>3)-1];
 
+        print_debug(debugEval, "After wcandidates %3d %3d\n", score.opening(), score.endgame());
+
         pawnEntry.passers[1] = bPassed;
         for ( i=0; bPassed; bPassed &= bPassed-1, i++ ) {
             uint64_t pos = bit(bPassed);
             uint64_t y = pos  >> 3;
             ASSERT(y>0 && y<7);
             score = score - pawnPasser22[6-y];
+            print_debug(debugEval, "After bpasser  %3d %3d\n", score.opening(), score.endgame());
             if (bPassedConnected & (1LL << pos)) score = score - pawnConnPasser22[6-y];
 
 //             print_debug(debugEval, "pawn bpasser:   %d\n", pawnPasser22[6-y]);
         }
         for (; bCandidate; bCandidate &= bCandidate-1)
             score = score - pawnCandidate[6-(bit(bCandidate)>>3)];
+        print_debug(debugEval, "After bcandidates %3d %3d\n", score.opening(), score.endgame());
 
         // possible weak pawns are adjacent to open files or below pawns an a adjacent file on both sides
         // rook pawns are always adjacent to a "open" file
@@ -364,10 +379,13 @@ PawnEntry Eval::pawns(const Board& b) const {
         uint64_t bIsolani = bpawn & (bOpenFiles<<1 | 0x101010101010101LL) & (bOpenFiles>>1 | 0x8080808080808080LL);
         score = score + pawnIsolatedCenter2[ (popcount15(wIsolani & ~(file<'a'>()|file<'h'>()))) ];
         score = score - pawnIsolatedCenter2[ (popcount15(bIsolani & ~(file<'a'>()|file<'h'>()))) ];
+        print_debug(debugEval, "After isocenter %3d %3d\n", score.opening(), score.endgame());
         score = score + pawnIsolatedEdge2[ (popcount15(wIsolani & (file<'a'>()|file<'h'>()))) ];
         score = score - pawnIsolatedEdge2[ (popcount15(bIsolani & (file<'a'>()|file<'h'>()))) ];
+        print_debug(debugEval, "After isoedge %3d %3d\n", score.opening(), score.endgame());
         score = score + pawnIsolatedOpen2[ (popcount15(wIsolani & ~bFront)) ];
         score = score - pawnIsolatedOpen2[ (popcount15(bIsolani & ~wFront)) ];
+        print_debug(debugEval, "After isoopen %3d %3d\n", score.opening(), score.endgame());
         pawnEntry.score = score.packed();
 
         uint64_t wDarkpawn = wpawn & darkSquares;
@@ -376,7 +394,20 @@ PawnEntry Eval::pawns(const Board& b) const {
         pawnEntry.dark[1] = popcount(bDarkpawn);
         pawnEntry.light[0] = popcount(wpawn - wDarkpawn);
         pawnEntry.light[1] = popcount(bpawn - bDarkpawn);
+        
+//        uint64_t wUndef = wpawn & ~(b.getAttacks<White,Pawn>());
+//        uint64_t bUndef = bpawn & ~(b.getAttacks<Black,Pawn>());
+//        pawnEntry.darkUndef[0] = popcount(wUndef & darkSquares);
+//        pawnEntry.darkUndef[1] = popcount(bUndef & darkSquares);
+//        pawnEntry.lightUndef[0] = popcount(wUndef & ~darkSquares);
+//        pawnEntry.lightUndef[1] = popcount(bUndef & ~darkSquares);
 
+        uint64_t wDef = wpawn & b.getAttacks<White,Pawn>();
+        uint64_t bDef = bpawn & b.getAttacks<Black,Pawn>();
+        pawnEntry.darkDef[0] = popcount(wDef & darkSquares);
+        pawnEntry.darkDef[1] = popcount(bDef & darkSquares);
+        pawnEntry.lightDef[0] = popcount(wDef & ~darkSquares);
+        pawnEntry.lightDef[1] = popcount(bDef & ~darkSquares);
 //         print_debug(debugEval, "wpawnDouble:    %3d\n", wdbl);
 //         print_debug(debugEval, "bpawnDouble:    %3d\n", bdbl);
 //         print_debug(debugEval, "wpawn backward: %3d\n", wpbw);
@@ -448,7 +479,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 	//         uint64_t bmob2 = bmob1 & noBlockedPawns;
 			// remove own pieces
 			bmob1 &= ~b.getOcc<C>();
-			uint64_t bmob1x = bmob1;
+//			uint64_t bmob1x = bmob1;
 			// restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move
 	//         uint64_t batt2 = b.build13Attack(bmob1);
 	//         bmob2 |= batt2 & restrictions & ~b.getOcc<C>();
@@ -485,10 +516,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 	//             print_debug(debugMobility, "b attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(batt1 & oppking), attackB1[popcount15(batt1 & oppking)], popcount15(batt2 & oppking), attackB2[popcount15(batt2 & oppking)]);
 			}
 
-			if (flags & 1)
-				nb = popcount(bmob1x);
-			else
-				nb = popcount(bmob1);
+			nb = popcount(bmob1);
 			score = score + bm[nb]; }
 	
 		for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
@@ -534,7 +562,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 	//         uint64_t rmob2 = rmob1 & noBlockedPawns;
 			// remove own pieces
 			rmob1 &= ~b.getOcc<C>();
-			uint64_t rmob1x = rmob1;
+//			uint64_t rmob1x = rmob1;
 			// restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move
 	//         uint64_t ratt2 = b.build02Attack(rmob1);
 	//         rmob2 |= ratt2 & restrictions & ~b.getOcc<C>();
@@ -563,10 +591,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 	//                 if (ratt1 & ownking) defendingPieces++;
 	//             print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
 			}
-			if (flags & 1)
-				nr = popcount(rmob1x);
-			else
-				nr = popcount(rmob1);
+			nr = popcount(rmob1);
 			score = score + rm[nr]; }
 	
 		restrictions &= ~(b.getAttacks<-C,Rook>());
@@ -574,7 +599,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 		uint64_t qmob1 = qatt1 & restrictions;
 //         uint64_t qmob2 = qmob1 & noBlockedPawns;
 		qmob1 &= ~b.getOcc<C>();
-		uint64_t qmob1x = qmob1;
+//		uint64_t qmob1x = qmob1;
 //         uint64_t qatt2 = b.build02Attack(qmob1) | b.build13Attack(qmob1);
 //         qmob2 |= qatt2 & restrictions & ~b.getOcc<C>();
 //        unsigned q=bit(b.getPieces<C,Queen>());
@@ -604,10 +629,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 //             print_debug(debugMobility, "q attack  %d: d%2d:%3d, i%2d:%3d\n", CI, popcount15(qatt1 & oppking), attackQ1[popcount15(qatt1 & oppking)], popcount15(qatt2 & oppking), attackQ2[popcount15(qatt2 & oppking)]);
 		}
 		// this may be the summed mobility of two queens or wrongly added rook mob
-		if (flags & 1)
-			nq = std::min(popcount(qmob1x), 27);
-		else
-			nq = std::min(popcount(qmob1), 27);
+		nq = std::min(popcount(qmob1), 27);
 			
 		score = score + qm[nq]; }
     else {
@@ -695,7 +717,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 	//         uint64_t rmob2 = rmob1 & noBlockedPawns;
 			// remove own pieces
 			rmob1 &= ~b.getOcc<C>();
-			uint64_t rmob1x = rmob1;
+//			uint64_t rmob1x = rmob1;
 			// restriced mobility in two moves, including own defended pieces, excluding pieces defended in the 2nd move
 	//         uint64_t ratt2 = b.build02Attack(rmob1);
 	//         rmob2 |= ratt2 & restrictions & ~b.getOcc<C>();
@@ -724,10 +746,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 	//                 if (ratt1 & ownking) defendingPieces++;
 	//             print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
 			}
-			if (flags & 1)
-				nr = popcount(rmob1x);
-			else
-				nr = popcount(rmob1);
+			nr = popcount(rmob1);
 			score = score + rm[nr]; } }
     
     uint64_t a = b.getAttacks<C,Pawn>() & oppking;
@@ -858,11 +877,11 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
     CompoundScore value( 0, 0 );
     for (int p=Rook; p<=King; ++p) {
         for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
-            uint64_t sq=bit(x);
+            unsigned sq=bit(x);
             print_debug(debugEval, "materialw%d %c%d    %4d%4d\n", p, (sq&7)+'a', sq/8+1, getPS( p, sq).opening, getPS( p, sq).endgame);
             value = value + getPS( p, sq); }
         for (uint64_t x=b.getPieces<Black>(p); x; x&=x-1) {
-            uint64_t sq=bit(x);
+        	unsigned sq=bit(x);
             print_debug(debugEval, "materialb%d %c%d    %4d%4d\n", p, (sq&7)+'a', sq/8+1, getPS(-p, sq).opening, getPS(-p, sq).endgame);
             value = value + getPS(-p, sq); } }
     int v = calc(b.matIndex, value);
@@ -873,11 +892,38 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 
         int wdp, bdp;
         CompoundScore mob = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
-        CompoundScore attend ( material[b.matIndex].opening ? attackDiff(b, pe, wap, bap, wdp, bdp) : 0,
-                               material[b.matIndex].opening != endgameTransitionSlope ? endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm) : 0);
+        CompoundScore attend ( scale[material[b.matIndex].scaleIndex].opening ? attackDiff(b, pe, wap, bap, wdp, bdp) : 0,
+                               scale[material[b.matIndex].scaleIndex].endgame ? endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm) : 0);
 
         CompoundScore pawn( pe.score );
-        CompoundScore piece = pieces<White>(b, pe) - pieces<Black>(b, pe);
+        
+#ifdef __SSSE3__
+        __v2di ofiles = _mm_loadu_si128((__m128i*)&pe.openFiles);
+        ofiles = _mm_shuffle_epi8(ofiles, _mm_set_epi8(1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0));
+        uint64_t wfile = _mm_extract_epi64(ofiles, 0);
+        uint64_t bfile = _mm_extract_epi64(ofiles, 1);
+#else
+        uint64_t wfile = pe.openFiles[0]; //TODO use lookuptable (2k) instead
+        wfile += wfile << 010;
+        wfile += wfile << 020;
+        wfile += wfile << 040;
+
+        uint64_t bfile = pe.openFiles[1];
+        bfile += bfile << 010;
+        bfile += bfile << 020;
+        bfile += bfile << 040;
+#endif
+        uint64_t wpasser = pe.passers[0];
+        wpasser += wpasser >> 010;
+        wpasser += wpasser >> 020;
+        wpasser += wpasser >> 040;
+
+        uint64_t bpasser = pe.passers[1];
+        bpasser += bpasser << 010;
+        bpasser += bpasser << 020;
+        bpasser += bpasser << 040;
+
+        CompoundScore piece = pieces<White>(b, pe, wfile, bfile, wpasser, bpasser) - pieces<Black>(b, pe, bfile, wfile, bpasser, wpasser);
 
 //         print_debug(debugEval, "endgame:        %d\n", e);
 //         print_debug(debugEval, "mobility:       %d\n", m);
@@ -886,20 +932,17 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 //         print_debug(debugEval, "pieces:         %d\n", pi);
 
         CompoundScore score = mob + attend + pawn + piece;
-        int o = material[b.matIndex].opening;
-        int e = endgameTransitionSlope - material[b.matIndex].opening;
-        int s = o*score.opening() + e*score.endgame();
-        s = s + endgameTransitionSlope/2 - (s<0);        
+        int s = interpolate(material[b.matIndex].scaleIndex, score);        
         print_debug(debugEval, "piece:       %4d %4d\n", piece.opening(), piece.endgame());
         print_debug(debugEval, "attack/endg: %4d %4d\n", attend.opening(), attend.endgame());
         print_debug(debugEval, "mobility:    %4d %4d\n", mob.opening(), mob.endgame());
         print_debug(debugEval, "pawn:        %4d %4d\n", pawn.opening(), pawn.endgame());
         print_debug(debugEval, "mat.bias:    %4d\n", material[b.matIndex].bias);
         print_debug(debugEval, "mat.drawish: %4d\n", material[b.matIndex].drawish);
-        print_debug(debugEval, "mat.opening: %4d\n", material[b.matIndex].opening);
-        print_debug(debugEval, "posScore:    %4d\n", s >> logEndgameTransitionSlope);
+        print_debug(debugEval, "mat.index:   %4d\n", material[b.matIndex].scaleIndex);
+        print_debug(debugEval, "posScore:    %4d\n", s);
         print_debug(debugEval, "PSScore:     %4d\n", calc(b.matIndex, CompoundScore(b.keyScore.score)));
-        return s >> logEndgameTransitionSlope; }
+        return s; }
     else {       // pawnless endgame
         int mat = b.keyScore.score.endgame;  //TODO use a simpler discriminator
         int wap, bap, wdp, bdp; //TODO not needed here
@@ -907,97 +950,44 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
         int p = (mat>0 ? 1:4)*kingSafety<White>(b) - (mat<0 ? 1:4)*kingSafety<Black>(b);
         return m + p; } }
 
-int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap, int psValue, int& posScore ) const {
-    int realScore;
-    switch(material[b.matIndex].recognized) {
-    case KBPk:
-        realScore = psValue >> evalKBPk<White>(b);
-        posScore = realScore - psValue;
-        return realScore;
-    case kpbK:
-        realScore = psValue >> evalKBPk<Black>(b);
-        posScore = realScore - psValue;
-        return realScore;
-    case KB_kb_:
-        posScore = operator()(b, stm, wap, bap);
-        realScore = (psValue + posScore) >> evalKB_kb_<Black>(b);
-        posScore = realScore - psValue;
-        return realScore;
-    case KPk:
-        realScore = (psValue<<2) >> evalKPk<White>(b, stm);
-        posScore = realScore - psValue;
-        return realScore;
-    case kpK:
-        realScore = (psValue<<2) >> evalKPk<Black>(b, stm);
-        posScore = realScore - psValue;
-        return realScore;
-
-    case Unspecified:
-    default:
-        posScore = operator()(b, stm, wap, bap);
-        return psValue + posScore; } }
-
 void Eval::ptClear() {
     pt->clear(); }
 
 /*
+ * Interpolate between score.opening and score.endgame according to weights
+ */
+int Eval::interpolate(CompoundScore weights, CompoundScore score) const {
+#ifdef __SSSE3__
+	// The SSE version loses half a bit of precision, because is rounds first
+	// and then sums up, where the normal code rounds last.
+    __v8hi score16 = _mm_mulhrs_epi16(weights.data, score.data);
+    int16_t s0 = _mm_extract_epi16( score16, 0 ) + _mm_extract_epi16( score16, 1 );
+    return s0;
+#else    
+	int o = weights.opening();
+    int e = weights.endgame();
+    int s = (o*score.opening() + e*score.endgame() + 0x4000) >> 15;
+    ASSERT(s==s0);
+    return s;
+#endif
+	}
+
+int Eval::interpolate(unsigned iScale, CompoundScore score) const {
+	CompoundScore weights = scale[iScale];
+	return interpolate(weights, score);
+	} 
+/*
  * Calculate the final score from a CompoundScore, including the material table
  * bias and draw chances
  */
+int Eval::calc(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const {
+
+    return (interpolate(weights, score) + bias) >> drawish; }
+
 int Eval::calc(unsigned matIndex, CompoundScore score) const {
-    int o = material[matIndex].opening;
-    int e = endgameTransitionSlope - material[matIndex].opening;
-    int s = o*score.opening() + e*score.endgame();
-    s = s + endgameTransitionSlope/2 - (s<0);
+    unsigned i = material[matIndex].scaleIndex;
+    CompoundScore weights = scale[i];
+    int bias = material[matIndex].bias;
+    unsigned drawish = material[matIndex].drawish;
+    return (interpolate(weights, score) + bias) >> drawish; }
 
-    return ((s >> logEndgameTransitionSlope) + material[matIndex].bias) >> material[matIndex].drawish; }
-
-template<Colors C>
-unsigned Eval::evalKBPk(const Board& b) const {
-    if (((b.getPieces<C,Pawn>() & file<'a'>())
-            && (b.getPieces<C,Bishop>() & (C==White ? darkSquares : ~darkSquares)))) {
-        uint64_t front = b.getPieces<C,Pawn>();
-        front |= front << 1;
-        front |= shift<C* 010>(front);
-        front |= shift<C* 020>(front);
-        front |= shift<C* 040>(front);
-        if (b.getPieces<-C,King>() & front) return 3; }
-    else if (((b.getPieces<C,Pawn>() & file<'h'>())
-              && (b.getPieces<C,Bishop>() & (C==White ? ~darkSquares : darkSquares)))) {
-        uint64_t front = b.getPieces<C,Pawn>();
-        front |= front >> 1;
-        front |= shift<C* 010>(front);
-        front |= shift<C* 020>(front);
-        front |= shift<C* 040>(front);
-        if (b.getPieces<-C,King>() & front) return 3;
-
-    }
-
-    return 0; }
-/*
- * Evaluate KPk. Returns a shift right value, which is applied to a pre-
- * shifted by 2 left value. A return value of 2 changes nothing.
- */
-template<Colors C>
-unsigned Eval::evalKPk(const Board& b, Colors stm) const {
-    uint64_t bk = b.getPieces<-C,King>();
-    uint64_t wp = b.getPieces<C,Pawn>();
-    // Underpromotions may cause a position with no pawns mapped to this
-    if (!wp) return 2;
-    uint64_t wpPos = bit(wp);
-    if (bk & ruleOfSquare[C==Black][wpPos]) {
-        if (b.getPieces<C,King>() & keySquare[C==Black][wpPos] && stm==Black
-                && !(wp & b.getAttacks<-C,King>()))
-            return 0;
-        if (b.getPieces<-C,King>() & keySquare[C==Black][wpPos] && stm==White)
-            return 4; }
-    else {
-        if (stm==White)
-            return 0; }
-    return 2; }
-
-template<Colors C>
-unsigned Eval::evalKB_kb_(const Board& b) const {
-    if (!(b.getPieces<C,Bishop>() & darkSquares) ^ !(b.getPieces<-C,Bishop>() & darkSquares)) {
-        return 1; }
-    return 0; }

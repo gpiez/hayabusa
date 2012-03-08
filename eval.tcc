@@ -51,3 +51,85 @@ __v8hi Eval::estimate(const Move m, const KeyScore keyScore) const {
                - getKSVector(C*m.piece(), m.from())
                + getKSVector(C*m.piece(), m.to())
                - getKSVector(-C*m.capture(), m.to()); } }
+
+template<Colors C>
+unsigned Eval::evalKBPk(const Board& b) const {
+    if (((b.getPieces<C,Pawn>() & file<'a'>())
+            && (b.getPieces<C,Bishop>() & (C==White ? darkSquares : ~darkSquares)))) {
+        uint64_t front = b.getPieces<C,Pawn>();
+        front |= front << 1;
+        front |= shift<C* 010>(front);
+        front |= shift<C* 020>(front);
+        front |= shift<C* 040>(front);
+        if (b.getPieces<-C,King>() & front) return 3; }
+    else if (((b.getPieces<C,Pawn>() & file<'h'>())
+              && (b.getPieces<C,Bishop>() & (C==White ? ~darkSquares : darkSquares)))) {
+        uint64_t front = b.getPieces<C,Pawn>();
+        front |= front >> 1;
+        front |= shift<C* 010>(front);
+        front |= shift<C* 020>(front);
+        front |= shift<C* 040>(front);
+        if (b.getPieces<-C,King>() & front) return 3;
+
+    }
+
+    return 0; }
+/*
+ * Evaluate KPk. Returns a shift right value, which is applied to a pre-
+ * shifted by 2 left value. A return value of 2 changes nothing.
+ */
+template<Colors C>
+unsigned Eval::evalKPk(const Board& b, Colors stm) const {
+    uint64_t bk = b.getPieces<-C,King>();
+    uint64_t wp = b.getPieces<C,Pawn>();
+    // Underpromotions may cause a position with no pawns mapped to this
+    if (!wp) return 2;
+    uint64_t wpPos = bit(wp);
+    if (bk & ruleOfSquare[C==Black][wpPos]) {
+        if (b.getPieces<C,King>() & keySquare[C==Black][wpPos] && stm==Black
+                && !(wp & b.getAttacks<-C,King>()))
+            return 0;
+        if (b.getPieces<-C,King>() & keySquare[C==Black][wpPos] && stm==White)
+            return 4; }
+    else {
+        if (stm==White)
+            return 0; }
+    return 2; }
+
+template<Colors C>
+unsigned Eval::evalKB_kb_(const Board& b) const {
+    if (!(b.getPieces<C,Bishop>() & darkSquares) ^ !(b.getPieces<-C,Bishop>() & darkSquares)) {
+        return 1; }
+    return 0; }
+
+template<Colors C>
+int Eval::operator() (const ColoredBoard<C>& b, int& wap, int& bap, int psValue, int& posScore ) const {
+    int realScore;
+    switch(material[b.matIndex].recognized) {
+    case KBPk:
+        realScore = psValue >> evalKBPk<White>(b);
+        posScore = realScore - psValue;
+        return realScore;
+    case kpbK:
+        realScore = psValue >> evalKBPk<Black>(b);
+        posScore = realScore - psValue;
+        return realScore;
+    case KB_kb_:
+        posScore = operator()(b, C, wap, bap);
+        realScore = (psValue + posScore) >> evalKB_kb_<Black>(b);
+        posScore = realScore - psValue;
+        return realScore;
+    case KPk:
+        realScore = (psValue<<2) >> evalKPk<White>(b, C);
+        posScore = realScore - psValue;
+        return realScore;
+    case kpK:
+        realScore = (psValue<<2) >> evalKPk<Black>(b, C);
+        posScore = realScore - psValue;
+        return realScore;
+
+    case Unspecified:
+    default:
+        posScore = operator()(b, C, wap, bap)
+        + C*(tempo0 + (tempo64*popcount((b.template getAttacks<C,Rook>() | b.template getAttacks<C,Bishop>() | b.template getAttacks<C,Queen>() | b.template getAttacks<C,Knight>() | b.template getAttacks<C,King>()) & ~b.template getOcc<C>()) >> 6));
+        return psValue + posScore; } }

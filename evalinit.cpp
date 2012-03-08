@@ -230,22 +230,19 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
     int emat = 5*er + 3*en + 10*eq + 3*eb + ep;
     if (mat<emat) return;
 
-    static_assert(56 == 4*(materialTab[Rook]+materialTab[Bishop]+materialTab[Knight]) + 2*materialTab[Queen] + 16*materialTab[Pawn], "Total material");
     int scalemat = (r+er)*materialTab[Rook]
                    + (b+eb)*materialTab[Bishop]
                    + (q+eq)*materialTab[Queen]
                    + (n+en)*materialTab[Knight]
                    + (p+ep)*materialTab[Pawn];
 
-
-    int openingScale = scalemat - e.endgameMaterial + endgameTransitionSlope/2;
-    openingScale = std::max(0, std::min(openingScale, endgameTransitionSlope));
-    m.opening = openingScale;
-
+	int scaleIndex = scalemat - endgameMaterial + endgameTransitionSlope/2;
+	scaleIndex = std::max(0, std::min(scaleIndex, endgameTransitionSlope));
+    m.scaleIndex = scaleIndex;
+    
     if (b >= 2) {
-    	int s = C*(bishopPair.opening*m.opening + bishopPair.endgame*(endgameTransitionSlope - m.opening));
-//    	ASSERT(m.bias == 0);
-        m.bias += (s + endgameTransitionSlope/2 - (s<0)) >> logEndgameTransitionSlope; //TODO use calc function
+    	int s = C*e.interpolate(m.scaleIndex, bishopPair);
+        m.bias += s;
     }
 
     if (b == 1 && eb == 1 && q+r+n+eq+er+en == 0)
@@ -346,6 +343,39 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
         m.reduce = true; }
 
 void Eval::Init::material() {
+
+	/*
+	 * Fill the interpolating table with 16 bit signed fixpoint integers.
+	 * The constant 0x7fff comes from the left shift by 15 later in
+	 * interpolate(). Although it would be possible to use the "exact" -0x8000
+	 * and then negate the score afterwards, this produces actually worse
+	 * results: Because negative -.5 fractions are rounded towards -infinity
+	 * and positive .5 fractions are rounded to zero, negated Compoundscores
+	 * do not always result in the exact value of the negated interpolated score
+	 */
+	for (int i=0; i<=endgameTransitionSlope; ++i) {
+		int endgameScale = endgameTransitionSlope - i;
+		e.scale[i].opening = (0x7fff*i )/endgameTransitionSlope;
+		e.scale[i].endgame = (0x7fff*endgameScale )/endgameTransitionSlope;
+#ifdef MYDEBUG		
+		PackedScore<> test;
+		for (test.opening = -100; test.opening <= 100; test.opening += 1)
+			for (test.endgame = -100; test.endgame <= 0; test.endgame+=1) {
+				PackedScore<> neg;
+				neg.endgame = -test.endgame;
+				neg.opening = -test.opening;
+				int s = e.interpolate(i, test);
+				int sneg = -e.interpolate(i, neg);
+				if ( s != sneg) {
+					std::cout << "sold:" << s << " snew:" << sneg << " o " << test.opening << " e " << test.endgame << " scale " << i << std::endl;
+					std::cout << this->e.scale[i].opening << "." << this->e.scale[i].endgame << ": " 
+						<< this->e.scale[i].opening*test.opening + this->e.scale[i].endgame*test.endgame << " = "
+						<< (this->e.scale[i].opening*test.opening + this->e.scale[i].endgame*test.endgame + 0x4000)/32768.0 << std::endl;
+				}
+			}
+#endif		
+	}
+
     memset(e.material, 0, sizeof(e.material));
     for (int wr=0; wr<=2; ++wr)
         for (int br=0; br<=2; ++br)
@@ -410,6 +440,8 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     SETPARM2(pawnBackwardOpen);
     SETPARM2(pawnIsolatedCenter);
     SETPARM2(pawnIsolatedEdge);
+    pawnIsolatedEdge.opening = pawnIsolatedEdge.opening + pawnIsolatedCenter.opening;
+    pawnIsolatedEdge.endgame = pawnIsolatedEdge.endgame + pawnIsolatedCenter.endgame;
     SETPARM2(pawnIsolatedOpen);
     SETPARM2(pawnDouble);
     SETPARM2(pawnShoulder);
@@ -440,7 +472,6 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     sigmoid(knight.vcenter.opening, knight.vert.opening, -knight.vert.value.opening, knight.vert.value.opening, knight.vert.inflection.opening );
     sigmoid(knight.hor.endgame, -knight.hor.value.endgame, knight.hor.value.endgame, knight.hor.inflection.endgame );
     sigmoid(knight.vcenter.endgame, knight.vert.endgame, -knight.vert.value.endgame, knight.vert.value.endgame, knight.vert.inflection.endgame );
-    SETPARM2(knightPair);
     SETPARM2(knightBlockPasser);
     mulTab(e.knightBlockPasser, knightBlockPasser);
     SETPARM2(knight.mobility);
@@ -535,7 +566,8 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     sigmoid(king.hor.endgame, -king.hor.value.endgame, king.hor.value.endgame, king.hor.inflection.endgame );
     sigmoid(king.vcenter.endgame, king.vert.endgame, -king.vert.value.endgame, king.vert.value.endgame, king.vert.inflection.endgame );
 
-    SETPARME(endgameMaterial);
+    SETPARM(endgameMaterial);
+    SETPARM(endgameTransitionSlope);
 
     SETPARM(oppKingOwnPawn2);
     SETPARM(ownKingOwnPawn2);
@@ -605,30 +637,32 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     sigmoid(e.nAttackersTab, attackFirst, 256, 0, attackSlope, 1);
 
     SETPARME(dMaxCapture);
-    SETPARME(dMaxExt);
-    e.dMaxExt += e.dMaxCapture;
+    SETPARME(dMaxCheckExt);
     SETPARME(dMinDualExt);
-    e.dMinDualExt = e.dMaxExt-e.dMinDualExt;
     SETPARME(dMinSingleExt);
-    e.dMinSingleExt = e.dMaxExt-e.dMinSingleExt;
-    SETPARME(flags);
     SETPARME(dMinForkExt);
-    e.dMinForkExt = e.dMaxExt-e.dMinForkExt;
     SETPARME(dMinMateExt);
-    e.dMinMateExt = e.dMaxExt-e.dMinMateExt;
     SETPARME(dMinPawnExt);
-    e.dMinPawnExt = e.dMaxExt-e.dMinPawnExt;
     SETPARME(dMinReduction);
+    e.dMaxExt = std::max(std::max(std::max(std::max(std::max(e.dMaxCheckExt,e.dMinDualExt),e.dMinSingleExt),e.dMinForkExt),e.dMinMateExt),e.dMinPawnExt);
+    e.dMaxExt += e.dMaxCapture;
+    e.dMinDualExt = e.dMaxExt-e.dMinDualExt;
+    e.dMinSingleExt = e.dMaxExt-e.dMinSingleExt;
+    e.dMinForkExt = e.dMaxExt-e.dMinForkExt;
+    e.dMinMateExt = e.dMaxExt-e.dMinMateExt;
+    e.dMinPawnExt = e.dMaxExt-e.dMinPawnExt;
+    e.dMaxCheckExt = e.dMaxExt - e.dMaxCheckExt;
     e.dMinReduction += e.dMaxExt;
     SETPARME(dRedCapture);
     SETPARME(dRedCheck);
+    SETPARME(flags);
 
     SETPARME(dMaxExtCheck);
     e.dMaxExtCheck += e.dMaxExt;
-    SETPARME(dMaxExtPawn);
-    e.dMaxExtPawn += e.dMaxExt;
-    SETPARME(dMinExtDisco);
-    e.dMinExtDisco = e.dMaxExt - e.dMinExtDisco;
+//    SETPARME(dMaxExtPawn);
+//    e.dMaxExtPawn += e.dMaxExt;
+//    SETPARME(dMinExtDisco);
+//    e.dMinExtDisco = e.dMaxExt - e.dMinExtDisco;
 //     SETPARM(dMaxExtDisco);
 //     dMaxExtDisco += dMaxExt;
     SETPARME(dNullIncr);
@@ -636,11 +670,12 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
 
     SETPARME(standardError);
     SETPARME(standardSigma);
-    SETPARME(calcMeanError);
     SETPARME(prune1);
     SETPARME(prune2);
+    SETPARME(prune3);
     SETPARME(prune1c);
     SETPARME(prune2c);
+    SETPARME(prune3c);
 
     SETPARME(dRed[0]);
     SETPARME(dRed[1]);
@@ -654,12 +689,27 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     SETPARME(aspirationLow);
     SETPARME(aspirationHigh);
     SETPARME(aspirationHigh2);
-    SETPARME(tempo);
+    SETPARME(tempo0);
+    SETPARME(tempo64);
     SETPARME(noEvalLimit);
-//    SETPARME(matFlag);
+    SETPARM2(rookSeventh);
+    SETPARM2(rookSeventh2);
+    e.rookSeventh[0] = PackedScore<>{0,0};
+    for (int i=1; i<5; ++i) {
+        e.rookSeventh[i].opening = e.rookSeventh[i-1].opening + rookSeventh.opening;
+        e.rookSeventh[i].endgame = e.rookSeventh[i-1].endgame + rookSeventh.endgame;
+        if (i>1) {
+            e.rookSeventh[i].opening = e.rookSeventh[i].opening + rookSeventh2.opening;            
+            e.rookSeventh[i].endgame = e.rookSeventh[i].endgame + rookSeventh2.endgame;
+        }
+    }
+
+    //    SETPARME(matFlag);
     for (unsigned i=8; i<=maxDepth; ++i) {
         e.dRed[i] = e.dRed[7]; }
     SETPARME(allowLazyRoot);
+    SETPARME(sortPrev);
+    SETPARME(sortNext);
 #ifdef MYDEBUG
     ASSERT(!e.control.size());
 #endif

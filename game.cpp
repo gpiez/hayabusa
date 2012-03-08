@@ -30,16 +30,6 @@ __thread RepetitionKeys keys;
 std::map<void*, void*> allocs;
 Mutex Game::allocMutex;
 
-void Game::PositionalError::init(int x) {
-    v = 0;
-    error = x;
-#ifdef CALCULATE_MEAN_POSITIONAL_ERROR
-    n = 0.0;
-    e = 0.0;
-    e2 = 0.0;
-#endif
-}
-
 void Game::stopTimer(milliseconds hardlimit) {
     UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
     /*#ifdef __WIN32__
@@ -183,7 +173,7 @@ void Game::clearEE() {
     for (int p=-(int)nPieces; p<=(int)nPieces; ++p)
         for (unsigned int sq1=0; sq1<nSquares; ++sq1)
             for (unsigned int sq=0; sq<nSquares; ++sq)
-                pe[p+nPieces][sq1][sq].init(eval.standardError); }
+                pe[p+nPieces][sq1][sq] = 0; }
 
 template<>
 const ColoredBoard<White>& Game::currentBoard<White>() const {
@@ -365,7 +355,6 @@ const Board& Game::setup(const std::string& str) {
 
     rootPly = 0;
     board.positionalScore = eval(board, color);
-    board.isExact = true;
     return board; }
 
 Move Game::findMove(const std::string& ) const {
