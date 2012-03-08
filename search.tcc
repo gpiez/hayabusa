@@ -51,9 +51,9 @@ int Game::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int dept
     return 0; }
 
 template<Colors C, Phase P, class A, class B>
-int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoard<C>& nextboard, const Move m, const unsigned newDepth,
+int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoard<C>& nextboard, const unsigned newDepth,
                   const A& alpha, const B& beta,
-                  const unsigned ply, Extension, NodeType nextNT NODEDEF ) {
+                  Extension, NodeType nextNT NODEDEF ) {
     ASSERT(P!=vein);
     ASSERT(P!=leaf);
     Score<C> value;
@@ -66,31 +66,33 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
          * with nullmove as the nullmove result will be even worse
          */
         const A alpha0(beta.v - C);
-        value.v = search4<C, P>(nextboard, m, verifyReduction[newDepth], alpha0, beta, ply, ExtNot, nextNT NODE);
+        value.v = search4<C, P>(nextboard, verifyReduction[newDepth], alpha0, beta, ExtNot, nextNT NODE);
         /*
          * The actual null move search. Search returns true if the
          * result in beta1 comes down to alpha0, in that case prune
          */
         if (value >= beta.v && !nextboard.template inCheck<C>()) {
             if (value >= infinity*C) return value.v;
-            if (isMain) line[ply].data = 0;            
             int temp = nextboard.fiftyMoves;
+            nextboard.ply++;
+            if (isMain) line[nextboard.ply].data = 0;            
             nextboard.fiftyMoves = 0;
             nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff;
-            Score<C> nullvalue(search4<(Colors)-C, P>(nextboard.swapped(), m, nullReduction[newDepth], beta, alpha0, ply+1, ExtNot, nextNT NODE ));
+            Score<C> nullvalue(search4<(Colors)-C, P>(nextboard.swapped(), nullReduction[newDepth], beta, alpha0, ExtNot, nextNT NODE ));
             if (nullvalue >= beta.v) return value.v;
             nextboard.fiftyMoves = temp;
+            nextboard.ply--;
         } }
     
     if (reduction) {
         nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff; 
         const A alpha0(beta.v - C);
-        value.v = search4<C, P>(nextboard, m, newDepth-reduction, alpha0, beta, ply, ExtNot, nextNT NODE);
+        value.v = search4<C, P>(nextboard, newDepth-reduction, alpha0, beta, ExtNot, nextNT NODE);
         if (value >= beta.v) {
             return value.v; } }
 
     nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff;
-    value.v = search4<C, P>(nextboard, m, newDepth, alpha, beta, ply, ExtNot, nextNT NODE);
+    value.v = search4<C, P>(nextboard, newDepth, alpha, beta, ExtNot, nextNT NODE);
 #ifdef QT_GUI_LIB
     if (parent) {
         NodeItem::m.lock();
@@ -104,9 +106,9 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
 template<Colors C, Phase P, class A, class B>
-int Game::search4(const ColoredBoard<C>& nextboard, const Move m, const unsigned depth,
+int Game::search4(const ColoredBoard<C>& nextboard, const unsigned depth,
                   const A& a, const B& b,
-                  const unsigned ply, Extension extend, const NodeType nt NODEDEF ) {
+                  Extension extend, const NodeType nt NODEDEF ) {
     ASSERT(P!=vein);
     ASSERT(P!=leaf);
     ASSERT(!(depth <= eval.dMaxCapture));
@@ -117,20 +119,20 @@ int Game::search4(const ColoredBoard<C>& nextboard, const Move m, const unsigned
 //     if (P == vein || depth <= eval.dMaxCapture)
 //         return search3<C,vein>(prev,m,depth,a.unshared(),b.unshared(),ply,extend,unused,nt NODE);
     if (/*P == leaf ||*/ depth <= eval.dMaxExt)
-        return search3<C,leaf>(nextboard,m,depth,a.unshared(),b.unshared(),ply,extend,unused,nt NODE);
+        return search3<C,leaf>(nextboard,depth,a.unshared(),b.unshared(),extend,unused,nt NODE);
     if (P == tree || depth <= Options::splitDepth + eval.dMaxExt)
-        return search3<C,tree>(nextboard,m,depth,a.unshared(),b,ply,extend,unused,nt NODE);
+        return search3<C,tree>(nextboard,depth,a.unshared(),b,extend,unused,nt NODE);
     ASSERT(P==trunk);
-    return search3<C,trunk>(nextboard,m,depth,a,b,ply,extend,unused,nt NODE); }
+    return search3<C,trunk>(nextboard,depth,a,b,extend,unused,nt NODE); }
 /*
  * Search with color C to move, executing a -C colored move m from a board prev.
  * beta is the return value, it is updated at the end
  * A, B can be a SharedScore (updated by other threads) or a Score (thread local)
  */
 template<Colors C, Phase P, class A, class B>
-int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
+int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                   const A& origAlpha, const B& origBeta,
-                  const unsigned ply, Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
+                  Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     stats.node++;
 //    if (stats.node == 2398583) asm("int3");
@@ -143,7 +145,7 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
         return 0; }
     KeyScore estimate;
     estimate = b.keyScore;
-    
+//    ASSERT(ply == b.ply);
 #ifdef QT_GUI_LIB
     NodeItem* node = 0;
     if (NodeItem::nNodes < MAX_NODES && parent) {
@@ -151,8 +153,8 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
         NodeData data = { };
         data.alpha = origAlpha.v;
         data.beta = origBeta.v;
-        data.move = m;
-        data.ply = ply;
+        data.move = b.m;
+        data.ply = b.ply;
         data.key = estimate.key;
         data.searchType = P;
         data.depth = depth;
@@ -253,10 +255,6 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
             stats.leafcut++;
             return value.v; } }
 
-    if (isMain) {
-        line[ply] = m;
-        currentPly = ply; }
-
     ASSERT( CompoundScore(b.keyScore.vector).opening() == CompoundScore(estimate.vector).opening());
     ASSERT( CompoundScore(b.keyScore.vector).endgame() == CompoundScore(estimate.vector).endgame());
     ASSERT(P == vein || z == b.getZobrist());
@@ -279,7 +277,7 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
     current.v=(-infinity*C);
     current.m = {0,0,0 };
     if (P != vein) {
-        if (findRepetition(b, z, ply) || b.fiftyMoves >= 100) {
+        if (findRepetition(b, z, b.ply) || b.fiftyMoves >= 100) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = 0;
             if (node) node->nodeType = NodeRepetition;
@@ -334,7 +332,7 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
     if (P==tree && Options::pruning && !threatened && !b.isPieceHanging(eval)) {
         if (depth == eval.dMaxExt + 1) { //TODO fall back to qsearch instead of hard prune
             Score<C> fScore;
-            fScore.v = b.estScore - C*eval.prune1 - !!m.capture()*C*eval.prune1c;
+            fScore.v = b.estScore - C*eval.prune1 - !!b.m.capture()*C*eval.prune1c;
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile1;
@@ -344,7 +342,7 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
                 return fScore.v; } }
         if (depth == eval.dMaxExt + 2) {
             Score<C> fScore;
-            fScore.v = b.estScore - C*eval.prune2 - !!m.capture()*C*eval.prune2c;
+            fScore.v = b.estScore - C*eval.prune2 - !!b.m.capture()*C*eval.prune2c;
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile2;
@@ -356,7 +354,7 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
             Score<(Colors)-C> beta3(beta.v + C*eval.prune3);
             if (Score<C>(b.estScore) >= beta3.v) {
                 bool unused;
-                Score<C> v(search3<C, leaf>(b, m, eval.dMaxExt, alpha3, beta3, ply, ExtNot, unused, nt NODE));
+                Score<C> v(search3<C, leaf>(b, eval.dMaxExt, alpha3, beta3, ExtNot, unused, nt NODE));
                 if (v >= beta3.v) {
                     stats.node--;
                     return v.v;
@@ -374,7 +372,7 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
                 Score<(Colors)-C> beta3(limit+C);
                 bool unused;
                 stats.node--;
-                Score<C> v(search3<C, tree>(b, m, (depth-eval.dMaxExt+1)/2 + eval.dMaxExt, alpha3, beta3, ply, ExtFutility, unused, nt NODE));
+                Score<C> v(search3<C, tree>(b, (depth-eval.dMaxExt+1)/2 + eval.dMaxExt, alpha3, beta3, ExtFutility, unused, nt NODE));
                 if (v <= alpha3.v) {
                     stats.node--;
                     return v.v;
@@ -411,7 +409,7 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
 #endif
 //        realScore = psValue + b.positionalScore;
 
-    if (isMain & !m.isSpecial()) {
+    if (isMain & !b.m.isSpecial()) {
         int diff2 = b.positionalScore - b.prevPositionalScore;
         *b.diff = (diff2 + *b.diff)/2; 
     }
@@ -533,7 +531,7 @@ int Game::search3(const ColoredBoard<C>& b, const Move m, unsigned depth,
                 } } }
         if (badCaptures > nonCaptures+1) {
             ASSERT(badCaptures <= last);
-            history.sort(nonCaptures, badCaptures-nonCaptures, ply + rootPly); }
+            history.sort(nonCaptures, badCaptures-nonCaptures, b.ply + rootPly); }
         ASSERT(first<last);
 #endif
 nosort:
@@ -553,7 +551,7 @@ nosort:
 				goto storeAndExit; } }
 		
 		// store key for repetitions
-        if (P!=vein) store(z, ply);
+        if (P!=vein) store(z, b.ply);
 
         // move best move from tt / history to front
         if (P != vein && current.m.data && first+1 < last && current.m.fromto() != first[0].fromto()) {
@@ -615,8 +613,8 @@ nosort:
                         NodeData data = { };
                         data.alpha = origAlpha.v;
                         data.beta = origBeta.v;
-                        data.move = m;
-                        data.ply = ply;
+                        data.move = b.m;
+                        data.ply = b.ply;
                         data.key = estimate.key;
                         data.searchType = P;
                         data.depth = depth;
@@ -650,7 +648,7 @@ nosort:
             if (P == vein)  {
             	ASSERT(i->capture() || i->isSpecial() || extend & ExtTestMate);
                 ASSERT(newDepth < eval.dMaxCapture);
-                value.v = search3<(Colors)-C, vein>(nextboard, *i, newDepth, beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nextNT NODE);
+                value.v = search3<(Colors)-C, vein>(nextboard, newDepth, beta.unshared(), alpha.unshared(), ExtNot, unused, nextNT NODE);
                 /*
                  * Transition from extended q search to pure q search for
                  * for non-tactical moves
@@ -661,7 +659,7 @@ nosort:
                      && !(extend & (ExtDualReply | ExtSingleReply)) //TODO replace by a condition "not checking move"
                     ) {
                 if (!i->capture() && !i->isSpecial()) continue;
-                value.v = search3<(Colors)-C, vein>(nextboard, *i, std::min(newDepth, eval.dMaxCapture), beta.unshared(), alpha.unshared(), ply+1, ExtNot, unused, nextNT NODE);
+                value.v = search3<(Colors)-C, vein>(nextboard, std::min(newDepth, eval.dMaxCapture), beta.unshared(), alpha.unshared(), ExtNot, unused, nextNT NODE);
                 /*
                  * Transition from extended q search to pure q search for tactical
                  * moves, if the move is a possible mate, don't do a lazy eval in
@@ -671,10 +669,10 @@ nosort:
             else if (P == leaf && newDepth <= eval.dMaxCapture) {
                 ASSERT(newDepth == eval.dMaxCapture);
                 leafExt = (i<captures) ? ExtTestMate : ExtNot;
-                value.v = search3<(Colors)-C, vein>(nextboard, *i, eval.dMaxCapture, beta.unshared(), alpha.unshared(), ply+1, leafExt, unused, nextNT NODE);
+                value.v = search3<(Colors)-C, vein>(nextboard, eval.dMaxCapture, beta.unshared(), alpha.unshared(), leafExt, unused, nextNT NODE);
                 leafMaxDepth = true; }
             else if ( P == leaf || newDepth <= eval.dMaxExt) {
-                value.v = search3<(Colors)-C, leaf>(nextboard, *i, newDepth, beta.unshared(), alpha.unshared(), ply+1, leafExt, leafMaxDepth, nextNT NODE); }
+                value.v = search3<(Colors)-C, leaf>(nextboard, newDepth, beta.unshared(), alpha.unshared(), leafExt, leafMaxDepth, nextNT NODE); }
             else {   // possible null search in tree or trunk
                 ASSERT(P != leaf);
                 bool ninf = current.v == -C*infinity;
@@ -684,12 +682,12 @@ nosort:
                 int reduction = !ninf && calcReduction(b, i-first, *i, depth);
                 if (P == trunk && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i > first) && WorkThread::canQueued(WorkThread::threadId, current.isNotReady())) {
                     WorkThread::queueJob(WorkThread::threadId,
-                                         new SearchJob<C, A, B, ColoredBoard<C> >(*this, b, doNull, reduction, *i, newDepth,
-                                                 alpha, beta, current, ply, WorkThread::threadId, keys, nextNT NODE));
+                                         new SearchJob<C, A, B, ColoredBoard<C> >(*this, b, doNull, reduction, newDepth,
+                                                 alpha, beta, current, WorkThread::threadId, keys, nextNT NODE));
                     if (stopSearch != Running) break;
                     continue; }
                 else {
-                    value.v = search9<(Colors)-C, P>(doNull, reduction, nextboard, *i, newDepth, beta, alpha, ply+1, ExtNot, nextNT NODE);
+                    value.v = search9<(Colors)-C, P>(doNull, reduction, nextboard, newDepth, beta, alpha, ExtNot, nextNT NODE);
                     WorkThread::reserve(last-i-1); } }
 
             if (stopSearch != Running) break;
@@ -701,7 +699,7 @@ nosort:
         // don't start threads from parent search but with same therad id here
         if (P == trunk) {
             Job* job;
-            while((job = WorkThread::getJob(WorkThread::threadId, ply))) {
+            while((job = WorkThread::getJob(WorkThread::threadId, b.ply))) {
                 job->job(); }
 //        while(current.isNotReady() && (job = WorkThread::getChildJob(zd))) job->job();
         }
@@ -732,7 +730,7 @@ storeAndExit:
         stored.loBound |= current > origAlpha.v;
         if (current > origAlpha.v && current.m.capture() == 0 && current.m.piece()/* && !current.m.isSpecial()*/) {
             ASSERT(current.m.fromto());
-            history.good(current.m, ply + rootPly); }
+            history.good(current.m, b.ply + rootPly); }
         stored.hiBound |= (current < origBeta.v) & (stopSearch == Running);
         stored.from |= current.m.from();
         stored.to |= current.m.to();

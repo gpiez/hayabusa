@@ -90,7 +90,6 @@ void Game::infoTimer(milliseconds repeat) {
 
 Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSize):
     iMove(0),
-    currentPly(0),
     wtime(300000),
     btime(300000),
     winc(5000),
@@ -98,6 +97,7 @@ Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSiz
     movestogo(0),
     stopSearch(Stopped),
     eval(phashSize, p),
+    currentPly(0),
     console(c),
     color(White) {
 //     eval.setParameters(p);

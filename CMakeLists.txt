@@ -61,7 +61,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 #set_source_files_properties(setpiece.asm OBJECT_DEPENDS offsets.inc)
 SET(common_SRCS console.cpp evolution.cpp parameters.cpp selfgame.cpp game.cpp 
     board.cpp workthread.cpp eval.cpp testpositions.cpp
-    move.cpp stringlist.cpp history.cpp evalinit.cpp)
+    move.cpp stringlist.cpp history.cpp evalinit.cpp sortedmovelist.cpp)
 
 SET(USE_QTGUI FALSE CACHE BOOL "Build the QT interface")
 SET(USE_GENETIC FALSE CACHE BOOL "Use genetic training algorithms")
@@ -78,7 +78,7 @@ else(USE_QTGUI)
     SET(QT_DONT_USE_QTGUI TRUE)
 endif(USE_QTGUI)    
 
-SET(hayabusa_SRCS sortedmovelist.cpp main.cpp)
+SET(hayabusa_SRCS main.cpp)
 SET(hayabusa_MOC_H ${hayabusa_MOC_H})
 SET(hayabusa_RCCS hayabusa.qrc)
 

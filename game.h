@@ -93,9 +93,7 @@ private:
     int currentMoveIndex;
     Move currentMove;
     int nMoves;
-    Move line[nMaxGameLength];
     unsigned rootPly;
-    unsigned currentPly;
     std::string info;
     std::chrono::system_clock::time_point start;
     uint64_t stopTime;
@@ -132,6 +130,8 @@ private:
 public:
     Eval eval ALIGN_XMM;
     static __thread History history;
+    Move line[nMaxGameLength];
+    unsigned currentPly;
     unsigned int depth;
     Console* console;
     Colors color;
@@ -159,17 +159,17 @@ public:
     const Board& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
     template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
     template<Colors C, Phase P, class A, class B>
-    int search3(const ColoredBoard<C>& b, Move m, unsigned depth,
+    int search3(const ColoredBoard<C>& b, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, bool& nextMaxDepth, NodeType nt NODEDEF  );
+                Extension ext, bool& nextMaxDepth, NodeType nt NODEDEF  );
     template<Colors C, Phase P, class A, class B>
-    int search4(const ColoredBoard<C>& b, Move m, unsigned depth,
+    int search4(const ColoredBoard<C>& b, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, NodeType nt NODEDEF ) __attribute__((always_inline));
+                Extension ext, NodeType nt NODEDEF ) __attribute__((always_inline));
     template<Colors C, Phase P, class A, class B>
-    int search9(const bool doNull, const unsigned reduction, const ColoredBoard<C>& b, Move m, unsigned depth,
+    int search9(const bool doNull, const unsigned reduction, const ColoredBoard<C>& b, unsigned depth,
                 const A& alpha, const B& beta,
-                unsigned ply, Extension ext, NodeType nt NODEDEF ) __attribute__((always_inline));
+                Extension ext, NodeType nt NODEDEF ) __attribute__((always_inline));
 
     void perft(unsigned int depth);
     void divide(unsigned int depth);

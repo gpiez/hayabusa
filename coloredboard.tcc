@@ -21,6 +21,7 @@
 
 #include "coloredboard.h"
 #include "game.h"
+#include "workthread.h"
 #include "board.tcc"
 
 /*
@@ -32,8 +33,8 @@ template<typename T>
 ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
     prev.copyPieces(*this);
     prev.doMove(this, m);
-    if (prev.CI == (unsigned)CI)
-        fiftyMoves = 0;
+    ply = prev.ply + 1;
+    this->m = m;
     keyScore.vector = est;
     buildAttacks(); }
 
@@ -42,12 +43,19 @@ template<typename T>
 ColoredBoard<C>::ColoredBoard(const T& prev, Move m, Game& game) {
     prev.copyPieces(*this);
     prev.doMove(this, m, game.eval);
+    ply = prev.ply + 1;
+    this->m = m;
     ASSERT(!_mm_testz_si128(keyScore.vector, game.eval.estimate<C>(m, prev.keyScore)));
     buildAttacks(); 
     diff = & game.pe[6 - C*(m.piece() & 7)][m.from()][m.to()];
     psValue = game.eval.calc(matIndex, CompoundScore(keyScore.vector));
     estScore = psValue + prev.positionalScore + *diff;
     prevPositionalScore = prev.positionalScore;
+    if (isMain) {
+        game.line[ply] = m;
+        game.currentPly = ply; }
+
+
 }
 /*
  * Execute a move and put result in next

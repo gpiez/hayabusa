@@ -47,12 +47,10 @@ class SearchJob: public Job {
     const T& b;
     bool doNull;
     unsigned reduction;
-    Move m;
     unsigned int depth;
     A& alpha;
     const B& beta;
     ScoreMove<C,A>& retval;
-    unsigned ply;
     unsigned parent;
     const RepetitionKeys& rep;  //TODO really needed? This should be always thread-local keys
     NodeType nt;
@@ -61,15 +59,14 @@ class SearchJob: public Job {
     NodeItem* startnode;
 #endif
 public:
-    SearchJob(Game& rb, const T& b, bool, unsigned, Move m, unsigned int depth, A& alpha, const B& beta,
-              ScoreMove<C,A>& retval, unsigned ply, unsigned parent, const RepetitionKeys& rep, NodeType nt
+    SearchJob(Game& rb, const T& b, bool, unsigned, unsigned int depth, A& alpha, const B& beta,
+              ScoreMove<C,A>& retval, unsigned parent, const RepetitionKeys& rep, NodeType nt
 #ifdef QT_GUI_LIB
               , NodeItem* node
 #endif
              );
     void job();
-    unsigned getPly() {
-        return ply; } };
+};
 
 template<Colors C>
 class RootSearchJob: public Job {

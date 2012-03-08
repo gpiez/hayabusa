@@ -85,6 +85,8 @@ struct Board {
     mutable int16_t* diff;
     mutable int psValue;
     mutable int estScore;
+    mutable unsigned ply;
+    mutable Move m;
     
     struct Bits {
         __v2di mask02;

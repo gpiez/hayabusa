@@ -22,13 +22,13 @@
 #include "jobs.h"
 template<Colors C, typename A, typename B, typename T>
 SearchJob<C,A,B,T>::SearchJob(Game& rb, const T& b, bool doNull,
-                              unsigned reduction, Move m, unsigned int depth, A& alpha, const B& beta, ScoreMove<C,A>& retval,
-                              unsigned ply, unsigned parent, const RepetitionKeys& rep, NodeType nt
+                              unsigned reduction, unsigned int depth, A& alpha, const B& beta, ScoreMove<C,A>& retval,
+                              unsigned parent, const RepetitionKeys& rep, NodeType nt
 #ifdef QT_GUI_LIB
                               , NodeItem* node
 #endif
-                             ): game(rb), b(b), doNull(doNull), reduction(reduction), m(m), depth(depth),
-    alpha(alpha), beta(beta), retval(retval), ply(ply), parent(parent), rep(rep), nt(nt)
+                             ): game(rb), b(b), doNull(doNull), reduction(reduction), depth(depth),
+    alpha(alpha), beta(beta), retval(retval), parent(parent), rep(rep), nt(nt)
 #ifdef QT_GUI_LIB
     , node(node)
 #endif
@@ -40,8 +40,8 @@ SearchJob<C,A,B,T>::SearchJob(Game& rb, const T& b, bool doNull,
         NodeData data = { };
         data.alpha = alpha.v;
         data.beta = beta.v;
-        data.move = m;
-        data.ply = ply;
+        data.move = b.m;
+        data.ply = b.ply;
         data.searchType = trunk;
         data.depth = depth;
         data.moveColor = b.CI == 0 ? White:Black;
@@ -66,13 +66,12 @@ void SearchJob<C,A,B,T>::job() {
     if (startnode) startnode->threadId = WorkThread::threadId;
 #endif
     if (alpha < beta.v) {
-        game.clone(b, rep, ply);
-        const ColoredBoard<(Colors)-C> nextboard(b, m, game);
-        int ret = game.search9<(Colors)-C,trunk>(doNull, reduction, nextboard, m, depth, beta, alpha, ply,
-                  ExtNot, nt NODE 
+        game.clone(b, rep, b.ply);
+        const ColoredBoard<(Colors)-C> nextboard(b, b.m, game);
+        int ret = game.search9<(Colors)-C,trunk>(doNull, reduction, nextboard, depth, beta, alpha, ExtNot, nt NODE 
                                                 );
         alpha.max(ret);
-        retval.max(ret, m); }
+        retval.max(ret, b.m); }
     else
         ++stats.cancelJob;
     alpha.setReady();
