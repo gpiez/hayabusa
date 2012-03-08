@@ -22,7 +22,7 @@
 #include "board.h"
 #include "bits.h"
 
-class Eval;
+class Game;
 class TestRootBoard;
 
 enum MoveType { AllMoves, NoUnderPromo, NoKingPawn };
@@ -39,7 +39,6 @@ public:
     static constexpr unsigned CI = C == White ? 0:1;
     static constexpr unsigned EI = C == White ? 1:0;
     static constexpr uint8_t pov = CI*56;    //for xoring square values to the other side
-    static unsigned errorPieceIndex[7];
 
     ColoredBoard() = default;
     const ColoredBoard<(Colors)-C>& swapped() const {
@@ -50,7 +49,7 @@ public:
     template<typename T>
     inline ColoredBoard(const T& prev, Move m, __v8hi est);
     template<typename T>
-    ColoredBoard(const T& prev, Move m, const Eval&);
+    ColoredBoard(const T& prev, Move m, Game&);
     static void initTables();
     template<MoveType>
     void generateCaptureMoves(Move*& list, Move*& bad) const __attribute__((noinline));
@@ -68,10 +67,10 @@ public:
     void doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to, const Eval&) const;
 
     bool isForked() const __attribute__((noinline));
-    uint64_t isPieceHanging() const;
+    uint64_t isPieceHanging(const Eval& e) const;
     inline Key getZobrist() const;
 private:
-    void generateTargetMove(Move*& good, Move*& bad, uint64_t tobit) const;
+    void generateTargetMove(Move*& bad, uint64_t tobit) const;
     template<MoveType>
     void generateTargetCapture(Move*& list, Move*& bad, uint64_t to, unsigned cap) const;
     uint64_t perft(unsigned int depth) const;
@@ -80,6 +79,6 @@ private:
     template<int R>
     uint64_t rank() const {
         return ::rank<C,R>(); }
-    uint64_t generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, uint64_t king, unsigned k) const;
+    uint64_t generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, /*uint64_t king, */unsigned k) const;
     uint64_t generateKnightMates(uint64_t block, uint64_t king, unsigned k) const; };
 #endif /* COLOREDBOARD_H_ */

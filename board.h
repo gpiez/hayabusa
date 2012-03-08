@@ -40,12 +40,12 @@ struct Board {
             Castling castling;
             uint64_t enPassant; }; };
 
-    uint64_t occupied[nColors];
-    uint64_t occupied1;
-    uint64_t fill;
-    uint64_t pins[nColors];                        // +16
-    uint64_t attacks[nPieces+2][nColors];        // include 16 byte filler
-    uint64_t pieces[nPieces+1][nColors];        // +160
+    uint64_t occupied[nColors];                         // +  0
+    uint64_t occupied1;                                 // + 16
+    uint64_t fill;                                      // + 24
+    uint64_t pins[nColors];                             // + 32
+    uint64_t attacks[nPieces+1][nColors];               // + 48
+    uint64_t pieces[nPieces+1][nColors];                // +160
     union {
         struct {
             __v2di d02;
@@ -56,10 +56,11 @@ struct Board {
             uint64_t d1;
             uint64_t d3; };
         uint64_t d[4]; }
-    dpins[nColors],                            //+256
-          datt[nColors],                             //+288 sum of all directed attacks, for each of the 4 main directions
-          kingIncoming[nColors];                    //+320
-
+        
+        dpins[nColors],                                 // +272
+        datt[nColors],                                  // +304 sum of all directed attacks, for each of the 4 main directions
+        kingIncoming[nColors];                          // +336
+                                                        //  372 total size of core structure  
     struct MoveTemplateB {
         Move move;
         __v2di d13; } bsingle[nColors][2+8+1];                   //704
@@ -74,12 +75,17 @@ struct Board {
 
     KeyScore keyScore;
     CastlingAndEP cep;
-    unsigned fiftyMoves;
-
+    mutable unsigned fiftyMoves;
+    int bias;
+    unsigned drawish;
     unsigned matIndex;
     mutable int positionalScore;
-    mutable bool isExact;
-
+    mutable int prevPositionalScore;
+    
+    mutable int16_t* diff;
+    mutable int psValue;
+    mutable int estScore;
+    
     struct Bits {
         __v2di mask02;
         __v2di mask13; // 1 KByte  antidiag : diagonal, excluding square

@@ -165,7 +165,6 @@ int Board::getPiece(unsigned pos) const {
     return NoPiece; }
 
 unsigned Board::getPieceKind(uint64_t bit) const {
-    ASSERT( !((getPieces<White, King>() | getPieces<Black, King>()) & bit) );
 #ifdef __SSE4_1__
     __v2di piece = _mm_set_epi64x(bit, bit);
     const __v2di zero = _mm_set_epi64x(0, 0);
@@ -174,9 +173,11 @@ unsigned Board::getPieceKind(uint64_t bit) const {
     __v2di q = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Queen >(), piece), zero) & _mm_set_epi64x(Queen, Queen);
     __v2di n = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Knight>(), piece), zero) & _mm_set_epi64x(Knight, Knight);
     __v2di p = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<Pawn  >(), piece), zero) & _mm_set_epi64x(Pawn, Pawn);
-    return fold(r|b|q|n|p);
+    __v2di k = ~_mm_cmpeq_epi64( _mm_and_si128( get2Pieces<King  >(), piece), zero) & _mm_set_epi64x(King, King);
+    return fold(r|b|q|n|p|k);
 #else
     return
+        (getPieces<White,King>() | getPieces<Black,King>()) & bit ? King:
         (getPieces<White,Pawn>() | getPieces<Black,Pawn>()) & bit ? Pawn:
         (getPieces<White,Knight>() | getPieces<Black,Knight>()) & bit ? Knight:
         (getPieces<White,Queen>() | getPieces<Black,Queen>()) & bit ? Queen:

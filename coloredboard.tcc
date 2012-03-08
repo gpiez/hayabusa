@@ -20,13 +20,8 @@
 #define COLOREDBOARD_TCC_
 
 #include "coloredboard.h"
-#include "eval.h"
+#include "game.h"
 #include "board.tcc"
-
-
-template<Colors PREVC>
-unsigned ColoredBoard<PREVC>::errorPieceIndex[7] =
-{ 0, 6+1*PREVC, 6+1*PREVC, 6+3*PREVC, 6+1*PREVC, 6+5*PREVC, 6+6*PREVC };
 
 /*
  * Construct a board with color C to move
@@ -44,13 +39,16 @@ ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
 
 template<Colors C>
 template<typename T>
-ColoredBoard<C>::ColoredBoard(const T& prev, Move m, const Eval& eval) {
+ColoredBoard<C>::ColoredBoard(const T& prev, Move m, Game& game) {
     prev.copyPieces(*this);
-    prev.doMove(this, m, eval);
-    if (prev.CI == (unsigned)CI)
-        fiftyMoves = 0;
-    ASSERT(!_mm_testz_si128(keyScore.vector, eval.estimate<C>(m, prev.keyScore)));
-    buildAttacks(); }
+    prev.doMove(this, m, game.eval);
+    ASSERT(!_mm_testz_si128(keyScore.vector, game.eval.estimate<C>(m, prev.keyScore)));
+    buildAttacks(); 
+    diff = & game.pe[6 - C*(m.piece() & 7)][m.from()][m.to()];
+    psValue = game.eval.calc(matIndex, CompoundScore(keyScore.vector));
+    estScore = psValue + prev.positionalScore + *diff;
+    prevPositionalScore = prev.positionalScore;
+}
 /*
  * Execute a move and put result in next
  */
@@ -65,7 +63,6 @@ void ColoredBoard<C>::doMove(Board* next, Move m) const {
     if (m.isSpecial()) {
         doSpecialMove(next, m, from, to); }
     else {
-        // standard move, e. p. is handled by captureOffset
         next->fiftyMoves = (!m.capture() & (m.piece() != Pawn)) * (fiftyMoves+1); //(m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
         // Do only fill in the enpPassant field, if there is really a pawn which
         // can capture besides the target square. This is because enpassant goes
@@ -205,7 +202,7 @@ Key ColoredBoard<C>::getZobrist() const {
     return keyScore.key + cep.castling.data4 + cep.enPassant*0x123456789abcdef + (C+1); }
 
 template<Colors C>
-uint64_t ColoredBoard<C>::isPieceHanging() const {
+uint64_t ColoredBoard<C>::isPieceHanging(const Eval& ) const {
     uint64_t oppAtt = getAttacks<-C,Pawn>();
     uint64_t ownPieces = getOcc<C>() & ~getPieces<C,Pawn>();
 #if 0    
@@ -218,6 +215,10 @@ uint64_t ColoredBoard<C>::isPieceHanging() const {
     if (ownPieces & oppAtt) return true;
 #else
     uint64_t hanging = ownPieces & oppAtt;
+    if (0) {
+        uint64_t undefended = ownPieces & ~getAttacks<C,All>() & getAttacks<-C,All>();
+    	hanging |= undefended;
+    }
     oppAtt |= getAttacks<-C, Knight>() | getAttacks<-C, Bishop>();
     ownPieces &= ~(getPieces<C,Knight>() | getPieces<C,Bishop>());
     hanging |= ownPieces & oppAtt;
@@ -225,6 +226,14 @@ uint64_t ColoredBoard<C>::isPieceHanging() const {
     ownPieces &= ~getPieces<C,Rook>();
     hanging |= ownPieces & oppAtt;
     return hanging;
+    
+//    uint64_t twoAttacks=( (b.getAttacks<C,Rook>()   &  b.getAttacks<C,Pawn>())
+//                          | (b.getAttacks<C,Bishop>() & (b.getAttacks<C,Pawn>() | b.getAttacks<C,Rook>()))
+//                          | (b.getAttacks<C,Queen>()  & (b.getAttacks<C,Pawn>() | b.getAttacks<C,Rook>() | b.getAttacks<C,Bishop>()))
+//                          | (b.getAttacks<C,Knight>() & (b.getAttacks<C,Pawn>() | b.getAttacks<C,Rook>() | b.getAttacks<C,Bishop>() | b.getAttacks<C,Queen>()))
+//                          | (b.getAttacks<C,King>()   & (b.getAttacks<C,Pawn>() | b.getAttacks<C,Rook>() | b.getAttacks<C,Bishop>() | b.getAttacks<C,Queen>() | b.getAttacks<C,King>()))
+//                        );
+
 #endif
 
     return false; }
