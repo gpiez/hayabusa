@@ -30,7 +30,7 @@ void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d,
         /*
          * King captures something.
          */
-        for ( uint64_t p = getAttacks<C,King>() & d & ~getAttacks<-C,All>(); p; p &= p-1 ) {
+        for ( uint64_t p = getAttacks<C,King>() & d & ~getAttacks<-C,All>(); unlikely(p); p &= p-1 ) {
             unsigned from = bit(getPieces<C,King>());
             *--good = Move(from, bit(p), King, cap); } }
     const __v2di zero = _mm_set1_epi64x(0);
@@ -44,10 +44,10 @@ void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d,
      * attack squares and additionally we can skip the check for a valid move
      * template at the first target found.
      */
-    if (getAttacks<C,Bishop>() & d) {
+    if unlikely((getAttacks<C,Bishop>() & d)) {
         const MoveTemplateB* bs = bsingle[CI];
         __v2di a13 = bs->d13;
-#ifdef __SSE_4_1__
+#ifdef __SSE4_1__
         while (_mm_testz_si128(d2, a13))
             a13 = (++bs)->d13;
 #endif
@@ -78,10 +78,10 @@ void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d,
             a13 = bs->d13; }
         while (m.data); }
 
-    if (getAttacks<C,Rook>() & d) {
+    if unlikely((getAttacks<C,Rook>() & d)) {
         const MoveTemplateR* rs = rsingle[CI];
         __v2di a02 = rs->d02;
-#ifdef __SSE_4_1__
+#ifdef __SSE4_1__
         while (_mm_testz_si128(d2, a02))
             a02 = (++rs)->d02;
 #endif
@@ -113,7 +113,7 @@ void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d,
             a02 = rs->d02; }
         while (m.data); }
 
-    if (getAttacks<C,Queen>() & d) {
+    if unlikely((getAttacks<C,Queen>() & d)) {
         const MoveTemplateQ* qs = qsingle[CI];
         Move m = qs->move;
         ASSERT(m.data);
@@ -150,7 +150,7 @@ void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d,
             m = (++qs)->move; }
         while (m.data); }
     // Knight captures something. Can't move at all if pinned.
-    for ( uint64_t p = getAttacks<C,Knight>() & d; p; p &= p-1 ) {
+    for ( uint64_t p = getAttacks<C,Knight>() & d; unlikely(p); p &= p-1 ) {
         uint64_t to = bit(p);
         for ( uint64_t f = getPieces<C,Knight>() & pins[CI] & knightAttacks[to]; f; f &= f-1)
             if (cap==Pawn && (p & -p & getAttacks<-C,Pawn>()
@@ -167,10 +167,9 @@ void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d,
             else *--good = Move(bit(f), to, Knight, cap); }
 
     // pawn capture to the absolute right, dir = 1 for white and 3 for black
-    for(uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & shift<-C*8-1>(d) & getPins<C,2-C>(); p ; p &= p-1) {
+    for(uint64_t p = getPieces<C,Pawn>() & ~file<'h'>() & shift<-C*8-1>(d) & getPins<C,2-C>(); unlikely(p) ; p &= p-1) {
         uint64_t from = bit(p);
         uint64_t to = from + C*8+1;
-//         if (C==White && from >= 48 || C==Black && from <16) {
         if (MT != NoKingPawn && rank<7>() & (p&-p)) {
             if (MT == AllMoves) {
                 *--good = Move(from, to, Knight, cap, true);
@@ -180,10 +179,9 @@ void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d,
         else
             *--good = Move(from, to, Pawn, cap); }
     // left
-    for (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & shift<-C*8+1>(d) & getPins<C,2+C>(); p ; p &= p-1) {
+    for (uint64_t p = getPieces<C,Pawn>() & ~file<'a'>() & shift<-C*8+1>(d) & getPins<C,2+C>(); unlikely(p) ; p &= p-1) {
         uint64_t from = bit(p);
         uint64_t to = from + C*8-1;
-//         if (C==White && from >= 48 || C==Black && from <16) {
         if (MT != NoKingPawn && rank<7>() & (p&-p)) {
             if (MT == AllMoves) {
                 *--good = Move(from, to, Knight, cap, true);
@@ -219,7 +217,7 @@ void ColoredBoard<C>::generateCaptureMoves( Move*& good, Move*& bad) const {
     if (uint64_t p = getPieces<-C,Queen>() & getAttacks<C,All>())
         generateTargetCapture<MT>(good, bad, p, Queen);
 
-    for (uint64_t p = getPieces<C,Pawn>() & rank<7>() & shift<-C*8>(~occupied1) & pins[CI]; p; p &= p-1) {
+    for (uint64_t p = getPieces<C,Pawn>() & rank<7>() & shift<-C*8>(~occupied1) & pins[CI]; unlikely(p); p &= p-1) {
         uint64_t sq = bit(p);
         uint64_t to = sq + C*dirOffsets[2];
         if (MT == AllMoves) {

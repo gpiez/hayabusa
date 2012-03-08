@@ -24,7 +24,7 @@
  * Generate moves which place a piece at dst, used for check evasion generation
  */
 template<Colors C>
-void ColoredBoard<C>::generateTargetMove(Move*& /*good*/, Move*& bad, uint64_t tobit ) const {
+void ColoredBoard<C>::generateTargetMove(Move*& bad, uint64_t tobit ) const {
     //special case where movin a pawn blocks a check
     //move is only legal if it is not pinned
     for (uint64_t p = getPieces<C,Pawn>() & shift<-C*8>(tobit) & pins[CI] & rank<7>(); p; p &= p-1) {
@@ -50,7 +50,7 @@ void ColoredBoard<C>::generateTargetMove(Move*& /*good*/, Move*& bad, uint64_t t
     const __v2di zero = _mm_set1_epi64x(0);
 //     const __v2di d2 = _mm_set1_epi64x(tobit);
 
-    if (getAttacks<C,Bishop>() & tobit) {
+    if unlikely((getAttacks<C,Bishop>() & tobit)) {
         const MoveTemplateB* bs = bsingle[CI];
         Move m = bs->move;
         do {
@@ -65,7 +65,7 @@ void ColoredBoard<C>::generateTargetMove(Move*& /*good*/, Move*& bad, uint64_t t
             m = (++bs)->move; }
         while (m.data); }
 
-    if (getAttacks<C,Rook>() & tobit) {
+    if unlikely((getAttacks<C,Rook>() & tobit)) {
         const MoveTemplateR* rs = rsingle[CI];
         Move m = rs->move;
         do {
@@ -80,7 +80,7 @@ void ColoredBoard<C>::generateTargetMove(Move*& /*good*/, Move*& bad, uint64_t t
             m = (++rs)->move; }
         while (m.data); }
 
-    if (getAttacks<C,Queen>() & tobit) {
+    if unlikely((getAttacks<C,Queen>() & tobit)) {
         const MoveTemplateQ* qs = qsingle[CI];
         Move m = qs->move;
         do {
@@ -165,7 +165,7 @@ void ColoredBoard<C>::generateCheckEvasions(Move*& good, Move*& bad) const {
                     generateTargetCapture<AllMoves>(good, bad, b, Bishop);
 
                 if (uint64_t p = datt[EI].d[bit(check)] & kinc & ~occupied1)
-                    generateTargetMove(good, bad, p); } }
+                    generateTargetMove(bad, p); } }
         else {
             // test, if capturing an adjacent checking piece with the king is possible
             // this is not covered by non capturing king moves below.

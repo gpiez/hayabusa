@@ -244,8 +244,6 @@ haveNoMate:
             // are blocked, we need to test these squares too, otherwise
             // the queen will cover them
 
-            uint64_t qsingle = 0;
-
             for (uint64_t possmate = qmate; unlikely(possmate); ) {
                 uint64_t bit = possmate & -possmate;
                 /*
@@ -328,7 +326,7 @@ haveNoMate:
 
 //        uint64_t qmate2 = 0;
         if (!(qescape & 0x20002)) {
-            if (uint64_t p=kingIncoming[EI].d0 & checkingMoves & ~(getAttacks<-C,All>()|xprot))
+            if (uint64_t p=kingIncoming[EI].d0 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
                 if (!(qescape & 0x30003)) {
                     qmate |= p & king << 2 & ~(attNotEnemyKing<<1);
                     if (!(qescape & 0x60006)) {
@@ -349,14 +347,14 @@ haveNoMate:
                             d4   = d4>>1 | d4>>2;
                             d4  |= d4>>2 | d4>>4;
                             d4 >>= 077-k;
-                            qmate |= p & ~d0 & ~d4; } } 
+                            qmate |= p & ~d0 & ~d4; } } }
                 else
                     if (!(qescape & 0x60006))
                         qmate |= p & king >> 2 & ~(attNotEnemyKing>>1);
         }
         
         if (!(qescape & 0x00500)) {
-            if (uint64_t p=kingIncoming[EI].d2 & checkingMoves & ~(getAttacks<-C,All>()|xprot))
+            if (uint64_t p=kingIncoming[EI].d2 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
                 if (!(qescape & 0x00505)) {
                     qmate |= p & king<<020 & ~(attNotEnemyKing<<8);
                     if (!(qescape & 0x50500)) {
@@ -376,7 +374,7 @@ haveNoMate:
                             d6   = d6>>010 | d6>>020;
                             d6  |= d6>>020 | d6>>040;
                             d6 >>= 077-k;
-                            qmate |= p & ~d2 & ~d6; } } 
+                            qmate |= p & ~d2 & ~d6; } } }
                 else
                     if (!(qescape & 0x50500))
                         qmate |= p & king >> 020 & ~(attNotEnemyKing>>8);
