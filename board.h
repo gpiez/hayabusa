@@ -31,6 +31,7 @@ struct Board {
     // with the zobrist key faster. Strictly 7 bits are suffient, 3 for the e. p.
     // row and 4 for the bits, but this simplifies access.
     // FEATURE no longer relevant, this is split up in getZobrist() anyway
+    // FEATURE use faster copy constructor for job()
     union CastlingAndEP {
         union Castling {
             struct {
@@ -76,8 +77,6 @@ struct Board {
     KeyScore keyScore;
     CastlingAndEP cep;
     mutable unsigned fiftyMoves;
-    int bias;
-    unsigned drawish;
     unsigned matIndex;
     mutable int positionalScore;
     mutable int prevPositionalScore;
