@@ -41,16 +41,16 @@ struct Job {
     virtual unsigned getPly() {
         return 0; }; };
 
-template<Colors C, typename A, typename B, typename T>
+template<Colors C, typename A, typename B>
 class SearchJob: public Job {
     Game& game;
-    const T& b;
+    const ColoredBoard<C> b;
     bool doNull;
     unsigned reduction;
     unsigned int depth;
-    A& alpha;
-    const B& beta;
-    ScoreMove<C,A>& retval;
+    const A& alpha;
+    B& beta;
+    ScoreMove<(Colors)-C,B>& retval;
     unsigned parent;
     const RepetitionKeys& rep;  //TODO really needed? This should be always thread-local keys
     NodeType nt;
@@ -59,8 +59,8 @@ class SearchJob: public Job {
     NodeItem* startnode;
 #endif
 public:
-    SearchJob(Game& rb, const T& b, bool, unsigned, unsigned int depth, A& alpha, const B& beta,
-              ScoreMove<C,A>& retval, unsigned parent, const RepetitionKeys& rep, NodeType nt
+    SearchJob(Game& rb, const ColoredBoard<C>& b, bool, unsigned, unsigned int depth, const A& alpha, B& beta,
+              ScoreMove<(Colors)-C,B>& retval, unsigned parent, const RepetitionKeys& rep, NodeType nt
 #ifdef QT_GUI_LIB
               , NodeItem* node
 #endif

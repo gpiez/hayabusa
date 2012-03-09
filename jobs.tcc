@@ -20,9 +20,9 @@
 #define JOBS_TCC_
 
 #include "jobs.h"
-template<Colors C, typename A, typename B, typename T>
-SearchJob<C,A,B,T>::SearchJob(Game& rb, const T& b, bool doNull,
-                              unsigned reduction, unsigned int depth, A& alpha, const B& beta, ScoreMove<C,A>& retval,
+template<Colors C, typename A, typename B>
+SearchJob<C,A,B>::SearchJob(Game& rb, const ColoredBoard<C>& b, bool doNull,
+                              unsigned reduction, unsigned int depth, const A& alpha, B& beta, ScoreMove<(Colors)-C,B>& retval,
                               unsigned parent, const RepetitionKeys& rep, NodeType nt
 #ifdef QT_GUI_LIB
                               , NodeItem* node
@@ -33,7 +33,7 @@ SearchJob<C,A,B,T>::SearchJob(Game& rb, const T& b, bool doNull,
     , node(node)
 #endif
 {
-    alpha.setNotReady();
+    beta.setNotReady();
     retval.setNotReady();
 #ifdef QT_GUI_LIB
     if (NodeItem::nNodes < MAX_NODES && node) {
@@ -44,7 +44,7 @@ SearchJob<C,A,B,T>::SearchJob(Game& rb, const T& b, bool doNull,
         data.ply = b.ply;
         data.searchType = trunk;
         data.depth = depth;
-        data.moveColor = b.CI == 0 ? White:Black;
+        data.moveColor = -C;
         data.nodeColor = C;
         data.flags = 0;
         data.threadId = WorkThread::threadId;
@@ -60,21 +60,19 @@ SearchJob<C,A,B,T>::SearchJob(Game& rb, const T& b, bool doNull,
 
 };
 
-template<Colors C, typename A, typename B, typename T>
-void SearchJob<C,A,B,T>::job() {
+template<Colors C, typename A, typename B>
+void SearchJob<C,A,B>::job() {
 #ifdef QT_GUI_LIB
     if (startnode) startnode->threadId = WorkThread::threadId;
 #endif
     if (alpha < beta.v) {
         game.clone(b, rep, b.ply);
-        const ColoredBoard<(Colors)-C> nextboard(b, b.m, game);
-        int ret = game.search9<(Colors)-C,trunk>(doNull, reduction, nextboard, depth, beta, alpha, ExtNot, nt NODE 
-                                                );
-        alpha.max(ret);
+        int ret = game.search9<C,trunk>(doNull, reduction, b, depth, alpha, beta, ExtNot, nt NODE);
+        beta.max(ret);
         retval.max(ret, b.m); }
     else
         ++stats.cancelJob;
-    alpha.setReady();
+    beta.setReady();
     retval.setReady(); }
 #endif
 
