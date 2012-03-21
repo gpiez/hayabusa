@@ -61,7 +61,7 @@ bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& 
 
 template<typename Entry, unsigned int assoc, typename Key>
 bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& ret ) const {
-    Key upperKey = k >> Entry::upperShift; //((Entry*) &k)->upperKey;
+    uint32_t upperKey = k >> 32;
     for (unsigned int i = 0; i < assoc; ++i) {        //TODO compare all keys simultaniously suing sse
         if (subTable->entries[i].upperKey == upperKey) {        //only lock if a possible match is found
             ret = subTable->entries[i];
@@ -69,14 +69,17 @@ bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& 
     return false; }
 
 template<unsigned int assoc, typename Key>
-bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* subTable, Key k, PawnEntry& ret ) {
-    Key upperKey = k >> PawnEntry::upperShift; //((Entry*) &k)->upperKey;
+bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* subTable, const Board& b, PawnEntry& ret ) {
     unsigned int i=0;
     PawnEntry first = subTable->entries[i];
     PawnEntry second;
-    bool possibleUse = subTable->entries[assoc-1].upperKey == 0;
-    do {        //TODO compare all keys simultaniously suing sse
-        if (first.upperKey == upperKey) {
+    do {
+#ifdef __SSE4_1__        
+        if (_mm_testz_si128(first.pawns, b.get2Pieces<Pawn>()))
+#else
+        if (first.pawns[0] == b.getPieces<White,Pawn>() && first.pawns[1] == b.getPieces<Black,Pawn>())
+#endif
+        {
             subTable->entries[0] = first;
             ret = first;
             return true; }
@@ -87,7 +90,6 @@ bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* 
         first = second; }
     while (true);
 
-    stats.ptuse += possibleUse;
     return false; }
 //#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"
@@ -98,15 +100,15 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
     // isn't sufficient, don't write anything.
     for (unsigned int i = 0; i < assoc; ++i)         //TODO compare all keys simultaniously suing sse
         if (subTable->entries[i].upperKey == entry.upperKey) {
-            if (entry.loBound + entry.hiBound >= subTable->entries[i].loBound + subTable->entries[i].hiBound
-                    || entry.depth >= subTable->entries[i].depth) {
+            if (entry[loBound] + entry[hiBound] >= subTable->entries[i][loBound] + subTable->entries[i][hiBound]
+                || entry[depth] >= subTable->entries[i][depth]) {
                 stats.ttoverwrite++;
                 stats.ttinsufficient--;
-                if (entry.depth == subTable->entries[i].depth/* && subTable->entries[i].score == entry.score*/)
-                    if (   (subTable->entries[i].loBound && entry.hiBound)
-                            || (subTable->entries[i].hiBound && entry.loBound)) {
-                        entry.hiBound |= 1;
-                        entry.loBound |= 1;
+                if (entry[depth] == subTable->entries[i][depth]/* && subTable->entries[i].score == entry.score*/)
+                    if (   (subTable->entries[i][loBound] && entry[hiBound])
+                            || (subTable->entries[i][hiBound] && entry[loBound])) {
+                        entry.set2(hiBound, true);
+                        entry.set2(loBound, true);
                         stats.ttmerge++; }
 
                 subTable->entries[i] = entry;
@@ -135,11 +137,11 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
             stats.ttinsufficient++;
             return; }
 
-    if (subTable->entries[assoc-1].data == 0 || subTable->entries[assoc-1].aged)
+    if (subTable->entries[assoc-1].upperKey == 0 || subTable->entries[assoc-1][aged])
         stats.ttuse++;
     unsigned int i;
     for (i = 0; i < assoc-1; ++i)                // TODO possibly checking only assoc/2 and a LRU in retrieve would be better
-        if (subTable->entries[i].aged || entry.depth >= subTable->entries[i].depth)
+        if (subTable->entries[i][aged] || entry[depth] >= subTable->entries[i][depth])
             break;
 
     for (unsigned j = assoc-1; j>i; --j) {
@@ -206,7 +208,7 @@ void Table<Entry, assoc, Key>::agex() {
 //     std::cerr << "clear " << size << std::endl;
     for (size_t i=0; i<nEntries; ++i) {
         for (size_t j=0; j<assoc; ++j) {
-            table[i].entries[j].aged |= 1; } } }
+            table[i].entries[j].set(aged, 1); } } }
 
 template<typename Entry, unsigned assoc, typename Key>
 template<Colors C>
@@ -222,7 +224,7 @@ std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C
 
     Move ttMove(0,0,0);
     if (retrieve(te, key, subentry) ) {
-        ttMove = Move(subentry.from, subentry.to, 0); }
+        ttMove = Move(subentry[from], subentry[to], 0); }
 
     Move moveList[256];
     Move* good=moveList+192;
@@ -264,8 +266,11 @@ std::string Table<Entry, assoc, Key>::bestLine(const Game& b) {
  *             6       32..64,00  d=1/8
  *             7       M1..M256   d=1
  */
-namespace {
-inline int inline_tt2Score(int s) {
+
+inline int tt2Score(int s) {
+    ASSERT(s < 0x800);
+    ASSERT(s >= -0x800);
+    
     if (s < 0x400 && s > -0x400)
         return s;
     if (s > 0) {
@@ -281,7 +286,10 @@ inline int inline_tt2Score(int s) {
             return s*4 + 0x600*4 - 0x800;
         return s*16 + 0x700*16 - 0x1000; } }
 
-inline int inline_score2tt(int s) {
+inline int score2tt(int s) {
+    ASSERT(s < 0x8000);
+    ASSERT(s >= -0x8000);
+    
     if (s < 0x400 && s > -0x400)
         return s;
     if (s > 0) {
@@ -295,5 +303,5 @@ inline int inline_score2tt(int s) {
             return (s+0x400)/2 - 0x400;
         if (s>-0x1000)
             return (s+0x800)/4 - 0x600;
-        return (s+0x1000)/16 - 0x700; } } }
+        return (s+0x1000)/16 - 0x700; } }
 #endif

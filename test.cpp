@@ -190,37 +190,6 @@ void TestRootBoard::generateCaptures() {
         time += readtsc() - tsc; }
     std::cout << "build13(vector): " << time/iter2 << " clocks" << std::endl;
 
-    time=0;
-    uint64_t op64=0x1234556789abcdef;
-    for (unsigned int i = 0; i < iter2; ++i) {
-        Board& bb = b->boards[i & 0xf].wb;
-        tsc = readtsc();
-        op64 = b->boards[0].wb.build02Attack(op64);
-        op64 = b->boards[1].wb.build02Attack(op64);
-        op64 = b->boards[2].wb.build02Attack(op64);
-        op64 = b->boards[3].wb.build02Attack(op64);
-        op64 = b->boards[4].wb.build02Attack(op64);
-        op64 = b->boards[5].wb.build02Attack(op64);
-        op64 = b->boards[6].wb.build02Attack(op64);
-        op64 = b->boards[7].wb.build02Attack(op64);
-        time += readtsc() - tsc; }
-    std::cout << "build02(bit): " << time/iter2 << " clocks" << std::endl;
-
-    time=0;
-    for (unsigned int i = 0; i < iter2; ++i) {
-        Board& bb = b->boards[i & 0xf].wb;
-        tsc = readtsc();
-        op64 = b->boards[0].wb.build13Attack(op64);
-        op64 = b->boards[1].wb.build13Attack(op64);
-        op64 = b->boards[2].wb.build13Attack(op64);
-        op64 = b->boards[3].wb.build13Attack(op64);
-        op64 = b->boards[4].wb.build13Attack(op64);
-        op64 = b->boards[5].wb.build13Attack(op64);
-        op64 = b->boards[6].wb.build13Attack(op64);
-        op64 = b->boards[7].wb.build13Attack(op64);
-        time += readtsc() - tsc; }
-    std::cout << "build13(bit): " << time/iter2 << " clocks" << std::endl;
-
     for (int j = 0; j < iter; ++j) {
         nmoves = 0;
         ncap=0;
@@ -260,11 +229,11 @@ void TestRootBoard::generateCaptures() {
 //                              std::cout << k->string() << std::endl;
                 tsc = readtsc();
                 if (color[i] == White) {
-                    __v8hi est = b->boards[i].wb.estimatedEval(*k, b->eval);
+                    __v8hi est = b->boards[i].b->eval.estimate(wb, *k);
                     ColoredBoard<Black> bb(b->boards[i].wb, *k, est);
                     blah += bb.getZobrist(); }
                 else {
-                    __v8hi est = b->boards[i].bb.estimatedEval(*k, b->eval);
+                    __v8hi est = b->boards[i].b->eval.estimate(bb, *k);
                     ColoredBoard<White> bb(b->boards[i].bb, *k, est);
                     blah += bb.getZobrist(); }
                 movetimes[i][j] += readtsc() - tsc - overhead; }

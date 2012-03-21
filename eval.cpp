@@ -221,18 +221,10 @@ PawnEntry Eval::pawns(const Board& b) const {
     PawnKey k=b.keyScore.pawnKey;
     Sub<PawnEntry, 4>* st = pt->getSubTable(k);
     PawnEntry pawnEntry;
-    if (k >> PawnEntry::upperShift && pt->retrieve(st, k, pawnEntry)) {
-#ifdef MYDEBUG        
-    	if (pawnEntry.wpawn == b.getPieces<White,Pawn>() || pawnEntry.bpawn == b.getPieces<Black,Pawn>())
-            /*stats.pcollision++*/;
-#endif        
-        /*stats.pthit++*/; }
+    if (pt->retrieve(st, b, pawnEntry)) 
+        stats.pthit++; 
     else {
-#ifdef MYDEBUG
-    	pawnEntry.wpawn = b.getPieces<White,Pawn>();
-    	pawnEntry.bpawn = b.getPieces<Black,Pawn>();
-#endif
-//        stats.ptmiss++;
+        stats.ptmiss++;
         uint64_t wpawn = b.getPieces<White,Pawn>();
         uint64_t bpawn = b.getPieces<Black,Pawn>();
 
@@ -435,9 +427,13 @@ PawnEntry Eval::pawns(const Board& b) const {
             if (pawnEntry.openFiles[0] & pawnEntry.openFiles[1] & 7<<i>>1) {
                 pawnEntry.shield2[0][i] += kingShieldOpenFile;
                 pawnEntry.shield2[1][i] += kingShieldOpenFile; } }
-        pawnEntry.upperKey = k >> PawnEntry::upperShift;
-        if (k >> PawnEntry::upperShift)
-            pt->store(st, pawnEntry); }
+#ifdef __SSE4_1__
+        pawnEntry.pawns = b.get2Pieces<Pawn>();
+#else
+        pawnEntry.pawns[0] = b.getPieces<White,Pawn>();
+        pawnEntry.pawns[1] = b.getPieces<Black,Pawn>();
+#endif
+        pt->store(st, pawnEntry); }
     return pawnEntry; }
 
 template<Colors C, GamePhase P> 
@@ -897,7 +893,7 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 
         CompoundScore pawn( pe.score );
         
-#ifdef __SSSE3__
+#ifdef __SSSE4_1__
         __v2di ofiles = _mm_loadu_si128((__m128i*)&pe.openFiles);
         ofiles = _mm_shuffle_epi8(ofiles, _mm_set_epi8(1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0));
         uint64_t wfile = _mm_extract_epi64(ofiles, 0);
@@ -991,3 +987,11 @@ int Eval::calc(unsigned matIndex, CompoundScore score) const {
     unsigned drawish = material[matIndex].drawish;
     return (interpolate(weights, score) + bias) >> drawish; }
 
+int Eval::quantize(int value) const {
+    if (value > 0) 
+        value += quantRound;        
+    if (value < 0)
+        value += quantRoundNeg;        
+    value &= quantMask;
+    return value;
+}

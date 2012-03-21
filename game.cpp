@@ -456,7 +456,7 @@ bool Game::doMove(Move m) {
 template<Colors C>
 bool Game::doMove(Move m) {
     WorkThread::stopAll();
-    MoveList ml(currentBoard<C>());
+    OldMoveList ml(currentBoard<C>());
 
     for (ml.begin(); ml.isValid(); ++ml) {
         if ((*ml).fromto() == m.fromto()) {
@@ -499,12 +499,6 @@ void Game::setHashSize(size_t s) {
 //    book.write(bstr);
 //}
 //
-int score2tt(int s) {
-    return inline_score2tt(s); }
-
-int tt2Score(int s) {
-    return inline_tt2Score(s); }
-
 void Game::setTime(uint64_t w, uint64_t b) {
     wtime = w / 1000000;
     btime = b / 1000000; }

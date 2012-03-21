@@ -59,7 +59,7 @@ public:
     SubTable* getSubTable( Key k ) {
         return &table[k & mask]; }
     void prefetchSubTable( Key k ) {
-        _mm_prefetch(&table[k & mask], _MM_HINT_NTA); }
+        _mm_prefetch(&table[k & mask], _MM_HINT_T0); }
 
     bool retrieve(const SubTable* subTable, Key k, Entry& ret, bool&) const ;
     bool retrieve(const SubTable* subTable, Key k, Entry& ret) const ;
@@ -73,8 +73,8 @@ public:
     template<Colors C> std::string bestLineNext(const ColoredBoard<(Colors)-C>&, Move, std::set<Key>&, const Game&);
     void clear();
     void agex();
-    uint64_t getEntries() const {
-        return assoc*nEntries; } };
+    uint64_t getEntries() const { return assoc*nEntries; }
+};
 
 template<typename Entry, unsigned assoc, typename Key>
 class TranspositionTable: public Table<Entry, assoc, Key> {
@@ -88,9 +88,6 @@ public:
 //     TranspositionTable() {};
     TranspositionTable(uint64_t size): Table<PawnEntry, assoc, Key>(size) {};
     void store(Sub<PawnEntry, assoc>* subTable, PawnEntry entry);
-    bool retrieve(Sub<PawnEntry, assoc>* subTable, Key k, PawnEntry& entry); };
-
-int score2tt(int s) __attribute__((noinline));
-int tt2Score(int s) __attribute__((noinline));
+    bool retrieve(Sub<PawnEntry, assoc>* subTable, const Board& b, PawnEntry& entry); };
 
 #endif /* TRANSPOSITIONTABLE_H_ */

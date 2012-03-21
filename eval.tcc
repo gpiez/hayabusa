@@ -109,27 +109,30 @@ int Eval::operator() (const ColoredBoard<C>& b, int& wap, int& bap, int psValue,
     case KBPk:
         realScore = psValue >> evalKBPk<White>(b);
         posScore = realScore - psValue;
-        return realScore;
+        break;
     case kpbK:
         realScore = psValue >> evalKBPk<Black>(b);
         posScore = realScore - psValue;
-        return realScore;
+        break;
     case KB_kb_:
         posScore = operator()(b, C, wap, bap);
         realScore = (psValue + posScore) >> evalKB_kb_<Black>(b);
         posScore = realScore - psValue;
-        return realScore;
+        break;
     case KPk:
         realScore = (psValue<<2) >> evalKPk<White>(b, C);
         posScore = realScore - psValue;
-        return realScore;
+        break;
     case kpK:
         realScore = (psValue<<2) >> evalKPk<Black>(b, C);
         posScore = realScore - psValue;
-        return realScore;
+        break;
 
     case Unspecified:
     default:
         posScore = operator()(b, C, wap, bap)
         + C*(tempo0 + (tempo64*popcount((b.template getAttacks<C,Rook>() | b.template getAttacks<C,Bishop>() | b.template getAttacks<C,Queen>() | b.template getAttacks<C,Knight>() | b.template getAttacks<C,King>()) & ~b.template getOcc<C>()) >> 6));
-        return psValue + posScore; } }
+        realScore = psValue + posScore; 
+    }
+    return quantize(realScore);
+}

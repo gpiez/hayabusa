@@ -25,6 +25,7 @@
 
 class Eval;
 class Game;
+enum Extension: unsigned;
 
 struct Board {
     // Puts castling flags and e. p. square together in one struct, to make xoring
@@ -86,6 +87,7 @@ struct Board {
     mutable int estScore;
     mutable unsigned ply;
     mutable Move m;
+    mutable Extension threatened;
     
     struct Bits {
         __v2di mask02;

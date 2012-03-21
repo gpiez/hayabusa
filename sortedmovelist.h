@@ -31,11 +31,11 @@
 
 #include "movelist.h"
 
-class SortedMoveList : public MoveList {
+class SortedMoveList : public OldMoveList {
     uint64_t nodes[maxMoves];
 public:
     template<Colors C>
-    SortedMoveList(const ColoredBoard<C>& b): MoveList(b) {
+    SortedMoveList(const ColoredBoard<C>& b): OldMoveList(b) {
         memset(nodes, 0, sizeof(nodes)); }
     void nodesCount(uint64_t n);
     void currentToFront();

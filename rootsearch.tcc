@@ -187,7 +187,6 @@ Move Game::rootSearch(unsigned int endDepth) {
                     SharedScore<C> neginf(-infinity*C);
                     limit<C>() = infinity*C;
                     limit<-C>() = alpha.v;
-                    nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff + C*eval.standardError;
                     value.v = search4<(Colors)-C, trunk>(nextboard, depth-1, beta2, neginf, ExtNot, NodePV NODE);
                     if (stopSearch) break;
                     alpha.v = value.v; }
@@ -203,7 +202,6 @@ Move Game::rootSearch(unsigned int endDepth) {
                     beta3.v  = alpha.v + eval.aspirationHigh2*C;
                     limit<-C>() = -infinity*C;
                     limit<C>() = beta3.v;
-                    nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff + C*eval.standardError; 
                     value.v = search4<(Colors)-C, trunk>(nextboard, depth-1, beta3, alpha, ExtNot, NodePV NODE);
                     if (stopSearch) break;
                     if (value >= beta3.v) {
@@ -213,7 +211,6 @@ Move Game::rootSearch(unsigned int endDepth) {
                         if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                         limit<-C>() = -infinity*C;
                         limit<C>() = beta.v;
-                        nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff + C*eval.standardError; 
                         value.v = search4<(Colors)-C, trunk>(nextboard, depth-1, beta, alpha, ExtNot, NodePV NODE);
                         if (stopSearch) break; }
                     alpha.v = value.v; }
@@ -258,7 +255,7 @@ Move Game::rootSearch(unsigned int endDepth) {
                     ml.nodesCount(stats.node - subnode);
                     if (stopSearch || value <= alpha.v) continue;
                     SharedScore<C> oldalpha(alpha);
-                    Move oldBestMove = bestMove;
+//                    Move oldBestMove = bestMove;
                     alpha.v = value.v;
                     if (ml.current >= bestMovesLimit) bestMovesLimit++;
                     bestMove = *ml;
@@ -269,15 +266,13 @@ Move Game::rootSearch(unsigned int endDepth) {
                         SharedScore<(Colors)-C> beta3;
                         beta3.v  = alpha.v + eval.aspirationHigh2*C;
                         limit<C>() = beta3.v;
-                        nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff + C*eval.standardError;
-                        if (eval.flags & 1) {
-                        value.v = search4<(Colors)-C, trunk>(nextboard, depth-1, beta3, oldalpha, ExtNot, NodePV NODE);
-                        if (oldalpha >= value.v) {
-                            alpha.v = oldalpha.v;
-                            bestMove = oldBestMove;
-                            continue;
-                        }
-                        } else
+                        //TODO evaluate fail-low after fail-high more precisely
+//                        value.v = search4<(Colors)-C, trunk>(nextboard, depth-1, beta3, oldalpha, ExtNot, NodePV NODE);
+//                        if (oldalpha >= value.v) {
+//                            alpha.v = oldalpha.v;
+//                            bestMove = oldBestMove;
+//                            continue;
+//                        }
                         value.v = search4<(Colors)-C, trunk>(nextboard, depth-1, beta3, alpha, ExtNot, NodePV NODE);
                         if (stopSearch) break;
                         alpha.v = value.v;
@@ -286,7 +281,6 @@ Move Game::rootSearch(unsigned int endDepth) {
                             if (!Options::quiet) console->send(status(now, value.v) + " lowerbound");
                             if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                             limit<C>() = beta.v;
-                            nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff + C*eval.standardError;
                             value.v = search4<(Colors)-C, trunk>(nextboard, depth-1, beta, alpha, ExtNot, NodePV NODE);
                             if (stopSearch) break;
                             alpha.v = value.v; } }

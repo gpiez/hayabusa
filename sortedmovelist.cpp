@@ -36,7 +36,7 @@ void SortedMoveList::nodesCount(uint64_t n) {
     nodes[current] += n; }
 
 void SortedMoveList::currentToFront() {
-    MoveList::currentToFront();
+    OldMoveList::currentToFront();
     uint64_t temp = nodes[current];
     memmove(nodes+first+1, nodes+first, sizeof(uint64_t) * (current-first));
     nodes[first] = temp; }

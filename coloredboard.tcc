@@ -36,7 +36,8 @@ ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
     ply = prev.ply + 1;
     this->m = m;
     keyScore.vector = est;
-    buildAttacks(); }
+    buildAttacks();
+}
 
 template<Colors C>
 template<typename T>
@@ -45,17 +46,17 @@ ColoredBoard<C>::ColoredBoard(const T& prev, Move m, Game& game) {
     prev.doMove(this, m, game.eval);
     ply = prev.ply + 1;
     this->m = m;
+#ifdef __SSE4_1__    
     ASSERT(!_mm_testz_si128(keyScore.vector, game.eval.estimate<C>(m, prev.keyScore)));
+#endif
+    if (isMain) {
+        game.line[ply] = m;
+        game.currentPly = ply; }
     buildAttacks(); 
     diff = & game.pe[6 - C*(m.piece() & 7)][m.from()][m.to()];
     psValue = game.eval.calc(matIndex, CompoundScore(keyScore.vector));
     estScore = psValue + prev.positionalScore + *diff;
     prevPositionalScore = prev.positionalScore;
-    if (isMain) {
-        game.line[ply] = m;
-        game.currentPly = ply; }
-
-
 }
 /*
  * Execute a move and put result in next

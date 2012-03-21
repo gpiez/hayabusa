@@ -222,15 +222,15 @@ inline __v2di Board::build02Attack(const unsigned sq) const {
     maskedDirs &= bits[sq].mask02;
     return maskedDirs;
 #else
-    uint64_t d0 = (occupied1 | 0x0101010101010101) & mask02[sq].d0;
-    uint64_t d2 = (occupied1 | 0xff) & mask02[sq].d2;
+    uint64_t d0 = (occupied1 | 0x0101010101010101) & *(uint64_t*)&bits[sq].mask02;
+    uint64_t d2 = (occupied1 | 0xff) & ((uint64_t*)&bits[sq].mask02)[1];
     __v2di maskedDir02 = _mm_set_epi64x(d2, d0);
     d0 <<= ~sq; //63-sq;
     d2 <<= ~sq; //63-sq;
     uint64_t lo = rol(6, sq + bitr(d0));
     uint64_t hi = rol(6, sq + bitr(d2));
     maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
-    maskedDir02 &= mask02[sq].x;
+    maskedDir02 &= bits[sq].mask02;
     return maskedDir02;
 #endif
 }

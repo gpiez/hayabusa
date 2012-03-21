@@ -14,8 +14,8 @@
 #include <mutex>
 #include <QList>
 
-#define MIN_NODES 0
-#define MAX_NODES 50000000
+#define MIN_NODES 9000000
+#define MAX_NODES 20000000
 
 struct NodeData {
     uint64_t key;

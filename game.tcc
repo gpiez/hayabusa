@@ -89,6 +89,7 @@ template<Colors C, Phase P, typename ResultType> void Game::perft(ResultType& re
     __v8hi est = eval.estimate<(Colors)-C>(m, prev.keyScore);
     const ColoredBoard<C> b(prev, m, est);
 
+#if 0    
     Key z = b.getZobrist();
     TranspositionTable<PerftEntry, 1, Key>::SubTable* pe = pt->getSubTable(z);
     PerftEntry subentry;
@@ -96,6 +97,7 @@ template<Colors C, Phase P, typename ResultType> void Game::perft(ResultType& re
     if (pt->retrieve(pe, z, subentry) && subentry.depth == depth) {
         result += subentry.value;
         return; }
+#endif
     Move list[256];
     Move* good = list + 192;
     Move* bad = good;
@@ -112,12 +114,14 @@ template<Colors C, Phase P, typename ResultType> void Game::perft(ResultType& re
     for (Move* i = good; i<bad; ++i) {
         perft<(Colors)-C, P>(n, b, *i, depth-1); }
 
+#if 0    
     PerftEntry stored;
-    stored.zero();
-    stored.depth |= depth;
-    stored.upperKey |= z >> stored.upperShift;
+//    stored.zero();
+    stored.depth = depth;
+    stored.upperKey = z >> stored.upperShift;
     stored.value = (uint64_t)n;
     pt->store(pe, stored);
+#endif
     result += n; }
 
 template<Colors C>

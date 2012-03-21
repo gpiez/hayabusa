@@ -25,7 +25,7 @@
 class Game;
 class TestRootBoard;
 
-enum MoveType { AllMoves, NoUnderPromo, NoKingPawn };
+enum MoveType { AllMoves, NoUnderPromo, NoKingPawn, OnlyCaptures };
 /*
  * Board with <color> to move. Serves as a common template for all color-dependant functions.
  */
@@ -53,6 +53,7 @@ public:
     static void initTables();
     template<MoveType>
     void generateCaptureMoves(Move*& list, Move*& bad) const __attribute__((noinline));
+    template<MoveType=AllMoves>
     void generateCheckEvasions(Move*& list, Move*& bad) const __attribute__((noinline));
     template<bool AbortOnFirst, typename R>
     R generateMateMoves( Move** good = NULL, Move** bad = NULL) const __attribute__((noinline));

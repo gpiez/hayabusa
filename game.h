@@ -32,7 +32,7 @@
 class Parameters;
 class WorkThread;
 class Console;
-union TTEntry;
+struct TTEntry;
 class PerftEntry;
 template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
@@ -41,7 +41,7 @@ typedef Key RepetitionKeys[100+nMaxGameLength];
 
 extern __thread RepetitionKeys keys;
 
-enum Extension {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
+enum Extension: unsigned {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
                 ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32,
                 ExtFork = 64, ExtTestMate = 128, ExtDiscoveredCheck = 256, ExtFirstMove = 512, ExtFutility = 1024 };
 

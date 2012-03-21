@@ -44,6 +44,8 @@ struct Move {
         return (uint32_t)data >> 24; }
     bool isSpecial() const {
         return data<0; }
+    bool isValid() const {
+        return data != 0; }
     std::string string() const;
     std::string algebraic() const; };
 #endif /* MOVE_H_ */

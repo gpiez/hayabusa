@@ -32,7 +32,7 @@
 #include "coloredboard.h"
 #include <cstring>
 
-class MoveList {
+class OldMoveList {
 protected:
     Move list[maxMoves];
     unsigned first;
@@ -42,10 +42,8 @@ protected:
 
 public:
     unsigned current;
-    template<Colors C, typename T>
-    MoveList(const ColoredBoard<C>& b, T& value);
     template<Colors C>
-    MoveList(const ColoredBoard<C>& b) {
+    OldMoveList(const ColoredBoard<C>& b) {
         Move* pfirst = list+goodMoves;
         Move* plast = pfirst;
 //        b.template generateMateMoves<false>(&first, &last);
@@ -56,101 +54,6 @@ public:
             b.template generateCaptureMoves<AllMoves>(pfirst, plast); }
         first = pfirst - list;
         last = plast - list; }
-    /*
-        MoveList(const ColoredBoard<C>& b) {
-            Move* pfirst = list+goodMoves;
-            Move* plast = pfirst;
-            Move* badCaptures = pfirst;
-            Move *captures, *threats, *nonCaptures;
-
-            if (b.template inCheck<C>()) {
-                nonCaptures = pfirst;
-                b.generateCheckEvasions(pfirst, last);
-                if (pfirst == plast) {
-    #ifdef QT_GUI_LIB
-                    if (node) node->nodeType = NodeMate;
-                    if (node) node->bestEval = -infinity*C;
-    #endif
-                    current.v = -infinity*C;
-                    break;
-                }
-                captures = good;
-                threats = good;
-                if (P==vein) {
-                    Move* j;
-                    for (Move* i = j = good; i<bad; ++i)
-                        if (i->capture())
-                            *j++ = *i;
-                    bad = j;
-                    goto nosort;
-                }
-
-            } else {    // not in check
-                if (P==vein || (P==leaf && !threatened)) {
-                    if ( P==leaf && extend & (ExtDualReply|ExtSingleReply)) b.template generateNonCap(good, bad); //FIXME should generate k-threat increasing moves only
-                    nonCaptures = good;
-                    if ( P==leaf ) b.generateSkewers(&good);
-                    threats = good;
-                    b.template generateCaptureMoves<NoUnderPromo>(good, bad);
-                    captures = good;
-                    if ( P==leaf ) {
-                        b.template generateMateMoves<false, void>(&good, &bad);
-                        if (good < captures)
-                            for (Move* removing = good; removing<captures; ++removing)
-                                for (Move* removed = captures; removed<bad; ++removed)
-                                    if (removing->data == removed->data) {
-                                        memmove(removed, removed+1, sizeof(Move) * (bad-removed-1));
-                                        --bad;
-                                        break;
-                                    }
-                    }
-                    goto nosort;
-                } else {
-                    b.template generateNonCap(good, bad);
-                    nonCaptures = good;
-                    b.template generateCaptureMoves<AllMoves>(good, bad);
-                    captures = good;
-                    if (bad == good) {
-    #ifdef QT_GUI_LIB
-                        if (node) node->nodeType = NodeMate;
-                        if (node) node->bestEval = 0;
-    #endif
-                        current.v = 0;
-                        break;
-                    }
-                    // FIXME not thread safe
-    //                 if ( P == leaf && alpha < 0 && ply>2 && b.fiftyMoves>2) {
-    //                     if (line[ply].from() == line[ply-2].to() && line[ply].to() == line[ply-2].from()) {
-    //                         ASSERT(line[ply-1].capture() == 0);
-    //                         *--good = Move(line[ply-1].to(), line[ply-1].from(), line[ply-1].piece());
-    //                     }
-    //                 }
-                    b.template generateSkewers(&good);
-                    threats = good;
-                    b.template generateMateMoves<false, void>(&good, &bad);
-                    if (good < threats) {
-                        for (Move* removing = good; removing<threats; ++removing) {
-                            for (Move* removed = threats; ; ++removed) {
-                                ASSERT(removed<bad);
-                                if (removing->data == removed->data) {
-                                    memmove(removed, removed+1, sizeof(Move) * (bad-removed-1));
-                                    --bad;
-                                    break;
-                                }
-                            }
-                        }
-                        if (bad < badCaptures) badCaptures = bad;
-    //                    goto nosort;
-                    }
-                }
-            }
-            if (badCaptures > nonCaptures+1) {
-                ASSERT(badCaptures <= bad);
-                history.sort<C>(nonCaptures, badCaptures-nonCaptures, ply + rootPly);
-            }
-
-    nosort:
-        }*/
 
     const Move& operator * () const {
         return list[current]; }
@@ -172,4 +75,161 @@ public:
         memmove(list+first+1, list+first, sizeof(Move) * (current-first));
         list[first] = temp; } };
 
+template<Colors C, Phase P>
+class MoveList;
+
+template<Colors C, Phase P>
+struct MoveFunc {
+    virtual void next(MoveList<C,P> &) = 0;
+};
+
+
+template<Colors C, Phase P>
+class MoveList {
+    
+    struct TT: public MoveFunc<C,P> {
+#ifdef MYDEBUG        
+        int max;
+#endif        
+//        void init(MoveList<C,P>&);
+        void next(MoveList<C,P>&); };
+
+    struct Mates: public MoveFunc<C,P> {
+#ifdef MYDEBUG        
+        int max;
+#endif        
+        void init(MoveList<C,P>&);
+        void next(MoveList<C,P>&); };
+
+    struct Captures: public MoveFunc<C,P> {
+#ifdef MYDEBUG        
+        int max;
+#endif        
+        void init(MoveList<C,P>&);
+        void next(MoveList<C,P>&); };
+    
+    struct Checks: public MoveFunc<C,P> {
+#ifdef MYDEBUG        
+        int max;
+#endif        
+        void init(MoveList<C,P>&);
+        void next(MoveList<C,P>&); };
+
+    struct Threats: public MoveFunc<C,P> {
+#ifdef MYDEBUG        
+        int max;
+#endif        
+        void init(MoveList<C,P>&);
+        void next(MoveList<C,P>&); };
+    
+    struct Skewers: public MoveFunc<C,P> {
+#ifdef MYDEBUG        
+        int max;
+#endif        
+        void init(MoveList<C,P>&);
+        void next(MoveList<C,P>&); };
+    
+    struct NonCaptures: public MoveFunc<C,P> {
+#ifdef MYDEBUG        
+        int max;
+#endif        
+        void init(MoveList<C,P>&);
+        void next(MoveList<C,P>&); };
+    
+    struct BadCaptures: public MoveFunc<C,P> {
+#ifdef MYDEBUG        
+        int max;
+#endif        
+        void init(MoveList<C,P>&);
+        void next(MoveList<C,P>&); };
+    
+    struct Evasions: public MoveFunc<C,P> {
+#ifdef MYDEBUG        
+        int max;
+#endif        
+        void init(MoveList<C,P>&);
+        void next(MoveList<C,P>&); };
+    /*
+     * 1. Generate  TT
+     * 2. Use       TT
+     * 3. Generate  Mates / Checks                  l1 used / l3 used
+     * 4. Use       Mates                           l1 free
+     * 5. Generate  Captures / BadCaptures          l1 used / l2 used
+     * 6. Use       Captures                        l1 free
+     * 7. Use       Checks                                    l3 free
+     * 8. Generate  Threats                         l1 used
+     * 9. Use       Threats                         l1 free
+     * 10.Generate  Skewers                         l1 used
+     * 11.Use       Skewers                         l1 free
+     * 12a.Generate  NonCaptures/append BadNonCaptures to BadCaptures  l1/l2 used
+     * 12b.Generate  nothing
+     * 13a.Use       NonCaptures+BadNonCaptures+BadCaptures    l1/l2 free
+     * 13b.Use       BadCaptures                               l2 free
+     *
+     * The sublists do not contain any real data. The moves are stored in this
+     * MoveList object, in 3 lists, which are partially shared during the move
+     * generation process. As the sublist contain no data, but only a vtable,
+     * the are made static. This has the advantage that the vtables do not
+     * need to be constructed during runtime each time a MoveList is created on
+     * the stack, but rather are initialized during startup. The sublist
+     * objects are basically used only as jumptables
+     */
+    static TT tt;
+    static Mates mates;
+    static Captures captures;
+    static Checks checks;
+    static Threats threats;
+    static Skewers skewers;
+    static NonCaptures nonCaptures;
+    static BadCaptures badCaptures;
+    static Evasions evasions;
+    
+    Move l[192]; // shared between Mates, Captures, Threats, Skewers, NonCaptures, Evasions
+    Move lend[0];
+    Move l2[64]; // badCaptures + appended BadNonCaptures
+    Move l2end[0];
+    Move l3[64]; // checks
+    Move l3end[0];
+    Move* p;
+    Move* p2;
+    Move* p3;
+    Move* pend;
+    const ColoredBoard<C>& b;
+    
+    MoveFunc<C,P>* iterator;
+    Move currentMove;
+    unsigned imove;
+    
+public:
+    MoveList(const ColoredBoard<C>& b, Move);
+
+    const Move& operator * () const {
+        return currentMove; }
+
+    bool operator ++ ();
+    
+    Move* operator -> () {
+        return &currentMove;
+    }
+
+    bool isEmpty() const {
+        return !iterator; }
+
+    unsigned size() const {
+        ASSERT((b.template inCheck<C>()));
+        if (P==vein && !b.threatened)
+            return -1;
+        if (P==leaf && !b.threatened)
+            return -1;
+        return pend-p; }
+    unsigned index() const {
+        return imove;
+    }
+    bool isCapture() { return iterator == &captures; }
+    bool isNonCapture() { return iterator == &nonCaptures; }
+    bool isFirst() {
+        return false; } //FIXME
+    bool isMate() { return iterator == &mates; }
+    
+};
 #endif // MOVELIST_H

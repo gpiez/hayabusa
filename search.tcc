@@ -1,4 +1,4 @@
-/*
+/*  
     Copyright (C) 2011  Gunther Piez
 
     This program is free software: you can redistribute it and/or modify
@@ -21,6 +21,8 @@
 #include "game.h"
 #include "options.h"
 #include "jobs.h"
+#include "movelist.h"
+#include "movelist.tcc"
 #include "transpositiontable.tcc"
 #include "history.tcc"
 #include "genmates.tcc"
@@ -30,8 +32,8 @@ int Game::calcReduction(const ColoredBoard< C >& b, int movenr, Move m, int dept
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     depth -= eval.dMaxExt;
     if (Options::reduction && movenr > eval.dRed[depth]) {
-        bool check = (!m.isSpecial() && (  (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | (m.piece() == Queen)))
-                                           || (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | (m.piece() == Queen)))
+        bool check = (!m.isSpecial() && (  (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d02) && ((m.piece() == Rook) | ((m.piece()&7) == Queen)))
+                                           || (fold(b.bits[m.to()].doublebits & b.kingIncoming[EI].d13) && ((m.piece() == Bishop) | ((m.piece()&7) == Queen)))
                                         )
                      )
                      || (Board::knightAttacks[m.to()] & b.template getPieces<-C,King>() && m.piece() == Knight)
@@ -77,6 +79,7 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
             nextboard.ply++;
             if (isMain) line[nextboard.ply].data = 0;            
             nextboard.fiftyMoves = 0;
+            if (eval.flags & 1)
             nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff;
             Score<C> nullvalue(search4<(Colors)-C, P>(nextboard.swapped(), nullReduction[newDepth], beta, alpha0, ExtNot, nextNT NODE ));
             if (nullvalue >= beta.v) return value.v;
@@ -85,12 +88,14 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
         } }
     
     if (reduction) {
+        if (eval.flags & 1)
         nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff; 
         const A alpha0(beta.v - C);
         value.v = search4<C, P>(nextboard, newDepth-reduction, alpha0, beta, ExtNot, nextNT NODE);
         if (value >= beta.v) {
             return value.v; } }
 
+    if (eval.flags & 1)
     nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff;
     value.v = search4<C, P>(nextboard, newDepth, alpha, beta, ExtNot, nextNT NODE);
 #ifdef QT_GUI_LIB
@@ -133,10 +138,8 @@ template<Colors C, Phase P, class A, class B>
 int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                   const A& origAlpha, const B& origBeta,
                   Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
-    enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     stats.node++;
-//    if (stats.node == 2398583) asm("int3");
-
+//    if (stats.node == 23001594) asm("int3");
 #ifdef MYDEBUG
     uint64_t __attribute__((unused)) localnode = stats.node;
 #endif
@@ -178,7 +181,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         alone increase the speed by ~2%.
         For a core i7 the speed increase from prefetching is about 3%.
     */
-    if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
+//    if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
 
     if (P != vein && P != leaf) {
 //         if (Options::cpuTime) {
@@ -203,39 +206,40 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
      * ExtFork:         You are forking me. Generate ALL moves, NO standpat. Next iteration generates capures (leaf)
      */
 
-    Extension threatened = ExtNot;
+    b.threatened = ExtNot;
     // This is needed here because we might be in vein with ExtTestMate
+    bool inCheck = b.template inCheck<C>();
     if (P==vein) {
-    	if (extend & ExtTestMate && b.template inCheck<C>()) 
-    		threatened = ExtCheck; }
+    	if (extend & ExtTestMate && inCheck) 
+    		b.threatened = ExtCheck; }
     
     else if (P==leaf || depth <= eval.dMaxExt+3 ) { // max pruning depth
         uint64_t pMoves;
-    	if (unlikely(b.template inCheck<C>()) && likely(depth > eval.dMaxCheckExt)) 
-            threatened = ExtCheck;
+    	if (unlikely(inCheck) && likely(depth > eval.dMaxCheckExt)) 
+            b.threatened = ExtCheck;
     	else if (likely(depth > eval.dMinForkExt) && unlikely(popcount(b.isPieceHanging(eval)) > 1))
-        	threatened = ExtFork;
+        	b.threatened = ExtFork;
     	else if (likely(depth > eval.dMinPawnExt) 
     	    && unlikely((pMoves = b.template getPieces<-C,Pawn>() & b.template getPins<(Colors)-C>() & rank<C,2>()))
     	    && ((pMoves = ( (  shift<-C*8  >(pMoves)               & ~b.occupied1)
                            | (shift<-C*8+1>(pMoves) & ~file<'a'>() &  b.template getOcc<C>())
                            | (shift<-C*8-1>(pMoves) & ~file<'h'>() &  b.template getOcc<C>()))
                          & ~b.template getAttacks<C,All>())))
-            threatened = ExtPawnThreat;
+            b.threatened = ExtPawnThreat;
         else if (likely(depth > eval.dMinMateExt) && unlikely((b.swapped().template generateMateMoves<true, bool>()))) 
-            threatened = ExtMateThreat;
-//         if (eval.flags &1 && !threatened && depth > eval.dMinExtDisco)
+            b.threatened = ExtMateThreat;
+//         if (eval.flags &1 && !b.threatened && depth > eval.dMinExtDisco)
 //             if (((ColoredBoard<(Colors)-C>*)&b) -> template generateDiscoveredCheck<true, bool>())
-//                 threatened = ExtDiscoveredCheck;
+//                 b.threatened = ExtDiscoveredCheck;
         else if (depth > eval.dMinForkExt && !b.isPieceHanging(eval) && unlikely(b.isForked()))
-            threatened = ExtFork; }
+            b.threatened = ExtFork; }
     // Only needed for check extension later
-    else if (unlikely(b.template inCheck<C>()) && likely(depth > eval.dMaxCheckExt)) 
-        threatened = ExtCheck; 
+    else if (unlikely(inCheck) && likely(depth > eval.dMaxCheckExt)) 
+        b.threatened = ExtCheck; 
 
 
 #ifdef QT_GUI_LIB
-    if (node && threatened) node->flags |= Threatened;
+    if (node && b.threatened) node->flags |= b.threatened;
     if (node && extend) node->flags |= Extend;
 #endif
 
@@ -243,10 +247,9 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     if (P!=vein) {
         z = b.getZobrist();
     }
-
-    if ((P==vein || P==leaf) && !threatened) {
+    if ((P==vein || P==leaf) && !b.threatened) {
         Score<C> value(origAlpha);
-        value.max(b.estScore - C*eval.standardError);
+        value.max(eval.quantize(b.estScore - C*eval.standardError));
         if (value >= origBeta.v && (value<limit<C>() || eval.allowLazyRoot)) {
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = value.v;
@@ -266,9 +269,9 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 //    bool betaNode = false;
 //     bool alphaNode = false;
     if (P == tree) {
-        if (depth < eval.dMaxExtCheck && threatened & ExtCheck)
+        if (depth < eval.dMaxExtCheck && b.threatened & ExtCheck)
             depth++;
-//         else if (depth < eval.dMaxExtPawn && threatened & ExtSingleReply)
+//         else if (depth < eval.dMaxExtPawn && b.threatened & ExtSingleReply)
 //             depth++;
     }
     A alpha(origAlpha);
@@ -276,6 +279,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     ScoreMove<C,A> current;
     current.v=(-infinity*C);
     current.m = {0,0,0 };
+    int posScore = 0xdeadbeaf;
     if (P != vein) {
         if (findRepetition(b, z, b.ply) || b.fiftyMoves >= 100) {
 #ifdef QT_GUI_LIB
@@ -286,18 +290,16 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         st = tt->getSubTable(z);
         if unlikely(tt->retrieve(st, z, subentry)) {
             stats.tthit++;
-            ttDepth = subentry.depth;
+            ttDepth = subentry[::depth];
+            posScore = tt2Score(subentry[::posScore]);
             Score<C> ttScore;
-            if (P == leaf)
-                ttScore.v = inline_tt2Score(subentry.score);
-            else
-                ttScore.v = tt2Score(subentry.score);
+            ttScore.v = tt2Score(subentry[score]);
             if unlikely (ttDepth >= depth 
-                || (ttScore>=infinity*C && subentry.loBound) 
-                || (ttScore<=-infinity*C && subentry.hiBound)) {
+                || (ttScore>=infinity*C && subentry[loBound]) 
+                || (ttScore<=-infinity*C && subentry[hiBound])) {
                 if (P == leaf && depth <= eval.dMaxExt) {
                     nextMaxDepth = true; }
-                    if unlikely(subentry.loBound & subentry.hiBound) {
+                    if unlikely(subentry[loBound] & subentry[hiBound]) {
 
 //                        stats.ttexact++;
 #ifdef QT_GUI_LIB
@@ -305,7 +307,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                         if (node) node->nodeType = NodeTT;
 #endif
                         return ttScore.v; } 
-                    else if unlikely(subentry.loBound) {
+                    else if unlikely(subentry[loBound]) {
                         alpha.max(ttScore.v);
                         stats.ttalpha++;
                         if (alpha >= beta.v) {
@@ -315,7 +317,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 #endif
                             return ttScore.v; }
                         current.max(ttScore.v); }
-                    else if (subentry.hiBound) {
+                    else if (subentry[hiBound]) {
                         stats.ttbeta++;
                         beta.max(ttScore.v); 
                         if (alpha >= beta.v) {
@@ -325,14 +327,34 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 #endif
                             return ttScore.v; } } }
 
-            current.m = Move(subentry.from, subentry.to, 0); } }
+                current.m = Move(subentry[from], subentry[to], subentry[piece], subentry[capture], subentry[special]);
+#ifdef MYDEBUG
+                if (current.m.piece()) {
+                    if (current.m.isSpecial() && (current.m.piece()&7) <= Pawn) {
+                        ASSERT((b.template getPieces<C,Pawn>() & 1ULL<<current.m.from()));
+                        if ((current.m.piece()&7) <= Knight) {
+                            if (current.m.capture())
+                                ASSERT(b.template getPieces<-C>(current.m.capture()) & 1ULL<<current.m.to());
+                            else
+                                ASSERT((b.occupied1 & 1ULL<<current.m.to()) == 0);
+                        }
+                    } else {
+                        ASSERT(b.template getPieces<C>(current.m.piece() & 7) & 1ULL<<current.m.from());
+                        if (current.m.capture())
+                            ASSERT(b.template getPieces<-C>(current.m.capture()) & 1ULL<<current.m.to());
+                        else
+                            ASSERT((b.occupied1 & 1ULL<<current.m.to()) == 0);
+                    }
+                }
+#endif                
+            } }
     bool leafMaxDepth;
     if (P == leaf) leafMaxDepth=false;
 
-    if (P==tree && Options::pruning && !threatened && !b.isPieceHanging(eval)) {
+    if (P==tree && Options::pruning && !b.threatened && !b.isPieceHanging(eval)) {
         if (depth == eval.dMaxExt + 1) { //TODO fall back to qsearch instead of hard prune
             Score<C> fScore;
-            fScore.v = b.estScore - C*eval.prune1 - !!b.m.capture()*C*eval.prune1c;
+            fScore.v = eval.quantize(b.estScore - C*eval.prune1 - !!b.m.capture()*C*eval.prune1c);
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile1;
@@ -342,7 +364,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                 return fScore.v; } }
         if (depth == eval.dMaxExt + 2) {
             Score<C> fScore;
-            fScore.v = b.estScore - C*eval.prune2 - !!b.m.capture()*C*eval.prune2c;
+            fScore.v = eval.quantize(b.estScore - C*eval.prune2 - !!b.m.capture()*C*eval.prune2c);
 #ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile2;
@@ -364,7 +386,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         }
     }
     
-    if (0 && P==tree && !(extend & ExtFutility) && eval.flags & 1) {
+    if (0 && P==tree && !(extend & ExtFutility)) {
         if (depth >= 3+eval.dMaxExt) {
             int limit = -C*1000/(depth-eval.dMaxExt);
             if (alpha > limit) {
@@ -396,192 +418,99 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         return 0; }
 
     if (P==vein) {
-        ASSERT(!(threatened & ~ExtCheck)); };
+        ASSERT(!(b.threatened & ~ExtCheck)); };
 
 
-    int realScore;
     stats.eval++;
-    realScore = eval(b, wattack, battack, b.psValue, b.positionalScore);
+    int realScore;
+    if (posScore == (signed)0xdeadbeaf)
+        realScore = eval(b, wattack, battack, b.psValue, b.positionalScore);
+    else {
+        b.positionalScore = posScore;
+        realScore = eval.quantize(b.psValue + b.positionalScore); }
+    
 //        Options::debug = 0;
 #ifdef QT_GUI_LIB
     if (node) node->real = realScore;
     if (node) node->pos = b.positionalScore;
 #endif
-//        realScore = psValue + b.positionalScore;
-
     if (isMain & !b.m.isSpecial()) {
         int diff2 = b.positionalScore - b.prevPositionalScore;
         *b.diff = (diff2 + *b.diff)/2; 
     }
-
-    if (P==vein || (P==leaf && !threatened)) {
+    /*
+     * If we are in one of the q searches and are not threatened, 
+     * assume a stand pat score. Without this score we need to make sure to
+     * generate *all* moves later in movelist.
+     */
+    if (P==vein && b.threatened) ASSERT(extend & ExtTestMate && inCheck);
+    if ((P==vein || P==leaf) && !b.threatened) {
         alpha.max(realScore);
         current.max(realScore);
-        ASSERT(!threatened || (P == vein && extend & ExtTestMate && b.template inCheck<C>()));
-        if (current >= beta.v && !threatened) {
+        if (current >= beta.v && !b.threatened) {
             stats.leafcut++;
 #ifdef QT_GUI_LIB
             if (node) node->nodeType = NodePrecut3;
 #endif
-//             current.m.data = 0;
             goto storeAndExit; }
-        /*            Move* j;
-                for (Move* i = j = good; i<bad; ++i) {
-                    ASSERT(!"Never executed");
-                    if (i->capture())
-                        *j++ = *i;
-                }
-                bad = j;*/
     }
+
 
     if (P == vein && !depth) return current.v;
     ASSERT(depth);
     {
-#ifdef USE_MOVE_LIST
-    	MoveList ml(b, current);
-#else
-        Move moveList[256];
-        Move* first = moveList+192;
-        Move* last = first;
-        Move* badCaptures = first;
-        Move* captures, *threats, *nonCaptures;
-        if (b.template inCheck<C>()) {
-            nonCaptures = first;
-            b.generateCheckEvasions(first, last);
-            if (last == first) {
+    	MoveList<C,P> i(b, current.m);
+    	if (i.isEmpty()) {
+    	    if ((P==vein || P==leaf) && !b.threatened) {
+                // we have no moves, but the list wasn't generated as complete list
+                // assume a stand pat move score.
+                if (current >= beta.v) {
+                    stats.leafcut++;
+                    ASSERT(!"should not happen");
+    #ifdef QT_GUI_LIB
+                    if (node) node->nodeType = NodeStandpat;
+    #endif
+                    ASSERT(current.m.piece() || !current.m.fromto()); }
+                goto storeAndExit; }
+    	    
+            if (inCheck) {
+                if (P==vein) ASSERT(b.threatened == ExtCheck);
+                if (P==vein) ASSERT(extend & ExtTestMate);
 #ifdef QT_GUI_LIB
                 if (node) node->nodeType = NodeMate;
                 if (node) node->bestEval = -infinity*C;
 #endif
-                current.v = -infinity*C;
-                ASSERT(!current.m.data);
+                current.v = -infinity*C; 
+                ASSERT(!current.m.isValid()); 
                 goto storeAndExit; }
-            captures = first;
-            threats = first;
-            // And remove non captures
-            if (P==vein) {
-                Move* j;
-                for (Move* i = j = first; i<last; ++i)
-                    if (i->capture() | i->isSpecial())
-                        *j++ = *i;
-                last = j;
-                goto nosort; }
-
-        }
-        else {      // not in check
-            if ((P==vein  && !threatened) || (P==leaf && !threatened)) {
-//                 if ( P==leaf && extend & (ExtDualReply|ExtSingleReply)) b.template generateNonCap(good, bad); //FEATURE should generate k-threat increasing moves only
-                nonCaptures = first;
-                if ( P==leaf ) b.generateSkewers(&first);
-                if (P == leaf) b.template generateDiscoveredCheck<false, void>(&first);
-                threats = first;
-                b.template generateCaptureMoves<NoUnderPromo>(first, last); //TODO if in vein mask out low target pieces which can't score better than alpha if captured
-                captures = first;
-                if ( P==leaf ) {
-// mates -- captures -- threats -- skewers -- badcaptures -- bad (end)
-                    Move checks[64];
-                    Move* pChecks = checks;
-                    b.template generateMateMoves<false, void>(&first, &pChecks); //FIXME this generates bad capture checks, which may have been generated by generateCaptureMoves<NoUnderPromo> before
-                    unsigned nChecks = pChecks-checks;
-                    memmove(threats+nChecks, threats, (last-threats)*sizeof(Move));
-                    memcpy(threats, checks, nChecks*sizeof(Move));
-// good -- mates -- captures -- checks -- threats -- skewers -- noncaptures == badcpatures -- bad (end)
-                    nonCaptures+=nChecks;
-                    last+=nChecks;
-
-					for (Move* removing = first; removing<threats; ++removing)
-						for (Move* removed = threats; removed<last; ++removed)
-							if (removing->data == removed->data) {
-								memmove(removed, removed+1, sizeof(Move) * (last-removed-1));
-								--last;
-								break; } } 
-                if (last == first) {
+            // stalemate
 #ifdef QT_GUI_LIB
-                    if (node) node->nodeType = NodeStandpat;
-                    if (node) node->bestEval = current.v;
+            if (node) node->nodeType = NodeMate;
+            if (node) node->bestEval = 0;
 #endif
-                    goto storeAndExit; }
-                goto nosort; }
-            else {
-                b.template generateNonCap(first, last);
-                nonCaptures = first;
-                b.template generateSkewers(&first);
-                threats = first;
-                b.template generateCaptureMoves<AllMoves>(first, last);
-                captures = first;
-                if (last == first) {
-                    ASSERT(!current.m.data);
-#ifdef QT_GUI_LIB
-                    if (node) node->nodeType = NodeMate;
-                    if (node) node->bestEval = 0;
-#endif
-                    current.v = 0;
-                    goto storeAndExit; }
-                b.template generateMateMoves<false, void>(&first, &last);
-                if (first < captures) {
-                    for (Move* removing = first; removing<captures; ++removing) {
-                        for (Move* removed = captures; ; ++removed) {
-                            ASSERT(removed<last);
-                            if (removing->data == removed->data) {
-                                memmove(removed, removed+1, sizeof(Move) * (last-removed-1));
-                                --last;
-                                break; } } }
-                    if (last < badCaptures) badCaptures = last;
-//                    goto nosort;
-                } } }
-        if (badCaptures > nonCaptures+1) {
-            ASSERT(badCaptures <= last);
-            history.sort(nonCaptures, badCaptures-nonCaptures, b.ply + rootPly); }
-        ASSERT(first<last);
-#endif
-nosort:
-#ifdef QT_GUI_LIB
-#endif
-
-		// We are in mate test, but it isn't a mate. Assume stand pat
-		if (P==vein && threatened) {
-			ASSERT(extend & ExtTestMate);
-			ASSERT(b.template inCheck<C>());
-			if (current >= beta.v) {
-				stats.leafcut++;
-		#ifdef QT_GUI_LIB
-				if (node) node->nodeType = NodeStandpat;
-		#endif
-				ASSERT(current.m.piece() || !current.m.fromto());
-				goto storeAndExit; } }
-		
-		// store key for repetitions
-        if (P!=vein) store(z, b.ply);
-
-        // move best move from tt / history to front
-        if (P != vein && current.m.data && first+1 < last && current.m.fromto() != first[0].fromto()) {
-            for (Move* removed = first+1; removed<last; ++removed) {
-                if (current.m.fromto() == removed->fromto()) {
-                    current.m = *removed;
-                    memmove(first+1, first, sizeof(Move) * (removed-first));
-                    *first = current.m;
-                    break; } } }
-        ASSERT(P==vein || first<last);
-        if (!current.m.fromto()) current.m = *first;
-//         ASSERT(current.m.piece() || !current.m.fromto());
+            current.v = 0;
+            ASSERT(!current.m.isValid()); 
+            goto storeAndExit; }
 
         bool unused __attribute__((unused));
-//         if (bad > good) current.m = *good;
-        Extension leafExt = threatened;
-        if (P != vein && b.template inCheck<C>()) {
+        Extension leafExt = b.threatened;
+        if (P != vein && inCheck) {
             ASSERT ( depth >= eval.dMaxCapture );
-            if (last-first == 2) {
+            if (i.size() == 2) {
                 if (depth > eval.dMinDualExt)
                     leafExt = (Extension) (leafExt | ExtDualReply); }
-            else if (last-first == 1)
+            else if (i.size() == 1) 
                 if (depth > eval.dMinSingleExt)
                     leafExt = (Extension) (leafExt | ExtSingleReply); }
         /*
          * The inner move loop
          */
-        NodeType nextNT = (NodeType)-nt;
+        if (P!=vein) store(z, b.ply);
         PackedScore<> currentWeight = eval.scale[eval.material[b.matIndex].scaleIndex];
-        for (Move* i = first; i<last && current < beta.v; ++i) {
+        NodeType nextNT = (NodeType)-nt;
+        unsigned newDepth = depth - 1;
+        do {
+            ASSERT(!i.isEmpty());
             if (!origBeta.isNotShared) beta.max(origBeta.v);
             if (!origAlpha.isNotShared) alpha.max(origAlpha.v);
 //             if (P != vein && i == good+1) {
@@ -589,21 +518,19 @@ nosort:
 //                     leafExt = (Extension) (leafExt & ~ExtDualReply);
 //             }
             Score<C> value;
-            unsigned newDepth = depth - 1;
             KeyScore estimate;
             estimate.vector = eval.estimate<C>(*i, b.keyScore);
-           
-            if (P != vein) tt->prefetchSubTable(estimate.key - C+1);
 
-            if (P==vein || (P==leaf && ((i>=captures && i<threats) || i>=nonCaptures)
-                                    && !threatened
+            if (P==vein || (P==leaf && (i.isCapture() | i.isNonCapture())
+                                    && !b.threatened
                                     && !(extend & (ExtDualReply | ExtSingleReply)))
-                        || (P==leaf && newDepth <= eval.dMaxCapture && i>=captures)) {
+                        || (P==leaf && newDepth <= eval.dMaxCapture && !i.isMate())) {
                 int nextPSValue = eval.interpolate(currentWeight, CompoundScore(estimate.vector));
-                int nextEstimatedScore = nextPSValue + C*eval.standardError + b.positionalScore /*+ diff.v + C*diff.error*/;                
-                Score<C> value(nextEstimatedScore);
+                int nextEstimatedScore = eval.quantize(nextPSValue + C*eval.standardError + b.positionalScore) /*+ diff.v + C*diff.error*/;                
+                value.v = nextEstimatedScore;
                 if (value <= alpha.v) {
                     stats.node++;
+//                    if (stats.node == 23001594) asm("int3");
                     stats.leafcut++;
                     current.max(value.v);
 #ifdef QT_GUI_LIB
@@ -611,31 +538,37 @@ nosort:
                     if (NodeItem::nNodes < MAX_NODES && node) {
                         NodeItem::m.lock();
                         NodeData data = { };
-                        data.alpha = origAlpha.v;
-                        data.beta = origBeta.v;
-                        data.move = b.m;
+                        data.alpha = beta.v;
+                        data.beta = alpha.v;
+                        data.move = *i;
                         data.ply = b.ply;
                         data.key = estimate.key;
                         data.searchType = P;
                         data.depth = depth;
-                        data.moveColor = -C;
-                        data.nodeColor = C;
+                        data.moveColor = C;
+                        data.nodeColor = -C;
                         data.flags = 0;
                         data.threadId = WorkThread::threadId;
                         data.nodes = 1;
                 
                         data.gain = diff;
                         data.error = eval.standardError;
-                        data.ps = b.psValue;
+                        data.ps = nextPSValue;
                         data.real = 0;
                         data.bestEval = value.v;
-                        data.nodeType = NodePrecut1;
+                        data.nodeType = NodePrecut3;
 
                         new NodeItem(data, node);
                         NodeItem::nNodes++;
                         NodeItem::m.unlock(); }
 #endif
-                    continue; } }
+                    continue; } 
+//                if (P == leaf && (i.isCapture() | i.isNonCapture())
+//                    && !b.threatened
+//                    && !(extend & (ExtDualReply | ExtSingleReply)) 
+//                    && !i->capture() && !i->isSpecial()) continue;
+            }
+            if (P != vein) tt->prefetchSubTable(estimate.key - C+1);
             const ColoredBoard<(Colors)-C> nextboard(b, *i, estimate.vector);
             nextboard.psValue = eval.calc(nextboard.matIndex, CompoundScore(estimate.vector));
             nextboard.diff = & pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
@@ -654,12 +587,12 @@ nosort:
                  * for non-tactical moves
                  */
             }
-            else if (P == leaf && ((i>=captures && i<threats) || i>=nonCaptures)
-                     && !threatened
+            else if (P == leaf && (i.isCapture() | i.isNonCapture())
+                     && !b.threatened
                      && !(extend & (ExtDualReply | ExtSingleReply)) //TODO replace by a condition "not checking move"
                     ) {
                 if (!i->capture() && !i->isSpecial()) continue;
-                value.v = search3<(Colors)-C, vein>(nextboard, std::min(newDepth, eval.dMaxCapture), beta.unshared(), alpha.unshared(), ExtNot, unused, nextNT NODE);
+                value.v = search3<(Colors)-C, vein>(nextboard, eval.dMaxCapture, beta.unshared(), alpha.unshared(), ExtNot, unused, nextNT NODE);
                 /*
                  * Transition from extended q search to pure q search for tactical
                  * moves, if the move is a possible mate, don't do a lazy eval in
@@ -668,8 +601,8 @@ nosort:
             }
             else if (P == leaf && newDepth <= eval.dMaxCapture) {
                 ASSERT(newDepth == eval.dMaxCapture);
-                leafExt = (i<captures) ? ExtTestMate : ExtNot;
-                value.v = search3<(Colors)-C, vein>(nextboard, eval.dMaxCapture, beta.unshared(), alpha.unshared(), leafExt, unused, nextNT NODE);
+                leafExt = i.isMate() ? ExtTestMate : ExtNot;
+                value.v = search3<(Colors)-C, vein>(nextboard, newDepth, beta.unshared(), alpha.unshared(), leafExt, unused, nextNT NODE);
                 leafMaxDepth = true; }
             else if ( P == leaf || newDepth <= eval.dMaxExt) {
                 value.v = search3<(Colors)-C, leaf>(nextboard, newDepth, beta.unshared(), alpha.unshared(), leafExt, leafMaxDepth, nextNT NODE); }
@@ -679,21 +612,22 @@ nosort:
                 bool doNull = newDepth >= eval.dMinReduction
                               && !ninf
                               && eval.material[b.matIndex].doNull;
-                int reduction = !ninf && calcReduction(b, i-first, *i, depth);
-                if (P == trunk && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i > first) && WorkThread::canQueued(WorkThread::threadId, current.isNotReady())) {
+                int reduction = !ninf && calcReduction(b, i.index(), *i, depth);
+                if (P == trunk && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i.index()) && WorkThread::canQueued(WorkThread::threadId, current.isNotReady())) {
                     WorkThread::queueJob(WorkThread::threadId,
-                                         new SearchJob<C, A, B, ColoredBoard<C> >(*this, b, doNull, reduction, newDepth,
-                                                 alpha, beta, current, WorkThread::threadId, keys, nextNT NODE));
+                                         new SearchJob<(Colors)-C, B, A>(*this, nextboard, doNull, reduction, newDepth,
+                                                 beta, alpha, current, WorkThread::threadId, keys, nextNT NODE));
                     if (stopSearch != Running) break;
                     continue; }
                 else {
                     value.v = search9<(Colors)-C, P>(doNull, reduction, nextboard, newDepth, beta, alpha, ExtNot, nextNT NODE);
-                    WorkThread::reserve(last-i-1); } }
+                } }
 
             if (stopSearch != Running) break;
             nextNT = NodeFailHigh;
             alpha.max(value.v);
-            current.max(value.v, *i); } // for Move*
+            current.max(value.v, *i); 
+        } while(current < beta.v && ++i);
 
         // if there are queued jobs started from _this_ node, do them first
         // don't start threads from parent search but with same therad id here
@@ -709,31 +643,32 @@ nosort:
 storeAndExit:
     if (P != vein) {
         TTEntry stored;
-        stored.zero();
+        stored.bitfield = 0;
         if (P == leaf) {
             ASSERT(depth <= eval.dMaxExt);
             if (!leafMaxDepth) //TODO dMinDual does not update hashMaxDepth correctly
-                stored.depth |= eval.dMaxExt;
+                stored.set(::depth, eval.dMaxExt);
             else {
-                stored.depth |= depth;
+                stored.set(::depth, depth);
                 nextMaxDepth = true; } }
         else
-            stored.depth |= depth;
+            stored.set(::depth, depth);
 
 
-        stored.upperKey |= z >> stored.upperShift;
-        if (P == leaf)
-            stored.score |= inline_score2tt(current.v);
-        else
-            stored.score |= score2tt(current.v);
+        stored.upperKey = z >> 32;
+        stored.set(score, score2tt(current.v));
 
-        stored.loBound |= current > origAlpha.v;
+        stored.set(loBound, current > origAlpha.v);
         if (current > origAlpha.v && current.m.capture() == 0 && current.m.piece()/* && !current.m.isSpecial()*/) {
             ASSERT(current.m.fromto());
             history.good(current.m, b.ply + rootPly); }
-        stored.hiBound |= (current < origBeta.v) & (stopSearch == Running);
-        stored.from |= current.m.from();
-        stored.to |= current.m.to();
+        stored.set(hiBound, (current < origBeta.v) & (stopSearch == Running));
+        stored.set(from, current.m.from());
+        stored.set(to, current.m.to());
+        stored.set(capture, current.m.capture()); 
+        stored.set(piece, current.m.piece() & 7); 
+        stored.set(special, current.m.isSpecial());
+        stored.set(::posScore, score2tt(b.positionalScore));
         tt->store(st, stored); }
 #ifdef QT_GUI_LIB
     if (node) {

@@ -710,6 +710,10 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     SETPARME(allowLazyRoot);
     SETPARME(sortPrev);
     SETPARME(sortNext);
+    SETPARM(quant);
+    e.quantMask = (-1)<<quant;
+    e.quantRound = (1<<quant)>>1;
+    e.quantRoundNeg = ((1 + (1<<quant))>>1 ) - 1;
 #ifdef MYDEBUG
     ASSERT(!e.control.size());
 #endif

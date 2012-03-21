@@ -21,10 +21,6 @@
 
 #include <cstdint>
 
-#define CALCULATE_MEAN_POSITIONAL_ERROR
-
-//#define static_assert(x) char __y[(x) ? 1 : -1 ] __attribute__((unused));
-
 #ifndef NDEBUG
 #include <iostream>
 #define ASSERT(x) do { if (!(x)) { \

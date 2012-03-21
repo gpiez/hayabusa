@@ -118,25 +118,25 @@ void Parameters::init() {
     Parameters::add("bishop.vert.value.endgame", 0);
     Parameters::add("bishop.vert.value.opening", 22);
     Parameters::add("king.attack", 40);
-    Parameters::add("king.corner.endgame", 0);
+    Parameters::add("king.corner.endgame", 3);                      //20120312
     Parameters::add("king.corner.opening", 0);
-    Parameters::add("king.hor.inflection.endgame", 1.0);
+    Parameters::add("king.hor.inflection.endgame", 1.0);            
     Parameters::add("king.hor.inflection.opening", 2);
-    Parameters::add("king.hor.value.endgame", -4);
+    Parameters::add("king.hor.value.endgame", -2);                  //20120309
     Parameters::add("king.hor.value.opening", -20);
     Parameters::add("king.vcenter.endgame", 3.5);
     Parameters::add("king.vcenter.opening", 3.5);
     Parameters::add("king.vert.inflection.endgame", 1.5);
     Parameters::add("king.vert.inflection.opening", 1);
-    Parameters::add("king.vert.value.endgame", 4);
+    Parameters::add("king.vert.value.endgame", 4);                  //20120309
     Parameters::add("king.vert.value.opening", -24);
     Parameters::add("knight.attack", 40);
-    Parameters::add("knight.corner.endgame", -16);
+    Parameters::add("knight.corner.endgame", -12);                  //20120312
     Parameters::add("knight.corner.opening", 0);
     Parameters::add("knight.defense", 15);
     Parameters::add("knight.hor.inflection.endgame", 0.5);
     Parameters::add("knight.hor.inflection.opening", 0.5);
-    Parameters::add("knight.hor.value.endgame", 2);
+    Parameters::add("knight.hor.value.endgame", 0);                 //20120313
     Parameters::add("knight.hor.value.opening", 10);
     Parameters::add("knight.mobility.endgame", 6);
     Parameters::add("knight.mobility.opening", 30);
@@ -191,7 +191,7 @@ void Parameters::init() {
     Parameters::add("rook.defense", 10);
     Parameters::add("rook.hor.inflection.endgame", 1.5);
     Parameters::add("rook.hor.inflection.opening", 1.2);
-    Parameters::add("rook.hor.value.endgame", 0);
+    Parameters::add("rook.hor.value.endgame", -6);
     Parameters::add("rook.hor.value.opening", 14);
     Parameters::add("rook.mobility.endgame", 4);
     Parameters::add("rook.mobility.opening", 16);
@@ -333,6 +333,7 @@ void Parameters::init() {
     Parameters::add("rookSeventh2", 0, 0);
     Parameters::add("sortPrev", 0);
     Parameters::add("sortNext", 128);
+    Parameters::add("quant", 3);
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i)
         defaultParameters.parms[i] = Parm<float>(base[i]);

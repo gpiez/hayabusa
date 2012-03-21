@@ -192,6 +192,7 @@ private:
         int endgameMaterial;
         int endgameTransitionSlope;
 
+        int quant;
         struct {
             int outer[3];
             int center[3];
@@ -278,6 +279,10 @@ public:
     int tempo64;
     int sortPrev;
     int sortNext;
+    unsigned quantMask;
+    int quantRound;
+    int quantRoundNeg;
+    
     int attackTable2[1024];
     int nAttackersTab[16];
     int allowLazyRoot;
@@ -324,6 +329,7 @@ public:
     int calc(unsigned matIndex, CompoundScore score) const;
     int calc(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const;
 	int interpolate(CompoundScore weights, CompoundScore score) const;
-	int interpolate(unsigned iScale, CompoundScore score) const; };
+	int interpolate(unsigned iScale, CompoundScore score) const;
+    int quantize(int) const; };
 
 #endif /* EVAL_H_ */
