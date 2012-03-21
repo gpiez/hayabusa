@@ -333,7 +333,7 @@ void Parameters::init() {
     Parameters::add("rookSeventh2", 0, 0);
     Parameters::add("sortPrev", 0);
     Parameters::add("sortNext", 128);
-    Parameters::add("quant", 3);
+    Parameters::add("quant", 0);
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i)
         defaultParameters.parms[i] = Parm<float>(base[i]);

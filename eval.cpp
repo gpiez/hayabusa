@@ -28,7 +28,6 @@ unsigned Eval::distance[nSquares][nSquares];
 uint64_t Eval::ruleOfSquare[nColors][nSquares];
 uint64_t Eval::keySquare[nColors][nSquares];
 
-static const __v2di zero = {0 };
 static constexpr int ksv[nSquares] = {
     0,  2,  4,  6,  6,  4,  2,  0,
     2, 10, 12, 14, 14, 12, 10,  2,

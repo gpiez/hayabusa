@@ -20,6 +20,7 @@
 #define CONSTANTS_H_
 
 #include <cstdint>
+#include <x86intrin.h>
 
 #ifndef NDEBUG
 #include <iostream>
@@ -114,5 +115,7 @@ static constexpr int materialTab[nPieces+1] = { 0, 5, 2, 10, 2, 0, 0 };
 static constexpr int materialTotal = 4*(materialTab[Rook]+materialTab[Bishop]+materialTab[Knight]) + 4*materialTab[Queen] + 16*materialTab[Pawn];
 
 static constexpr int maxScoreChildren = 16;
+
+static const __m128i zero = {0};
 
 #endif /* CONSTANTS_H_ */

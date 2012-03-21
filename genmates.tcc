@@ -21,7 +21,6 @@
 
 #include "coloredboard.h"
 
-static const __m128i zero = _mm_set1_epi64x(0);
 typedef unsigned int uint128_t __attribute__ ((mode(TI)));
 
 template<Colors C>
@@ -569,9 +568,29 @@ haveNoMate:
                 if (AbortOnFirst) return (R)true;
                 *--*good = Move(bit(f), to, Knight, getPieceKind(1ULL << to)); } } }
 
-    /*    if (uint64_t checkingMoves = shift<C*8>(getPieces<C,Pawn>()) & ~occupied1 & shift<-C*8>((king>>1 & ~file<'h'>()) | (king<<1 & ~file<'a'>()))) {
-
-            }*/
+    // pawn moves, non capture, non promo
+    uint64_t escape = getAttacks<-C,King>() & ~occupied[EI] & ~getAttacks<C,All>();
+    if (AbortOnFirst && escape) return (R) false;
+    uint64_t pawnChecks = shift<-C*17>(king & ~file<'a'>()) | shift<-C*15>(king & ~file<'h'>());
+    for (uint64_t p = getPieces<C,Pawn>() & ~rank<7>() & shift<-C*8>(~occupied1) & getPins<C,2>() & pawnChecks; p; p &= p-1) {
+        if (AbortOnFirst) return (R) true;
+        unsigned from = bit(p);
+        unsigned to = from + C*dirOffsets[2];
+        if (!escape) {
+            *--*good = Move(from, to, Pawn); }            
+        else
+            *(*bad)++ = Move(from, to, Pawn); }
+    // pawn double steps
+    for (uint64_t p = getPieces<C,Pawn>() & rank<2>() & shift<-C*8>(~occupied1) & shift<-C*16>(~occupied1) & getPins<C,2>() & shift<-C*8>(pawnChecks); p; p &= p-1) {
+        if (AbortOnFirst) return (R) true;
+        unsigned from = bit(p);
+        unsigned to = from + 2*C*dirOffsets[2];
+        uint64_t escape = getAttacks<-C,King>() & ~occupied[EI] & ~getAttacks<C,All>();
+        if (!escape) { 
+            *--*good = Move(from, to, Pawn); } 
+        else
+            *(*bad)++ = Move(from, to, Pawn); }
+    
     return (R)false; }
 
 template<Colors C>

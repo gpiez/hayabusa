@@ -139,7 +139,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                   const A& origAlpha, const B& origBeta,
                   Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
     stats.node++;
-//    if (stats.node == 23001594) asm("int3");
+//    if (stats.node == 87) asm("int3");
 #ifdef MYDEBUG
     uint64_t __attribute__((unused)) localnode = stats.node;
 #endif

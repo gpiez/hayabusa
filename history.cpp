@@ -44,8 +44,6 @@ const __v16qi History::sinctab[16] = {
     { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0 } };
 
-static const __v16qi zero = _mm_set1_epi8(0);
-
 // History::History()
 // {
 //     init();
