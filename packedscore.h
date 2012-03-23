@@ -21,6 +21,19 @@
 
 template<typename T=int16_t>
 struct PackedScore {
+    PackedScore operator + (const PackedScore& x) {
+        return PackedScore{ opening + x.opening, endgame + x.endgame };
+    }
+    PackedScore operator - (const PackedScore& x) {
+        return PackedScore{ opening - x.opening, endgame - x.endgame };
+    }
+    PackedScore operator * (int x) {
+        return PackedScore{ opening * x, endgame * x };
+    }
+    PackedScore operator / (int x) {
+        return PackedScore{ opening / x, endgame / x };
+    }
+
     T    opening;
     T    endgame; };
 #endif

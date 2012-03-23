@@ -107,7 +107,6 @@ private:
     PackedScore<> pawnConnPasser22[6];
     PackedScore<> pawnPasser22[6];
     PackedScore<> pawnCandidate[6];
-    PackedScore<> pawnPiece;
 
     PackedScore<> bm[14];
     PackedScore<> nm[9];
@@ -193,6 +192,15 @@ private:
         int endgameTransitionSlope;
 
         int quant;
+        
+        PackedScore<> twoMinOneMaj;
+        PackedScore<> oneMinThreePawns;
+        PackedScore<> rookPerPawn;
+        PackedScore<> bishopPerPawn;
+        PackedScore<> knightPerPawn;
+        PackedScore<> queenPerPawn;
+        PackedScore<> pawnPerPawn;
+        
         struct {
             int outer[3];
             int center[3];

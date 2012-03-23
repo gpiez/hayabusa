@@ -240,11 +240,24 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
 	scaleIndex = std::max(0, std::min(scaleIndex, endgameTransitionSlope));
     m.scaleIndex = scaleIndex;
     
-    if (b >= 2) {
-    	int s = C*e.interpolate(m.scaleIndex, bishopPair);
+    if (b+n == eb+en+2 && r+1 == er) {
+        int s = C*e.interpolate(m.scaleIndex, twoMinOneMaj);
         m.bias += s;
     }
-
+    if (b+n == eb+en+1 && p+3 >= ep) {
+        int s = C*e.interpolate(m.scaleIndex, oneMinThreePawns);
+        m.bias += s;
+    }
+    if (b >= 2) {
+        int s = C*e.interpolate(m.scaleIndex, bishopPair);
+        m.bias += s;
+    }
+    m.bias += e.interpolate(m.scaleIndex, rookPerPawn*r*(p+ep)/16*C);
+    m.bias += e.interpolate(m.scaleIndex, bishopPerPawn*b*(p+ep)/16*C);
+    m.bias += e.interpolate(m.scaleIndex, knightPerPawn*n*(p+ep)/16*C);
+    m.bias += e.interpolate(m.scaleIndex, queenPerPawn*q*(p+ep)/16*C);
+    m.bias += e.interpolate(m.scaleIndex, pawnPerPawn*p*p/16*C);
+    
     if (b == 1 && eb == 1 && q+r+n+eq+er+en == 0)
         m.recognized = KB_kb_;
 
@@ -378,41 +391,41 @@ void Eval::Init::material() {
 
     memset(e.material, 0, sizeof(e.material));
     for (int wr=0; wr<=2; ++wr)
-        for (int br=0; br<=2; ++br)
-            for (int wn=0; wn<=2; ++wn)
-                for (int bn=0; bn<=2; ++bn)
-                    for (int wq=0; wq<=2; ++wq)
-                        for (int bq=0; bq<=2; ++bq)
-                            for (int wb=0; wb<=2; ++wb)
-                                for (int bb=0; bb<=2; ++bb)
-                                    for (int wp=0; wp<=8; ++wp)
-                                        for (int bp=0; bp<=8; ++bp) {
-                                            unsigned bi = bp*matIndex[0][Pawn]
-                                                          + bn*matIndex[0][Knight]
-                                                          + bq*matIndex[0][Queen]
-                                                          + bb*matIndex[0][Bishop]
-                                                          + br*matIndex[0][Rook]
-                                                          + wp*matIndex[1][Pawn]
-                                                          + wn*matIndex[1][Knight]
-                                                          + wq*matIndex[1][Queen]
-                                                          + wb*matIndex[1][Bishop]
-                                                          + wr*matIndex[1][Rook]
-                                                          - minIndex;
-                                            unsigned wi = bp*matIndex[1][Pawn]
-                                                          + bn*matIndex[1][Knight]
-                                                          + bq*matIndex[1][Queen]
-                                                          + bb*matIndex[1][Bishop]
-                                                          + br*matIndex[1][Rook]
-                                                          + wp*matIndex[0][Pawn]
-                                                          + wn*matIndex[0][Knight]
-                                                          + wq*matIndex[0][Queen]
-                                                          + wb*matIndex[0][Bishop]
-                                                          + wr*matIndex[0][Rook]
-                                                          - minIndex;
-                                            ASSERT(wi <= maxIndex-minIndex);
-                                            ASSERT(bi <= maxIndex-minIndex);
-                                            material<White>(wr, wb, wq, wn, wp, br, bb, bq, bn, bp, e.material[wi]);
-                                            material<Black>(wr, wb, wq, wn, wp, br, bb, bq, bn, bp, e.material[bi]); } }
+    for (int br=0; br<=2; ++br)
+    for (int wn=0; wn<=2; ++wn)
+    for (int bn=0; bn<=2; ++bn)
+    for (int wq=0; wq<=2; ++wq)
+    for (int bq=0; bq<=2; ++bq)
+    for (int wb=0; wb<=2; ++wb)
+    for (int bb=0; bb<=2; ++bb)
+    for (int wp=0; wp<=8; ++wp)
+    for (int bp=0; bp<=8; ++bp) {
+        unsigned bi = bp*matIndex[0][Pawn]
+                      + bn*matIndex[0][Knight]
+                      + bq*matIndex[0][Queen]
+                      + bb*matIndex[0][Bishop]
+                      + br*matIndex[0][Rook]
+                      + wp*matIndex[1][Pawn]
+                      + wn*matIndex[1][Knight]
+                      + wq*matIndex[1][Queen]
+                      + wb*matIndex[1][Bishop]
+                      + wr*matIndex[1][Rook]
+                      - minIndex;
+        unsigned wi = bp*matIndex[1][Pawn]
+                      + bn*matIndex[1][Knight]
+                      + bq*matIndex[1][Queen]
+                      + bb*matIndex[1][Bishop]
+                      + br*matIndex[1][Rook]
+                      + wp*matIndex[0][Pawn]
+                      + wn*matIndex[0][Knight]
+                      + wq*matIndex[0][Queen]
+                      + wb*matIndex[0][Bishop]
+                      + wr*matIndex[0][Rook]
+                      - minIndex;
+        ASSERT(wi <= maxIndex-minIndex);
+        ASSERT(bi <= maxIndex-minIndex);
+        material<White>(wr, wb, wq, wn, wp, br, bb, bq, bn, bp, e.material[wi]);
+        material<Black>(wr, wb, wq, wn, wp, br, bb, bq, bn, bp, e.material[bi]); } }
 #define SETPARM(x) x = p[ #x ].value; \
                    ASSERT( e.control.erase(toLower( #x )) );
 #define SETPARM2(x) SETPARM(x.opening) \
@@ -460,7 +473,6 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     sigmoid(e.pawnConnPasser22, PackedScore<float> {0,0 }, pawnConnPasser, PackedScore<float> {6,6 }, pawnPasserSlope );
     SETPARM2(pawnCandidate);
     sigmoid(e.pawnCandidate, PackedScore<float> {0,0 }, pawnCandidate, PackedScore<float> {6,6 }, pawnPasserSlope);
-    SETPARME2(pawnPiece);
     SETPARM2(knight.value);
     SETPARM2(knight.hor.value);
     SETPARM2(knight.hor.inflection);
@@ -538,7 +550,9 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     SETPARM2(bishop.mobslope);
     sigmoid(e.bm, PackedScore<float> { -bishop.mobility.opening,  -bishop.mobility.endgame }, bishop.mobility, PackedScore<float> {0,0 }, bishop.mobslope);
 
-    SETPARM2(queen.value);
+    queen.value.opening = 1000.0/480.0*rook.value.opening;
+    queen.value.endgame = 890.0/480.0*rook.value.endgame;
+//    SETPARM2(queen.value);
     SETPARM2(queen.hor.value);
     SETPARM2(queen.hor.inflection);
     SETPARM2(queen.vert.value);
@@ -714,6 +728,14 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     e.quantMask = (-1)<<quant;
     e.quantRound = (1<<quant)>>1;
     e.quantRoundNeg = ((1 + (1<<quant))>>1 ) - 1;
+    SETPARM2(twoMinOneMaj);
+    twoMinOneMaj.endgame = twoMinOneMaj.opening; 
+    SETPARM2(oneMinThreePawns);
+    SETPARM2(rookPerPawn);
+    SETPARM2(bishopPerPawn);
+    SETPARM2(queenPerPawn);
+    SETPARM2(knightPerPawn);
+    SETPARM2(pawnPerPawn);
 #ifdef MYDEBUG
     ASSERT(!e.control.size());
 #endif
