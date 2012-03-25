@@ -50,22 +50,23 @@ static constexpr Bitfield to AFTER(from, 6);
 static constexpr Bitfield depth AFTER(to, 7);
 static constexpr SignedBitfield score AFTER(depth, 12);
 static constexpr SignedBitfield posScore AFTER(score, 12);
+static constexpr Bitfield key11 AFTER(posScore, 11);
 struct TTEntry {
     
-    constexpr int operator [] (const Bitfield bf) {
+    constexpr unsigned operator [] (const Bitfield bf) {
         return bitfield << (64-bf.pos-bf.size) >> (64-bf.size);
     }
-    int operator [] (const SignedBitfield bf) {
+    constexpr int operator [] (const SignedBitfield bf) {
         return (int64_t)bitfield << (64-bf.pos-bf.size) >> (64-bf.size);
     }
     void set(Bitfield bf, unsigned value) {
         ASSERT(value < 1ULL<<bf.size );
         ASSERT((*this)[bf] == 0);
-        bitfield |= value << bf.pos;
+        bitfield |= (uint64_t)value << bf.pos;
     }
     void set2(Bitfield bf, unsigned value) {
         ASSERT(value < 1ULL<<bf.size );
-        bitfield |= value << bf.pos;
+        bitfield |= (uint64_t)value << bf.pos;
     }
     void set(SignedBitfield bf, int value) {
         ASSERT(value < 1LL<<(bf.size-1) );

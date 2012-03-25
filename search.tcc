@@ -656,6 +656,7 @@ storeAndExit:
 
 
         stored.upperKey = z >> 32;
+        stored.set(key11, (uint32_t)z >> (32-key11.size));
         stored.set(score, score2tt(current.v));
 
         stored.set(loBound, current > origAlpha.v);

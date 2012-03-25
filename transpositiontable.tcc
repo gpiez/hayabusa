@@ -63,10 +63,16 @@ template<typename Entry, unsigned int assoc, typename Key>
 bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& ret ) const {
     uint32_t upperKey = k >> 32;
     for (unsigned int i = 0; i < assoc; ++i) {        //TODO compare all keys simultaniously suing sse
-        if (subTable->entries[i].upperKey == upperKey) {        //only lock if a possible match is found
+        if (subTable->entries[i].upperKey == upperKey) 
+        if (subTable->entries[i][key11] == (uint32_t)k >> (32-key11.size)) {        //only lock if a possible match is found
             ret = subTable->entries[i];
             return true; } }
     return false; }
+
+inline bool compare128(__m128i a, __m128i b) {
+    __m128i c = _mm_xor_si128(a, b);
+    return _mm_testc_si128(zero, c);
+}
 
 template<unsigned int assoc, typename Key>
 bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* subTable, const Board& b, PawnEntry& ret ) {
@@ -74,8 +80,11 @@ bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* 
     PawnEntry first = subTable->entries[i];
     PawnEntry second;
     do {
-#ifdef __SSE4_1__        
-        if (_mm_testz_si128(first.pawns, b.get2Pieces<Pawn>()))
+#ifdef __SSE4_1__
+#ifdef MYDEBUG
+        ASSERT(compare128(first.pawns, b.get2Pieces<Pawn>()) == (((uint64_t*)&first.pawns)[0] == b.getPieces<White,Pawn>() && ((uint64_t*)&first.pawns)[1] == b.getPieces<Black,Pawn>()));
+#endif
+        if (compare128(first.pawns, b.get2Pieces<Pawn>()))
 #else
         if (first.pawns[0] == b.getPieces<White,Pawn>() && first.pawns[1] == b.getPieces<Black,Pawn>())
 #endif
