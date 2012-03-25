@@ -29,11 +29,11 @@ static const std::chrono::milliseconds minimumTime = std::chrono::milliseconds(1
 template<Colors C>
 Move Game::rootSearch(unsigned int endDepth) {
     using namespace std::chrono;
-    stopSearch = Running;
     start = system_clock::now();
 
 #ifdef QT_GUI_LIB
     while (!statWidget->tree);
+    
     statWidget->emptyTree();
 #endif
     isMain = true;
@@ -56,16 +56,21 @@ Move Game::rootSearch(unsigned int endDepth) {
     system_clock::time_point softLimit = start + (time + inc*movestogo)/(2*movestogo);
     milliseconds hardBudget = std::min(time/2, (2*time + 2*inc*movestogo)/(movestogo+1));
     stopTimerMutex.lock();
-    Thread* stopTimerThread = NULL;
-    if (!infinite/* && Options::cpuTime*/) stopTimerThread = new Thread(&Game::stopTimer, this, hardBudget); //TODO resuse existing thread
+    infoTimerMutex.lock();
+    stopTimerData = hardBudget;
+    stopSearch = Running;
+    stopTimerCond.notify_one();
+    infoTimerCond.notify_one();
+    stopTimerMutex.unlock();
+    infoTimerMutex.unlock();
 //     if (Options::cpuTime) {
 //         boost::chrono::time_point<boost::chrono::process_cpu_clock::times, boost::chrono::nanoseconds> t = boost::chrono::process_cpu_clock::now();
 //         stopTime = t.time_since_epoch().count() + hardBudget.count()*1000000;
 //     }
 
-    infoTimerMutex.lock();
-    Thread* infoTimerThread = NULL;
-    if (!Options::quiet) infoTimerThread = new Thread(&Game::infoTimer, this, milliseconds(1000));
+//    infoTimerMutex.lock();
+//    Thread* infoTimerThread = NULL;
+//    if (!Options::quiet) infoTimerThread = new Thread(&Game::infoTimer, this, milliseconds(1000));
 
     print_debug(debugSearch, "dMaxExt %d\n", eval.dMaxExt);
     print_debug(debugSearch, "dMaxCapture %d\n", eval.dMaxCapture);
@@ -312,13 +317,13 @@ Move Game::rootSearch(unsigned int endDepth) {
             if (stopSearch) break; } // for depth
     } // if nMoves
 
-    infoTimerMutex.unlock();
-    if (infoTimerThread) infoTimerThread->join();
-    delete infoTimerThread;
-
+    stopTimerMutex.lock();
+    infoTimerMutex.lock();
+    stopSearch = Stopping;
+    stopTimerCond.notify_one();
+    infoTimerCond.notify_one();
     stopTimerMutex.unlock();
-    if (stopTimerThread) stopTimerThread->join();
-    delete stopTimerThread;
+    infoTimerMutex.unlock();
 
     console->send("bestmove "+bestMove.algebraic());
     UniqueLock<Mutex> l(stopSearchMutex);

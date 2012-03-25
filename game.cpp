@@ -30,16 +30,14 @@ __thread RepetitionKeys keys;
 std::map<void*, void*> allocs;
 Mutex Game::allocMutex;
 
-void Game::stopTimer(milliseconds hardlimit) {
-    UniqueLock<TimedMutex> lock(stopTimerMutex, hardlimit);
-    /*#ifdef __WIN32__
-        Sleep(hardlimit.count()*1000);
-    #else
-        timespec ts = { hardlimit.count()/1000, (hardlimit.count()%1000)*1000000 };
-        nanosleep(&ts, NULL);
-    #endif    */
-    stopSearch = Stopping; }
-
+void Game::stopThread() {
+    UniqueLock<Mutex> lock(stopTimerMutex);
+    while(timerRunning) {
+        stopTimerCond.wait(lock, [this]{ return stopSearch == Running; });
+        stopTimerCond.wait_for(lock, stopTimerData, [this]{ return stopSearch != Running; });
+        stopSearch = Stopping; 
+    }
+}
 std::string Game::commonStatus() const {
     std::stringstream g;
     g.imbue(std::locale("de_DE"));
@@ -50,32 +48,35 @@ std::string Game::commonStatus() const {
     return g.str(); }
 
 void Game::infoTimer(milliseconds repeat) {
+    UniqueLock<Mutex> lock(infoTimerMutex);
     static int lastCurrentMoveIndex = 0;
-    while(!infoTimerMutex.try_lock()) {
-        UniqueLock<TimedMutex> lock(infoTimerMutex, repeat);
-        Stats tempStats = getStats();
-        uint64_t ntemp = tempStats.node;
-        uint64_t t = duration_cast<milliseconds>(system_clock::now()-start).count();
-        std::stringstream g;
-        if (!Options::humanreadable && !Options::quiet && (currentMoveIndex != lastCurrentMoveIndex)) {
-            g << "info currmove " << currentMove.algebraic() << " currmovenumber " << currentMoveIndex << std::endl;
-            lastCurrentMoveIndex = currentMoveIndex; }
-        if (Options::currline) {
-            g << "info currline " << getLine() << std::endl; }
-        if (Options::humanreadable) {
-            g << commonStatus()
-              << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t*1000+1.0) << "/s "
-              << getLine();
-            std::string str = g.str();
-            str.resize(80,' ');
-            std::cout << str << "\015" << std::flush; }
-        else {
-            g   << "info"
-                << " nodes " << ntemp
-                << " nps " << (1000*ntemp)/(t+1)
-                << " hashfull " << (2000*tempStats.ttuse+1)/(2*tt->getEntries())
-                ;
-            console->send(g.str());
+    while(timerRunning) {
+        infoTimerCond.wait(lock, [this]{ return stopSearch == Running; });
+        infoTimerCond.wait_for(lock, repeat, [this]{ return stopSearch != Running; });
+        if (stopSearch == Running) {
+            Stats tempStats = getStats();
+            uint64_t ntemp = tempStats.node;
+            uint64_t t = duration_cast<milliseconds>(system_clock::now()-start).count();
+            std::stringstream g;
+            if (!Options::humanreadable && !Options::quiet && (currentMoveIndex != lastCurrentMoveIndex)) {
+                g << "info currmove " << currentMove.algebraic() << " currmovenumber " << currentMoveIndex << std::endl;
+                lastCurrentMoveIndex = currentMoveIndex; }
+            if (Options::currline) {
+                g << "info currline " << getLine() << std::endl; }
+            if (Options::humanreadable) {
+                g << commonStatus()
+                  << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t*1000+1.0) << "/s "
+                  << getLine();
+                std::string str = g.str();
+                str.resize(80,' ');
+                std::cout << str << "\015" << std::flush; }
+            else {
+                g   << "info"
+                    << " nodes " << ntemp
+                    << " nps " << (1000*ntemp)/(t+1)
+                    << " hashfull " << (2000*tempStats.ttuse+1)/(2*tt->getEntries())
+                    ;
+                console->send(g.str());
 #ifdef MYDEBUG
 #if 0
             g << std::endl;
@@ -85,8 +86,7 @@ void Game::infoTimer(milliseconds repeat) {
             g << " bmob3 " << eval.bmob3 / (eval.bmobn+0.1);
 #endif
 #endif
-        } }
-    infoTimerMutex.unlock(); }
+        } } } }
 
 Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSize):
     iMove(0),
@@ -122,6 +122,9 @@ Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSiz
     tt = new TranspositionTable<TTEntry, transpositionTableAssoc, Key>(hashSize);
     clearEE();
     boards[0].wb.init();
+    timerRunning = true;
+    stopTimerThread = new Thread(&Game::stopThread, this);
+    infoTimerThread = new Thread(&Game::infoTimer, this, milliseconds(1000));
 #ifdef QT_GUI_LIB
     statWidget = new StatWidget(*this);
     statWidget->show();
@@ -129,6 +132,17 @@ Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSiz
 }
 
 Game::~Game() {
+    stopTimerMutex.lock();
+    infoTimerMutex.lock();
+    timerRunning = false;
+    stopTimerCond.notify_one();
+    infoTimerCond.notify_one();
+    stopTimerMutex.unlock();
+    infoTimerMutex.unlock();
+    stopTimerThread->join();
+    infoTimerThread->join();
+    delete stopTimerThread;
+    delete infoTimerThread;
     delete tt; }
 
 void* Game::operator new(size_t size) {

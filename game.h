@@ -110,13 +110,19 @@ private:
     Mutex stopSearchMutex;
     Condition stoppedCond;
 
-    TimedMutex infoTimerMutex;
-    TimedMutex stopTimerMutex;
+    Mutex infoTimerMutex;
+    Condition infoTimerCond;
+    Thread* infoTimerThread;
     int bestScore;
     int whiteLimit;
     int blackLimit;
     static Mutex allocMutex;
-
+    Condition stopTimerCond;
+    Mutex stopTimerMutex;
+    std::chrono::milliseconds stopTimerData;
+    bool timerRunning;
+    Thread* stopTimerThread;
+    
     template<Colors C> inline bool findRepetition(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
     std::string status(std::chrono::system_clock::time_point, int);
@@ -126,7 +132,7 @@ private:
     template<int C> int& limit() {
         if (C==White) return whiteLimit;
         else return blackLimit; }
-
+    void stopThread();
 public:
     Eval eval ALIGN_XMM;
     static __thread History history;
