@@ -58,6 +58,7 @@ Console::Console(int& argc, char** argv)
 #endif
 #endif
 {
+    new Thread(&Console::outputThread, this);
     args.resize(argc);
     std::copy(argv+1, argv+argc, args.begin());
     if (args[0] == "debug") {
@@ -97,11 +98,6 @@ Console::Console(int& argc, char** argv)
     dispatcher["selfgame"] = &Console::selfgame;
     dispatcher["parmtest"] = &Console::parmtest;
     dispatcher["egtest"] = &Console::egtest;
-#endif
-
-
-#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
-    connect(this, SIGNAL(signalSend(std::string)), this, SLOT(privateSend(std::string)));
 #endif
 }
 
@@ -146,9 +142,6 @@ std::string Console::getAnswer() {
         sleep(1); }
     return answer; }
 
-void Console::send(std::string str) {
-    emit signalSend(str); }
-
 void Console::getResult(std::string result) {
     answer = result;
     std::cout << result << std::endl; }
@@ -181,23 +174,13 @@ void Console::newConnection() {
     socket = server->nextPendingConnection();
     connect(socket, SIGNAL(disconnected()), socket, SLOT(deleteLater()));
     connect(socket, SIGNAL(readyRead()), this, SLOT(dataArrived())); }
-#else
+#endif
 void Console::send(std::string str) {
-    privateSend(str); }
-#endif
-
-void Console::privateSend(std::string str) {
-    if (Options::quiet) return;
-#if defined(QT_NETWORK_LIB)
-    if (Options::server) {
-        socket->write(str.c_str());
-        socket->write("\n");
-        socket->flush(); }
-    else
-#endif
-    {
-        std::cout << str << std::endl; }
-    answer = str; }
+    LockGuard<Mutex> lock(outputMutex);
+    outputData = str;
+    answer = str;
+    outputCondition.notify_one();
+}
 
 void Console::parse(std::string str) {
     if (!str.empty()) {
@@ -504,3 +487,11 @@ void Console::parmtest(StringList cmds) {
     else
         std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> <n>\"" << std::endl; }
 #endif
+void Console::outputThread() {
+    UniqueLock<Mutex> lock(outputMutex);
+    while(true) {
+        outputCondition.wait(lock, [this] { return !outputData.empty(); });
+        std::cout << outputData << std::endl;
+        outputData.clear();
+    }
+}

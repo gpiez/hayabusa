@@ -55,18 +55,13 @@ class Console
     void ordering(StringList);
     void parse(std::string);
     void eval(StringList);
+    void outputThread();
 #ifdef USE_GENETIC
     void selfgame(StringList);
     void parmtest(StringList);
     void egtest(StringList);
 #endif
-    private
-#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
-    slots
-#endif
-:
-    void privateSend(std::string);
-
+   
 private:
     Game* game;
 #ifdef USE_GENETIC
@@ -77,7 +72,9 @@ private:
     bool debugMode;
     std::map<std::string, std::string> option;
     std::map<std::string, void (Console::*)(StringList)> dispatcher;
-
+    Mutex outputMutex;
+    Condition outputCondition;
+    std::string outputData;
 public:
 #if defined(QT_GUI_LIB)
     QSocketNotifier* notifier;
@@ -97,9 +94,6 @@ public slots:
     void getResult(std::string);
     std::string getAnswer();
     void newConnection();
-
-signals:
-    void signalSend(std::string);
 #endif
 };
 
