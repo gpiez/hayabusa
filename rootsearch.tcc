@@ -59,22 +59,16 @@ Move Game::rootSearch(unsigned int endDepth) {
     infoTimerMutex.lock();
     stopTimerData = hardBudget;
     stopSearch = Running;
-    stopTimerCond.notify_one();
-    infoTimerCond.notify_one();
+    bool infinite = this->infinite;
+    if (!infinite) stopTimerCond.notify_one();
+    bool quiet = Options::quiet;
+    if (!quiet) infoTimerCond.notify_one();
     stopTimerMutex.unlock();
     infoTimerMutex.unlock();
 //     if (Options::cpuTime) {
 //         boost::chrono::time_point<boost::chrono::process_cpu_clock::times, boost::chrono::nanoseconds> t = boost::chrono::process_cpu_clock::now();
 //         stopTime = t.time_since_epoch().count() + hardBudget.count()*1000000;
 //     }
-
-//    infoTimerMutex.lock();
-//    Thread* infoTimerThread = NULL;
-//    if (!Options::quiet) infoTimerThread = new Thread(&Game::infoTimer, this, milliseconds(1000));
-
-    print_debug(debugSearch, "dMaxExt %d\n", eval.dMaxExt);
-    print_debug(debugSearch, "dMaxCapture %d\n", eval.dMaxCapture);
-    print_debug(debugSearch, "dMinDualExt %d\n", eval.dMinDualExt);
 
     nMoves = ml.count();
     ml.begin();
@@ -320,8 +314,8 @@ Move Game::rootSearch(unsigned int endDepth) {
     stopTimerMutex.lock();
     infoTimerMutex.lock();
     stopSearch = Stopping;
-    stopTimerCond.notify_one();
-    infoTimerCond.notify_one();
+    if (!infinite) stopTimerCond.notify_one();
+    if (!quiet) infoTimerCond.notify_one();
     stopTimerMutex.unlock();
     infoTimerMutex.unlock();
 
