@@ -22,6 +22,10 @@
 #include "options.h"
 
 #include <fstream>
+#ifdef __linux__
+#include <sys/prctl.h>
+#include <unistd.h>
+#endif
 
 using namespace std;
 
@@ -155,6 +159,9 @@ void Evolution::parmTest(std::string pname, float min, float max, int n, std::st
         cout << "------------------" << endl; } }
 
 int Evolution::game(const Evolution::Individual& a, const Evolution::Individual& b) {
+#ifdef __linux__
+    prctl(PR_SET_NAME, "hayabusa game");
+#endif
     int result;
     {
         SelfGame sg(console, a.parm, b.parm, nodes, endgame);
@@ -167,6 +174,9 @@ int Evolution::game(const Evolution::Individual& a, const Evolution::Individual&
     return result; }
 
 void Evolution::tournament() {
+#ifdef __linux__
+    prctl(PR_SET_NAME, "hayabusa tournament");
+#endif
     for (int i=0; i<nIndi; ++i)
         if (recalc[i])
             for (int j=firstGame[i]; j<currentNGames; ++j) {

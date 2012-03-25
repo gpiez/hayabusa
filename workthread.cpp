@@ -70,7 +70,7 @@ void WorkThread::run() {
         stopped.notify_one(); }
 #ifdef __linux__
     std::stringstream name;
-    name << "WorkThread " << std::find(threads.begin(), threads.end(), this) - threads.begin();
+    name << "hayabusa worker " << std::find(threads.begin(), threads.end(), this) - threads.begin();
     prctl(PR_SET_NAME, name.str().c_str() );
 #endif
     while(keepRunning) {

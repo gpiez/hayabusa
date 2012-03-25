@@ -22,6 +22,11 @@
 #include "jobs.tcc"
 #include "score.tcc"
 
+#ifdef __linux__
+#include <sys/prctl.h>
+#include <unistd.h>
+#endif
+
 using namespace std::chrono;
 
 __thread History Game::history;
@@ -31,9 +36,13 @@ std::map<void*, void*> allocs;
 Mutex Game::allocMutex;
 
 void Game::stopThread() {
+#ifdef __linux__
+    prctl(PR_SET_NAME, "hayabusa stop");
+#endif
     UniqueLock<Mutex> lock(stopTimerMutex);
     while(timerRunning) {
         stopTimerCond.wait(lock, [this]{ return stopSearch == Running; });
+        if (!timerRunning) break;
         stopTimerCond.wait_for(lock, stopTimerData, [this]{ return stopSearch != Running; });
         stopSearch = Stopping; 
     }
@@ -48,10 +57,14 @@ std::string Game::commonStatus() const {
     return g.str(); }
 
 void Game::infoTimer(milliseconds repeat) {
+#ifdef __linux__
+    prctl(PR_SET_NAME, "hayabusa info");
+#endif
     UniqueLock<Mutex> lock(infoTimerMutex);
     static int lastCurrentMoveIndex = 0;
     while(timerRunning) {
         infoTimerCond.wait(lock, [this]{ return stopSearch == Running; });
+        if (!timerRunning) break;
         infoTimerCond.wait_for(lock, repeat, [this]{ return stopSearch != Running; });
         if (stopSearch == Running) {
             Stats tempStats = getStats();
@@ -135,6 +148,7 @@ Game::~Game() {
     stopTimerMutex.lock();
     infoTimerMutex.lock();
     timerRunning = false;
+    stopSearch = Running;
     stopTimerCond.notify_one();
     infoTimerCond.notify_one();
     stopTimerMutex.unlock();
