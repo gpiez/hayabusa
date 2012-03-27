@@ -148,7 +148,7 @@ void StatWidget::update() {
     DISPLAYNUM(ttoverwrite)
     DISPLAYNUM(ttinsufficient)
     DISPLAYNUM(ttstore)
-    DISPLAYNUM(ttoverwrite)
+    DISPLAYNUM(ttmerge)
     DISPLAYNUM(leafcut);
     DISPLAYNUM(pthit);
     DISPLAYNUM(ptmiss);
