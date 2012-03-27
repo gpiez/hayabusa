@@ -30,6 +30,7 @@
 
 #include <unistd.h>
 #include <future>
+#include <sstream>
 
 namespace Options {
 unsigned int        splitDepth = 777;
@@ -47,17 +48,13 @@ bool                server = false;
 #endif
 }
 
-Console::Console(int& argc, char** argv)
-#if defined(QT_GUI_LIB)
-    :
-    QApplication(argc, argv)
-#else
-#if defined(QT_NETWORK_LIB)
-    :
-    QCoreApplication(argc, argv)
-#endif
-#endif
+Console console;
+
+void Console::init(int& argc, char** argv)
 {
+#if defined(QT_GUI_LIB)
+    app = new QApplication(argc, argv);
+#endif
     new Thread(&Console::outputThread, this);
     args.resize(argc);
     std::copy(argv+1, argv+argc, args.begin());
@@ -108,20 +105,12 @@ int Console::exec() {
     StringList cmdsList = split(argStr, ":");
     for(auto cmdStr = cmdsList.begin(); cmdStr != cmdsList.end(); ++cmdStr) {
         parse(simplified(*cmdStr)); }
-#if defined(QT_NETWORK_LIB)
-    if (!Options::server) {
-        stdinFile = new QFile(this);
-        stdinFile->open(stdin, QIODevice::ReadOnly);
-        notifier = new QSocketNotifier(stdinFile->handle(), QSocketNotifier::Read, this);
-        connect(notifier, SIGNAL(activated(int)), this, SLOT(dataArrived())); }
-#endif
 #if defined(QT_GUI_LIB)
-    return QApplication::exec();
-#else
-#if defined(QT_NETWORK_LIB)
-    return QCoreApplication::exec();
-#else
-//     std::ofstream f("log");
+    new Thread(&Console::inputThread, this);
+    return QApplication::exec(); }
+
+void Console::inputThread() {
+#endif
     while(true) {
         std::string str;
         std::getline(std::cin, str);
@@ -129,55 +118,19 @@ int Console::exec() {
         if (str[str.length()-1] == 13 || str[str.length()-1] == 10) {
             str.erase(str.length()-1); }
         parse(str); }
-    return 0;
-#endif
-#endif
 }
 
-#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
-std::string Console::getAnswer() {
-    answer = "";
-    while(answer == "") {
-        processEvents();
-        sleep(1); }
-    return answer; }
-
-void Console::getResult(std::string result) {
-    answer = result;
-    std::cout << result << std::endl; }
-
-void Console::dataArrived() {
-    std::string temp;
-    if (Options::server) {
-        if (!socket->canReadLine()) return;
-        char buffer[nMaxGameLength*10+100];
-        qint64 lineLength = socket->readLine(buffer, sizeof(buffer));
-        temp.append(buffer, lineLength);
-//        for (int i=0; i<lineLength; ++i) std::cout << (int)buffer[i] << std::endl;
-//        std::cout << temp << std::endl;
-    }
-    else
-        std::getline(std::cin, temp);
-
-    while (temp[temp.length()-1] == 13 || temp[temp.length()-1] == 10) {
-        temp.erase(temp.length()-1); }
-    parse(temp);
-    if (Options::server && socket->canReadLine())
-        dataArrived();
-//    QTimer::singleShot(50, this, SLOT(delayedEnable()));
-}
-
-void Console::delayedEnable() { //TODO remove if not needed under windows
-    notifier->setEnabled(true); }
-
-void Console::newConnection() {
-    socket = server->nextPendingConnection();
-    connect(socket, SIGNAL(disconnected()), socket, SLOT(deleteLater()));
-    connect(socket, SIGNAL(readyRead()), this, SLOT(dataArrived())); }
-#endif
+//std::string Console::getAnswer() {
+//    answer = "";
+//    while(answer == "") {
+//        processEvents();
+//        sleep(1); }
+//    return answer; }
+//
 void Console::send(std::string str) {
+    if (Options::quiet) return;
     LockGuard<Mutex> lock(outputMutex);
-    outputData = str;
+    outputData = str + "\n";
     answer = str;
     outputCondition.notify_one();
 }
@@ -285,14 +238,6 @@ void Console::setoption(StringList cmds) {
             Options::pruning = convert< bool >(data); }
         else if (name == "clear hash") {
             game->clearHash();
-#ifdef QT_NETWORK_LIB
-        }
-        else if (name == "server") {
-            Options::server = true;
-            server = new QTcpServer();
-            server->listen(QHostAddress::Any, 7788);
-            connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
-#endif
         }
         else if (Parameters::exists(name)) {
             defaultParameters[name] = convert<float>(data);
@@ -488,10 +433,21 @@ void Console::parmtest(StringList cmds) {
         std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> <n>\"" << std::endl; }
 #endif
 void Console::outputThread() {
+    setvbuf(stdout, NULL, _IOLBF, 0);
     UniqueLock<Mutex> lock(outputMutex);
     while(true) {
         outputCondition.wait(lock, [this] { return !outputData.empty(); });
-        std::cout << outputData << std::endl;
+        printf(outputData.c_str());
         outputData.clear();
     }
+}
+
+template<>
+Console& Console::operator << (std::string out) {
+    if (Options::quiet) return *this;
+    LockGuard<Mutex> lock(outputMutex);
+    outputData = out;
+    answer = out;
+    outputCondition.notify_one();
+    return *this;
 }

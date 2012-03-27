@@ -25,18 +25,7 @@ class WorkThread;
 class Game;
 class Evolution;
 
-class Console
-#if defined(QT_GUI_LIB)
-        : public QApplication {
-    Q_OBJECT
-#else
-#if defined(QT_NETWORK_LIB)
-        : public QCoreApplication {
-    Q_OBJECT
-#else
-{
-#endif
-#endif
+class Console {
     friend class TestRootBoard;
     void perft(StringList);
     void divide(StringList);
@@ -62,7 +51,10 @@ class Console
     void egtest(StringList);
 #endif
    
-private:
+#if defined(QT_GUI_LIB)
+    QApplication* app;
+    void inputThread();
+#endif
     Game* game;
 #ifdef USE_GENETIC
     Evolution* evolution;
@@ -76,25 +68,20 @@ private:
     Condition outputCondition;
     std::string outputData;
 public:
-#if defined(QT_GUI_LIB)
-    QSocketNotifier* notifier;
-    QTcpServer* server;
-    QTcpSocket* socket;
-#endif
-    Console(int& argc, char** argv);
-    virtual ~Console();
+    ~Console();
+    void init(int& argc, char** argv);
     int exec();
     void send(std::string);
-
-#if defined(QT_GUI_LIB)
-    QFile* stdinFile;
-public slots:
-    void dataArrived();
-    void delayedEnable();
-    void getResult(std::string);
+    void operator () (const char* fmt, ...);
+    template<typename T>
+    Console& operator << (T out) {
+        std::stringstream s;
+        s << out;
+        send(s.str());
+        return *this;
+    }
     std::string getAnswer();
-    void newConnection();
-#endif
 };
 
+extern Console console;
 #endif /* CONSOLE_H_ */
