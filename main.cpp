@@ -25,5 +25,5 @@ int main(int argc, char* argv[]) {
     Q_INIT_RESOURCE(hayabusa);
     qRegisterMetaType<std::string>("std::string");
 #endif
-    Console console(argc, argv);
+    console.init(argc, argv);
     return console.exec(); }
