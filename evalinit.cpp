@@ -252,11 +252,11 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
         int s = C*e.interpolate(m.scaleIndex, bishopPair);
         m.bias += s;
     }
-    m.bias += e.interpolate(m.scaleIndex, rookPerPawn*r*(p+ep)/16*C);
-    m.bias += e.interpolate(m.scaleIndex, bishopPerPawn*b*(p+ep)/16*C);
-    m.bias += e.interpolate(m.scaleIndex, knightPerPawn*n*(p+ep)/16*C);
-    m.bias += e.interpolate(m.scaleIndex, queenPerPawn*q*(p+ep)/16*C);
-    m.bias += e.interpolate(m.scaleIndex, pawnPerPawn*p*p/16*C);
+    m.bias += e.interpolate(m.scaleIndex, rookPerPawn*r*(p+ep-8)/16*C);
+    m.bias += e.interpolate(m.scaleIndex, bishopPerPawn*b*(p+ep-8)/16*C);
+    m.bias += e.interpolate(m.scaleIndex, knightPerPawn*n*(p+ep-8)/16*C);
+    m.bias += e.interpolate(m.scaleIndex, queenPerPawn*q*(p+ep-8)/16*C);
+    m.bias += e.interpolate(m.scaleIndex, pawnPerPawn*p*(p-4)/16*C);
     
     if (b == 1 && eb == 1 && q+r+n+eq+er+en == 0)
         m.recognized = KB_kb_;
@@ -731,10 +731,13 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     SETPARM2(twoMinOneMaj);
     twoMinOneMaj.endgame = twoMinOneMaj.opening; 
     SETPARM2(oneMinThreePawns);
+    oneMinThreePawns.endgame = oneMinThreePawns.opening;
     SETPARM2(rookPerPawn);
+    rookPerPawn.endgame = rookPerPawn.opening;
     SETPARM2(bishopPerPawn);
     SETPARM2(queenPerPawn);
     SETPARM2(knightPerPawn);
+//    knightPerPawn.endgame = knightPerPawn.opening;
     SETPARM2(pawnPerPawn);
 #ifdef MYDEBUG
     ASSERT(!e.control.size());

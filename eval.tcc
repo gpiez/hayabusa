@@ -134,5 +134,24 @@ int Eval::operator() (const ColoredBoard<C>& b, int& wap, int& bap, int psValue,
         + C*(tempo0 + (tempo64*popcount((b.template getAttacks<C,Rook>() | b.template getAttacks<C,Bishop>() | b.template getAttacks<C,Queen>() | b.template getAttacks<C,Knight>() | b.template getAttacks<C,King>()) & ~b.template getOcc<C>()) >> 6));
         realScore = psValue + posScore; 
     }
+#ifdef MYDEBUG
+    ColoredBoard<(Colors)-C> b2;
+    for (int i=0; i<7; ++i) {
+        b2.pieces[i][0] = __bswapq(b.pieces[i][1]);
+        b2.pieces[i][1] = __bswapq(b.pieces[i][0]);
+    }
+    b2.occupied[0] = __bswapq(b.occupied[1]);
+    b2.occupied[1] = __bswapq(b.occupied[0]);
+    b2.occupied1 = __bswapq(b.occupied1);
+    b2.keyScore.score.opening = -b.keyScore.score.opening;
+    b2.keyScore.score.endgame = -b.keyScore.score.endgame;
+    b2.keyScore.pawnKey = 0;
+    b2.buildAttacks();
+    int wap2 = wap;
+    int bap2 = bap;
+    int posScore2 = posScore;
+//    int eval2 = -this->operator ()(b2, wap2, bap2, -psValue, posScore2);
+//    ASSERT(quantize(eval2) == quantize(realScore));
+#endif
     return quantize(realScore);
 }
