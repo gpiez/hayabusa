@@ -270,8 +270,8 @@ PawnEntry Eval::pawns(const Board& b) const {
         print_debug(debugEval, "After bward       %3d %3d\n", score.opening(), score.endgame());
 
         // backward pawns on open files, reduce to (uint8_t) for rooks later
-        uint64_t wBackOpen = wBackward & ~bFront;
-        uint64_t bBackOpen = bBackward & ~wFront;
+        uint64_t wBackOpen = wBackward & ~bFront & ~wBack;
+        uint64_t bBackOpen = bBackward & ~wFront & ~bBack;
         uint64_t wBack8 = wBackOpen | wBackOpen>>010;
         uint64_t bBack8 = bBackOpen | bBackOpen>>010;
         wBack8 |= wBack8>>020;
@@ -359,7 +359,6 @@ PawnEntry Eval::pawns(const Board& b) const {
             score = score - pawnCandidate[6-(bit(bCandidate)>>3)];
         print_debug(debugEval, "After bcandidates %3d %3d\n", score.opening(), score.endgame());
 
-        // possible weak pawns are adjacent to open files or below pawns an a adjacent file on both sides
         // rook pawns are always adjacent to a "open" file
         uint64_t wOpenFiles = ~(wFront | wpawn | wBack);
         uint64_t bOpenFiles = ~(bFront | bpawn | bBack);
@@ -386,33 +385,12 @@ PawnEntry Eval::pawns(const Board& b) const {
         pawnEntry.light[0] = popcount(wpawn - wDarkpawn);
         pawnEntry.light[1] = popcount(bpawn - bDarkpawn);
         
-//        uint64_t wUndef = wpawn & ~(b.getAttacks<White,Pawn>());
-//        uint64_t bUndef = bpawn & ~(b.getAttacks<Black,Pawn>());
-//        pawnEntry.darkUndef[0] = popcount(wUndef & darkSquares);
-//        pawnEntry.darkUndef[1] = popcount(bUndef & darkSquares);
-//        pawnEntry.lightUndef[0] = popcount(wUndef & ~darkSquares);
-//        pawnEntry.lightUndef[1] = popcount(bUndef & ~darkSquares);
-
         uint64_t wDef = wpawn & b.getAttacks<White,Pawn>();
         uint64_t bDef = bpawn & b.getAttacks<Black,Pawn>();
         pawnEntry.darkDef[0] = popcount(wDef & darkSquares);
         pawnEntry.darkDef[1] = popcount(bDef & darkSquares);
         pawnEntry.lightDef[0] = popcount(wDef & ~darkSquares);
         pawnEntry.lightDef[1] = popcount(bDef & ~darkSquares);
-//         print_debug(debugEval, "wpawnDouble:    %3d\n", wdbl);
-//         print_debug(debugEval, "bpawnDouble:    %3d\n", bdbl);
-//         print_debug(debugEval, "wpawn backward: %3d\n", wpbw);
-//         print_debug(debugEval, "bpawn backward: %3d\n", bpbw);
-//         print_debug(debugEval, "wpawn bwo:      %3d\n", wpbwo);
-//         print_debug(debugEval, "bpawn bwo:      %3d\n", bpbwo);
-//         print_debug(debugEval, "wpawnShoulder:  %3d\n", wps);
-//         print_debug(debugEval, "bpawnShoulder:  %3d\n", bps);
-//         print_debug(debugEval, "wpawn ciso:     %3d\n", wpic);
-//         print_debug(debugEval, "bpawn ciso:     %3d\n", bpic);
-//         print_debug(debugEval, "wpawn eiso:     %3d\n", wpie);
-//         print_debug(debugEval, "bpawn eiso:     %3d\n", bpie);
-//         print_debug(debugEval, "wpawn oiso:     %3d\n", wpio);
-//         print_debug(debugEval, "bpawn oiso:     %3d\n", bpio);
 
         for (unsigned i=0; i<nRows; ++i) {
             pawnEntry.shield2[0][i] = evalShield2<White>(wpawn, i);
