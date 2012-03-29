@@ -160,10 +160,12 @@ public:
     const Board& currentBoard() const;
     void go(const std::map<std::string, StringList>&);
     void goReadParam(const std::map<std::string, StringList>&);
+    template< template <Colors> class T = Score >
     void goExecute();
     void stop();
     const Board& setup(const std::string& fen = std::string("rnbqkbnr/pppppppp/////PPPPPPPP/RNBQKBNR w KQkq - 0 0"));
-    template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
+//    template<Colors C> Move rootSearch(unsigned int endDepth=maxDepth);
+    template<Colors C, template <Colors> class T=Score > Move rootSearch(unsigned int endDepth=maxDepth);
     template<Colors C, Phase P, class A, class B>
     int search3(const ColoredBoard<C>& b, unsigned depth,
                 const A& alpha, const B& beta,

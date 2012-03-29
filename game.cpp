@@ -391,7 +391,10 @@ Move Game::findMove(const std::string& ) const {
 
 void Game::go(const std::map<std::string, StringList>& param ) {
     goReadParam(param);
-    goExecute(); }
+    if (Options::splitDepth)
+        goExecute<SharedScore>();
+    else
+        goExecute(); }
 
 void Game::goReadParam(const std::map<std::string, StringList>& param ) {
     infinite = param.count("infinite");
@@ -433,12 +436,13 @@ void Game::goReadParam(const std::map<std::string, StringList>& param ) {
     else
         movetime = 0; }
 
+template< template <Colors> class T >
 void Game::goExecute() {
     Job* job;
     if (color == White)
-        job = new RootSearchJob<White>(*this, keys, maxSearchDepth);
+        job = new RootSearchJob<White, T>(*this, keys, maxSearchDepth);
     else
-        job = new RootSearchJob<Black>(*this, keys, maxSearchDepth);
+        job = new RootSearchJob<Black, T>(*this, keys, maxSearchDepth);
     WorkThread::findFree()->queueJob(0U, job); }
 
 void Game::stop() {

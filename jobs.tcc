@@ -90,14 +90,14 @@ void RootDivideJob<C>::job() {
     temp << n;
     game.console->send(temp.str()); }
 
-template<Colors C>
-RootSearchJob<C>::RootSearchJob(Game& rb, const RepetitionKeys& rep, unsigned depth): game(rb), rep(rep), depth(depth) {};
+template<Colors C, template <Colors> class T >
+RootSearchJob<C,T>::RootSearchJob(Game& rb, const RepetitionKeys& rep, unsigned depth): game(rb), rep(rep), depth(depth) {};
 
-template<Colors C>
-void RootSearchJob<C>::job() {
+template<Colors C, template <Colors> class T >
+void RootSearchJob<C, T>::job() {
     game.clone<C>(game.currentBoard<C>(), rep, 0);
-    game.rootSearch<C>(depth); }
+    game.rootSearch<C, T>(depth); }
 
-template<Colors C>
-void RootSearchJob<C>::stop() {
+template<Colors C, template <Colors> class T >
+void RootSearchJob<C, T>::stop() {
     game.stop(); }

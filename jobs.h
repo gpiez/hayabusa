@@ -68,7 +68,7 @@ public:
     void job();
 };
 
-template<Colors C>
+template<Colors C, template <Colors> class T=Score >
 class RootSearchJob: public Job {
     Game& game;
     const RepetitionKeys& rep;//TODO really needed? This should be always thread-local keys
