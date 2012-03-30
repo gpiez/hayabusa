@@ -55,6 +55,7 @@ class Console {
     QApplication* app;
     void inputThread();
 #endif
+    void inputNetThread();
     Game* game;
 #ifdef USE_GENETIC
     Evolution* evolution;
@@ -67,7 +68,9 @@ class Console {
     Mutex outputMutex;
     Condition outputCondition;
     std::string outputData;
+    int newsockfd;
 public:
+    Console();
     ~Console();
     void init(int& argc, char** argv);
     int exec();

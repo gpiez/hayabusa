@@ -31,6 +31,8 @@
 #include <unistd.h>
 #include <future>
 #include <sstream>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 namespace Options {
 unsigned int        splitDepth = 777;
@@ -43,12 +45,14 @@ bool                reduction = true;
 bool                pruning = true;
 unsigned            debug = 0;
 bool                currline = false;
-#ifdef QT_NETWORK_LIB
-bool                server = false;
-#endif
+unsigned            listenPort = 7788;
 }
 
 Console console;
+
+Console::Console():
+    newsockfd(0)
+{}
 
 void Console::init(int& argc, char** argv)
 {
@@ -105,6 +109,7 @@ int Console::exec() {
     StringList cmdsList = split(argStr, ":");
     for(auto cmdStr = cmdsList.begin(); cmdStr != cmdsList.end(); ++cmdStr) {
         parse(simplified(*cmdStr)); }
+    new Thread(&Console::inputNetThread, this);
 #if defined(QT_GUI_LIB)
     new Thread(&Console::inputThread, this);
     return QApplication::exec(); }
@@ -120,6 +125,60 @@ void Console::inputThread() {
         parse(str); }
 }
 
+void Console::inputNetThread() {
+    int sockfd, portno;
+    socklen_t clilen;
+    char buffer[256];
+    sockaddr_in serv_addr, cli_addr;
+    int n;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    portno = Options::listenPort;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(portno);
+    if (bind(sockfd, (sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        std::cerr << "Can't listen on port " << portno << std::endl;
+        return;
+    }
+    while (true) {
+        listen(sockfd,5);
+        clilen = sizeof(cli_addr);
+        newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &clilen);
+        if (newsockfd < 0) {             
+            std::cerr << "ERROR on accept\n";
+            newsockfd = 0;
+            continue;
+        }
+        std::string str;
+        while(true) {
+            do {
+                bzero(buffer,256);
+                n = read(newsockfd,buffer,255);
+                if (n <= 0) {
+                    std::cerr << "ERROR reading from socket\n";
+                    break;
+                }
+                std::string part(buffer);
+                str += part;
+            } while (str.empty() || (str.find('\n')==std::string::npos && str.find('\r')==std::string::npos));
+            size_t strend = 0;
+            if (str.find('\n') != std::string::npos)
+                strend = str.find('\n');
+            if (str.find('\r') != std::string::npos)
+                strend = std::max(str.find('\r'), strend);
+
+            std::string substr = str.substr(0, strend);
+//            std::cerr << "got " << strend << " " << substr << " tog" << std::endl;
+            while (!substr.empty() && (substr[substr.length()-1] == '\n' || substr[substr.length()-1] == '\r')) {
+                substr.erase(substr.length()-1); }
+            parse(substr);
+            str.erase(0, strend+1); }
+        close(newsockfd);
+        newsockfd = 0;}
+    close(sockfd);
+}
+
 //std::string Console::getAnswer() {
 //    answer = "";
 //    while(answer == "") {
@@ -130,7 +189,7 @@ void Console::inputThread() {
 void Console::send(std::string str) {
     if (Options::quiet) return;
     LockGuard<Mutex> lock(outputMutex);
-    outputData = str + "\n";
+    outputData += str + "\n";
     answer = str;
     outputCondition.notify_one();
 }
@@ -292,9 +351,8 @@ void Console::ponderhit(StringList /*cmds*/) {}
 void Console::quit(StringList /*cmds*/) {
 #ifdef QT_GUI_LIB
     QApplication::quit();
-#else
-    exit(0);
 #endif
+    exit(0);
 }
 
 std::mutex nThreadMutex;
@@ -438,6 +496,7 @@ void Console::outputThread() {
     while(true) {
         outputCondition.wait(lock, [this] { return !outputData.empty(); });
         printf(outputData.c_str());
+        if (newsockfd) write(newsockfd, outputData.c_str(), strlen(outputData.c_str()));
         outputData.clear();
     }
 }
@@ -446,7 +505,7 @@ template<>
 Console& Console::operator << (std::string out) {
     if (Options::quiet) return *this;
     LockGuard<Mutex> lock(outputMutex);
-    outputData = out;
+    outputData += out;
     answer = out;
     outputCondition.notify_one();
     return *this;

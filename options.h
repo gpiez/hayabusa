@@ -35,9 +35,7 @@ extern bool pruning;
 extern unsigned debug;
 extern bool currline;
 extern bool cpuTime;
-#ifdef QT_NETWORK_LIB
-extern bool server;
-#endif
+extern unsigned listenPort;
 }
 
 enum DebugFlags { debugSearch = 1, debugEval = 2, debugMobility = 4 };
