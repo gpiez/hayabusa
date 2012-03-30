@@ -217,7 +217,7 @@ void Table<Entry, assoc, Key>::agex() {
 //     std::cerr << "clear " << size << std::endl;
     for (size_t i=0; i<nEntries; ++i) {
         for (size_t j=0; j<assoc; ++j) {
-            table[i].entries[j].set(aged, 1); } } }
+            table[i].entries[j].set2(aged, 1); } } }
 
 template<typename Entry, unsigned assoc, typename Key>
 template<Colors C>
