@@ -3691,6 +3691,7 @@ const char* testPositions[] = {
     "r3k2r/1p3ppp/pb1p4/4PQ2/2B2Pn1/N3q3/PP4PP/R4R1K b kq - acd 4; acn 2343; acs 1; bm Qg1+; ce 32764; id \"WCSAC.0999\"; pv Qg1+ Rxg1 Nf2#;",
     "r2q1rk1/ppp2ppp/3b2n1/1N1P4/2BBP3/P4pP1/1PQ2PbP/R3R1K1 b - - acd 13; acn 93660692; acs 47; bm Nf4; ce 32754; id \"WCSAC.1000\"; pv Nf4 gxf4 Bxf4 Be5 Bxe5 h3 Qh4 d6 Bh2+ Kxh2 Qxh3+ Kg1 Qh1#;",
     "7k/p4q1p/1pb5/2p5/4B2Q/2P1B3/P6P/7K b - - acd 5; acn 7695; acs 1; bm Qf1+; ce 32762; id \"WCSAC.1001\"; pv Qf1+ Bg1 Qf3+ Bxf3 Bxf3#;",
+    "4r3/p2N1pkp/1p3p2/7b/5b2/1P1B3P/P4PP1/R5K1 w - - 2 23 ; haya1; am Bxh7",
     0 };
 
 const int testDepths[] = {
