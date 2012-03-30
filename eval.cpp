@@ -174,7 +174,16 @@ CompoundScore Eval::pieces(const Board& b, const PawnEntry& p, uint64_t own, uin
 
     value = value + knightBlockPasser [ popcount3((b.getPieces<C,Knight>() & shift<C* 8>(p.passers[EI]))) ];
     print_debug(debugEval, "after knight: %4d %4d\n", value.opening(), value.endgame());
-    
+    if unlikely((shift<-C*8>(b.getPieces<C,Knight>()) & b.getPieces<-C,Pawn>())) {
+        if unlikely((b.getPieces<C,Knight>() 
+            & (rank<C,7>() & file<'b'>() | rank<C,7>() & file<'a'>()) 
+            & shift<-1>(b.getPieces<-C,Pawn>()))) 
+            value = value + knightTrapped;
+        if unlikely((b.getPieces<C,Knight>() 
+            & (rank<C,7>() & file<'g'>() | rank<C,7>() & file<'h'>()) 
+            & shift<1>(b.getPieces<-C,Pawn>()))) 
+            value = value + knightTrapped;        
+    }
     if (uint64_t bishop = b.getPieces<C,Bishop>()) {
         value = value + bishopBlockPasser [ popcount3(bishop & shift<C* 8>(p.passers[EI])) ];
     
@@ -191,8 +200,23 @@ CompoundScore Eval::pieces(const Board& b, const PawnEntry& p, uint64_t own, uin
         value = value + bishopOppPawn[ (dark ? ddef:0) + (light ? ldef:0) ];
         value = value + bishopNotOppPawn[ (light ? ddef:0)+ (dark ? ldef:0) ];
         print_debug(debugEval, "after bishop: %4d %4d\n", value.opening(), value.endgame());
+        
+        if unlikely((shift<-C*8+1>(bishop) & b.getPieces<-C,Pawn>() & (rank<C,6>() & file<'b'>() | rank<C,7>() & file<'c'>()))) {
+            value = value + bishopTrapped;
+        }
+        if unlikely((shift<-C*8-1>(bishop) & b.getPieces<-C,Pawn>() & (rank<C,6>() & file<'g'>() | rank<C,7>() & file<'f'>()))) {
+            value = value + bishopTrapped;
+        }
     }
     
+    if ( b.getPieces<C,Bishop>() & b.pins[CI] ) 
+        value = value + bishopPin;
+    if ( b.getPieces<C,Knight>() & b.pins[CI] ) 
+        value = value + knightPin;
+    if ( b.getPieces<C,Rook>() & b.pins[CI] ) 
+        value = value + rookPin;
+    if ( b.getPieces<C,Queen>() & b.pins[CI] ) 
+        value = value + queenPin;
     return value; }
 
 template<Colors C>
@@ -954,7 +978,6 @@ int Eval::interpolate(unsigned iScale, CompoundScore score) const {
  * bias and draw chances
  */
 int Eval::calc(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const {
-
     return (interpolate(weights, score) + bias) >> drawish; }
 
 int Eval::calc(unsigned matIndex, CompoundScore score) const {
@@ -962,7 +985,7 @@ int Eval::calc(unsigned matIndex, CompoundScore score) const {
     CompoundScore weights = scale[i];
     int bias = material[matIndex].bias;
     unsigned drawish = material[matIndex].drawish;
-    return (interpolate(weights, score) + bias) >> drawish; }
+    return calc(weights, bias, drawish, score); }
 
 int Eval::quantize(int value) const {
     if (value > 0) 

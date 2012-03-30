@@ -126,6 +126,9 @@ void Eval::Init::initPS(Pieces pIndex, Parameters::Piece& piece) {
         ye = std::max(0, std::min(7, ye));
         e.getPS( pIndex, sq) = { (short) (piece.value.opening + piece.hor.opening[xh] + piece.vert.opening[yo] + corner*piece.corner.opening),
                                  (short) (piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame) };
+        if (pIndex == Pawn && y==6) {
+            e.getPS(pIndex, sq) = e.getPS(pIndex, sq) + e.pawnPasser22[y-1]; 
+        }
         e.getPS(-pIndex, sq ^ 070) = (-CompoundScore(e.getPS( pIndex, sq))).packed();
         print_debug(debugEval, "%4d %4d  ", e.getPS(pIndex, sq).opening, e.getPS(pIndex, sq).endgame);
 //        print_debug(debugEval, "%4d %4d  ", e.getPS(-pIndex, sq ^ 070).opening, e.getPS(-pIndex, sq ^ 070).endgame);
@@ -143,6 +146,7 @@ void Eval::Init::initPS() {
     initPS(Queen, queen);
     initPS(Knight, knight);
     initPS(Pawn, pawn);
+    e.pawnPasser22[5] = PackedScore<>{0,0};
     initPS(King, king); }
 
 void Eval::Init::initShield() {
@@ -240,11 +244,11 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
 	scaleIndex = std::max(0, std::min(scaleIndex, endgameTransitionSlope));
     m.scaleIndex = scaleIndex;
     
-    if (b+n == eb+en+2 && r+1 == er) {
+    if (b+n >= eb+en+2 && r+1 >= er) {
         int s = C*e.interpolate(m.scaleIndex, twoMinOneMaj);
         m.bias += s;
     }
-    if (b+n == eb+en+1 && p+3 >= ep) {
+    if (b+n >= eb+en+1 && p+3 >= ep) {
         int s = C*e.interpolate(m.scaleIndex, oneMinThreePawns);
         m.bias += s;
     }
@@ -739,6 +743,19 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     SETPARM2(knightPerPawn);
 //    knightPerPawn.endgame = knightPerPawn.opening;
     SETPARM2(pawnPerPawn);
+    SETPARME2(bishopPin);
+    e.bishopPin.endgame = e.bishopPin.opening;
+    SETPARME2(knightPin);
+    e.knightPin.endgame = e.knightPin.opening;
+    SETPARME2(rookPin);
+    e.rookPin.endgame = e.rookPin.opening;
+    SETPARME2(queenPin);
+    e.queenPin.endgame = e.queenPin.opening;
+    SETPARME2(bishopTrapped);
+    e.bishopTrapped.endgame = e.bishopTrapped.opening;
+    SETPARME2(knightTrapped);
+    e.knightTrapped.endgame = e.knightTrapped.opening;
+    
 #ifdef MYDEBUG
     ASSERT(!e.control.size());
 #endif

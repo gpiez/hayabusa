@@ -86,9 +86,13 @@ private:
     PackedScore<> bishopNotOwnPawn[9];
     PackedScore<> bishopNotOppPawn[9];
     PackedScore<> bishopBlockPasser[3];
-
+    PackedScore<> bishopPin;
+    PackedScore<> bishopTrapped;
+    
     PackedScore<> knightBlockPasser[3];
-
+    PackedScore<> knightPin;
+    PackedScore<> knightTrapped;
+    
     PackedScore<> rookTrapped;
     PackedScore<> rookOpen[9][8];
     PackedScore<> rookHalfOpen[9][8];
@@ -96,6 +100,7 @@ private:
     PackedScore<> rookOwnPasser[5];
     PackedScore<> rookOppPasser[5];
     PackedScore<> rookSeventh[5];
+    PackedScore<> rookPin;
 
     PackedScore<> pawnBackward2[8];
     PackedScore<> pawnBackwardOpen2[8];
@@ -107,6 +112,8 @@ private:
     PackedScore<> pawnConnPasser22[6];
     PackedScore<> pawnPasser22[6];
     PackedScore<> pawnCandidate[6];
+
+    PackedScore<> queenPin;
 
     PackedScore<> bm[14];
     PackedScore<> nm[9];

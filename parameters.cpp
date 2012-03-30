@@ -142,8 +142,8 @@ void Parameters::init() {
     Parameters::add("knight.mobility.opening", 30);
     Parameters::add("knight.mobslope.endgame", 3.0);
     Parameters::add("knight.mobslope.opening", 3.0);
-    Parameters::add("knight.value.endgame", 288, 20, 400);
-    Parameters::add("knight.value.opening", 290, 20, 400);
+    Parameters::add("knight.value.endgame", 271, 20, 400);
+    Parameters::add("knight.value.opening", 270, 20, 400);          //20120326
     Parameters::add("knight.vcenter.endgame", 4.0);
     Parameters::add("knight.vcenter.opening", 5.0);
     Parameters::add("knight.vert.inflection.endgame", 0);
@@ -198,7 +198,7 @@ void Parameters::init() {
     Parameters::add("rook.mobslope.endgame", 6.0);
     Parameters::add("rook.mobslope.opening", 6.0);
     Parameters::add("rook.value.endgame", 500, 30, 600);        //20120322
-    Parameters::add("rook.value.opening", 480, 30, 600);
+    Parameters::add("rook.value.opening", 460, 30, 600);
     Parameters::add("rook.vcenter.endgame", 3.5);
     Parameters::add("rook.vcenter.opening", 3.5);
     Parameters::add("rook.vert.inflection.endgame", 1.5);
@@ -287,7 +287,7 @@ void Parameters::init() {
     Parameters::add("dRed[5]", 2);
     Parameters::add("dRed[4]", 3);
     Parameters::add("dRed[3]", 6);
-    Parameters::add("dRed[2]", 16);
+    Parameters::add("dRed[2]", 255);
     Parameters::add("dRed[1]", 255);
     Parameters::add("dRed[0]", 255);
 
@@ -333,13 +333,19 @@ void Parameters::init() {
     Parameters::add("sortPrev", 0);
     Parameters::add("sortNext", 128);
     Parameters::add("quant", 0);
-    Parameters::add("twoMinOneMaj", 50, 50);
-    Parameters::add("oneMinThreePawns", 0, 0);
+    Parameters::add("twoMinOneMaj", 40, 40);
+    Parameters::add("oneMinThreePawns", 30, 50);
     Parameters::add("rookPerPawn", 0, 0);
-    Parameters::add("bishopPerPawn", 0, 0);
+    Parameters::add("bishopPerPawn", 15, 15);
     Parameters::add("queenPerPawn", 0, 0);
-    Parameters::add("knightPerPawn", 0, 0);
+    Parameters::add("knightPerPawn", 40, 60);
     Parameters::add("pawnPerPawn", 0, 0);
+    Parameters::add("bishopPin", 0, 0);
+    Parameters::add("knightPin", 0, 0);
+    Parameters::add("rookPin", 0, 0);
+    Parameters::add("queenPin", 0, 0);
+    Parameters::add("bishopTrapped", -50, -50);
+    Parameters::add("knightTrapped", -50, -50);
     defaultParameters.parms.resize(maxIndex);
     for (unsigned i=0; i<maxIndex; ++i)
         defaultParameters.parms[i] = Parm<float>(base[i]);
