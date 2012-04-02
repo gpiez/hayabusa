@@ -28,14 +28,15 @@
 
 std::multimap<unsigned,Job*>    WorkThread::jobs;
 Mutex                           WorkThread::runningMutex;
-unsigned int                    WorkThread::running = 0;
-volatile unsigned int           WorkThread::waiting = 0;
-unsigned int                    WorkThread::nThreads = 0;
+Condition                       WorkThread::stopped;
+unsigned int                    WorkThread::running;
+unsigned int                    WorkThread::waiting;
+unsigned int                    WorkThread::nThreads;
 std::vector<WorkThread*>        WorkThread::threads;
 unsigned                        WorkThread::logWorkThreads;
 unsigned                        WorkThread::nWorkThreads;
 
-__thread Stats stats;
+__thread Stats WorkThread::stats;
 __thread unsigned WorkThread::threadId;
 __thread bool isMain = false;
 __thread int lastPositionalEval = 0;
@@ -47,33 +48,33 @@ namespace boost {
 void tss_cleanup_implemented(void) {} }
 #endif
 
+// Do not initialize from thread local variables like stats and threadId  here, 
+// they do not exist at this point
 WorkThread::WorkThread():
-    isStopped(false),
-    keepRunning(true),
+    parent(0),
     job(NULL) {
-    board.init(); }
+}
 
 WorkThread::~WorkThread() {}
 
 void WorkThread::run() {
     lastPositionalEval = 0;
-    reserved = 0;
-    stats = &::stats;
-    pThreadId = &threadId;
     Game::history.init();
+    pThreadId = &threadId;
+    pStats = &stats;
     workThread = this;
 
-    UniqueLock <Mutex> lock(runningMutex);
-    {
-        LockGuard<Mutex> stoplock(stoppedMutex);
-        isStopped = true;
-        stopped.notify_one(); }
 #ifdef __linux__
     std::stringstream name;
     name << "hayabusa worker " << std::find(threads.begin(), threads.end(), this) - threads.begin();
     prctl(PR_SET_NAME, name.str().c_str() );
 #endif
-    while(keepRunning) {
+    while(true) {
+        UniqueLock <Mutex> lock(runningMutex);
+        delete job;
+        job = NULL;
+        --running; 
+        if (running == 0) stopped.notify_one();  //wake stop() function 
         ASSERT(!job);
         if (jobs.size()>0 && running<nThreads) {
             ASSERT(!job);
@@ -83,32 +84,22 @@ void WorkThread::run() {
             job = (*last).second;
             jobs.erase(last);
             ++running; }
-        if (!job) {
-            isStopped = true;
-            stopped.notify_one();    //wake stop() function
-            starting.wait(lock);//starting is signalled by StartJob() or QJob()
-        }
+        starting.wait(lock, [this] () { return job != 0; });   //starting is signalled by StartJob() or QJob()
         ASSERT(job);
-        stats->jobs++;
-        isStopped = false;      //TODO wrong semantic: this should be reset by the starting event/thread
-        runningMutex.unlock();
+        stats.jobs++;
         job->job();             //returning the result must have happened here.
-        runningMutex.lock();
-        delete job;
-        job = NULL;
-        --running; } }
+    } }
 
 // Queue a job from a parent. This allows the parent later to start only its
 // own jobs.
-void WorkThread::queueJob(unsigned parent, Job* j) {
+void WorkThread::queueJob(Job* j) {
+    unsigned parent = threadId;
     UniqueLock<Mutex> lock(runningMutex);
     if (reserved > 0) --reserved;
     if (running < nThreads)
         for (auto th = threads.begin(); th !=threads.end(); ++th) {
-            if ((*th)->isStopped) {
-                ASSERT((*th)->job == NULL);
+            if (!(*th)->job) {
                 (*th)->job = j;
-                (*th)->isStopped = false;
                 ++running;
                 (*th)->parent = parent;
                 (*th)->starting.notify_one();
@@ -122,36 +113,28 @@ void WorkThread::idle(int n) {
 //  finished, while join() continues, which increases the number of running and
 //  executed threads beyond the number of cores
     UniqueLock<Mutex> lock(runningMutex);
-    running -= n;
     waiting += n;
     if (n>0 && running < nThreads && jobs.size() > 0)
         for (auto th = threads.begin(); th !=threads.end(); ++th)
-            if ((*th)->isStopped) {
+            if (!(*th)->job) {
                 ASSERT((*th)->job == NULL);
                 auto j = jobs.begin();
                 (*th)->parent = j->first;
                 (*th)->job = j->second;
                 jobs.erase(j);
                 --waiting;
-                (*th)->isStopped = false;
-                ++running;
                 (*th)->starting.notify_one();
                 return; } }
 
 void WorkThread::stop() {
-    UniqueLock<Mutex> lock(stoppedMutex);
-    if (job) job->stop();
-    while (!isStopped) {
-        stopped.wait(lock);    //waits until the end of the run loop is reached.
-    } }
-
+}
 void WorkThread::stopAll() {
+    UniqueLock<Mutex> l(runningMutex);
     for (auto th = threads.begin(); th !=threads.end(); ++th)
-        (*th)->stop(); }
-
-Job* WorkThread::getJob(unsigned parent, unsigned ply) {
-    UniqueLock<Mutex> lock(runningMutex);
-    return findJob(parent, ply); }
+        if ((*th)->job) (*th)->job->stop();    
+//        (*th)->stop(); 
+    stopped.wait(l, [] { return running == 0; });    //waits until the end of the run loop is reached.
+}
 
 Job* WorkThread::findJob(unsigned parent, unsigned ply) {
     ASSERT(!runningMutex.try_lock());
@@ -169,7 +152,14 @@ Job* WorkThread::findJob(unsigned parent, unsigned ply) {
 
     return 0; }
 
-bool WorkThread::canQueued(unsigned /*parent*/, int ) {
+void WorkThread::executeOldJobs(unsigned ply) {
+    Job* job;
+    LockGuard<Mutex> l(runningMutex);
+    while((job = findJob(threadId, ply))) {
+        job->job(); }
+}
+
+bool WorkThread::canQueued( int ) {
     UniqueLock<Mutex> lock(runningMutex);
 //     if (parent && getReserved(threads[parent]->parent) + running >= nThreads) return false;
     return running < nThreads; }
@@ -189,21 +179,27 @@ void WorkThread::init() {
         ;
     if (logWorkThreads) ++logWorkThreads;
     nWorkThreads = 1<<logWorkThreads;
+    UniqueLock<Mutex> lock(runningMutex);
+    running = nWorkThreads;
+    reserved = 0;
     for (unsigned int i=0; i<nWorkThreads; ++i) {
         WorkThread* th = new WorkThread();
         new Thread(&WorkThread::run, th);
-        threads.push_back(th);
-        UniqueLock<Mutex> lock(th->stoppedMutex);
-        while (!th->isStopped)
-            th->stopped.wait(lock);    //waits until initialized
-        th->getThreadId() = i; } }
+        threads.push_back(th); } 
+    //waits until initialized
+    stopped.wait(lock, [] () { return running == 0; });
+
+    unsigned i=0;
+    for(auto th = threads.begin(); th != threads.end(); ++th)
+        (*th)->getThreadId() = ++i;
+}
 
 
 WorkThread* WorkThread::findFree() {
 #ifdef MYDEBUG
     UniqueLock<Mutex> lock(runningMutex);
     for(auto th = threads.begin(); th != threads.end(); ++th)
-        if (!(*th)->isStopped)
+        if ((*th)->job)
             ASSERT(!"still running jobs");
 #endif
     return threads.front(); }
