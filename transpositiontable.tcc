@@ -104,21 +104,21 @@ bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* 
 #pragma GCC diagnostic ignored "-Wtype-limits"
 template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
-    stats.ttstore++;
+    WorkThread::stats.ttstore++;
     // look if the position is already stored. if it is, but the new depth
     // isn't sufficient, don't write anything.
     for (unsigned int i = 0; i < assoc; ++i)         //TODO compare all keys simultaniously suing sse
         if (subTable->entries[i].upperKey == entry.upperKey) {
             if (entry[loBound] + entry[hiBound] >= subTable->entries[i][loBound] + subTable->entries[i][hiBound]
                 || entry[depth] >= subTable->entries[i][depth]) {
-                stats.ttoverwrite++;
-                stats.ttinsufficient--;
+                WorkThread::stats.ttoverwrite++;
+                WorkThread::stats.ttinsufficient--;
                 if (entry[depth] == subTable->entries[i][depth]/* && subTable->entries[i].score == entry.score*/)
                     if (   (subTable->entries[i][loBound] && entry[hiBound])
                             || (subTable->entries[i][hiBound] && entry[loBound])) {
                         entry.set2(hiBound, true);
                         entry.set2(loBound, true);
-                        stats.ttmerge++; }
+                        WorkThread::stats.ttmerge++; }
 
                 subTable->entries[i] = entry;
                 /*                unsigned j;
@@ -143,11 +143,11 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
                                     subTable->entries[j] = entry;
                                 }*/
             }
-            stats.ttinsufficient++;
+            WorkThread::stats.ttinsufficient++;
             return; }
 
     if (subTable->entries[assoc-1].upperKey == 0 || subTable->entries[assoc-1][aged])
-        stats.ttuse++;
+        WorkThread::stats.ttuse++;
     unsigned int i;
     for (i = 0; i < assoc-1; ++i)                // TODO possibly checking only assoc/2 and a LRU in retrieve would be better
         if (subTable->entries[i][aged] || entry[depth] >= subTable->entries[i][depth])
