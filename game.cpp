@@ -39,12 +39,12 @@ void Game::stopThread() {
 #ifdef __linux__
     prctl(PR_SET_NAME, "hayabusa stop");
 #endif
-    UniqueLock<Mutex> lock(stopTimerMutex);
+    UniqueLock<Mutex> lock(searchStateMutex);
     while(timerRunning) {
-        stopTimerCond.wait(lock, [this]{ return stopSearch == Running; });
+        stopTimerCond.wait(lock, [this]{ return searchState == Running; });
         if (!timerRunning) break;
-        stopTimerCond.wait_for(lock, stopTimerData, [this]{ return stopSearch != Running; });
-        stopSearch = Stopping; 
+        stopTimerCond.wait_for(lock, stopTimerData, [this]{ return searchState != Running; });
+        if (searchState == Running) searchState = Stopping;
     }
 }
 std::string Game::commonStatus() const {
@@ -63,10 +63,10 @@ void Game::infoTimer(milliseconds repeat) {
     UniqueLock<Mutex> lock(infoTimerMutex);
     static int lastCurrentMoveIndex = 0;
     while(timerRunning) {
-        infoTimerCond.wait(lock, [this]{ return stopSearch == Running; });
+        infoTimerCond.wait(lock, [this]{ return searchState == Running; });
         if (!timerRunning) break;
-        infoTimerCond.wait_for(lock, repeat, [this]{ return stopSearch != Running; });
-        if (stopSearch == Running) {
+        infoTimerCond.wait_for(lock, repeat, [this]{ return searchState != Running; });
+        if (searchState == Running) {
             Stats tempStats = getStats();
             uint64_t ntemp = tempStats.node;
             uint64_t t = duration_cast<milliseconds>(system_clock::now()-start).count();
@@ -108,7 +108,7 @@ Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSiz
     winc(5000),
     binc(5000),
     movestogo(0),
-    stopSearch(Stopped),
+    searchState(Stopped),
     eval(phashSize, p),
     currentPly(0),
     console(c),
@@ -145,13 +145,13 @@ Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSiz
 }
 
 Game::~Game() {
-    stopTimerMutex.lock();
+    searchStateMutex.lock();
     infoTimerMutex.lock();
     timerRunning = false;
-    stopSearch = Running;
+    searchState = Running;
     stopTimerCond.notify_one();
     infoTimerCond.notify_one();
-    stopTimerMutex.unlock();
+    searchStateMutex.unlock();
     infoTimerMutex.unlock();
     stopTimerThread->join();
     infoTimerThread->join();
@@ -443,25 +443,29 @@ void Game::goExecute() {
         job = new RootSearchJob<White, T>(*this, keys, maxSearchDepth);
     else
         job = new RootSearchJob<Black, T>(*this, keys, maxSearchDepth);
-    WorkThread::findFree()->queueJob(0U, job); }
+    {
+        LockGuard<Mutex> l(searchStateMutex); // not sure this lock is actually needed, because nobody is waiting for searchstate == running
+        ASSERT(searchState == Stopped);
+        searchState = Running; }
+
+    WorkThread::findFree()->queueJob(job); }
 
 void Game::stop() {
-    UniqueLock<Mutex> l(stopSearchMutex);
-    if (stopSearch == Running) stopSearch = Stopping;
-    while (stopSearch != Stopped)
-        stoppedCond.wait(l); }
+    UniqueLock<Mutex> l(searchStateMutex);
+    if (searchState == Running) searchState = Stopping;
+    stoppedCond.wait(l, [this] { return searchState == Stopped; }); }
 
 void Game::perft(unsigned int depth) {
     if (color == White)
-        WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*this, depth));
+        WorkThread::findFree()->queueJob(new RootPerftJob<White>(*this, depth));
     else
-        WorkThread::findFree()->queueJob(0U, new RootPerftJob<Black>(*this, depth)); }
+        WorkThread::findFree()->queueJob(new RootPerftJob<Black>(*this, depth)); }
 
 void Game::divide(unsigned int depth) {
     if (color == White)
-        WorkThread::findFree()->queueJob(0U, new RootDivideJob<White>(*this, depth));
+        WorkThread::findFree()->queueJob(new RootDivideJob<White>(*this, depth));
     else
-        WorkThread::findFree()->queueJob(0U, new RootDivideJob<Black>(*this, depth)); }
+        WorkThread::findFree()->queueJob(new RootDivideJob<Black>(*this, depth)); }
 
 Stats Game::getStats() const {
     auto& threads = WorkThread::getThreads();
@@ -537,7 +541,7 @@ void Game::setTime(uint64_t w, uint64_t b) {
 
 void Game::goWait() {
     Job* job;
-    stats.node = 0;
+    WorkThread::stats.node = 0;
     if (color == White)
         job = new RootSearchJob<White>(*this, keys, maxSearchDepth);
     else

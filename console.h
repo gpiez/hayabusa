@@ -44,6 +44,7 @@ class Console {
     void ordering(StringList);
     void parse(std::string);
     void eval(StringList);
+    void port(StringList);
     void outputThread();
 #ifdef USE_GENETIC
     void selfgame(StringList);

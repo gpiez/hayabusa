@@ -20,6 +20,7 @@
 #define JOBS_TCC_
 
 #include "jobs.h"
+#include "workthread.h"
 template<Colors C, typename A, typename B>
 SearchJob<C,A,B>::SearchJob(Game& rb, const ColoredBoard<C>& b, bool doNull,
                               unsigned reduction, unsigned int depth, const A& alpha, B& beta, ScoreMove<(Colors)-C,B>& retval,
@@ -62,6 +63,7 @@ SearchJob<C,A,B>::SearchJob(Game& rb, const ColoredBoard<C>& b, bool doNull,
 
 template<Colors C, typename A, typename B>
 void SearchJob<C,A,B>::job() {
+    WorkThread::Unlock l;
 #ifdef QT_GUI_LIB
     if (startnode) startnode->threadId = WorkThread::threadId;
 #endif
@@ -71,13 +73,15 @@ void SearchJob<C,A,B>::job() {
         beta.max(ret);
         retval.max(ret, b.m); }
     else
-        ++stats.cancelJob;
+        ++WorkThread::stats.cancelJob;
     beta.setReady();
-    retval.setReady(); }
-#endif
+    retval.setReady(); 
+    
+}
 
 template<Colors C>
 void RootPerftJob<C>::job() {
+    WorkThread::Unlock l;
     uint64_t n=game.rootPerft<C>(depth);
     std::ostringstream temp;
     temp << n;
@@ -85,6 +89,7 @@ void RootPerftJob<C>::job() {
 
 template<Colors C>
 void RootDivideJob<C>::job() {
+    WorkThread::Unlock l;
     uint64_t n=game.rootDivide<C>(depth);
     std::ostringstream temp;
     temp << n;
@@ -95,9 +100,13 @@ RootSearchJob<C,T>::RootSearchJob(Game& rb, const RepetitionKeys& rep, unsigned 
 
 template<Colors C, template <Colors> class T >
 void RootSearchJob<C, T>::job() {
+    WorkThread::Unlock l;
     game.clone<C>(game.currentBoard<C>(), rep, 0);
     game.rootSearch<C, T>(depth); }
 
 template<Colors C, template <Colors> class T >
 void RootSearchJob<C, T>::stop() {
+    WorkThread::Unlock l;
     game.stop(); }
+
+#endif

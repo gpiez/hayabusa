@@ -31,9 +31,12 @@
 // Abstract base class for functions called to be executed by a different thread
 // To execute a function in a different thread, create a ***Job object with the
 // function parameters given in the constructor. The constructor returns
-// immediatly and the job() member is executed by the WorkThread run loop
-// functions started this way can not have a return value, instead parameters
+// immediatly and the job() member is executed by the WorkThread run loop.
+// Functions started this way can not have a return value, instead parameters
 // by reference have to be used, with appropriate means of joining/synching
+// Inside job() and stop() member functions the global jobMutex gets unlocked
+// in the scope of the Unlock object. This way functions manipulating job lists
+// can call job() or stop() from multiple threads without a deadlock.
 struct Job {
     virtual ~Job() {};            // the for calling destructor of QObject in signalJob
     virtual void job() = 0;

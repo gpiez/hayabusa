@@ -125,7 +125,7 @@ int Game::search4(const ColoredBoard<C>& nextboard, const unsigned depth,
 //         return search3<C,vein>(prev,m,depth,a.unshared(),b.unshared(),ply,extend,unused,nt NODE);
     if (/*P == leaf ||*/ depth <= eval.dMaxExt)
         return search3<C,leaf>(nextboard,depth,a.unshared(),b.unshared(),extend,unused,nt NODE);
-    if (P == tree || depth <= Options::splitDepth + eval.dMaxExt)
+    if (P == tree || b.isNotShared || depth <= Options::splitDepth + eval.dMaxExt)
         return search3<C,tree>(nextboard,depth,a.unshared(),b,extend,unused,nt NODE);
     ASSERT(P==trunk);
     return search3<C,trunk>(nextboard,depth,a,b,extend,unused,nt NODE); }
@@ -138,13 +138,13 @@ template<Colors C, Phase P, class A, class B>
 int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                   const A& origAlpha, const B& origBeta,
                   Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
-    stats.node++;
-//    if (stats.node == 87) asm("int3");
+    WorkThread::stats.node++;
+//     if (stats.node == 13080) asm("int3");
 #ifdef MYDEBUG
-    uint64_t __attribute__((unused)) localnode = stats.node;
+    uint64_t __attribute__((unused)) localnode = WorkThread::stats.node;
 #endif
-    if unlikely( stats.node > maxSearchNodes ) {
-        stopSearch = Stopping;
+    if unlikely( WorkThread::stats.node > maxSearchNodes ) {
+        searchState = Stopping;
         return 0; }
     KeyScore estimate;
     estimate = b.keyScore;
@@ -189,7 +189,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 //             if (t.count().system+t.count().user > stopTime)
 //                 stopSearch = Stopping;
 //         }
-        if unlikely(stopSearch != Running) return 0; }
+        if unlikely(searchState != Running) return 0; }
 #ifdef QT_GUI_LIB
 //    if (node) node->gain = diff.v;
 //    if (node) node->error = diff.error;
@@ -255,7 +255,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             if (node) node->bestEval = value.v;
             if (node) node->nodeType = NodePrecut2;
 #endif
-            stats.leafcut++;
+            WorkThread::stats.leafcut++;
             return value.v; } }
 
     ASSERT( CompoundScore(b.keyScore.vector).opening() == CompoundScore(estimate.vector).opening());
@@ -289,7 +289,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             return 0; }
         st = tt->getSubTable(z);
         if unlikely(tt->retrieve(st, z, subentry)) {
-            stats.tthit++;
+            WorkThread::stats.tthit++;
             ttDepth = subentry[::depth];
             posScore = tt2Score(subentry[::posScore]);
             Score<C> ttScore;
@@ -309,7 +309,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                         return ttScore.v; } 
                     else if unlikely(subentry[loBound]) {
                         alpha.max(ttScore.v);
-                        stats.ttalpha++;
+                        WorkThread::stats.ttalpha++;
                         if (alpha >= beta.v) {
 #ifdef QT_GUI_LIB
                             if (node) node->bestEval = ttScore.v;
@@ -318,7 +318,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                             return ttScore.v; }
                         current.max(ttScore.v); }
                     else if (subentry[hiBound]) {
-                        stats.ttbeta++;
+                        WorkThread::stats.ttbeta++;
                         beta.max(ttScore.v); 
                         if (alpha >= beta.v) {
 #ifdef QT_GUI_LIB
@@ -378,7 +378,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                 bool unused;
                 Score<C> v(search3<C, leaf>(b, eval.dMaxExt, alpha3, beta3, ExtNot, unused, nt NODE));
                 if (v >= beta3.v) {
-                    stats.node--;
+                    WorkThread::stats.node--;
                     return v.v;
                 }
             }
@@ -393,10 +393,10 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                 Score< C> alpha3(limit);
                 Score<(Colors)-C> beta3(limit+C);
                 bool unused;
-                stats.node--;
+                WorkThread::stats.node--;
                 Score<C> v(search3<C, tree>(b, (depth-eval.dMaxExt+1)/2 + eval.dMaxExt, alpha3, beta3, ExtFutility, unused, nt NODE));
                 if (v <= alpha3.v) {
-                    stats.node--;
+                    WorkThread::stats.node--;
                     return v.v;
                 }
             }    
@@ -421,7 +421,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         ASSERT(!(b.threatened & ~ExtCheck)); };
 
 
-    stats.eval++;
+    WorkThread::stats.eval++;
     int realScore;
     if (posScore == (signed)0xdeadbeaf)
         realScore = eval(b, wattack, battack, b.psValue, b.positionalScore);
@@ -448,7 +448,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         alpha.max(realScore);
         current.max(realScore);
         if (current >= beta.v && !b.threatened) {
-            stats.leafcut++;
+            WorkThread::stats.leafcut++;
 #ifdef QT_GUI_LIB
             if (node) node->nodeType = NodePrecut3;
 #endif
@@ -465,7 +465,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                 // we have no moves, but the list wasn't generated as complete list
                 // assume a stand pat move score.
                 if (current >= beta.v) {
-                    stats.leafcut++;
+                    WorkThread::stats.leafcut++;
                     ASSERT(!"should not happen");
     #ifdef QT_GUI_LIB
                     if (node) node->nodeType = NodeStandpat;
@@ -506,7 +506,10 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
          * The inner move loop
          */
         if (P!=vein) store(z, b.ply);
-        PackedScore<> currentWeight = eval.scale[eval.material[b.matIndex].scaleIndex];
+        PackedScore<> cweight = eval.scale[mat.scaleIndex];
+        int cbias = mat.bias;
+        unsigned cdrawish = mat.drawish;
+        
         NodeType nextNT = (NodeType)-nt;
         unsigned newDepth = depth - 1;
         do {
@@ -525,13 +528,13 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                                     && !b.threatened
                                     && !(extend & (ExtDualReply | ExtSingleReply)))
                         || (P==leaf && newDepth <= eval.dMaxCapture && !i.isMate())) {
-                int nextPSValue = eval.interpolate(currentWeight, CompoundScore(estimate.vector));
-                int nextEstimatedScore = eval.quantize(nextPSValue + C*eval.standardError + b.positionalScore) /*+ diff.v + C*diff.error*/;                
+                int nextPSValue = eval.calc(cweight, cbias, cdrawish, CompoundScore(estimate.vector));
+                int nextEstimatedScore = eval.quantize(nextPSValue + C*eval.standardError + b.positionalScore);                
                 value.v = nextEstimatedScore;
                 if (value <= alpha.v) {
-                    stats.node++;
-//                    if (stats.node == 23001594) asm("int3");
-                    stats.leafcut++;
+                    WorkThread::stats.node++;
+//                    if (stats.node ==  13080) asm("int3");
+                    WorkThread::stats.leafcut++;
                     current.max(value.v);
 #ifdef QT_GUI_LIB
                     int16_t diff = pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
@@ -613,17 +616,16 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                               && !ninf
                               && eval.material[b.matIndex].doNull;
                 int reduction = !ninf && calcReduction(b, i.index(), *i, depth);
-                if (P == trunk && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i.index()) && WorkThread::canQueued(WorkThread::threadId, current.isNotReady())) {
-                    WorkThread::queueJob(WorkThread::threadId,
-                                         new SearchJob<(Colors)-C, B, A>(*this, nextboard, doNull, reduction, newDepth,
-                                                 beta, alpha, current, WorkThread::threadId, keys, nextNT NODE));
-                    if (stopSearch != Running) break;
+                if (P == trunk && !alpha.isNotShared && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i.index()) && WorkThread::canQueued(current.isNotReady())) {
+                    WorkThread::queueJob(new SearchJob<(Colors)-C, B, A>(*this, nextboard, doNull, reduction, newDepth,
+                                                 beta, alpha, current, WorkThread::getThisThreadId(), keys, nextNT NODE));
+                    if (searchState != Running) break;
                     continue; }
                 else {
                     value.v = search9<(Colors)-C, P>(doNull, reduction, nextboard, newDepth, beta, alpha, ExtNot, nextNT NODE);
                 } }
 
-            if (stopSearch != Running) break;
+            if (searchState != Running) break;
             nextNT = NodeFailHigh;
             alpha.max(value.v);
             current.max(value.v, *i); 
@@ -632,9 +634,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         // if there are queued jobs started from _this_ node, do them first
         // don't start threads from parent search but with same therad id here
         if (P == trunk) {
-            Job* job;
-            while((job = WorkThread::getJob(WorkThread::threadId, b.ply))) {
-                job->job(); }
+            WorkThread::executeOldJobs(b.ply);
 //        while(current.isNotReady() && (job = WorkThread::getChildJob(zd))) job->job();
         }
 
@@ -663,7 +663,7 @@ storeAndExit:
         if (current > origAlpha.v && current.m.capture() == 0 && current.m.piece()/* && !current.m.isSpecial()*/) {
             ASSERT(current.m.fromto());
             history.good(current.m, b.ply + rootPly); }
-        stored.set(hiBound, (current < origBeta.v) & (stopSearch == Running));
+        stored.set(hiBound, (current < origBeta.v) & (searchState == Running));
         stored.set(from, current.m.from());
         stored.set(to, current.m.to());
         stored.set(capture, current.m.capture()); 

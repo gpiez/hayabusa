@@ -45,7 +45,7 @@ bool                reduction = true;
 bool                pruning = true;
 unsigned            debug = 0;
 bool                currline = false;
-unsigned            listenPort = 7788;
+unsigned            listenPort = 0;
 }
 
 Console console;
@@ -95,6 +95,7 @@ void Console::init(int& argc, char** argv)
     dispatcher["divide"] = &Console::divide;
     dispatcher["ordering"] = &Console::ordering;
     dispatcher["eval"] = &Console::eval;
+    dispatcher["port"] = &Console::port;
 #ifdef USE_GENETIC
     dispatcher["selfgame"] = &Console::selfgame;
     dispatcher["parmtest"] = &Console::parmtest;
@@ -119,6 +120,8 @@ void Console::inputThread() {
     while(true) {
         std::string str;
         std::getline(std::cin, str);
+//        std::cerr << "input:" << str << std::endl;
+
 //         f << str;
         if (str[str.length()-1] == 13 || str[str.length()-1] == 10) {
             str.erase(str.length()-1); }
@@ -126,23 +129,23 @@ void Console::inputThread() {
 }
 
 void Console::inputNetThread() {
-    int sockfd, portno;
+    if (!Options::listenPort) return;
+    int sockfd;
     socklen_t clilen;
     char buffer[256];
     sockaddr_in serv_addr, cli_addr;
     int n;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     bzero((char *) &serv_addr, sizeof(serv_addr));
-    portno = Options::listenPort;
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(portno);
+    serv_addr.sin_port = htons(Options::listenPort);
     if (bind(sockfd, (sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        std::cerr << "Can't listen on port " << portno << std::endl;
+        std::cerr << "Can't listen on port " << Options::listenPort << std::endl;
         return;
     }
+    listen(sockfd,5);
     while (true) {
-        listen(sockfd,5);
         clilen = sizeof(cli_addr);
         newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &clilen);
         if (newsockfd < 0) {             
@@ -150,9 +153,10 @@ void Console::inputNetThread() {
             newsockfd = 0;
             continue;
         }
+//        else std::cerr << "Connection accepted\n";
         std::string str;
         while(true) {
-            do {
+            while (str.empty() || (str.find('\n')==std::string::npos && str.find('\r')==std::string::npos)) {
                 bzero(buffer,256);
                 n = read(newsockfd,buffer,255);
                 if (n <= 0) {
@@ -161,19 +165,25 @@ void Console::inputNetThread() {
                 }
                 std::string part(buffer);
                 str += part;
-            } while (str.empty() || (str.find('\n')==std::string::npos && str.find('\r')==std::string::npos));
+            } 
+            if (str.empty()) break;
+//            std::cerr << "got:" << str << std::endl;
             size_t strend = 0;
-            if (str.find('\n') != std::string::npos)
+            size_t strnext = 0;
+            if (str.find('\n') != std::string::npos) {
                 strend = str.find('\n');
-            if (str.find('\r') != std::string::npos)
-                strend = std::max(str.find('\r'), strend);
+                strnext = str.find('\n')+1;
+            }
+            if (str.find('\r') != std::string::npos) {
+                strend = std::min(str.find('\r'), strend);
+                strnext = std::max(str.find('\r')+1, strnext);
+            }
+            if (strnext == 0) break;
 
             std::string substr = str.substr(0, strend);
-//            std::cerr << "got " << strend << " " << substr << " tog" << std::endl;
-            while (!substr.empty() && (substr[substr.length()-1] == '\n' || substr[substr.length()-1] == '\r')) {
-                substr.erase(substr.length()-1); }
             parse(substr);
-            str.erase(0, strend+1); }
+            str.erase(0, strnext); }
+            
         close(newsockfd);
         newsockfd = 0;}
     close(sockfd);
@@ -188,13 +198,18 @@ void Console::inputNetThread() {
 //
 void Console::send(std::string str) {
     if (Options::quiet) return;
-    LockGuard<Mutex> lock(outputMutex);
-    outputData += str + "\n";
-    answer = str;
-    outputCondition.notify_one();
+//    std::cerr << "send:" << str << std::endl;
+    {
+        LockGuard<Mutex> lock(outputMutex);
+        outputData += str + "\n";
+        answer = str;
+        outputCondition.notify_one();
+    }
+    __gthread_yield();
 }
 
 void Console::parse(std::string str) {
+//    std::cerr << "parse:" << str << std::endl;
     if (!str.empty()) {
         StringList cmds = split(str, " ");
         if (dispatcher.find(cmds[0]) != dispatcher.end()) {
@@ -242,7 +257,13 @@ void Console::divide(StringList cmds) {
     game->divide(convert(cmds[1])); }
 
 void Console::uci(StringList /*cmds*/) {
-    send("id name hayabusa 0.11.7");
+    std::string date(__DATE__);
+    StringList dates = split(date, " ");
+    std::string time(__TIME__);
+    StringList times = split(time, ":");
+    send("id name hayabusa-0.11.7-" 
+        + dates[2] + "-" + dates[0] + "-" + dates[1] + "-"
+        + times[0] + ":" + times[1]);
     send("id author Gunther Piez");
     std::stringstream str;
     str << " 32768"; //TranspositionTable::maxSize;
@@ -262,7 +283,8 @@ void Console::uci(StringList /*cmds*/) {
     send("uciok"); }
 
 void Console::debug(StringList cmds) {
-    auto pos = cmds.parse(StringList() << "eval" << "mobility" << "search");
+    static const StringList tokens = StringList() << "eval" << "mobility" << "search";
+        auto pos = cmds.parse(tokens);
     if (pos.count("eval")) Options::debug |= debugEval;
     if (pos.count("mobility")) Options::debug |= debugMobility;
     if (pos.count("search")) Options::debug |= debugSearch; }
@@ -272,7 +294,8 @@ void Console::isready(StringList /*cmds*/) {
     send("readyok"); }
 
 void Console::setoption(StringList cmds) {
-    std::map<std::string, StringList> o = cmds.parse(StringList() << "name" << "value");
+    static const StringList tokens = StringList() << "name" << "value";
+    std::map<std::string, StringList> o = cmds.parse(tokens);
     std::string name =  toLower(o["name"].join(" "));
     if (!name.empty()) {
         std::string data = toLower(o["value"].join(" "));
@@ -312,8 +335,9 @@ void Console::ucinewgame(StringList /*cmds*/) {
     game->clearHash(); }
 
 void Console::position(StringList cmds) {
+    static const StringList tokens = StringList() << "startpos" << "fen" << "test" << "moves";
     if (cmds.size() < 2) return;
-    auto pos = cmds.parse(StringList() << "startpos" << "fen" << "test" << "moves");
+    auto pos = cmds.parse(tokens);
     WorkThread::stopAll();
     if (pos.count("startpos"))
         game->setup();
@@ -333,13 +357,15 @@ void Console::position(StringList cmds) {
         for (auto imove = moves.begin(); imove != moves.end(); ++imove)
             tryMove(*imove);
 
-    } }
+    } 
+}
 
 void Console::go(StringList cmds) {
+    static const StringList tokens = StringList() << "searchmoves"
+        << "ponder" << "wtime" << "btime" << "winc" << "binc" << "movestogo" << "depth"
+        << "nodes" << "mate" << "movetime" << "infinite";
     WorkThread::stopAll();
-    std::map<std::string, StringList> subCmds = cmds.parse(StringList() << "searchmoves"
-            << "ponder" << "wtime" << "btime" << "winc" << "binc" << "movestogo" << "depth"
-            << "nodes" << "mate" << "movetime" << "infinite");
+    std::map<std::string, StringList> subCmds = cmds.parse(tokens);
 
     game->go(subCmds); }
 
@@ -350,9 +376,10 @@ void Console::ponderhit(StringList /*cmds*/) {}
 
 void Console::quit(StringList /*cmds*/) {
 #ifdef QT_GUI_LIB
-    QApplication::quit();
-#endif
+    app->quit();
+#else
     exit(0);
+#endif
 }
 
 std::mutex nThreadMutex;
@@ -373,7 +400,7 @@ uint64_t orderingInit(Game* board, int i) {
             board->rootSearch<White>(40);
         else
             board->rootSearch<Black>(40);
-        if (stats.node < 5000000)
+        if (WorkThread::stats.node < 5000000)
             result = 0;
         else
             result = board->depth - board->eval.dMaxExt; }
@@ -389,14 +416,14 @@ uint64_t orderingTest(Game* board, int i) {
     if (testDepths[i]) {
         board->maxSearchNodes = ~0;
         tested++;
-        stats.node=0;
+        WorkThread::stats.node=0;
         board->setup(testPositions[i]);
         board->clearHash();
         if (board->color == White)
             board->rootSearch<White>(testDepths[i]+ board->eval.dMaxExt-1);
         else
             board->rootSearch<Black>(testDepths[i]+ board->eval.dMaxExt-1);
-        result = stats.node; }
+        result = WorkThread::stats.node; }
     else {
         result = 1; }
     {
@@ -476,6 +503,7 @@ void Console::egtest(StringList cmds) {
 
 void Console::parmtest(StringList cmds) {
     Options::quiet = true;
+    Options::listenPort = 0;
     if (cmds.size() == 5)
         evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), "20000", "");
     else if (cmds.size() == 6)
@@ -509,4 +537,8 @@ Console& Console::operator << (std::string out) {
     answer = out;
     outputCondition.notify_one();
     return *this;
+}
+
+void Console::port(StringList cmds) {
+    Options::listenPort = convert<unsigned>(cmds[1]);
 }

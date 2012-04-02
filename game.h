@@ -106,8 +106,8 @@ private:
     int mate;
     int movetime;
     Move bm;
-    volatile Status stopSearch;
-    Mutex stopSearchMutex;
+    volatile Status searchState;
+    Mutex searchStateMutex;
     Condition stoppedCond;
 
     Mutex infoTimerMutex;
@@ -118,7 +118,7 @@ private:
     int blackLimit;
     static Mutex allocMutex;
     Condition stopTimerCond;
-    Mutex stopTimerMutex;
+//    Mutex stopTimerMutex;
     std::chrono::milliseconds stopTimerData;
     bool timerRunning;
     Thread* stopTimerThread;
