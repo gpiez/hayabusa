@@ -48,7 +48,6 @@ union Stats {
         uint64_t    cancelJob; };
     uint64_t data[]; };
 
-extern __thread Stats stats;
 #ifdef MYDEBUG
 extern uint64_t mobStat[nColors][nPieces+1][2][nSquares];
 #endif
