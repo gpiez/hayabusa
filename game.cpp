@@ -491,7 +491,6 @@ bool Game::doMove(Move m) {
 // returns true on error
 template<Colors C>
 bool Game::doMove(Move m) {
-    WorkThread::stopAll();
     OldMoveList ml(currentBoard<C>());
 
     for (ml.begin(); ml.isValid(); ++ml) {
@@ -540,11 +539,12 @@ void Game::setTime(uint64_t w, uint64_t b) {
     btime = b / 1000000; }
 
 void Game::goWait() {
-    Job* job;
     WorkThread::stats.node = 0;
-    if (color == White)
-        job = new RootSearchJob<White>(*this, keys, maxSearchDepth);
-    else
-        job = new RootSearchJob<Black>(*this, keys, maxSearchDepth);
-    job->job();
-    delete job; }
+    searchState = Running;
+    if (color == White) {
+        RootSearchJob<White> j(*this, keys, maxSearchDepth);
+        j.unlockedJob(); }
+    else {
+        RootSearchJob<Black> j(*this, keys, maxSearchDepth);
+        j.unlockedJob(); }
+}

@@ -48,7 +48,7 @@ SearchJob<C,A,B>::SearchJob(Game& rb, const ColoredBoard<C>& b, bool doNull,
         data.moveColor = -C;
         data.nodeColor = C;
         data.flags = 0;
-        data.threadId = WorkThread::threadId;
+        data.threadId = WorkThread::getThisThreadId();
         data.nodes = 0;
         data.nodeType = NodeStart;
         NodeItem::m.lock();
@@ -65,7 +65,7 @@ template<Colors C, typename A, typename B>
 void SearchJob<C,A,B>::job() {
     WorkThread::Unlock l;
 #ifdef QT_GUI_LIB
-    if (startnode) startnode->threadId = WorkThread::threadId;
+    if (startnode) startnode->threadId = WorkThread::getThisThreadId();
 #endif
     if (alpha < beta.v) {
         game.clone(b, rep, b.ply);
@@ -101,6 +101,10 @@ RootSearchJob<C,T>::RootSearchJob(Game& rb, const RepetitionKeys& rep, unsigned 
 template<Colors C, template <Colors> class T >
 void RootSearchJob<C, T>::job() {
     WorkThread::Unlock l;
+    unlockedJob(); }
+
+template<Colors C, template <Colors> class T >
+void RootSearchJob<C, T>::unlockedJob() {
     game.clone<C>(game.currentBoard<C>(), rep, 0);
     game.rootSearch<C, T>(depth); }
 

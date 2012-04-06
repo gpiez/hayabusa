@@ -917,7 +917,7 @@ bool SelfGame::checkResult(const Game& rb) {
 
 int SelfGame::tournament() {
     int sum = 0;
-    Options::splitDepth = 1000;
+    Options::splitDepth = 0;
     Options::quiet = true;
     std::vector<std::string>& posn = endgame.length() ? endgamePosition : testPosition;
     numGames = 0;

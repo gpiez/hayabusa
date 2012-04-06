@@ -21,16 +21,15 @@
 
 #include "eval.h"
 #include "coloredboard.h"
-#include "stats.h"
 #include "history.h"
 #ifdef QT_GUI_LIB
 #include "statwidget.h"
 #include "nodeitem.h"
 #endif
 #include "stringlist.h"
+#include "workthread.h"
 
 class Parameters;
-class WorkThread;
 class Console;
 struct TTEntry;
 class PerftEntry;

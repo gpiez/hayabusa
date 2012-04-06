@@ -41,6 +41,7 @@ struct Job {
     virtual ~Job() {};            // the for calling destructor of QObject in signalJob
     virtual void job() = 0;
     virtual void stop() {};
+    virtual void unlockedJob() {};
     virtual unsigned getPly() {
         return 0; }; };
 
@@ -80,6 +81,7 @@ class RootSearchJob: public Job {
 public:
     RootSearchJob(Game& rb, const RepetitionKeys& rep, unsigned depth);
     void job();
+    void unlockedJob() override;
     void stop(); };
 
 template<Colors C, typename T>

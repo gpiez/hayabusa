@@ -17,7 +17,6 @@
 
 */
 #include <pch.h>
-#include "stats.h"
 
 #ifdef QT_GUI_LIB
 #include "statwidget.h"
@@ -137,7 +136,7 @@ void StatWidget::update() {
 
 #define DISPLAYNUM(x) n##x->setText(number(prev.last().x)); if (prev.size() > 1) v##x->setText(number((prev.last().x - prev.first().x) / (prev.size()-1)));
 
-    ninternalNode->setText(number(WorkThread::running));
+    ninternalNode->setText(number(WorkThread::getRunning()));
 //    vttentries->setText(stats.tt);
     DISPLAYNUM(node)
     DISPLAYNUM(eval)

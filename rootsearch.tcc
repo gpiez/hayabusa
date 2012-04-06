@@ -83,7 +83,7 @@ Move Game::rootSearch(unsigned int endDepth) {
         NodeData data;
         data.move.data = 0;
         data.ply = 1;
-        data.threadId = WorkThread::threadId;
+        data.threadId = WorkThread::getThisThreadId();
         data.nodes = 1;
         NodeItem::m.lock();
         NodeItem* node=0;
@@ -147,11 +147,11 @@ Move Game::rootSearch(unsigned int endDepth) {
             NodeData data;
             data.move.data = 0;
             data.ply = depth-eval.dMaxExt;
-            data.threadId = WorkThread::threadId;
+            data.threadId = WorkThread::getThisThreadId();
             data.nodes = 1;
             NodeItem::m.lock();
             NodeItem* node=0;
-            if (NodeItem::nNodes < MAX_NODES && stats.node >= MIN_NODES) {
+            if (NodeItem::nNodes < MAX_NODES && WorkThread::stats.node >= MIN_NODES) {
                 node = new NodeItem(data, statWidget->tree->root());
                 NodeItem::nNodes++; }
             NodeItem::m.unlock();
@@ -244,14 +244,14 @@ Move Game::rootSearch(unsigned int endDepth) {
                 currentMoveIndex++;
                 currentMove = *ml;
                 uint64_t subnode = WorkThread::stats.node;
-                bool doNull = alpha.v != -infinity*C
-                              && depth > eval.dMinReduction
-                              && eval.material[b.matIndex].doNull
-                              && searchState == Running;
                 if (searchState == Running) {
                     limit<-C>() = -infinity*C;
                     limit<C>() = beta2.v;
                     ColoredBoard<(Colors)-C> nextboard(b, *ml, *this);
+                    bool doNull = alpha.v != -infinity*C
+                                  && depth > eval.dMinReduction
+                                  && eval.material[nextboard.matIndex].doNull
+                                  && searchState == Running;
                     value.v = search9<(Colors)-C,trunk>(doNull, 0, nextboard, depth-1, beta2, alpha, ExtNot, NodeFailHigh NODE );
                     ml.nodesCount(WorkThread::stats.node - subnode);
                     if (searchState || value <= alpha.v) continue;
