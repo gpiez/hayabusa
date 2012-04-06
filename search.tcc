@@ -139,7 +139,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                   const A& origAlpha, const B& origBeta,
                   Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
     WorkThread::stats.node++;
-//     if (stats.node == 13080) asm("int3");
+//     if (WorkThread::stats.node == 2327) asm("int3");
 #ifdef MYDEBUG
     uint64_t __attribute__((unused)) localnode = WorkThread::stats.node;
 #endif
@@ -148,7 +148,6 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         return 0; }
     KeyScore estimate;
     estimate = b.keyScore;
-//    ASSERT(ply == b.ply);
 #ifdef QT_GUI_LIB
     NodeItem* node = 0;
     if (NodeItem::nNodes < MAX_NODES && parent) {
@@ -164,7 +163,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         data.moveColor = -C;
         data.nodeColor = C;
         data.flags = 0;
-        data.threadId = WorkThread::threadId;
+        data.threadId = WorkThread::getThisThreadId();
         data.nodes = 1;
 
         data.nodeType = NodeFull;
@@ -183,16 +182,9 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     */
 //    if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
 
-    if (P != vein && P != leaf) {
-//         if (Options::cpuTime) {
-//             boost::chrono::duration<boost::chrono::process_cpu_clock::times, boost::nano> t = boost::chrono::process_cpu_clock::now();
-//             if (t.count().system+t.count().user > stopTime)
-//                 stopSearch = Stopping;
-//         }
-        if unlikely(searchState != Running) return 0; }
+    if (P != vein && P != leaf && unlikely(searchState != Running)) return 0;
 #ifdef QT_GUI_LIB
-//    if (node) node->gain = diff.v;
-//    if (node) node->error = diff.error;
+    if (node) node->gain = *b.diff.v;
     if (node) node->ps = b.psValue;
     if (node) node->real = 0;
 #endif
@@ -404,7 +396,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     }
 
     int wattack, battack;
-    ASSERT(eval.calc(b.matIndex, CompoundScore(b.keyScore.score)) == b.psValue);
+    ASSERT(eval.calc(b, b.matIndex, CompoundScore(b.keyScore.score)) == b.psValue);
     Eval::Material mat=eval.material[b.matIndex];
     if (P != vein && P!=leaf) {
         if (mat.reduce) {
@@ -506,10 +498,6 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
          * The inner move loop
          */
         if (P!=vein) store(z, b.ply);
-        PackedScore<> cweight = eval.scale[mat.scaleIndex];
-        int cbias = mat.bias;
-        unsigned cdrawish = mat.drawish;
-        
         NodeType nextNT = (NodeType)-nt;
         unsigned newDepth = depth - 1;
         do {
@@ -523,17 +511,17 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             Score<C> value;
             KeyScore estimate;
             estimate.vector = eval.estimate<C>(*i, b.keyScore);
-
+            unsigned estmatIndex = eval.estimate<C>(*i, b.matIndex);
             if (P==vein || (P==leaf && (i.isCapture() | i.isNonCapture())
                                     && !b.threatened
                                     && !(extend & (ExtDualReply | ExtSingleReply)))
                         || (P==leaf && newDepth <= eval.dMaxCapture && !i.isMate())) {
-                int nextPSValue = eval.calc(cweight, cbias, cdrawish, CompoundScore(estimate.vector));
-                int nextEstimatedScore = eval.quantize(nextPSValue + C*eval.standardError + b.positionalScore);                
+                int nextPSValue = eval.calc(b.swapped() , estmatIndex, CompoundScore(estimate.vector));
+                int nextEstimatedScore = eval.quantize(nextPSValue + b.positionalScore + C*eval.standardError);                
                 value.v = nextEstimatedScore;
                 if (value <= alpha.v) {
                     WorkThread::stats.node++;
-//                    if (stats.node ==  13080) asm("int3");
+//                    if (WorkThread::stats.node ==  432) asm("int3");
                     WorkThread::stats.leafcut++;
                     current.max(value.v);
 #ifdef QT_GUI_LIB
@@ -551,7 +539,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                         data.moveColor = C;
                         data.nodeColor = -C;
                         data.flags = 0;
-                        data.threadId = WorkThread::threadId;
+                        data.threadId = WorkThread::getThisThreadId();
                         data.nodes = 1;
                 
                         data.gain = diff;
@@ -573,7 +561,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             }
             if (P != vein) tt->prefetchSubTable(estimate.key - C+1);
             const ColoredBoard<(Colors)-C> nextboard(b, *i, estimate.vector);
-            nextboard.psValue = eval.calc(nextboard.matIndex, CompoundScore(estimate.vector));
+            nextboard.psValue = eval.calc(nextboard , nextboard.matIndex, CompoundScore(estimate.vector));
             nextboard.diff = & pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
             nextboard.prevPositionalScore = b.positionalScore;
             nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff;
@@ -614,7 +602,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                 bool ninf = current.v == -C*infinity;
                 bool doNull = newDepth >= eval.dMinReduction
                               && !ninf
-                              && eval.material[b.matIndex].doNull;
+                              && eval.material[nextboard.matIndex].doNull;
                 int reduction = !ninf && calcReduction(b, i.index(), *i, depth);
                 if (P == trunk && !alpha.isNotShared && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i.index()) && WorkThread::canQueued(current.isNotReady())) {
                     WorkThread::queueJob(new SearchJob<(Colors)-C, B, A>(*this, nextboard, doNull, reduction, newDepth,

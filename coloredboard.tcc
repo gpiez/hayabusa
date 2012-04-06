@@ -54,7 +54,7 @@ ColoredBoard<C>::ColoredBoard(const T& prev, Move m, Game& game) {
         game.currentPly = ply; }
     buildAttacks(); 
     diff = & game.pe[6 - C*(m.piece() & 7)][m.from()][m.to()];
-    psValue = game.eval.calc(matIndex, CompoundScore(keyScore.vector));
+    psValue = game.eval.calc(*this, matIndex, CompoundScore(keyScore.vector));
     estScore = psValue + prev.positionalScore + *diff;
     prevPositionalScore = prev.positionalScore;
 }

@@ -340,11 +340,16 @@ public:
     template<Colors C>
     __v8hi estimate(const Move m, const KeyScore keyScore) const;
     template<Colors C>
+    unsigned estimate(const Move m, unsigned) const;
+    template<Colors C>
     __v8hi inline_estimate(const Move m, const KeyScore keyScore) const __attribute__((always_inline)) ;
-    int calc(unsigned matIndex, CompoundScore score) const;
-    int calc(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const;
+    template<Colors C>
+    int calc(const ColoredBoard<C>&b, unsigned matIndex, CompoundScore score) const;
+    int calcPS(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const;
 	int interpolate(CompoundScore weights, CompoundScore score) const;
 	int interpolate(unsigned iScale, CompoundScore score) const;
+	template<Colors C>
+	unsigned recognizer(const ColoredBoard<C>& b, unsigned matreco) const;
     int quantize(int) const; };
 
 #endif /* EVAL_H_ */

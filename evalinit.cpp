@@ -265,7 +265,7 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
     if (b == 1 && eb == 1 && q+r+n+eq+er+en == 0)
         m.recognized = KB_kb_;
 
-    if (q+r+b+n + eq+er+eb+en)
+    if (q+r+b+n && eq+er+eb+en)
         m.doNull = true;
 
     // Reduce material advantage in likely drawn endgames to a value -pawn..pawn
@@ -310,15 +310,17 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
     // NP* BP*
 
     if (q+r == 0 && p==1) {
+
         if (b + n == 1 && emat <= 3) {
-            // N B
-            if (emat<=2) {
-                m.recognized = C==White ? KBPk : kpbK; }
             // KBPkb KNPkN
             if (emat==3 && en+eb==1) {
                 m.bias = -200*C;
                 m.drawish = true;
                 return; } } }
+
+    // B
+    if (q+r+n == 0 && p && b==1 && emat<=1) {
+        m.recognized = C==White ? KBPk : kpbK; }
 
     // KNNk KNNkp KNNk*
     if (q + r + b + p == 0) {

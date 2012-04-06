@@ -10,7 +10,7 @@
 #include <pch.h>
 
 #include "nodeitem.h"
-#include "stats.h"
+#include "workthread.h"
 
 std::recursive_mutex NodeItem::m;
 int NodeItem::nNodes = 0;
@@ -24,7 +24,7 @@ NodeItem::NodeItem( const NodeData& nodeData_ ):
 NodeItem::NodeItem( const NodeData& nodeData_, NodeItem* parent_ ):
     NodeData( nodeData_ ),
     parent( parent_ ) {
-    id = stats.node;
+    id = WorkThread::stats.node;
 //     std::lock_guard<std::recursive_mutex> lock(m);
     if (parent_)
         parent_->appendChild( this );

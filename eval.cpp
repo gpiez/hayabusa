@@ -22,7 +22,6 @@
 #include "transpositiontable.tcc"
 #include "parameters.h"
 #include "bits.h"
-#include "stats.h"
 
 unsigned Eval::distance[nSquares][nSquares];
 uint64_t Eval::ruleOfSquare[nColors][nSquares];
@@ -176,11 +175,11 @@ CompoundScore Eval::pieces(const Board& b, const PawnEntry& p, uint64_t own, uin
     print_debug(debugEval, "after knight: %4d %4d\n", value.opening(), value.endgame());
     if unlikely((shift<-C*8>(b.getPieces<C,Knight>()) & b.getPieces<-C,Pawn>())) {
         if unlikely((b.getPieces<C,Knight>() 
-            & (rank<C,7>() & file<'b'>() | rank<C,7>() & file<'a'>()) 
+            & ((rank<C,7>() & file<'b'>()) | (rank<C,7>() & file<'a'>())) 
             & shift<-1>(b.getPieces<-C,Pawn>()))) 
             value = value + knightTrapped;
         if unlikely((b.getPieces<C,Knight>() 
-            & (rank<C,7>() & file<'g'>() | rank<C,7>() & file<'h'>()) 
+            & ((rank<C,7>() & file<'g'>()) | (rank<C,7>() & file<'h'>())) 
             & shift<1>(b.getPieces<-C,Pawn>()))) 
             value = value + knightTrapped;        
     }
@@ -201,10 +200,10 @@ CompoundScore Eval::pieces(const Board& b, const PawnEntry& p, uint64_t own, uin
         value = value + bishopNotOppPawn[ (light ? ddef:0)+ (dark ? ldef:0) ];
         print_debug(debugEval, "after bishop: %4d %4d\n", value.opening(), value.endgame());
         
-        if unlikely((shift<-C*8+1>(bishop) & b.getPieces<-C,Pawn>() & (rank<C,6>() & file<'b'>() | rank<C,7>() & file<'c'>()))) {
+        if unlikely((shift<-C*8+1>(bishop) & b.getPieces<-C,Pawn>() & ((rank<C,6>() & file<'b'>()) | (rank<C,7>() & file<'c'>())))) {
             value = value + bishopTrapped;
         }
-        if unlikely((shift<-C*8-1>(bishop) & b.getPieces<-C,Pawn>() & (rank<C,6>() & file<'g'>() | rank<C,7>() & file<'f'>()))) {
+        if unlikely((shift<-C*8-1>(bishop) & b.getPieces<-C,Pawn>() & ((rank<C,6>() & file<'g'>()) | (rank<C,7>() & file<'f'>())))) {
             value = value + bishopTrapped;
         }
     }
@@ -245,9 +244,9 @@ PawnEntry Eval::pawns(const Board& b) const {
     Sub<PawnEntry, 4>* st = pt->getSubTable(k);
     PawnEntry pawnEntry;
     if (pt->retrieve(st, b, pawnEntry)) 
-        stats.pthit++; 
+        WorkThread::stats.pthit++; 
     else {
-        stats.ptmiss++;
+        WorkThread::stats.ptmiss++;
         uint64_t wpawn = b.getPieces<White,Pawn>();
         uint64_t bpawn = b.getPieces<Black,Pawn>();
 
@@ -514,6 +513,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 			}
 
 			nb = popcount(bmob1);
+            print_debug(debugEval, "bMob %4d%4d\n", bm[nb].opening, bm[nb].endgame);
 			score = score + bm[nb]; }
 	
 		for (uint64_t p = b.getPieces<C, Knight>(); p; p &= p-1) {
@@ -545,6 +545,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 	//         if (rmob3 & oppking) attackingPieces++;
 			nn = popcount(nmob1x);
 			score = score + nm[nn];
+            print_debug(debugEval, "nMob %4d%4d\n", nm[nn].opening, nm[nn].endgame);
 	
 		}
 	
@@ -589,6 +590,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 	//             print_debug(debugMobility, "r attack  %d: d%3d:%2d, i%2d:%3d\n", CI, popcount15(ratt1 & oppking), attackR1[popcount15(ratt1 & oppking)], popcount15(ratt2 & oppking), attackR2[popcount15(ratt2 & oppking)]);
 			}
 			nr = popcount(rmob1);
+            print_debug(debugEval, "rMob %4d%4d\n", rm[nr].opening, rm[nr].endgame);
 			score = score + rm[nr]; }
 	
 		restrictions &= ~(b.getAttacks<-C,Rook>());
@@ -627,6 +629,7 @@ inline CompoundScore Eval::mobility( const Board& b, int& attackingPieces, int& 
 		}
 		// this may be the summed mobility of two queens or wrongly added rook mob
 		nq = std::min(popcount(qmob1), 27);
+        print_debug(debugEval, "qMob %4d%4d\n", qm[nq].opening, qm[nq].endgame);
 			
 		score = score + qm[nq]; }
     else {
@@ -870,7 +873,11 @@ int Eval::operator () (const Board& b, Colors stm ) const {
 
 int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 #if defined(MYDEBUG)
-    int cmp = calc(b.matIndex, CompoundScore(b.keyScore.score));
+    int cmp;
+    if (stm == White)
+        cmp = calc<White>((const ColoredBoard<White>&)b, b.matIndex, CompoundScore(b.keyScore.score));
+    else
+        cmp = calc<Black>((const ColoredBoard<Black>&)b, b.matIndex, CompoundScore(b.keyScore.score));
     CompoundScore value( 0, 0 );
     for (int p=Rook; p<=King; ++p) {
         for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
@@ -881,7 +888,11 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
         	unsigned sq=bit(x);
             print_debug(debugEval, "materialb%d %c%d    %4d%4d\n", p, (sq&7)+'a', sq/8+1, getPS(-p, sq).opening, getPS(-p, sq).endgame);
             value = value + getPS(-p, sq); } }
-    int v = calc(b.matIndex, value);
+    int v;
+    if (stm == White)
+        v = calc<White>((const ColoredBoard<White>&)b, b.matIndex, value);
+    else
+        v = calc<Black>((const ColoredBoard<Black>&)b, b.matIndex, value);
     if (v != cmp) asm("int3");
 #endif
     if (b.getPieces<White,Pawn>() + b.getPieces<Black,Pawn>()) {
@@ -938,7 +949,9 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
         print_debug(debugEval, "mat.drawish: %4d\n", material[b.matIndex].drawish);
         print_debug(debugEval, "mat.index:   %4d\n", material[b.matIndex].scaleIndex);
         print_debug(debugEval, "posScore:    %4d\n", s);
-        print_debug(debugEval, "PSScore:     %4d\n", calc(b.matIndex, CompoundScore(b.keyScore.score)));
+#ifdef MYDEBUG        
+        print_debug(debugEval, "PSScore:     %4d\n", v);
+#endif        
         return s; }
     else {       // pawnless endgame
         int mat = b.keyScore.score.endgame;  //TODO use a simpler discriminator
@@ -974,18 +987,11 @@ int Eval::interpolate(unsigned iScale, CompoundScore score) const {
 	return interpolate(weights, score);
 	} 
 /*
- * Calculate the final score from a CompoundScore, including the material table
+ * Calculate the final piece square score from a CompoundScore, including the material table
  * bias and draw chances
  */
-int Eval::calc(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const {
+int Eval::calcPS(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const {
     return (interpolate(weights, score) + bias) >> drawish; }
-
-int Eval::calc(unsigned matIndex, CompoundScore score) const {
-    unsigned i = material[matIndex].scaleIndex;
-    CompoundScore weights = scale[i];
-    int bias = material[matIndex].bias;
-    unsigned drawish = material[matIndex].drawish;
-    return calc(weights, bias, drawish, score); }
 
 int Eval::quantize(int value) const {
     if (value > 0) 

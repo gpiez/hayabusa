@@ -24,7 +24,6 @@
 #endif
 #include "workthread.h"
 #include "jobs.h"
-#include "stats.h"
 
 std::multimap<unsigned,Job*>    WorkThread::jobs;
 Mutex                           WorkThread::runningMutex;
@@ -132,7 +131,6 @@ void WorkThread::stopAll() {
     UniqueLock<Mutex> l(runningMutex);
     for (auto th = threads.begin(); th !=threads.end(); ++th)
         if ((*th)->job) (*th)->job->stop();    
-//        (*th)->stop(); 
     stopped.wait(l, [] { return running == 0; });    //waits until the end of the run loop is reached.
 }
 
@@ -191,7 +189,7 @@ void WorkThread::init() {
 
     unsigned i=0;
     for(auto th = threads.begin(); th != threads.end(); ++th)
-        (*th)->getThreadId() = ++i;
+        (*th)->getThreadId() = i++;
 }
 
 

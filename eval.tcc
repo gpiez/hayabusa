@@ -53,23 +53,54 @@ __v8hi Eval::estimate(const Move m, const KeyScore keyScore) const {
                - getKSVector(-C*m.capture(), m.to()); } }
 
 template<Colors C>
+unsigned Eval::estimate(const Move m, unsigned matIndex) const {
+    static constexpr unsigned CI = C == White ? 0:1;
+    static constexpr unsigned EI = 1-CI;
+    ASSERT(m.piece());
+    if (m.isSpecial()) {
+        unsigned piece = m.piece() & 7;
+        if (piece == King) return matIndex;
+        else if (piece == Pawn) 
+            matIndex -= ::matIndex[EI][Pawn];
+        else {
+            matIndex -= ::matIndex[CI][Pawn];
+            matIndex += ::matIndex[CI][piece];
+            matIndex -= ::matIndex[EI][m.capture()];
+        }
+    } else {
+        matIndex -= ::matIndex[EI][m.capture()];
+    }
+    return matIndex;
+}
+
+template<Colors C>
 unsigned Eval::evalKBPk(const Board& b) const {
-    if (((b.getPieces<C,Pawn>() & file<'a'>())
+    if (((b.getPieces<C,Pawn>() & file<'a'>()) == b.getPieces<C,Pawn>() 
             && (b.getPieces<C,Bishop>() & (C==White ? darkSquares : ~darkSquares)))) {
         uint64_t front = b.getPieces<C,Pawn>();
         front |= front << 1;
         front |= shift<C* 010>(front);
         front |= shift<C* 020>(front);
         front |= shift<C* 040>(front);
-        if (b.getPieces<-C,King>() & front) return 3; }
-    else if (((b.getPieces<C,Pawn>() & file<'h'>())
+        uint64_t back = b.getPieces<C,Pawn>();
+        back |= back << 1;
+        back  = shift<-C* 010>(back);
+        back |= shift<-C* 020>(back);
+        back |= shift<-C* 040>(back);
+        if (b.getPieces<-C,King>() & front & ~back) return 3; }
+    else if (((b.getPieces<C,Pawn>() & file<'h'>()) == b.getPieces<C,Pawn>()
               && (b.getPieces<C,Bishop>() & (C==White ? ~darkSquares : darkSquares)))) {
         uint64_t front = b.getPieces<C,Pawn>();
         front |= front >> 1;
         front |= shift<C* 010>(front);
         front |= shift<C* 020>(front);
         front |= shift<C* 040>(front);
-        if (b.getPieces<-C,King>() & front) return 3;
+        uint64_t back = b.getPieces<C,Pawn>();
+        back |= back >> 1;
+        back  = shift<-C* 010>(back);
+        back |= shift<-C* 020>(back);
+        back |= shift<-C* 040>(back);
+        if (b.getPieces<-C,King>() & front & ~back) return 3;
 
     }
 
@@ -103,28 +134,48 @@ unsigned Eval::evalKB_kb_(const Board& b) const {
     return 0; }
 
 template<Colors C>
+unsigned Eval::recognizer(const ColoredBoard<C>& b, unsigned matreco) const {
+    switch(matreco) {
+    case KBPk:
+        return evalKBPk<White>(b);
+    case kpbK:
+        return evalKBPk<Black>(b);
+    case KB_kb_:
+        return evalKB_kb_<Black>(b);
+    case KPk:
+        return evalKPk<White>(b, C);
+    case kpK:
+        return evalKPk<Black>(b, C);
+
+    case Unspecified:
+    default:
+        return 0;
+    }
+    
+}
+template<Colors C> //FIXME reuse recognizer which was used in psScore
 int Eval::operator() (const ColoredBoard<C>& b, int& wap, int& bap, int psValue, int& posScore ) const {
     int realScore;
     switch(material[b.matIndex].recognized) {
     case KBPk:
-        realScore = psValue >> evalKBPk<White>(b);
+        realScore = psValue;// >> evalKBPk<White>(b);
         posScore = realScore - psValue;
         break;
     case kpbK:
-        realScore = psValue >> evalKBPk<Black>(b);
+        realScore = psValue;// >> evalKBPk<Black>(b);
         posScore = realScore - psValue;
         break;
     case KB_kb_:
         posScore = operator()(b, C, wap, bap);
-        realScore = (psValue + posScore) >> evalKB_kb_<Black>(b);
+        realScore = psValue + (posScore >> evalKB_kb_<Black>(b));
         posScore = realScore - psValue;
         break;
     case KPk:
-        realScore = (psValue<<2) >> evalKPk<White>(b, C);
+        realScore = psValue;//<<2) >> evalKPk<White>(b, C);
         posScore = realScore - psValue;
         break;
     case kpK:
-        realScore = (psValue<<2) >> evalKPk<Black>(b, C);
+        realScore = psValue;//<<2) >> evalKPk<Black>(b, C);
         posScore = realScore - psValue;
         break;
 
@@ -155,3 +206,20 @@ int Eval::operator() (const ColoredBoard<C>& b, int& wap, int& bap, int psValue,
 #endif
     return quantize(realScore);
 }
+
+template<Colors C>
+int Eval::calc(const ColoredBoard<C>& b, unsigned matIndex, CompoundScore score) const {
+//    static unsigned ci = 0xdeadbeaf;
+//    static CompoundScore cw;
+//    static int cb;
+//    static unsigned cd;
+//    
+//    if (matIndex == ci) 
+//        return calcPS(cw, cb, cd, score);
+    
+    unsigned ci = matIndex;
+    if unlikely(material[ci].draw) return 0;
+    CompoundScore cw = scale[material[ci].scaleIndex];
+    int cb = material[ci].bias;
+    unsigned cd = material[ci].drawish + recognizer(b, material[ci].recognized) ;
+    return calcPS(cw, cb, cd, score); }

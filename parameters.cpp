@@ -104,19 +104,19 @@ void Parameters::init() {
     Parameters::add("bishop.hor.inflection.endgame", 1.5);
     Parameters::add("bishop.hor.inflection.opening", 0.6875);
     Parameters::add("bishop.hor.value.endgame", 0);
-    Parameters::add("bishop.hor.value.opening", 12);
+    Parameters::add("bishop.hor.value.opening", 12);                //20130404
     Parameters::add("bishop.mobility.endgame", 10);
     Parameters::add("bishop.mobility.opening", 30);
     Parameters::add("bishop.mobslope.endgame", 5.0);
     Parameters::add("bishop.mobslope.opening", 5.0);
-    Parameters::add("bishop.value.endgame", 300, 20, 400);
-    Parameters::add("bishop.value.opening", 310, 20, 400);
+    Parameters::add("bishop.value.endgame", 278, 20, 400);
+    Parameters::add("bishop.value.opening", 318, 20, 400);          //20120303
     Parameters::add("bishop.vcenter.endgame", 3.5);
     Parameters::add("bishop.vcenter.opening", 4.0);
     Parameters::add("bishop.vert.inflection.endgame", 1.5);
     Parameters::add("bishop.vert.inflection.opening", 1.34375);
     Parameters::add("bishop.vert.value.endgame", 0);
-    Parameters::add("bishop.vert.value.opening", 22);
+    Parameters::add("bishop.vert.value.opening", 14);               //20130404
     Parameters::add("king.attack", 40);
     Parameters::add("king.corner.endgame", 3);                      //20120312
     Parameters::add("king.corner.opening", 0);
