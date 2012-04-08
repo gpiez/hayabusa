@@ -19,7 +19,7 @@
 #include "eval.h"
 
 template<Colors C>
-__v8hi Eval::estimate(const Move m, const KeyScore keyScore) const {
+__v8hi Eval::estimate(const Move m, const KeyScore k) const {
     enum { pov = C == White ? 0:070 };
     using namespace SquareIndex;
     ASSERT(m.piece());
@@ -27,30 +27,30 @@ __v8hi Eval::estimate(const Move m, const KeyScore keyScore) const {
         unsigned piece = m.piece() & 7;
         if (piece == King) {
             ASSERT(m.capture() == 0);
-            __v8hi estKing = keyScore.vector
-                             - getKSVector(C*King, m.from())
-                             + getKSVector(C*King, m.to());
+            __v8hi estKing = k.vector
+                             - keyScore(C*King, m.from()).vector
+                             + keyScore(C*King, m.to()).vector;
             if (m.to() == (pov^g1)) {
-                return estKing - getKSVector(C*Rook, pov^h1)
-                       + getKSVector(C*Rook, pov^f1); }
+                return estKing - keyScore(C*Rook, pov^h1).vector
+                       + keyScore(C*Rook, pov^f1).vector; }
             else {
-                return estKing - getKSVector(C*Rook, pov^a1)
-                       + getKSVector(C*Rook, pov^d1); } }
+                return estKing - keyScore(C*Rook, pov^a1).vector
+                       + keyScore(C*Rook, pov^d1).vector; } }
         else if (piece == Pawn) {
-            return keyScore.vector - getKSVector(C*Pawn, m.from())
-                   + getKSVector(C*Pawn, m.to())
-                   - getKSVector(-C*Pawn, m.to()-C*8);
+            return k.vector - keyScore(C*Pawn, m.from()).vector
+                   + keyScore(C*Pawn, m.to()).vector
+                   - keyScore(-C*Pawn, m.to()-C*8).vector;
 
         }
         else {
-            return keyScore.vector - getKSVector(C*Pawn, m.from())
-                   + getKSVector(C*piece, m.to())
-                   - getKSVector(-C*m.capture(), m.to()); } }
+            return k.vector - keyScore(C*Pawn, m.from()).vector
+                   + keyScore(C*piece, m.to()).vector
+                   - keyScore(-C*m.capture(), m.to()).vector; } }
     else {
-        return keyScore.vector
-               - getKSVector(C*m.piece(), m.from())
-               + getKSVector(C*m.piece(), m.to())
-               - getKSVector(-C*m.capture(), m.to()); } }
+        return k.vector
+               - keyScore(C*m.piece(), m.from()).vector
+               + keyScore(C*m.piece(), m.to()).vector
+               - keyScore(-C*m.capture(), m.to()).vector; } }
 
 template<Colors C>
 unsigned Eval::estimate(const Move m, unsigned matIndex) const {
@@ -194,13 +194,13 @@ int Eval::operator() (const ColoredBoard<C>& b, int& wap, int& bap, int psValue,
     b2.occupied[0] = __bswapq(b.occupied[1]);
     b2.occupied[1] = __bswapq(b.occupied[0]);
     b2.occupied1 = __bswapq(b.occupied1);
-    b2.keyScore.score.opening = -b.keyScore.score.opening;
-    b2.keyScore.score.endgame = -b.keyScore.score.endgame;
-    b2.keyScore.pawnKey = 0;
+//    b2.keyScore.score().opening = -b.keyScore.score().opening;
+//    b2.keyScore.score().endgame = -b.keyScore.score().endgame;
+//    b2.keyScore.pawnKey = 0;
     b2.buildAttacks();
-    int wap2 = wap;
-    int bap2 = bap;
-    int posScore2 = posScore;
+//    int wap2 = wap;
+//    int bap2 = bap;
+//    int posScore2 = posScore;
 //    int eval2 = -this->operator ()(b2, wap2, bap2, -psValue, posScore2);
 //    ASSERT(quantize(eval2) == quantize(realScore));
 #endif

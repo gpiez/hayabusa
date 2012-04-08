@@ -112,9 +112,9 @@ void ColoredBoard<C>::doMove(Board* next, Move m, const Eval& eval) const {
         next->getPieces<C>(m.piece()) += to - from;
         next->getPieces<-C>(m.capture()) -= to;
         next->matIndex = matIndex - ::matIndex[EI][m.capture()];
-        next->keyScore.vector = keyScore.vector - eval.getKSVector(C*m.piece(), m.from())
-                                + eval.getKSVector(C*m.piece(), m.to())
-                                - eval.getKSVector(-C*m.capture(), m.to()); }
+        next->keyScore.vector = keyScore.vector - eval.keyScore(C*m.piece(), m.from()).vector
+                                + eval.keyScore(C*m.piece(), m.to()).vector
+                                - eval.keyScore(-C*m.capture(), m.to()).vector; }
     next->occupied1 = next->occupied[CI] | next->occupied[EI]; }
 
 template<Colors C>
@@ -168,20 +168,20 @@ void ColoredBoard<C>::doSpecialMove(Board* next, Move m, uint64_t from, uint64_t
         next->occupied[EI] = occupied[EI];
         next->matIndex = matIndex;
         __v8hi estKing = keyScore.vector
-                         - eval.getKSVector(C*King, m.from())
-                         + eval.getKSVector(C*King, m.to());
+                         - eval.keyScore(C*King, m.from()).vector
+                         + eval.keyScore(C*King, m.to()).vector;
         if (m.to() == (pov^g1)) {
             // short castling
             next->occupied[CI] = occupied[CI] ^ 0b1111ULL << m.from();
             next->getPieces<C,Rook>() ^= (from + to) << 1;
-            next->keyScore.vector = estKing - eval.getKSVector(C*Rook, pov^h1)
-                                    + eval.getKSVector(C*Rook, pov^f1); }
+            next->keyScore.vector = estKing - eval.keyScore(C*Rook, pov^h1).vector
+                                    + eval.keyScore(C*Rook, pov^f1).vector; }
         else {
             // long castling
             next->occupied[CI] = occupied[CI] ^ 0b11101ULL << (m.to() & 070);
             next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4);
-            next->keyScore.vector = estKing - eval.getKSVector(C*Rook, pov^a1)
-                                    + eval.getKSVector(C*Rook, pov^d1); }
+            next->keyScore.vector = estKing - eval.keyScore(C*Rook, pov^a1).vector
+                                    + eval.keyScore(C*Rook, pov^d1).vector; }
         ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>())); }
     else if (piece == Pawn) {
         // en passant
@@ -190,9 +190,9 @@ void ColoredBoard<C>::doSpecialMove(Board* next, Move m, uint64_t from, uint64_t
         next->getPieces<C,Pawn>() += to - from;
         next->getPieces<-C,Pawn>() -= shift<-C*8>(to);
         next->matIndex = matIndex - ::matIndex[EI][Pawn];
-        next->keyScore.vector = keyScore.vector - eval.getKSVector(C*Pawn, m.from())
-                                + eval.getKSVector(C*Pawn, m.to())
-                                - eval.getKSVector(-C*Pawn, m.to()-C*8); }
+        next->keyScore.vector = keyScore.vector - eval.keyScore(C*Pawn, m.from()).vector
+                                + eval.keyScore(C*Pawn, m.to()).vector
+                                - eval.keyScore(-C*Pawn, m.to()-C*8).vector; }
     else {
         // promotion
         next->occupied[CI] = occupied[CI] - from + to;
@@ -202,13 +202,13 @@ void ColoredBoard<C>::doSpecialMove(Board* next, Move m, uint64_t from, uint64_t
         next->getPieces<-C>(m.capture()) -= to;
         next->matIndex = matIndex - ::matIndex[EI][m.capture()] + ::matIndex[CI][piece]
                          - ::matIndex[CI][Pawn];
-        next->keyScore.vector = keyScore.vector - eval.getKSVector(C*Pawn, m.from())
-                                + eval.getKSVector(C*piece, m.to())
-                                - eval.getKSVector(-C*m.capture(), m.to()); } }
+        next->keyScore.vector = keyScore.vector - eval.keyScore(C*Pawn, m.from()).vector
+                                + eval.keyScore(C*piece, m.to()).vector
+                                - eval.keyScore(-C*m.capture(), m.to()).vector; } }
 
 template<Colors C>
 Key ColoredBoard<C>::getZobrist() const {
-    return keyScore.key + cep.castling.data4 + cep.enPassant*0x123456789abcdef + (C+1); }
+    return keyScore.key() + cep.castling.data4 + cep.enPassant*0x123456789abcdef + (C+1); }
 
 template<Colors C>
 uint64_t ColoredBoard<C>::isPieceHanging(const Eval& ) const {

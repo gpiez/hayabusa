@@ -157,7 +157,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         data.beta = origBeta.v;
         data.move = b.m;
         data.ply = b.ply;
-        data.key = estimate.key;
+        data.key = estimate.key();
         data.searchType = P;
         data.depth = depth;
         data.moveColor = -C;
@@ -184,7 +184,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 
     if (P != vein && P != leaf && unlikely(searchState != Running)) return 0;
 #ifdef QT_GUI_LIB
-    if (node) node->gain = *b.diff.v;
+    if (node) node->gain = *b.diff;
     if (node) node->ps = b.psValue;
     if (node) node->real = 0;
 #endif
@@ -396,7 +396,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     }
 
     int wattack, battack;
-    ASSERT(eval.calc(b, b.matIndex, CompoundScore(b.keyScore.score)) == b.psValue);
+    ASSERT(eval.calc(b, b.matIndex, CompoundScore(b.keyScore.score())) == b.psValue);
     Eval::Material mat=eval.material[b.matIndex];
     if (P != vein && P!=leaf) {
         if (mat.reduce) {
@@ -533,7 +533,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                         data.beta = alpha.v;
                         data.move = *i;
                         data.ply = b.ply;
-                        data.key = estimate.key;
+                        data.key = estimate.key();
                         data.searchType = P;
                         data.depth = depth;
                         data.moveColor = C;
@@ -559,9 +559,9 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 //                    && !(extend & (ExtDualReply | ExtSingleReply)) 
 //                    && !i->capture() && !i->isSpecial()) continue;
             }
-            if (P != vein) tt->prefetchSubTable(estimate.key - C+1);
+            if (P != vein) tt->prefetchSubTable(estimate.key() - C+1);
             const ColoredBoard<(Colors)-C> nextboard(b, *i, estimate.vector);
-            nextboard.psValue = eval.calc(nextboard , nextboard.matIndex, CompoundScore(estimate.vector));
+            nextboard.psValue = eval.calc(nextboard , nextboard.matIndex, CompoundScore(nextboard.keyScore.vector));
             nextboard.diff = & pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
             nextboard.prevPositionalScore = b.positionalScore;
             nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff;

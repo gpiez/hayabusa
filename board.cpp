@@ -133,7 +133,7 @@ void Board::initTables() {
 void Board::init() {
     *this = (Board) {{
             0 } };
-    keyScore.pawnKey = 0x12345678;
+    keyScore.pawnKey(0x12345678);
     matIndex = -::minIndex; }
 #pragma GCC diagnostic warning "-Wmissing-field-initializers"
 

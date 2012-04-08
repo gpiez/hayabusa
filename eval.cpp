@@ -240,7 +240,7 @@ int Eval::evalShield2(uint64_t pawns, unsigned file) const {
         return shieldMirrored[index]; }
 //TODO asess blocked pawns and their consequences on an attack
 PawnEntry Eval::pawns(const Board& b) const {
-    PawnKey k=b.keyScore.pawnKey;
+    PawnKey k=b.keyScore.pawnKey();
     Sub<PawnEntry, 4>* st = pt->getSubTable(k);
     PawnEntry pawnEntry;
     if (pt->retrieve(st, b, pawnEntry)) 
@@ -875,19 +875,19 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 #if defined(MYDEBUG)
     int cmp;
     if (stm == White)
-        cmp = calc<White>((const ColoredBoard<White>&)b, b.matIndex, CompoundScore(b.keyScore.score));
+        cmp = calc<White>((const ColoredBoard<White>&)b, b.matIndex, b.keyScore.score());
     else
-        cmp = calc<Black>((const ColoredBoard<Black>&)b, b.matIndex, CompoundScore(b.keyScore.score));
+        cmp = calc<Black>((const ColoredBoard<Black>&)b, b.matIndex, b.keyScore.score());
     CompoundScore value( 0, 0 );
     for (int p=Rook; p<=King; ++p) {
         for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
             unsigned sq=bit(x);
-            print_debug(debugEval, "materialw%d %c%d    %4d%4d\n", p, (sq&7)+'a', sq/8+1, getPS( p, sq).opening, getPS( p, sq).endgame);
-            value = value + getPS( p, sq); }
+            print_debug(debugEval, "materialw%d %c%d    %4d%4d\n", p, (sq&7)+'a', sq/8+1, keyScore( p, sq).opening(), keyScore( p, sq).endgame());
+            value = value + keyScore( p, sq).score(); }
         for (uint64_t x=b.getPieces<Black>(p); x; x&=x-1) {
         	unsigned sq=bit(x);
-            print_debug(debugEval, "materialb%d %c%d    %4d%4d\n", p, (sq&7)+'a', sq/8+1, getPS(-p, sq).opening, getPS(-p, sq).endgame);
-            value = value + getPS(-p, sq); } }
+            print_debug(debugEval, "materialb%d %c%d    %4d%4d\n", p, (sq&7)+'a', sq/8+1, keyScore(-p, sq).opening(), keyScore(-p, sq).endgame());
+            value = value + keyScore(-p, sq).score(); } }
     int v;
     if (stm == White)
         v = calc<White>((const ColoredBoard<White>&)b, b.matIndex, value);
@@ -954,7 +954,7 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 #endif        
         return s; }
     else {       // pawnless endgame
-        int mat = b.keyScore.score.endgame;  //TODO use a simpler discriminator
+        int mat = b.keyScore.endgame();  //TODO use a simpler discriminator
         int wap, bap, wdp, bdp; //TODO not needed here
         int m = mobilityDiff<Endgame>(b, wap, bap, wdp, bdp).endgame();
         int p = (mat>0 ? 1:4)*kingSafety<White>(b) - (mat<0 ? 1:4)*kingSafety<Black>(b);

@@ -316,23 +316,16 @@ public:
     int operator () (const Board&, Colors sideToMove) const __attribute__((noinline));
     template<Colors C> int operator () (const ColoredBoard<C>&, int&, int&, int, int&) const __attribute__((noinline));
     template<Colors C> Move evalMate(const Board&) const __attribute__((noinline));
-    PackedScore<> getPS(int8_t piece, uint8_t square) const {
-        ASSERT(square < nSquares);
-        ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
-        return zobristPieceSquare[piece+nPieces][square].score; }
-    PackedScore<>& getPS(int8_t piece, uint8_t square) {
-        ASSERT(square < nSquares);
-        ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
-        return zobristPieceSquare[piece+nPieces][square].score; }
-    __v8hi getKSVector(int8_t piece, uint8_t square) const {
+    KeyScore keyScore(unsigned piece, unsigned square) const {
         static_assert(sizeof(KeyScore) == sizeof(__v8hi), "Structure size error");
         ASSERT(square < nSquares);
-        ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
-        return zobristPieceSquare[piece+nPieces][square].vector; }
-    PawnKey getPawnKey(int8_t piece, uint8_t square) const {
+        ASSERT(piece+nPieces <= 2*nPieces);
+        return zobristPieceSquare[piece+nPieces][square]; }
+    KeyScore& keyScore(unsigned piece, unsigned square) {
+        static_assert(sizeof(KeyScore) == sizeof(__v8hi), "Structure size error");
         ASSERT(square < nSquares);
-        ASSERT(piece >= (signed)-nPieces && piece <= (signed)nPieces);
-        return zobristPieceSquare[piece+nPieces][square].pawnKey; }
+        ASSERT(piece+nPieces <= 2*nPieces);
+        return zobristPieceSquare[piece+nPieces][square]; }
     template<Colors C>
     bool draw(const Board& b, int& upperbound) const;
     void ptClear();

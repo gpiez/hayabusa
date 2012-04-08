@@ -199,10 +199,11 @@ class MoveList {
     MoveFunc<C,P>* iterator;
     Move currentMove;
     unsigned imove;
+    Move ttMove;
     
 public:
     MoveList(const ColoredBoard<C>& b, Move);
-
+    
     const Move& operator * () const {
         return currentMove; }
 

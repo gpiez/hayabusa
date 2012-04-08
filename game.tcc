@@ -149,6 +149,6 @@ uint64_t Game::rootPerft(unsigned int depth) {
 
 template<Colors C>
 bool Game::isDraw(const ColoredBoard<C>& b) const {
-    return findRepetition(b, b.keyScore.key, 0) || b.fiftyMoves >= 100; }
+    return findRepetition(b, b.keyScore.key(), 0) || b.fiftyMoves >= 100; }
 
 #endif

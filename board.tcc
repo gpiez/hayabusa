@@ -440,11 +440,11 @@ void Board::buildPins() {
 #endif
 
 }
-template<Colors C> void Board::setPiece(unsigned int piece, unsigned int pos, const Eval& e) {
+template<Colors C> void Board::setPiece(unsigned piece, unsigned pos, const Eval& e) {
     enum { CI = C == White ? 0:1, EI = C == White ? 1:0 };
     getPieces<C>(piece) |= 1ULL << pos;
     occupied[CI] |= 1ULL << pos;
     occupied1 |= 1ULL << pos;
-    keyScore.vector += e.getKSVector(C*piece, pos);
+    keyScore.vector += e.keyScore(C*piece, pos).vector;
     matIndex += ::matIndex[CI][piece]; }
 #endif

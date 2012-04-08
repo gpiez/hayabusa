@@ -153,7 +153,7 @@ struct Board {
     template<Colors C>
     bool inCheck() const {
         return getPieces<C,King>() & getAttacks<-C,All>(); }
-    template<Colors C> void setPiece(unsigned int piece, unsigned int pos, const Eval& e);
+    template<Colors C> void setPiece(unsigned piece, unsigned pos, const Eval& e);
 
     inline __v2di build02Attack(const unsigned sq) const __attribute__((always_inline));
     inline __v2di build13Attack(const unsigned sq) const __attribute__((always_inline));

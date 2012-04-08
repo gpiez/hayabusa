@@ -93,10 +93,10 @@ void Eval::Init::sigmoid(T& p, double start, double end, double dcenter, double 
 template<typename T>
 void Eval::Init::mulTab(T& p, PackedScore<float> step) {
     const size_t n = sizeof(T)/sizeof(p[0]);
-    CompoundScore cs(0,0);
+    PackedScore<> s = {0,0};
     for (unsigned int i = 0; i < n; ++i) {
-        p[i] = cs.packed();
-        cs = cs + CompoundScore( step.opening, step.endgame ); } }
+        p[i] = s;
+        s = s + PackedScore<>{ step.opening, step.endgame }; } }
 
 void Eval::Init::sigmoid(int n, int p[], double start, double end, double dcenter, double width) {
     double t0 = -dcenter;
@@ -124,13 +124,13 @@ void Eval::Init::initPS(Pieces pIndex, Parameters::Piece& piece) {
         if (y>piece.vcenter.endgame)
             ye = 2*piece.vcenter.endgame - y;
         ye = std::max(0, std::min(7, ye));
-        e.getPS( pIndex, sq) = { (short) (piece.value.opening + piece.hor.opening[xh] + piece.vert.opening[yo] + corner*piece.corner.opening),
-                                 (short) (piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame) };
+        e.keyScore( pIndex, sq).opening(piece.value.opening + piece.hor.opening[xh] + piece.vert.opening[yo] + corner*piece.corner.opening);
+        e.keyScore( pIndex, sq).endgame(piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame);
         if (pIndex == Pawn && y==6) {
-            e.getPS(pIndex, sq) = e.getPS(pIndex, sq) + e.pawnPasser22[y-1]; 
+            e.keyScore(pIndex, sq).score(e.keyScore(pIndex, sq).score() + e.pawnPasser22[y-1]); 
         }
-        e.getPS(-pIndex, sq ^ 070) = (-CompoundScore(e.getPS( pIndex, sq))).packed();
-        print_debug(debugEval, "%4d %4d  ", e.getPS(pIndex, sq).opening, e.getPS(pIndex, sq).endgame);
+        e.keyScore(-pIndex, sq ^ 070).score(-e.keyScore( pIndex, sq).score());
+        print_debug(debugEval, "%4d %4d  ", e.keyScore(pIndex, sq).opening(), e.keyScore(pIndex, sq).endgame());
 //        print_debug(debugEval, "%4d %4d  ", e.getPS(-pIndex, sq ^ 070).opening, e.getPS(-pIndex, sq ^ 070).endgame);
         if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n'); }
 
@@ -139,7 +139,7 @@ void Eval::Init::initPS(Pieces pIndex, Parameters::Piece& piece) {
 void Eval::Init::initPS() {
 
     for (unsigned int sq = 0; sq<nSquares; ++sq)
-        e.getPS( 0, sq) = PackedScore<> {0,0 };
+        e.keyScore( 0, sq) = KeyScore{{0}};
 
     initPS(Rook, rook);
     initPS(Bishop, bishop);
@@ -196,14 +196,14 @@ void Eval::Init::zobrist() {
             while (popcount(r) >= 29 && popcount(r) <= 36);
 
             if (p)
-                e.zobristPieceSquare[p+nPieces][i].key = r;
+                e.zobristPieceSquare[p+nPieces][i].key(r);
             else
-                e.zobristPieceSquare[p+nPieces][i].key = 0;
+                e.zobristPieceSquare[p+nPieces][i].key(0);
 
             if (abs(p) == Pawn)
-                e.zobristPieceSquare[p+nPieces][i].pawnKey = r ^ r >> 32;
+                e.zobristPieceSquare[p+nPieces][i].pawnKey(r ^ r >> 32);
             else
-                e.zobristPieceSquare[p+nPieces][i].pawnKey = 0; }
+                e.zobristPieceSquare[p+nPieces][i].pawnKey(0); }
 
 #ifdef MYDEBUG
     int collision=0;
@@ -218,7 +218,7 @@ void Eval::Init::zobrist() {
                         for (int cp = -nPieces; cp <= (signed int)nPieces; cp++)
                             if (cp)
                                 for (unsigned int c = 0; c < nSquares; ++c)
-                                    if (e.zobristPieceSquare[cp+nPieces][c].key == z1.key || e.zobristPieceSquare[p+nPieces][c].key == z2.key)
+                                    if (e.zobristPieceSquare[cp+nPieces][c].key() == z1.key() || e.zobristPieceSquare[p+nPieces][c].key() == z2.key())
                                         ++collision; }
     if (collision)
         std::cerr << collision << " Zobrist collisions" << std::endl;
