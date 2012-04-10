@@ -28,9 +28,9 @@
 static constexpr uint64_t darkSquares = 0xaa55aa55aa55aa55;
 
 static constexpr int ipw = 1;
-static constexpr int inw = 9*ipw;
-static constexpr int ibw = 3*inw;
-static constexpr int irw = 3*ibw;
+static constexpr int inw = 9*ipw;       //9
+static constexpr int ibw = 3*inw;       //27
+static constexpr int irw = 3*ibw;       //81
 static constexpr int iqw = 3*irw;		//243
 
 static constexpr int iqb = 3*iqw;		//729
@@ -66,7 +66,7 @@ enum Endgames { Unspecified, KBPk, kpbK, KB_kb_, KPk, kpK };
 class Eval {
 public:
     struct Material {
-        unsigned scaleIndex:6;  // 0..egTSlope index in table of scaling factors
+        PackedScore<> scale;
         int bias:10;            // -511..511
         unsigned draw:1;
         unsigned drawish:1;     // the position is likely a draw
@@ -74,8 +74,7 @@ public:
         unsigned reduce:1;      // don't search deep after this point
         unsigned doNull:1;      // null move allowed
         Endgames recognized:3;
-
-    } __attribute__((packed));
+    };
 private:
     KeyScore zobristPieceSquare[nTotalPieces][nSquares];
 

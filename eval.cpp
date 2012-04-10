@@ -900,8 +900,8 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 
         int wdp, bdp;
         CompoundScore mob = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
-        CompoundScore attend ( scale[material[b.matIndex].scaleIndex].opening ? attackDiff(b, pe, wap, bap, wdp, bdp) : 0,
-                               scale[material[b.matIndex].scaleIndex].endgame ? endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm) : 0);
+        CompoundScore attend ( material[b.matIndex].scale.opening ? attackDiff(b, pe, wap, bap, wdp, bdp) : 0,
+                               material[b.matIndex].scale.endgame ? endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm) : 0);
 
         CompoundScore pawn( pe.score );
         
@@ -940,14 +940,14 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 //         print_debug(debugEval, "pieces:         %d\n", pi);
 
         CompoundScore score = mob + attend + pawn + piece;
-        int s = interpolate(material[b.matIndex].scaleIndex, score);        
+        int s = interpolate(material[b.matIndex].scale, score);        
         print_debug(debugEval, "piece:       %4d %4d\n", piece.opening(), piece.endgame());
         print_debug(debugEval, "attack/endg: %4d %4d\n", attend.opening(), attend.endgame());
         print_debug(debugEval, "mobility:    %4d %4d\n", mob.opening(), mob.endgame());
         print_debug(debugEval, "pawn:        %4d %4d\n", pawn.opening(), pawn.endgame());
         print_debug(debugEval, "mat.bias:    %4d\n", material[b.matIndex].bias);
         print_debug(debugEval, "mat.drawish: %4d\n", material[b.matIndex].drawish);
-        print_debug(debugEval, "mat.index:   %4d\n", material[b.matIndex].scaleIndex);
+        print_debug(debugEval, "mat.opening: %4d\n", material[b.matIndex].scale.opening);
         print_debug(debugEval, "posScore:    %4d\n", s);
 #ifdef MYDEBUG        
         print_debug(debugEval, "PSScore:     %4d\n", v);
@@ -982,10 +982,10 @@ int Eval::interpolate(CompoundScore weights, CompoundScore score) const {
 #endif
 	}
 
-int Eval::interpolate(unsigned iScale, CompoundScore score) const {
-	CompoundScore weights = scale[iScale];
-	return interpolate(weights, score);
-	} 
+//int Eval::interpolate(unsigned iScale, CompoundScore score) const {
+//	CompoundScore weights = scale[iScale];
+//	return interpolate(weights, score);
+//	} 
 /*
  * Calculate the final piece square score from a CompoundScore, including the material table
  * bias and draw chances

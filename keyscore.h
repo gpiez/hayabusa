@@ -13,6 +13,14 @@
 #include "compoundscore.h"
 #include "x86intrin.h"
 
+/*
+ * update score:        every move      needed early
+ * update key:          every move      needed late
+ * update pawnkey:      only pawn move  needed very late
+ * update material:     only capture    needed early
+ * update *material:    some cpatures   needed early
+ * update *matscale:    rare            needed early
+ */
 #ifdef __SSE4_1__
 struct KeyScore {
     __v8hi vector;

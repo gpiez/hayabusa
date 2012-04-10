@@ -219,7 +219,8 @@ int Eval::calc(const ColoredBoard<C>& b, unsigned matIndex, CompoundScore score)
     
     unsigned ci = matIndex;
     if unlikely(material[ci].draw) return 0;
-    CompoundScore cw = scale[material[ci].scaleIndex];
+//    CompoundScore cw = scale[material[ci].scaleIndex];
+    CompoundScore cw = material[ci].scale;
     int cb = material[ci].bias;
     unsigned cd = material[ci].drawish + recognizer(b, material[ci].recognized) ;
     return calcPS(cw, cb, cd, score); }

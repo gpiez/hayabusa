@@ -242,25 +242,26 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
 
 	int scaleIndex = scalemat - endgameMaterial + endgameTransitionSlope/2;
 	scaleIndex = std::max(0, std::min(scaleIndex, endgameTransitionSlope));
-    m.scaleIndex = scaleIndex;
+//    m.scaleIndex = scaleIndex;
+    m.scale = e.scale[scaleIndex];
     
     if (b+n >= eb+en+2 && r+1 >= er) {
-        int s = C*e.interpolate(m.scaleIndex, twoMinOneMaj);
+        int s = C*e.interpolate(m.scale, twoMinOneMaj);
         m.bias += s;
     }
     if (b+n >= eb+en+1 && p+3 >= ep) {
-        int s = C*e.interpolate(m.scaleIndex, oneMinThreePawns);
+        int s = C*e.interpolate(m.scale, oneMinThreePawns);
         m.bias += s;
     }
     if (b >= 2) {
-        int s = C*e.interpolate(m.scaleIndex, bishopPair);
+        int s = C*e.interpolate(m.scale, bishopPair);
         m.bias += s;
     }
-    m.bias += e.interpolate(m.scaleIndex, rookPerPawn*r*(p+ep-8)/16*C);
-    m.bias += e.interpolate(m.scaleIndex, bishopPerPawn*b*(p+ep-8)/16*C);
-    m.bias += e.interpolate(m.scaleIndex, knightPerPawn*n*(p+ep-8)/16*C);
-    m.bias += e.interpolate(m.scaleIndex, queenPerPawn*q*(p+ep-8)/16*C);
-    m.bias += e.interpolate(m.scaleIndex, pawnPerPawn*p*(p-4)/16*C);
+    m.bias += e.interpolate(m.scale, rookPerPawn*r*(p+ep-8)/16*C);
+    m.bias += e.interpolate(m.scale, bishopPerPawn*b*(p+ep-8)/16*C);
+    m.bias += e.interpolate(m.scale, knightPerPawn*n*(p+ep-8)/16*C);
+    m.bias += e.interpolate(m.scale, queenPerPawn*q*(p+ep-8)/16*C);
+    m.bias += e.interpolate(m.scale, pawnPerPawn*p*(p-4)/16*C);
     
     if (b == 1 && eb == 1 && q+r+n+eq+er+en == 0)
         m.recognized = KB_kb_;
@@ -383,8 +384,8 @@ void Eval::Init::material() {
 				PackedScore<> neg;
 				neg.endgame = -test.endgame;
 				neg.opening = -test.opening;
-				int s = e.interpolate(i, test);
-				int sneg = -e.interpolate(i, neg);
+				int s = e.interpolate(e.scale[i], test);
+				int sneg = -e.interpolate(e.scale[i], neg);
 				if ( s != sneg) {
 					std::cout << "sold:" << s << " snew:" << sneg << " o " << test.opening << " e " << test.endgame << " scale " << i << std::endl;
 					std::cout << this->e.scale[i].opening << "." << this->e.scale[i].endgame << ": " 

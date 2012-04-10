@@ -87,6 +87,7 @@ template<Colors C, Phase P, typename ResultType> void Game::perft(ResultType& re
         return; }
 
     __v8hi est = eval.estimate<(Colors)-C>(m, prev.keyScore);
+//    unsigned estmatIndex = eval.estimate<(Colors)-C>(m, prev.matIndex);
     const ColoredBoard<C> b(prev, m, est);
 
 #if 0    
