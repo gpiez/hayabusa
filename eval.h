@@ -339,7 +339,6 @@ public:
     int calc(const ColoredBoard<C>&b, unsigned matIndex, CompoundScore score) const;
     int calcPS(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const;
 	int interpolate(CompoundScore weights, CompoundScore score) const;
-	int interpolate(unsigned iScale, CompoundScore score) const;
 	template<Colors C>
 	unsigned recognizer(const ColoredBoard<C>& b, unsigned matreco) const;
     int quantize(int) const; };

@@ -982,14 +982,6 @@ int Eval::interpolate(CompoundScore weights, CompoundScore score) const {
 #endif
 	}
 
-//int Eval::interpolate(unsigned iScale, CompoundScore score) const {
-//	CompoundScore weights = scale[iScale];
-//	return interpolate(weights, score);
-//	} 
-/*
- * Calculate the final piece square score from a CompoundScore, including the material table
- * bias and draw chances
- */
 int Eval::calcPS(CompoundScore weights, int bias, unsigned drawish, CompoundScore score) const {
     return (interpolate(weights, score) + bias) >> drawish; }
 
