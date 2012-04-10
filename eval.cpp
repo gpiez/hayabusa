@@ -946,8 +946,8 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
         print_debug(debugEval, "mobility:    %4d %4d\n", mob.opening(), mob.endgame());
         print_debug(debugEval, "pawn:        %4d %4d\n", pawn.opening(), pawn.endgame());
         print_debug(debugEval, "mat.bias:    %4d\n", material[b.matIndex].bias);
-        print_debug(debugEval, "mat.drawish: %4d\n", material[b.matIndex].drawish);
-        print_debug(debugEval, "mat.opening: %4d\n", material[b.matIndex].scale.opening);
+        print_debug(debugEval, "mat.opening: %6.1f\n", material[b.matIndex].scale.opening/32767.0);
+        print_debug(debugEval, "mat.endgame: %6.1f\n", material[b.matIndex].scale.endgame/32767.0);
         print_debug(debugEval, "posScore:    %4d\n", s);
 #ifdef MYDEBUG        
         print_debug(debugEval, "PSScore:     %4d\n", v);

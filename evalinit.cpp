@@ -242,7 +242,6 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
 
 	int scaleIndex = scalemat - endgameMaterial + endgameTransitionSlope/2;
 	scaleIndex = std::max(0, std::min(scaleIndex, endgameTransitionSlope));
-//    m.scaleIndex = scaleIndex;
     m.scale = e.scale[scaleIndex];
     
     if (b+n >= eb+en+2 && r+1 >= er) {
@@ -290,13 +289,13 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
                 return; }
             // Np Bp, reduce to -¼ pawn
             if (emat==1) {
-                m.drawish = true;
-                m.bias = -225*C;
+                m.scale = m.scale/2;
+                m.bias = -112*C;
                 return; }
             // Npp Bpp, reduce to -½ pawn
             if (emat==2) {
-                m.drawish = true;
-                m.bias = -150*C;
+                m.scale = m.scale/2;
+                m.bias = -75*C;
                 return; }
             ASSERT(emat=3);
             // Nn Nb Bb Bn
@@ -305,8 +304,8 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
                 return; }
             // Nppp Bppp, reduce to -¾ pawn
             ASSERT(ep==3);
-            m.drawish = true;
-            m.bias = -75*C;
+            m.scale = m.scale/2;
+            m.bias = -37*C;
             return; } }
     // NP* BP*
 
@@ -315,8 +314,7 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
         if (b + n == 1 && emat <= 3) {
             // KBPkb KNPkN
             if (emat==3 && en+eb==1) {
-                m.bias = -200*C;
-                m.drawish = true;
+                m.scale = m.scale/16;
                 return; } } }
 
     // B
@@ -330,21 +328,21 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
                 m.draw = true;
                 return; }
             else if (emat==1) {
-                m.drawish = true;
-                m.bias = -400*C;
+                m.scale = m.scale/2;
+                m.bias = -200*C;
                 return; }
             else if (emat==2) {
-                m.drawish = true;
-                m.bias = -300*C;
+                m.scale = m.scale/2;
+                m.bias = -150*C;
                 return; }
             else if (emat==3 && eb+en==1) {
                 m.draw = true;
                 return; }
             else if (emat==4 && eb+en==1) {
-                m.drawish = true;
-                m.bias = -100*C;
+                m.scale = m.scale/2;
+                m.bias = -50*C;
                 return; }
-            m.drawish = true;
+            m.scale = m.scale/2;
             return; } }
 
     // KQk KRk KBNk KBBk
@@ -355,8 +353,8 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
 
     // KRkb KRkn
     if (q+b+n+p==0 && r==1 && eq+er+ep==0 && eb+en==1) {
-        m.bias = -100*C;
-        m.drawish = true;
+        m.bias = -50*C;
+        m.scale = m.scale/2;
         return; }
 
     if (mat-emat >= e.noEvalLimit && mat>2*emat)

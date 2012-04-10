@@ -68,8 +68,8 @@ public:
     struct Material {
         PackedScore<> scale;
         int bias:10;            // -511..511
-        unsigned draw:1;
-        unsigned drawish:1;     // the position is likely a draw
+        unsigned draw:1;        // the position is a sure draw
+//        unsigned drawish:1;     
         unsigned won:1;         // the side with advantage has probably won
         unsigned reduce:1;      // don't search deep after this point
         unsigned doNull:1;      // null move allowed
