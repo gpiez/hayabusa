@@ -445,6 +445,7 @@ template<Colors C> void Board::setPiece(unsigned piece, unsigned pos, const Eval
     getPieces<C>(piece) |= 1ULL << pos;
     occupied[CI] |= 1ULL << pos;
     occupied1 |= 1ULL << pos;
-    keyScore.vector += e.keyScore(C*piece, pos).vector;
-    matIndex += ::matIndex[CI][piece]; }
+    kms.v += e.kms(C*piece, pos).v;
+    pawnKey ^= e.pawnKey(C*piece, pos);
+}
 #endif

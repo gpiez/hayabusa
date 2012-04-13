@@ -37,23 +37,47 @@ static constexpr int iqb = 3*iqw;		//729
 static constexpr int irb = 3*iqb;		//2187
 static constexpr int ibb = 3*irb;		//6561
 static constexpr int inb = 3*ibb;		//19683
-static constexpr int ipb = 3*inb;
+static constexpr int ipb = 0x10000;//3*inb;
+
+// This clever constants for indexing the material table were chosen to
+// improve cache locality. More materially equal positions are close together
+// in the center of the memory blob, and common exchanges like PxP, BxB etc.
+// shift the material index value only by a small amount. This comes at a cost
+// of doubleing the memory consumption, but the memory is only sparsely used.
+// Alas, this doesn't improve speed in any measurable way.
+
+//static constexpr int matIndex[nColors][nPieces+1] = {
+//    { 0, -irb,    -ibb,    -iqb,    -inb,    -ipb,     0 },
+//    { 0,  irb-irw, ibb-ibw, iqb-iqw, inb-inw, ipb-ipw, 0 } };
+
+//static constexpr int minIndex = 9*matIndex[0][Pawn]
+//                         + 3*matIndex[0][Knight]
+//                         + 3*matIndex[0][Queen]
+//                         + 3*matIndex[0][Bishop]
+//                         + 3*matIndex[0][Rook];
+
+//static constexpr int maxIndex = 9*matIndex[1][Pawn]
+//                         + 3*matIndex[1][Knight]
+//                         + 3*matIndex[1][Queen]
+//                         + 3*matIndex[1][Bishop]
+//                         + 3*matIndex[1][Rook];
 
 static constexpr int matIndex[nColors][nPieces+1] = {
-    {	0, -irb,    -ibb,    -iqb,    -inb,    -ipb,     0 },
-    {	0,  irb-irw, ibb-ibw, iqb-iqw, inb-inw, ipb-ipw, 0 } };
+    { 0, irb,    ibb,    iqb,    inb,    ipb,     0 },
+    { 0, irw,    ibw,    iqw,    inw,    ipw,   0 } };
 
-static constexpr int minIndex = 9*matIndex[0][Pawn]
-                         + 3*matIndex[0][Knight]
-                         + 3*matIndex[0][Queen]
-                         + 3*matIndex[0][Bishop]
-                         + 3*matIndex[0][Rook];
+static constexpr int minIndex = 0;
 
 static constexpr int maxIndex = 9*matIndex[1][Pawn]
                          + 3*matIndex[1][Knight]
                          + 3*matIndex[1][Queen]
                          + 3*matIndex[1][Bishop]
-                         + 3*matIndex[1][Rook];
+                         + 3*matIndex[1][Rook]
+                         + 9*matIndex[0][Pawn]
+                         + 3*matIndex[0][Knight]
+                         + 3*matIndex[0][Queen]
+                         + 3*matIndex[0][Bishop]
+                         + 3*matIndex[0][Rook];
 class Parameters;
 class PieceList;
 class Board;
@@ -69,7 +93,6 @@ public:
         PackedScore<> scale;
         int bias:10;            // -511..511
         unsigned draw:1;        // the position is a sure draw
-//        unsigned drawish:1;     
         unsigned won:1;         // the side with advantage has probably won
         unsigned reduce:1;      // don't search deep after this point
         unsigned doNull:1;      // null move allowed
@@ -77,7 +100,8 @@ public:
     };
 private:
     KeyScore zobristPieceSquare[nTotalPieces][nSquares];
-
+    KeyMaterialScore keyMaterialScore[nTotalPieces][nSquares];
+    PawnKey pk[nTotalPieces][nSquares];
     TranspositionTable<PawnEntry, 4, PawnKey>* pt;
 
     PackedScore<> bishopOwnPawn[9];
@@ -320,11 +344,31 @@ public:
         ASSERT(square < nSquares);
         ASSERT(piece+nPieces <= 2*nPieces);
         return zobristPieceSquare[piece+nPieces][square]; }
+    PawnKey pawnKey(int piece, unsigned square) const {
+        ASSERT(square < nSquares);
+        ASSERT(piece+nPieces <= 2*nPieces);
+        return pk[piece+nPieces][square]; }
+    KeyMaterialScore kms(int piece, unsigned square) const {
+        ASSERT(square < nSquares);
+        ASSERT(piece+nPieces <= 2*nPieces);
+        return keyMaterialScore[piece+nPieces][square]; }
+private:
     KeyScore& keyScore(unsigned piece, unsigned square) {
         static_assert(sizeof(KeyScore) == sizeof(__v8hi), "Structure size error");
         ASSERT(square < nSquares);
         ASSERT(piece+nPieces <= 2*nPieces);
         return zobristPieceSquare[piece+nPieces][square]; }
+    KeyMaterialScore& kms(int piece, unsigned square) {
+        ASSERT(square < nSquares);
+        ASSERT(piece+nPieces <= 2*nPieces);
+        return keyMaterialScore[piece+nPieces][square]; }
+    void pawnKey(int piece, unsigned square, PawnKey v) {
+        ASSERT(square < nSquares);
+        ASSERT(piece+nPieces <= 2*nPieces);
+        pk[piece+nPieces][square] = v; }
+public:
+    void key(int piece, unsigned square, Key v) {
+        kms(piece, square).key(v); }
     template<Colors C>
     bool draw(const Board& b, int& upperbound) const;
     void ptClear();
@@ -333,6 +377,8 @@ public:
     __v8hi estimate(const Move m, const KeyScore keyScore) const;
     template<Colors C>
     unsigned estimate(const Move m, unsigned) const;
+    template<Colors C>
+    __v8hi estimate(const Move m, const KeyMaterialScore) const;
     template<Colors C>
     __v8hi inline_estimate(const Move m, const KeyScore keyScore) const __attribute__((always_inline)) ;
     template<Colors C>

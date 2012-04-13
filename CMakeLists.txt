@@ -119,6 +119,6 @@ IF (USE_GENETIC)
     ADD_DEFINITIONS(-DUSE_GENETIC)
 ENDIF (USE_GENETIC)
 
-add_gcc_precompiled_header(pch.h common_SRCS)
+#add_gcc_precompiled_header(pch.h common_SRCS)
 
 ADD_EXECUTABLE(mats mats.cpp)

@@ -223,9 +223,9 @@ template<typename Entry, unsigned assoc, typename Key>
 template<Colors C>
 std::string Table<Entry, assoc, Key>::bestLineNext(const ColoredBoard<(Colors)-C>& prev, Move m, std::set<Key>& visited, const Game& rb) {
     std::string line = m.string();
-    __v8hi est = rb.eval.estimate<(Colors)-C>(m, prev.keyScore);
+    __v8hi est = rb.eval.estimate<(Colors)-C>(m, prev.kms);
 //    unsigned estmatIndex = rb.eval.estimate<(Colors)-C>(m, prev.matIndex);
-    const ColoredBoard<C> b(prev, m, est);
+    const ColoredBoard<C> b(prev, m, est, rb.eval);
     Key key = b.getZobrist();
     if (visited.count(key)) return line;
     visited.insert(key);

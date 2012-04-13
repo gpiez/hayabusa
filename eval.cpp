@@ -240,7 +240,7 @@ int Eval::evalShield2(uint64_t pawns, unsigned file) const {
         return shieldMirrored[index]; }
 //TODO asess blocked pawns and their consequences on an attack
 PawnEntry Eval::pawns(const Board& b) const {
-    PawnKey k=b.keyScore.pawnKey();
+    PawnKey k=b.pawnKey;
     Sub<PawnEntry, 4>* st = pt->getSubTable(k);
     PawnEntry pawnEntry;
     if (pt->retrieve(st, b, pawnEntry)) 
@@ -875,9 +875,9 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 #if defined(MYDEBUG)
     int cmp;
     if (stm == White)
-        cmp = calc<White>((const ColoredBoard<White>&)b, b.matIndex, b.keyScore.score());
+        cmp = calc<White>((const ColoredBoard<White>&)b, b.kms.materialIndex(), b.kms.score());
     else
-        cmp = calc<Black>((const ColoredBoard<Black>&)b, b.matIndex, b.keyScore.score());
+        cmp = calc<Black>((const ColoredBoard<Black>&)b, b.kms.materialIndex(), b.kms.score());
     CompoundScore value( 0, 0 );
     for (int p=Rook; p<=King; ++p) {
         for (uint64_t x=b.getPieces<White>(p); x; x&=x-1) {
@@ -890,9 +890,9 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
             value = value + keyScore(-p, sq).score(); } }
     int v;
     if (stm == White)
-        v = calc<White>((const ColoredBoard<White>&)b, b.matIndex, value);
+        v = calc<White>((const ColoredBoard<White>&)b, b.kms.materialIndex(), value);
     else
-        v = calc<Black>((const ColoredBoard<Black>&)b, b.matIndex, value);
+        v = calc<Black>((const ColoredBoard<Black>&)b, b.kms.materialIndex(), value);
     if (v != cmp) asm("int3");
 #endif
     if (b.getPieces<White,Pawn>() + b.getPieces<Black,Pawn>()) {
@@ -900,8 +900,8 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 
         int wdp, bdp;
         CompoundScore mob = mobilityDiff<Opening>(b, wap, bap, wdp, bdp);
-        CompoundScore attend ( material[b.matIndex].scale.opening ? attackDiff(b, pe, wap, bap, wdp, bdp) : 0,
-                               material[b.matIndex].scale.endgame ? endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm) : 0);
+        CompoundScore attend ( material[b.kms.materialIndex()].scale.opening ? attackDiff(b, pe, wap, bap, wdp, bdp) : 0,
+                               material[b.kms.materialIndex()].scale.endgame ? endgame<White>(b, pe, stm) - endgame<Black>(b, pe, stm) : 0);
 
         CompoundScore pawn( pe.score );
         
@@ -940,21 +940,21 @@ int Eval::operator () (const Board& b, Colors stm, int& wap, int& bap ) const {
 //         print_debug(debugEval, "pieces:         %d\n", pi);
 
         CompoundScore score = mob + attend + pawn + piece;
-        int s = interpolate(material[b.matIndex].scale, score);        
+        int s = interpolate(material[b.kms.materialIndex()].scale, score);        
         print_debug(debugEval, "piece:       %4d %4d\n", piece.opening(), piece.endgame());
         print_debug(debugEval, "attack/endg: %4d %4d\n", attend.opening(), attend.endgame());
         print_debug(debugEval, "mobility:    %4d %4d\n", mob.opening(), mob.endgame());
         print_debug(debugEval, "pawn:        %4d %4d\n", pawn.opening(), pawn.endgame());
-        print_debug(debugEval, "mat.bias:    %4d\n", material[b.matIndex].bias);
-        print_debug(debugEval, "mat.opening: %6.1f\n", material[b.matIndex].scale.opening/32767.0);
-        print_debug(debugEval, "mat.endgame: %6.1f\n", material[b.matIndex].scale.endgame/32767.0);
+        print_debug(debugEval, "mat.bias:    %4d\n", material[b.kms.materialIndex()].bias);
+        print_debug(debugEval, "mat.opening: %6.1f\n", material[b.kms.materialIndex()].scale.opening/32767.0);
+        print_debug(debugEval, "mat.endgame: %6.1f\n", material[b.kms.materialIndex()].scale.endgame/32767.0);
         print_debug(debugEval, "posScore:    %4d\n", s);
 #ifdef MYDEBUG        
         print_debug(debugEval, "PSScore:     %4d\n", v);
 #endif        
         return s; }
     else {       // pawnless endgame
-        int mat = b.keyScore.endgame();  //TODO use a simpler discriminator
+        int mat = b.kms.endgame();  //TODO use a simpler discriminator
         int wap, bap, wdp, bdp; //TODO not needed here
         int m = mobilityDiff<Endgame>(b, wap, bap, wdp, bdp).endgame();
         int p = (mat>0 ? 1:4)*kingSafety<White>(b) - (mat<0 ? 1:4)*kingSafety<Black>(b);

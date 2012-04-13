@@ -75,6 +75,9 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
          */
         if (value >= beta.v && !nextboard.template inCheck<C>()) {
             if (value >= infinity*C) return value.v;
+            uint64_t temp2 = nextboard.cep.enPassant;
+            nextboard.cep.enPassant = 0;
+            tt->prefetchSubTable(nextboard.swapped().getZobrist());
             int temp = nextboard.fiftyMoves;
             nextboard.ply++;
             if (isMain) line[nextboard.ply].data = 0;            
@@ -84,6 +87,7 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
             Score<C> nullvalue(search4<(Colors)-C, P>(nextboard.swapped(), nullReduction[newDepth], beta, alpha0, ExtNot, nextNT NODE ));
             if (nullvalue >= beta.v) return value.v;
             nextboard.fiftyMoves = temp;
+            nextboard.cep.enPassant = temp2;
             nextboard.ply--;
         } }
     
@@ -139,15 +143,13 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                   const A& origAlpha, const B& origBeta,
                   Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
     WorkThread::stats.node++;
-//     if (WorkThread::stats.node == 2327) asm("int3");
+//   +  if (WorkThread::stats.node == 261065) asm("int3");
 #ifdef MYDEBUG
     uint64_t __attribute__((unused)) localnode = WorkThread::stats.node;
 #endif
     if unlikely( WorkThread::stats.node > maxSearchNodes ) {
         searchState = Stopping;
         return 0; }
-    KeyScore estimate;
-    estimate = b.keyScore;
 #ifdef QT_GUI_LIB
     NodeItem* node = 0;
     if (NodeItem::nNodes < MAX_NODES && parent) {
@@ -157,7 +159,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         data.beta = origBeta.v;
         data.move = b.m;
         data.ply = b.ply;
-        data.key = estimate.key();
+        data.key = b.kms.key();
         data.searchType = P;
         data.depth = depth;
         data.moveColor = -C;
@@ -180,7 +182,11 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         alone increase the speed by ~2%.
         For a core i7 the speed increase from prefetching is about 3%.
     */
-//    if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
+    Key z;
+    if (P!=vein) {
+        z = b.getZobrist();
+//        tt->prefetchSubTable(z);
+    }
 
     if (P != vein && P != leaf && unlikely(searchState != Running)) return 0;
 #ifdef QT_GUI_LIB
@@ -235,10 +241,6 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     if (node && extend) node->flags |= Extend;
 #endif
 
-    Key z;
-    if (P!=vein) {
-        z = b.getZobrist();
-    }
     if ((P==vein || P==leaf) && !b.threatened) {
         Score<C> value(origAlpha);
         value.max(eval.quantize(b.estScore - C*eval.standardError));
@@ -250,8 +252,6 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             WorkThread::stats.leafcut++;
             return value.v; } }
 
-    ASSERT( CompoundScore(b.keyScore.vector).opening() == CompoundScore(estimate.vector).opening());
-    ASSERT( CompoundScore(b.keyScore.vector).endgame() == CompoundScore(estimate.vector).endgame());
     ASSERT(P == vein || z == b.getZobrist());
     ASSERT(!b.template inCheck<(Colors)-C>());
     TranspositionTable<TTEntry, transpositionTableAssoc, Key>::SubTable* st;
@@ -396,8 +396,8 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     }
 
     int wattack, battack;
-    ASSERT(eval.calc(b, b.matIndex, CompoundScore(b.keyScore.score())) == b.psValue);
-    Eval::Material mat=eval.material[b.matIndex];
+    ASSERT(eval.calc(b, b.kms.materialIndex(), b.kms.score()) == b.psValue);
+    Eval::Material mat=eval.material[b.kms.materialIndex()];
     if (P != vein && P!=leaf) {
         if (mat.reduce) {
 //                depth = eval.dMaxExt + (depth-eval.dMaxExt)/4;
@@ -509,14 +509,13 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 //                     leafExt = (Extension) (leafExt & ~ExtDualReply);
 //             }
             Score<C> value;
-            KeyScore estimate;
-            estimate.vector = eval.estimate<C>(*i, b.keyScore);
-            unsigned estmatIndex = eval.estimate<C>(*i, b.matIndex);
+            KeyMaterialScore kms;
+            kms.v = eval.estimate<C>(*i, b.kms);
             if (P==vein || (P==leaf && (i.isCapture() | i.isNonCapture())
                                     && !b.threatened
                                     && !(extend & (ExtDualReply | ExtSingleReply)))
                         || (P==leaf && newDepth <= eval.dMaxCapture && !i.isMate())) {
-                int nextPSValue = eval.calc(b.swapped() , estmatIndex, CompoundScore(estimate.vector));
+                int nextPSValue = eval.calc(b.swapped() , kms.materialIndex(), kms.score());
                 int nextEstimatedScore = eval.quantize(nextPSValue + b.positionalScore + C*eval.standardError);                
                 value.v = nextEstimatedScore;
                 if (value <= alpha.v) {
@@ -533,7 +532,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                         data.beta = alpha.v;
                         data.move = *i;
                         data.ply = b.ply;
-                        data.key = estimate.key();
+                        data.key = b.kms.key();
                         data.searchType = P;
                         data.depth = depth;
                         data.moveColor = C;
@@ -559,9 +558,10 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 //                    && !(extend & (ExtDualReply | ExtSingleReply)) 
 //                    && !i->capture() && !i->isSpecial()) continue;
             }
-            if (P != vein) tt->prefetchSubTable(estimate.key() - C+1);
-            const ColoredBoard<(Colors)-C> nextboard(b, *i, estimate.vector);
-            nextboard.psValue = eval.calc(nextboard , nextboard.matIndex, CompoundScore(nextboard.keyScore.vector));
+//            if (P != vein) tt->prefetchSubTable(b.kms.key() + b.cep.castling.data4 - C+1);
+            const ColoredBoard<(Colors)-C> nextboard(b, *i, kms.v, eval);
+            if (P != vein) tt->prefetchSubTable(nextboard.getZobrist());
+            nextboard.psValue = eval.calc(nextboard , nextboard.kms.materialIndex(), nextboard.kms.score());
             nextboard.diff = & pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
             nextboard.prevPositionalScore = b.positionalScore;
             nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff;
@@ -602,7 +602,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                 bool ninf = current.v == -C*infinity;
                 bool doNull = newDepth >= eval.dMinReduction
                               && !ninf
-                              && eval.material[nextboard.matIndex].doNull;
+                              && eval.material[nextboard.kms.materialIndex()].doNull;
                 int reduction = !ninf && calcReduction(b, i.index(), *i, depth);
                 if (P == trunk && !alpha.isNotShared && depth > Options::splitDepth + eval.dMaxExt && (nt == NodeFailLow || i.index()) && WorkThread::canQueued(current.isNotReady())) {
                     WorkThread::queueJob(new SearchJob<(Colors)-C, B, A>(*this, nextboard, doNull, reduction, newDepth,

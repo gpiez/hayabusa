@@ -47,7 +47,7 @@ public:
             const ColoredBoard<(Colors)-C>* const swapped; } swapper = { this };
         return *(swapper.swapped); }
     template<typename T>
-    inline ColoredBoard(const T& prev, Move m, __v8hi est);
+    inline ColoredBoard(const T& prev, Move m, __v8hi est, const Eval &);
     template<typename T>
     ColoredBoard(const T& prev, Move m, Game&);
     static void initTables();
@@ -62,9 +62,7 @@ public:
     bool generateSkewers( Move** good) const __attribute__((noinline));
     bool generateForks( Move** good) const __attribute__((noinline));
     void generateNonCap(Move*& good, Move*& bad) const __attribute__((noinline));
-    void doMove(Board* next, Move m) const;
     void doMove(Board* next, Move m, const Eval&) const;
-    void doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to) const;
     void doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to, const Eval&) const;
 
     bool isForked() const __attribute__((noinline));

@@ -250,7 +250,7 @@ Move Game::rootSearch(unsigned int endDepth) {
                     ColoredBoard<(Colors)-C> nextboard(b, *ml, *this);
                     bool doNull = alpha.v != -infinity*C
                                   && depth > eval.dMinReduction
-                                  && eval.material[nextboard.matIndex].doNull
+                                  && eval.material[nextboard.kms.materialIndex()].doNull
                                   && searchState == Running;
                     value.v = search9<(Colors)-C,trunk>(doNull, 0, nextboard, depth-1, beta2, alpha, ExtNot, NodeFailHigh NODE );
                     ml.nodesCount(WorkThread::stats.node - subnode);

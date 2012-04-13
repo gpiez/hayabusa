@@ -86,9 +86,8 @@ template<Colors C, Phase P, typename ResultType> void Game::perft(ResultType& re
         result += n;
         return; }
 
-    __v8hi est = eval.estimate<(Colors)-C>(m, prev.keyScore);
-//    unsigned estmatIndex = eval.estimate<(Colors)-C>(m, prev.matIndex);
-    const ColoredBoard<C> b(prev, m, est);
+    __v8hi est = eval.estimate<(Colors)-C>(m, prev.kms);
+    const ColoredBoard<C> b(prev, m, est, eval);
 
 #if 0    
     Key z = b.getZobrist();
@@ -150,6 +149,6 @@ uint64_t Game::rootPerft(unsigned int depth) {
 
 template<Colors C>
 bool Game::isDraw(const ColoredBoard<C>& b) const {
-    return findRepetition(b, b.keyScore.key(), 0) || b.fiftyMoves >= 100; }
+    return findRepetition(b, b.kms.key(), 0) || b.fiftyMoves >= 100; }
 
 #endif

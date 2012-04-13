@@ -96,11 +96,39 @@ union KeyScore {
     };
 };
 #endif
-union KeyMaterialScore {
-    __v8hi vector;
-    struct {
-        PackedScore<>  score;
-        unsigned       matIndex;
-        Key            key; }; };
+struct KeyMaterialScore {
+    __v8hi v;
+    CompoundScore score() const {
+        return CompoundScore(v);
+    }
+    void opening(int x) {
+        v = _mm_insert_epi16(v, x, 0);
+    }
+    void endgame(int x) {
+        v = _mm_insert_epi16(v, x, 1);        
+    }
+    void score(CompoundScore x) {
+        int v32 = _mm_extract_epi32(x.data, 0);
+        v = _mm_insert_epi32(v, v32, 0);
+    }
+    PawnKey materialIndex() const {
+        return _mm_extract_epi32(v, 1);
+    }
+    void materialIndex(uint32_t pk) {
+        v = _mm_insert_epi32(v, pk, 1);
+    }
+    Key key() const {
+        return _mm_extract_epi64(v, 1);
+    }
+    void key(uint64_t k) {
+        v = _mm_insert_epi64(v, k, 1);
+    }
+    int opening() const {
+        return _mm_extract_epi16(v, 0);
+    }
+    int endgame() const {
+        return _mm_extract_epi16(v, 1);
+    }
+};
 
 #endif /* KEYSCORE_H_ */

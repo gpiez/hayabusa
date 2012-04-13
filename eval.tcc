@@ -53,6 +53,40 @@ __v8hi Eval::estimate(const Move m, const KeyScore k) const {
                - keyScore(-C*m.capture(), m.to()).vector; } }
 
 template<Colors C>
+__v8hi Eval::estimate(const Move m, const KeyMaterialScore k) const {
+    enum { pov = C == White ? 0:070 };
+    using namespace SquareIndex;
+    ASSERT(m.piece());
+    if (m.isSpecial()) {
+        unsigned piece = m.piece() & 7;
+        if (piece == King) {
+            ASSERT(m.capture() == 0);
+            __v8hi estKing = k.v
+                             - kms(C*King, m.from()).v
+                             + kms(C*King, m.to()).v;
+            if (m.to() == (pov^g1)) {
+                return estKing - kms(C*Rook, pov^h1).v
+                       + kms(C*Rook, pov^f1).v; }
+            else {
+                return estKing - kms(C*Rook, pov^a1).v
+                       + kms(C*Rook, pov^d1).v; } }
+        else if (piece == Pawn) {
+            return k.v - kms(C*Pawn, m.from()).v
+                   + kms(C*Pawn, m.to()).v
+                   - kms(-C*Pawn, m.to()-C*8).v;
+
+        }
+        else {
+            return k.v - kms(C*Pawn, m.from()).v
+                   + kms(C*piece, m.to()).v
+                   - kms(-C*m.capture(), m.to()).v; } }
+    else {
+        return k.v
+               - kms(C*m.piece(), m.from()).v
+               + kms(C*m.piece(), m.to()).v
+               - kms(-C*m.capture(), m.to()).v; } }
+
+template<Colors C>
 unsigned Eval::estimate(const Move m, unsigned matIndex) const {
     static constexpr unsigned CI = C == White ? 0:1;
     static constexpr unsigned EI = 1-CI;
@@ -156,7 +190,7 @@ unsigned Eval::recognizer(const ColoredBoard<C>& b, unsigned matreco) const {
 template<Colors C> //FIXME reuse recognizer which was used in psScore
 int Eval::operator() (const ColoredBoard<C>& b, int& wap, int& bap, int psValue, int& posScore ) const {
     int realScore;
-    switch(material[b.matIndex].recognized) {
+    switch(material[b.kms.materialIndex()].recognized) {
     case KBPk:
         realScore = psValue;// >> evalKBPk<White>(b);
         posScore = realScore - psValue;
@@ -222,5 +256,5 @@ int Eval::calc(const ColoredBoard<C>& b, unsigned matIndex, CompoundScore score)
 //    CompoundScore cw = scale[material[ci].scaleIndex];
     CompoundScore cw = material[ci].scale;
     int cb = material[ci].bias;
-    unsigned cd = /*material[ci].drawish +*/ recognizer(b, material[ci].recognized) ;
+    unsigned cd = recognizer(b, material[ci].recognized) ;
     return calcPS(cw, cb, cd, score); }

@@ -500,8 +500,11 @@ bool Game::doMove(Move m) {
                 store(cb.getZobrist(), 0);
                 ColoredBoard<(Colors)-C>* next = &nextBoard<C>();
                 cb.copyPieces(*next);
-                cb.doMove(next, *ml);
-                next->keyScore.vector = eval.estimate<C>(*ml, cb.keyScore);
+                KeyMaterialScore est;
+                est.v = eval.estimate<C>(*ml, cb.kms);
+                cb.doMove(next, *ml, eval);
+                next->kms = est;
+                next->m = m;
                 next->buildAttacks();
 
                 if (C == Black) iMove++;

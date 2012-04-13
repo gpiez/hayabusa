@@ -126,10 +126,14 @@ void Eval::Init::initPS(Pieces pIndex, Parameters::Piece& piece) {
         ye = std::max(0, std::min(7, ye));
         e.keyScore( pIndex, sq).opening(piece.value.opening + piece.hor.opening[xh] + piece.vert.opening[yo] + corner*piece.corner.opening);
         e.keyScore( pIndex, sq).endgame(piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame);
+        e.kms( pIndex, sq).opening(piece.value.opening + piece.hor.opening[xh] + piece.vert.opening[yo] + corner*piece.corner.opening);
+        e.kms( pIndex, sq).endgame(piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame);
         if (pIndex == Pawn && y==6) {
             e.keyScore(pIndex, sq).score(e.keyScore(pIndex, sq).score() + e.pawnPasser22[y-1]); 
+            e.kms(pIndex, sq).score(e.kms(pIndex, sq).score() + e.pawnPasser22[y-1]); 
         }
         e.keyScore(-pIndex, sq ^ 070).score(-e.keyScore( pIndex, sq).score());
+        e.kms(-pIndex, sq ^ 070).score(-e.kms( pIndex, sq).score());
         print_debug(debugEval, "%4d %4d  ", e.keyScore(pIndex, sq).opening(), e.keyScore(pIndex, sq).endgame());
 //        print_debug(debugEval, "%4d %4d  ", e.getPS(-pIndex, sq ^ 070).opening, e.getPS(-pIndex, sq ^ 070).endgame);
         if ((sq & 7) == 7) print_debug(debugEval, "%c", '\n'); }
@@ -163,7 +167,7 @@ void Eval::Init::initShield() {
         if (index & 0400) score += kingShield.inner[2];
         ASSERT(score >= 0);
         score = std::min(INT8_MAX, score);
-        e.shield[index] = score;
+        e.shield[index] = score; 
 
         score = 0;
         if (index &    1) score += kingShield.inner[0];
@@ -195,15 +199,23 @@ void Eval::Init::zobrist() {
                 r = rng() + ((uint64_t)rng() << 32); }
             while (popcount(r) >= 29 && popcount(r) <= 36);
 
-            if (p)
+            if (p) {
                 e.zobristPieceSquare[p+nPieces][i].key(r);
-            else
+                e.kms(p, i).key(r);
+                e.kms(p, i).materialIndex(::matIndex[p<0][abs(p)]);
+            } else {
                 e.zobristPieceSquare[p+nPieces][i].key(0);
+                e.kms(p, i).key(0);
+                e.kms(p, i).materialIndex(0);
+            }
 
-            if (abs(p) == Pawn)
+            if (abs(p) == Pawn) {
                 e.zobristPieceSquare[p+nPieces][i].pawnKey(r ^ r >> 32);
-            else
-                e.zobristPieceSquare[p+nPieces][i].pawnKey(0); }
+                e.pawnKey(p, i, r ^ r >> 32);
+            } else {
+                e.zobristPieceSquare[p+nPieces][i].pawnKey(0); 
+                e.pawnKey(p, i, 0); }
+        }
 
 #ifdef MYDEBUG
     int collision=0;
@@ -394,7 +406,17 @@ void Eval::Init::material() {
 #endif		
 	}
 
-    memset(e.material, 0, sizeof(e.material));
+    static constexpr Material defaultMaterial = {
+        { 0x4000, 0x4000 },     //      PackedScore<> scale;
+        0,                      //      bias
+        0,                      //      draw
+        0,                      //      won
+        0,                      //      reduce
+        0,                      //      doNull
+        Unspecified };
+    for (unsigned i=0; i<sizeof e.material / sizeof(Material); ++i)
+        e.material[i] = defaultMaterial;
+
     for (int wr=0; wr<=2; ++wr)
     for (int br=0; br<=2; ++br)
     for (int wn=0; wn<=2; ++wn)

@@ -33,14 +33,14 @@ struct Board {
     // row and 4 for the bits, but this simplifies access.
     // FEATURE no longer relevant, this is split up in getZobrist() anyway
     // FEATURE use faster copy constructor for job()
-    union CastlingAndEP {
+//    union CastlingAndEP {
         union Castling {
             struct {
                 bool q,k; } color[nColors];
             uint32_t data4; };
-        struct {
+        struct CastlingAndEP {
             Castling castling;
-            uint64_t enPassant; }; };
+            uint64_t enPassant; }; //};
 
     uint64_t occupied[nColors];                         // +  0
     uint64_t occupied1;                                 // + 16
@@ -75,10 +75,10 @@ struct Board {
         Move move;
         __v2di d02, d13; } qsingle[nColors][1+8+1];                  //960
 
-    KeyScore keyScore;
-    CastlingAndEP cep;
+    KeyMaterialScore kms;
+    PawnKey pawnKey;
+    mutable CastlingAndEP cep;
     mutable unsigned fiftyMoves;
-    unsigned matIndex;
     mutable int positionalScore;
     mutable int prevPositionalScore;
     
@@ -103,7 +103,7 @@ struct Board {
     static const uint64_t kAttacked2[nSquares+2];
     static const uint64_t kAttacked[nSquares+2];
     static uint64_t kingAttacks[16][nSquares];
-    static CastlingAndEP::Castling castlingMask[nSquares];
+    static /*CastlingAndEP::*/Castling castlingMask[nSquares];
 
     template<int C>
     uint64_t getOcc() const {
