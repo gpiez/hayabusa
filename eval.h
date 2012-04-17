@@ -40,20 +40,24 @@ static constexpr int inb = 3*ibb;		//19683
 static constexpr int ipb = 3*inb;
 
 static constexpr int matIndex[nColors][nPieces+1] = {
-    {	0, -irb,    -ibb,    -iqb,    -inb,    -ipb,     0 },
-    {	0,  irb-irw, ibb-ibw, iqb-iqw, inb-inw, ipb-ipw, 0 } };
+    {	0, irw, ibw, iqw, inw, ipw, 0 }, 
+    {   0, irb, ibb, iqb, inb, ipb, 0 } };
+//static constexpr int matIndex[nColors][nPieces+1] = {
+//    {   0, -irb,    -ibb,    -iqb,    -inb,    -ipb,     0 },
+//    {   0,  irb-irw, ibb-ibw, iqb-iqw, inb-inw, ipb-ipw, 0 } };
 
-static constexpr int minIndex = 9*matIndex[0][Pawn]
-                         + 3*matIndex[0][Knight]
-                         + 3*matIndex[0][Queen]
-                         + 3*matIndex[0][Bishop]
-                         + 3*matIndex[0][Rook];
+static constexpr int minIndex = 0;
 
 static constexpr int maxIndex = 9*matIndex[1][Pawn]
                          + 3*matIndex[1][Knight]
                          + 3*matIndex[1][Queen]
                          + 3*matIndex[1][Bishop]
-                         + 3*matIndex[1][Rook];
+                         + 3*matIndex[1][Rook]
+                         + 9*matIndex[0][Pawn]
+                          + 3*matIndex[0][Knight]
+                          + 3*matIndex[0][Queen]
+                          + 3*matIndex[0][Bishop]
+                          + 3*matIndex[0][Rook];
 class Parameters;
 class PieceList;
 class Board;
@@ -69,7 +73,6 @@ public:
         PackedScore<> scale;
         int bias:10;            // -511..511
         unsigned draw:1;        // the position is a sure draw
-//        unsigned drawish:1;     
         unsigned won:1;         // the side with advantage has probably won
         unsigned reduce:1;      // don't search deep after this point
         unsigned doNull:1;      // null move allowed

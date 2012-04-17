@@ -394,8 +394,17 @@ void Eval::Init::material() {
 #endif		
 	}
 
-    memset(e.material, 0, sizeof(e.material));
-    for (int wr=0; wr<=2; ++wr)
+	static constexpr Material defaultMaterial = {
+	    { 0x4000, 0x4000 },     //      PackedScore<> scale;
+	    0,                      //      bias
+	    0,                      //      draw
+	    0,                      //      won
+	    0,                      //      reduce
+	    0,                      //      doNull
+	    Unspecified };
+	for (unsigned i=0; i<sizeof e.material / sizeof(Material); ++i)
+	    e.material[i] = defaultMaterial;
+	for (int wr=0; wr<=2; ++wr)
     for (int br=0; br<=2; ++br)
     for (int wn=0; wn<=2; ++wn)
     for (int bn=0; bn<=2; ++bn)
