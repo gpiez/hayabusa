@@ -320,7 +320,7 @@ void Parameters::init() {
     Parameters::add("pieceAttack", 125);
     Parameters::add("attackFirst", 75);
     Parameters::add("attackSlope", 1.0);
-    Parameters::add("flags", 15);
+    Parameters::add("flags", 3);
     Parameters::add("attackTotal", 200);
 
     Parameters::add("castlingTempo", 5);

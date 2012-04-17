@@ -75,6 +75,9 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
          */
         if (value >= beta.v && !nextboard.template inCheck<C>()) {
             if (value >= infinity*C) return value.v;
+            uint64_t temp2 = nextboard.cep.enPassant;
+            nextboard.cep.enPassant = 0;
+            tt->prefetchSubTable(nextboard.getZobrist());
             int temp = nextboard.fiftyMoves;
             nextboard.ply++;
             if (isMain) line[nextboard.ply].data = 0;            
@@ -84,6 +87,7 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
             Score<C> nullvalue(search4<(Colors)-C, P>(nextboard.swapped(), nullReduction[newDepth], beta, alpha0, ExtNot, nextNT NODE ));
             if (nullvalue >= beta.v) return value.v;
             nextboard.fiftyMoves = temp;
+            nextboard.cep.enPassant = temp2;
             nextboard.ply--;
         } }
     
@@ -139,15 +143,13 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                   const A& origAlpha, const B& origBeta,
                   Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
     WorkThread::stats.node++;
-//     if (WorkThread::stats.node == 2327) asm("int3");
+//     if (WorkThread::stats.node == 129221) asm("int3");
 #ifdef MYDEBUG
     uint64_t __attribute__((unused)) localnode = WorkThread::stats.node;
 #endif
     if unlikely( WorkThread::stats.node > maxSearchNodes ) {
         searchState = Stopping;
         return 0; }
-    KeyScore estimate;
-    estimate = b.keyScore;
 #ifdef QT_GUI_LIB
     NodeItem* node = 0;
     if (NodeItem::nNodes < MAX_NODES && parent) {
@@ -157,7 +159,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         data.beta = origBeta.v;
         data.move = b.m;
         data.ply = b.ply;
-        data.key = estimate.key();
+        data.key = b.keyScore.key();
         data.searchType = P;
         data.depth = depth;
         data.moveColor = -C;
@@ -171,17 +173,6 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         NodeItem::nNodes++;
         NodeItem::m.unlock(); }
 #endif
-    /*
-        prefetching is not very effective for core2, probably because each access
-        is completely random and causes not only a cache miss, but additionally a
-        tlb miss, which stalls the processor almost als long as the actual memory
-        access would without. It gets slightly more useful, if 2M pages are used.
-        Speed increase measured as 1-2% with 4k pages and ~5% witch 2M pages. 2M
-        alone increase the speed by ~2%.
-        For a core i7 the speed increase from prefetching is about 3%.
-    */
-//    if (P != vein) tt->prefetchSubTable(estimate.key + C+1);
-
     if (P != vein && P != leaf && unlikely(searchState != Running)) return 0;
 #ifdef QT_GUI_LIB
     if (node) node->gain = *b.diff;
@@ -250,8 +241,6 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             WorkThread::stats.leafcut++;
             return value.v; } }
 
-    ASSERT( CompoundScore(b.keyScore.vector).opening() == CompoundScore(estimate.vector).opening());
-    ASSERT( CompoundScore(b.keyScore.vector).endgame() == CompoundScore(estimate.vector).endgame());
     ASSERT(P == vein || z == b.getZobrist());
     ASSERT(!b.template inCheck<(Colors)-C>());
     TranspositionTable<TTEntry, transpositionTableAssoc, Key>::SubTable* st;
@@ -456,13 +445,6 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     	    if ((P==vein || P==leaf) && !b.threatened) {
                 // we have no moves, but the list wasn't generated as complete list
                 // assume a stand pat move score.
-                if (current >= beta.v) {
-                    WorkThread::stats.leafcut++;
-                    ASSERT(!"should not happen");
-    #ifdef QT_GUI_LIB
-                    if (node) node->nodeType = NodeStandpat;
-    #endif
-                    ASSERT(current.m.piece() || !current.m.fromto()); }
                 goto storeAndExit; }
     	    
             if (inCheck) {
@@ -513,17 +495,17 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             estimate.vector = eval.estimate<C>(*i, b.keyScore);
             unsigned estmatIndex = eval.estimate<C>(*i, b.matIndex);
             if (P==vein || (P==leaf && (i.isCapture() | i.isNonCapture())
-                                    && !b.threatened
+//                                    && !b.threatened 
                                     && !(extend & (ExtDualReply | ExtSingleReply)))
                         || (P==leaf && newDepth <= eval.dMaxCapture && !i.isMate())) {
-                int nextPSValue = eval.calc(b.swapped() , estmatIndex, CompoundScore(estimate.vector));
+                int nextPSValue = eval.calc(b.swapped() , estmatIndex, estimate.vector);
                 int nextEstimatedScore = eval.quantize(nextPSValue + b.positionalScore + C*eval.standardError);                
                 value.v = nextEstimatedScore;
                 if (value <= alpha.v) {
                     WorkThread::stats.node++;
 //                    if (WorkThread::stats.node ==  432) asm("int3");
                     WorkThread::stats.leafcut++;
-                    current.max(value.v);
+                    if (b.threatened) current.max(value.v);
 #ifdef QT_GUI_LIB
                     int16_t diff = pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
                     if (NodeItem::nNodes < MAX_NODES && node) {
@@ -559,9 +541,18 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 //                    && !(extend & (ExtDualReply | ExtSingleReply)) 
 //                    && !i->capture() && !i->isSpecial()) continue;
             }
-            if (P != vein) tt->prefetchSubTable(estimate.key() - C+1);
+            /*
+                prefetching is not very effective for core2, probably because each access
+                is completely random and causes not only a cache miss, but additionally a
+                tlb miss, which stalls the processor almost als long as the actual memory
+                access would without. It gets slightly more useful, if 2M pages are used.
+                Speed increase measured as 1-2% with 4k pages and ~5% witch 2M pages. 2M
+                alone increase the speed by ~2%.
+                For a core i7 the speed increase from prefetching is about 3%.
+            */
+            if (P != vein) tt->prefetchSubTable(estimate.key() + b.cep.castling.data4 - C+1);
             const ColoredBoard<(Colors)-C> nextboard(b, *i, estimate.vector);
-            nextboard.psValue = eval.calc(nextboard , nextboard.matIndex, CompoundScore(nextboard.keyScore.vector));
+            nextboard.psValue = eval.calc(nextboard , nextboard.matIndex, nextboard.keyScore.vector);
             nextboard.diff = & pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
             nextboard.prevPositionalScore = b.positionalScore;
             nextboard.estScore = nextboard.psValue + b.positionalScore + *nextboard.diff;
