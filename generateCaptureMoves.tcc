@@ -44,75 +44,6 @@ void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d,
      * attack squares and additionally we can skip the check for a valid move
      * template at the first target found.
      */
-    if unlikely((getAttacks<C,Bishop>() & d)) {
-        const MoveTemplateB* bs = bsingle[CI];
-        __v2di a13 = bs->d13;
-#ifdef __SSE4_1__
-        while (_mm_testz_si128(d2, a13))
-            a13 = (++bs)->d13;
-#endif
-        Move m = bs->move;
-        ASSERT(m.data);
-        do {
-            __v2di from2 = bits[m.from()].doublebits;
-            __v2di pin13 = from2 & dpins[CI].d13;
-            pin13 = pcmpeqq(pin13, zero);
-            pin13 = ~pin13 & d2 & a13;
-            for (uint64_t a=fold(pin13); a; a&=a-1) {
-                Move n;
-                n.data = m.data + Move(0, bit(a), 0, cap).data;
-                if ( cap==Pawn
-                        &&  (
-                            a & -a & getAttacks<-C,Pawn>()
-                            /*                           || a & -a & getAttacks<-C,All>() &
-                                                                     ~( getAttacks<C,Rook>()
-                                                                      | getAttacks<C,Queen>()
-                                                                      | getAttacks<C,King>()
-                                                                      | getAttacks<C,Knight>()
-                                                                      | getAttacks<C,Pawn>()
-                                                                      )*/
-                        )
-                   ) *bad++ = n;
-                else *--good = n; }
-            m = (++bs)->move;
-            a13 = bs->d13; }
-        while (m.data); }
-
-    if unlikely((getAttacks<C,Rook>() & d)) {
-        const MoveTemplateR* rs = rsingle[CI];
-        __v2di a02 = rs->d02;
-#ifdef __SSE4_1__
-        while (_mm_testz_si128(d2, a02))
-            a02 = (++rs)->d02;
-#endif
-        Move m = rs->move;
-        ASSERT (m.data);
-        do {
-            __v2di from2 = bits[m.from()].doublebits;
-            __v2di pin02 = from2 & dpins[CI].d02;
-            pin02 = pcmpeqq(pin02, zero);
-            pin02 = ~pin02 & d2 & a02;
-            uint64_t attPKB = getAttacks<-C,Pawn>() | getAttacks<-C,Knight>() | getAttacks<-C,Bishop>();
-            for (uint64_t a=fold(pin02); a; a&=a-1) {
-                Move n;
-                n.data = m.data + Move(0, bit(a), 0, cap).data;
-                if ( val[cap] < val[Rook]
-                        &&  (
-                            a & -a & attPKB
-                            /*                           || a & -a & getAttacks<-C,All>() &
-                                                             ~( getAttacks<C,Bishop>()
-                                                              | getAttacks<C,Queen>()
-                                                              | getAttacks<C,King>()
-                                                              | getAttacks<C,Knight>()
-                                                              | getAttacks<C,Pawn>()
-                                                              )*/
-                        )
-                   ) *bad++ = n;
-                else *--good = n; }
-            m = (++rs)->move;
-            a02 = rs->d02; }
-        while (m.data); }
-
     if unlikely((getAttacks<C,Queen>() & d)) {
         const MoveTemplateQ* qs = qsingle[CI];
         Move m = qs->move;
@@ -149,6 +80,76 @@ void ColoredBoard<C>::generateTargetCapture(Move*& good, Move*& bad, uint64_t d,
                 else *--good = n; }
             m = (++qs)->move; }
         while (m.data); }
+
+    if unlikely((getAttacks<C,Rook>() & d)) {
+        const MoveTemplateR* rs = rsingle[CI];
+        __v2di a02 = rs->d02;
+#ifdef __SSE4_1__
+        if (_mm_testz_si128(d2, a02))
+            a02 = (++rs)->d02;
+#endif
+        Move m = rs->move;
+        ASSERT (m.data);
+        do {
+            __v2di from2 = bits[m.from()].doublebits;
+            __v2di pin02 = from2 & dpins[CI].d02;
+            pin02 = pcmpeqq(pin02, zero);
+            pin02 = ~pin02 & d2 & a02;
+            uint64_t attPKB = getAttacks<-C,Pawn>() | getAttacks<-C,Knight>() | getAttacks<-C,Bishop>();
+            for (uint64_t a=fold(pin02); a; a&=a-1) {
+                Move n;
+                n.data = m.data + Move(0, bit(a), 0, cap).data;
+                if ( val[cap] < val[Rook]
+                        &&  (
+                            a & -a & attPKB
+                            /*                           || a & -a & getAttacks<-C,All>() &
+                                                             ~( getAttacks<C,Bishop>()
+                                                              | getAttacks<C,Queen>()
+                                                              | getAttacks<C,King>()
+                                                              | getAttacks<C,Knight>()
+                                                              | getAttacks<C,Pawn>()
+                                                              )*/
+                        )
+                   ) *bad++ = n;
+                else *--good = n; }
+            m = (++rs)->move;
+            a02 = rs->d02; }
+        while (m.data); }
+
+    if unlikely((getAttacks<C,Bishop>() & d)) {
+        const MoveTemplateB* bs = bsingle[CI];
+        __v2di a13 = bs->d13;
+#ifdef __SSE4_1__
+        if (_mm_testz_si128(d2, a13))  // just preload both bishops, and select based on test
+            a13 = (++bs)->d13;
+#endif
+        Move m = bs->move;
+        ASSERT(m.data);
+        do {
+            __v2di from2 = bits[m.from()].doublebits;
+            __v2di pin13 = from2 & dpins[CI].d13;
+            pin13 = pcmpeqq(pin13, zero);
+            pin13 = ~pin13 & d2 & a13;
+            for (uint64_t a=fold(pin13); a; a&=a-1) {
+                Move n;
+                n.data = m.data + Move(0, bit(a), 0, cap).data;
+                if ( cap==Pawn
+                        &&  (
+                            a & -a & getAttacks<-C,Pawn>()
+                            /*                           || a & -a & getAttacks<-C,All>() &
+                                                                     ~( getAttacks<C,Rook>()
+                                                                      | getAttacks<C,Queen>()
+                                                                      | getAttacks<C,King>()
+                                                                      | getAttacks<C,Knight>()
+                                                                      | getAttacks<C,Pawn>()
+                                                                      )*/
+                        )
+                   ) *bad++ = n;
+                else *--good = n; }
+            m = (++bs)->move;
+            a13 = bs->d13; }
+        while (m.data); }
+
     // Knight captures something. Can't move at all if pinned.
     for ( uint64_t p = getAttacks<C,Knight>() & d; unlikely(p); p &= p-1 ) {
         uint64_t to = bit(p);
