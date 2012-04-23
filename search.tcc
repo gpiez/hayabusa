@@ -482,6 +482,8 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         if (P!=vein) store(z, b.ply);
         NodeType nextNT = (NodeType)-nt;
         unsigned newDepth = depth - 1;
+        bool nonTactical;
+        if (P==leaf) nonTactical = !b.threatened && !(extend & (ExtDualReply | ExtSingleReply));
         do {
             ASSERT(!i.isEmpty());
             if (!origBeta.isNotShared) beta.max(origBeta.v);
@@ -492,12 +494,23 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 //             }
             Score<C> value;
             KeyScore estimate;
-            estimate.vector = eval.estimate<C>(*i, b.keyScore);
-            unsigned estmatIndex = eval.estimate<C>(*i, b.matIndex);
-            if (P==vein || (P==leaf && (i.isCapture() | i.isNonCapture())
-//                                    && !b.threatened 
-                                    && !(extend & (ExtDualReply | ExtSingleReply)))
-                        || (P==leaf && newDepth <= eval.dMaxCapture && !i.isMate())) {
+            unsigned estmatIndex;
+            static constexpr unsigned CI = C == White ? 0:1;
+            static constexpr unsigned EI = 1-CI;
+            if (i->isSpecial()) {
+                estimate.vector = b.keyScore.vector;
+                estmatIndex = b.matIndex;
+                eval.estimate<C>(*i, estimate.vector, estmatIndex);
+            } else {
+                estmatIndex = b.matIndex - ::matIndex[EI][i->capture()];
+                estimate.vector = b.keyScore.vector - eval.keyScore(C*i->piece(), i->from()).vector
+                   + eval.keyScore(C*i->piece(), i->to()).vector
+                   - eval.keyScore(-C*i->capture(), i->to()).vector;
+            }
+//            estimate.vector = eval.estimate<C>(*i, b.keyScore);
+            ASSERT(estmatIndex == eval.estimate<C>(*i, b.matIndex));
+            if (P==vein || (P==leaf && (i.isCapture() | i.isNonCapture()))
+                        || (P==leaf && newDepth <= eval.dMaxCapture)) {
                 int nextPSValue = eval.calc(b.swapped() , estmatIndex, estimate.vector);
                 int nextEstimatedScore = eval.quantize(nextPSValue + b.positionalScore + C*eval.standardError);                
                 value.v = nextEstimatedScore;
@@ -505,6 +518,8 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                     WorkThread::stats.node++;
 //                    if (WorkThread::stats.node ==  432) asm("int3");
                     WorkThread::stats.leafcut++;
+                    // b.threatened is sysnonymous to "not having a stand pat score"
+                    // So, current may be -inf, even if a move is possible 
                     if (b.threatened) current.max(value.v);
 #ifdef QT_GUI_LIB
                     int16_t diff = pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
@@ -569,11 +584,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                  * for non-tactical moves
                  */
             }
-            else if (P == leaf && (i.isCapture() | i.isNonCapture())
-                     && !b.threatened
-                     && !(extend & (ExtDualReply | ExtSingleReply)) //TODO replace by a condition "not checking move"
-                    ) {
-                if (!i->capture() && !i->isSpecial()) continue;
+            else if (P == leaf && (i.isCapture() | i.isNonCapture())) {
                 value.v = search3<(Colors)-C, vein>(nextboard, eval.dMaxCapture, beta.unshared(), alpha.unshared(), ExtNot, unused, nextNT NODE);
                 /*
                  * Transition from extended q search to pure q search for tactical
@@ -583,7 +594,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             }
             else if (P == leaf && newDepth <= eval.dMaxCapture) {
                 ASSERT(newDepth == eval.dMaxCapture);
-                leafExt = i.isMate() ? ExtTestMate : ExtNot;
+                leafExt = /*i.isMate() ? ExtTestMate :*/ ExtNot;
                 value.v = search3<(Colors)-C, vein>(nextboard, newDepth, beta.unshared(), alpha.unshared(), leafExt, unused, nextNT NODE);
                 leafMaxDepth = true; }
             else if ( P == leaf || newDepth <= eval.dMaxExt) {

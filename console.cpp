@@ -265,7 +265,7 @@ void Console::uci(StringList /*cmds*/) {
     StringList times = split(time, ":");
     send("id name hayabusa-0.11.7-" 
         + dates[2] + "-" + dates[0] + "-" + dates[1] + "-"
-        + times[0] + ":" + times[1]);
+        + times[0] + "-" + times[1]);
     send("id author Gunther Piez");
     std::stringstream str;
     str << " 32768"; //TranspositionTable::maxSize;

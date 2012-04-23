@@ -74,6 +74,45 @@ unsigned Eval::estimate(const Move m, unsigned matIndex) const {
 }
 
 template<Colors C>
+void Eval::estimate(const Move m, __v8hi& k, unsigned& matIndex) const {
+    static constexpr unsigned CI = C == White ? 0:1;
+    static constexpr unsigned EI = 1-CI;
+    enum { pov = C == White ? 0:070 };
+    using namespace SquareIndex;
+    ASSERT(m.piece());
+//    if (m.isSpecial()) {
+        unsigned piece = m.piece() & 7;
+        if (piece == King) {
+            ASSERT(m.capture() == 0);
+            __v8hi estKing = k - keyScore(C*King, m.from()).vector
+                             + keyScore(C*King, m.to()).vector;
+            if (m.to() == (pov^g1)) {
+                k = estKing - keyScore(C*Rook, pov^h1).vector
+                       + keyScore(C*Rook, pov^f1).vector; }
+            else {
+                k = estKing - keyScore(C*Rook, pov^a1).vector
+                       + keyScore(C*Rook, pov^d1).vector; } }
+        else if (piece == Pawn) {
+            matIndex -= ::matIndex[EI][Pawn];
+            k = k - keyScore(C*Pawn, m.from()).vector
+                   + keyScore(C*Pawn, m.to()).vector
+                   - keyScore(-C*Pawn, m.to()-C*8).vector;
+
+        }
+        else {
+            matIndex -= ::matIndex[CI][Pawn];
+            matIndex += ::matIndex[CI][piece];
+            matIndex -= ::matIndex[EI][m.capture()];
+            k = k - keyScore(C*Pawn, m.from()).vector
+                   + keyScore(C*piece, m.to()).vector
+                   - keyScore(-C*m.capture(), m.to()).vector; } }
+    /*else {
+        matIndex -= ::matIndex[EI][m.capture()];
+        k = k  - keyScore(C*m.piece(), m.from()).vector
+               + keyScore(C*m.piece(), m.to()).vector
+               - keyScore(-C*m.capture(), m.to()).vector; } }*/
+
+template<Colors C>
 unsigned Eval::evalKBPk(const Board& b) const {
     if (((b.getPieces<C,Pawn>() & file<'a'>()) == b.getPieces<C,Pawn>() 
             && (b.getPieces<C,Bishop>() & (C==White ? darkSquares : ~darkSquares)))) {

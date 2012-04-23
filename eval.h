@@ -337,6 +337,8 @@ public:
     template<Colors C>
     unsigned estimate(const Move m, unsigned) const;
     template<Colors C>
+    void estimate(const Move m, __v8hi& keyScore, unsigned& matIndex) const;
+    template<Colors C>
     __v8hi inline_estimate(const Move m, const KeyScore keyScore) const __attribute__((always_inline)) ;
     template<Colors C>
     int calc(const ColoredBoard<C>&b, unsigned matIndex, CompoundScore score) const;

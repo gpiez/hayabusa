@@ -155,7 +155,7 @@ void Parameters::init() {
     Parameters::add("pawn.corner.opening", -4);
     Parameters::add("pawn.hor.inflection.endgame", 1.5);
     Parameters::add("pawn.hor.inflection.opening", 1.5);
-    Parameters::add("pawn.hor.value.endgame", -8);
+    Parameters::add("pawn.hor.value.endgame", -5);
     Parameters::add("pawn.hor.value.opening", 8);
     Parameters::add("pawn.value.endgame", 100, 10, 150);
     Parameters::add("pawn.value.opening", 90 , 10, 150);
@@ -282,7 +282,7 @@ void Parameters::init() {
     Parameters::add("dVerifyIncr", 0b10000100001010, 0, 0xffffff, 0);
     Parameters::add("dMinReduction", 2, 0, 10, 1);
 
-    Parameters::add("dRed[7]", 2);
+    Parameters::add("dRed[7]", 1);
     Parameters::add("dRed[6]", 2);
     Parameters::add("dRed[5]", 2);
     Parameters::add("dRed[4]", 3);
