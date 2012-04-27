@@ -217,7 +217,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         else if (depth > eval.dMinForkExt && !b.isPieceHanging(eval) && unlikely(b.isForked()))
             b.threatened = ExtFork; }
 
-    if (b.threatened && depth < 9 && extend & ExtLMR) depth++;
+    if (b.threatened && extend & ExtLMR) depth++;
 
 #ifdef QT_GUI_LIB
     if (node && b.threatened) node->flags |= b.threatened;

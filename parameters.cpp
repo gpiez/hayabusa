@@ -165,7 +165,7 @@ void Parameters::init() {
     Parameters::add("pawn.vert.inflection.opening", 6);
     Parameters::add("pawn.vert.value.endgame", 14);
     Parameters::add("pawn.vert.value.opening", 12);
-    Parameters::add("queen.attack", 160);
+    Parameters::add("queen.attack", 80);
     Parameters::add("queen.corner.endgame", 0);
     Parameters::add("queen.corner.opening", 0);
     Parameters::add("queen.defense", 5);
