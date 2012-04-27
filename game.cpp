@@ -499,6 +499,8 @@ bool Game::doMove(Move m) {
                 const ColoredBoard<C>& cb = currentBoard<C>();
                 store(cb.getZobrist(), 0);
                 ColoredBoard<(Colors)-C>* next = &nextBoard<C>();
+//                *next = ColoredBoard<(Colors)-C>(cb, *ml, *this);
+//                next->ply = 0;
                 cb.copyPieces(*next);
                 cb.doMove(next, *ml);
                 next->keyScore.vector = eval.estimate<C>(*ml, cb.keyScore);

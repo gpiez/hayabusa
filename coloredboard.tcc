@@ -29,6 +29,17 @@
  * with executing move m from a given position prev
  */
 template<Colors C>
+void ColoredBoard<C>::init(const ColoredBoard<(Colors)-C>& prev, Move m) {
+    prev.copyPieces(*this);
+    prev.doMove2(this, m);
+    ply = prev.ply + 1;
+    this->m = m;
+//    keyScore.vector = est;
+    buildAttacks();
+}
+
+/*
+template<Colors C>
 template<typename T>
 ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
     prev.copyPieces(*this);
@@ -38,6 +49,7 @@ ColoredBoard<C>::ColoredBoard(const T& prev, Move m, __v8hi est) {
     keyScore.vector = est;
     buildAttacks();
 }
+*/
 
 template<Colors C>
 template<typename T>
@@ -58,9 +70,11 @@ ColoredBoard<C>::ColoredBoard(const T& prev, Move m, Game& game) {
     estScore = psValue + prev.positionalScore + *diff;
     prevPositionalScore = prev.positionalScore;
 }
+
 /*
  * Execute a move and put result in next
  */
+
 template<Colors C>
 void ColoredBoard<C>::doMove(Board* next, Move m) const {
     uint64_t from = 1ULL << m.from();
@@ -71,6 +85,33 @@ void ColoredBoard<C>::doMove(Board* next, Move m) const {
 
     if (m.isSpecial()) {
         doSpecialMove(next, m, from, to); }
+    else {
+        next->fiftyMoves = (!m.capture() & (m.piece() != Pawn)) * (fiftyMoves+1); //(m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
+        // Do only fill in the enpPassant field, if there is really a pawn which
+        // can capture besides the target square. This is because enpassant goes
+        // into the zobrist key.
+        next->cep.enPassant = shift<C* 16>(getPieces<C,Pawn>() & from) & to & shift<C* 8>(getAttacks<-C,Pawn>());
+        ASSERT(occupied[CI] & from);
+        ASSERT(~occupied[CI] & to);
+        ASSERT(from != to);
+        next->occupied[CI] = occupied[CI] - from + to;
+        next->occupied[EI] = occupied[EI] & ~to;
+        next->getPieces<C>(m.piece()) += to - from;
+        next->getPieces<-C>(m.capture()) -= to;
+        next->matIndex = matIndex - ::matIndex[EI][m.capture()]; }
+    next->occupied1 = next->occupied[CI] | next->occupied[EI]; }
+
+
+template<Colors C>
+void ColoredBoard<C>::doMove2(Board* next, Move m) const {
+    uint64_t from = 1ULL << m.from();
+    uint64_t to = 1ULL << m.to();
+    ASSERT(m.piece());
+
+    next->cep.castling.data4 = cep.castling.data4 & castlingMask[m.from()].data4 & castlingMask[m.to()].data4;
+
+    if (m.isSpecial()) {
+        doSpecialMove2(next, m, from, to); }
     else {
         next->fiftyMoves = (!m.capture() & (m.piece() != Pawn)) * (fiftyMoves+1); //(m.capture()) | (m.piece()==Pawn) ? 0:fiftyMoves+1;
         // Do only fill in the enpPassant field, if there is really a pawn which
@@ -155,6 +196,39 @@ void ColoredBoard<C>::doSpecialMove(Board* next, Move m, uint64_t from, uint64_t
                          - ::matIndex[CI][Pawn];
 
     } }
+
+template<Colors C>
+void ColoredBoard<C>::doSpecialMove2(Board* next, Move m, uint64_t from, uint64_t to) const {
+    using namespace SquareIndex;
+    next->fiftyMoves = 0;
+    next->cep.enPassant = 0;
+    unsigned int piece = m.piece() & 7;
+    if (piece == King) {
+        ASSERT(m.capture() == 0);
+        next->getPieces<C,King>() ^= from + to;
+        next->occupied[EI] = occupied[EI];
+        if (m.to() == (pov^g1)) {
+            // short castling
+            next->occupied[CI] = occupied[CI] ^ 0b1111ULL << m.from();
+            next->getPieces<C,Rook>() ^= (from + to) << 1; }
+        else {
+            // long castling
+            next->occupied[CI] = occupied[CI] ^ 0b11101ULL << (m.to() & 070);
+            next->getPieces<C,Rook>() ^= (from >> 1) + (from >> 4); }
+        ASSERT(popcount(next->getPieces<C,Rook>()) == popcount(getPieces<C,Rook>())); }
+    else if (piece == Pawn) {
+        // en passant
+        next->occupied[CI] = occupied[CI] - from + to;
+        next->occupied[EI] = occupied[EI] - shift<-C*8>(to);
+        next->getPieces<C,Pawn>() += to - from;
+        next->getPieces<-C,Pawn>() -= shift<-C*8>(to); }
+    else {
+        // promotion
+        next->occupied[CI] = occupied[CI] - from + to;
+        next->occupied[EI] = occupied[EI] & ~to;
+        next->getPieces<C,Pawn>() -= from;
+        next->getPieces<C>(piece) += to;
+        next->getPieces<-C>(m.capture()) -= to; } }
 
 template<Colors C>
 void ColoredBoard<C>::doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to, const Eval& eval) const {

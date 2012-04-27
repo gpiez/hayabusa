@@ -31,11 +31,11 @@ enum MoveType { AllMoves, NoUnderPromo, NoKingPawn, OnlyCaptures };
  */
 template<Colors C>
 class ColoredBoard: public Board {
-
     friend class TestRootBoard;
 //    static uint8_t diaPinTable[nDirs][256];
 
 public:
+    using Board::init;
     static constexpr unsigned CI = C == White ? 0:1;
     static constexpr unsigned EI = C == White ? 1:0;
     static constexpr uint8_t pov = CI*56;    //for xoring square values to the other side
@@ -48,8 +48,10 @@ public:
         return *(swapper.swapped); }
     template<typename T>
     inline ColoredBoard(const T& prev, Move m, __v8hi est);
+    void init(const ColoredBoard<(Colors)-C>& prev, Move m);
     template<typename T>
     ColoredBoard(const T& prev, Move m, Game&);
+    void init(const ColoredBoard<(Colors)-C>& prev, Move m, Game&);
     static void initTables();
     template<MoveType>
     void generateCaptureMoves(Move*& list, Move*& bad) const __attribute__((noinline));
@@ -63,8 +65,10 @@ public:
     bool generateForks( Move** good) const __attribute__((noinline));
     void generateNonCap(Move*& good, Move*& bad) const __attribute__((noinline));
     void doMove(Board* next, Move m) const;
+    void doMove2(Board* next, Move m) const;
     void doMove(Board* next, Move m, const Eval&) const;
     void doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to) const;
+    void doSpecialMove2(Board* next, Move m, uint64_t from, uint64_t to) const;
     void doSpecialMove(Board* next, Move m, uint64_t from, uint64_t to, const Eval&) const;
 
     bool isForked() const __attribute__((noinline));

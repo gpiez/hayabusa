@@ -42,7 +42,8 @@ extern __thread RepetitionKeys keys;
 
 enum Extension: unsigned {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
                 ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32,
-                ExtFork = 64, ExtTestMate = 128, ExtDiscoveredCheck = 256, ExtFirstMove = 512, ExtFutility = 1024 };
+                ExtFork = 64, ExtTestMate = 128, ExtDiscoveredCheck = 256, 
+                ExtFirstMove = 512, ExtFutility = 1024, ExtLMR = 2048 };
 
 enum Status { Running, Stopping, Stopped };
 

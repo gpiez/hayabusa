@@ -85,10 +85,10 @@ template<Colors C, Phase P, typename ResultType> void Game::perft(ResultType& re
         perft<C, tree>(n, prev, m, depth);
         result += n;
         return; }
-
-    __v8hi est = eval.estimate<(Colors)-C>(m, prev.keyScore);
+    ColoredBoard<C> b;
+    b.keyScore.vector = eval.estimate<(Colors)-C>(m, prev.keyScore);
 //    unsigned estmatIndex = eval.estimate<(Colors)-C>(m, prev.matIndex);
-    const ColoredBoard<C> b(prev, m, est);
+    b.init(prev, m);
 
 #if 0    
     Key z = b.getZobrist();
