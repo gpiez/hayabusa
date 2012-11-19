@@ -27,8 +27,6 @@
 #include <unistd.h>
 #endif
 
-using namespace std::chrono;
-
 __thread History Game::history;
 __thread RepetitionKeys keys;
 
@@ -43,53 +41,80 @@ void Game::stopThread() {
     while(timerRunning) {
         stopTimerCond.wait(lock, [this]{ return searchState == Running; });
         if (!timerRunning) break;
+#ifdef __arm__
+        stopTimerCond.wait_for(lock, boost::convert(stopTimerData), [this]{ return searchState != Running; });
+#else
         stopTimerCond.wait_for(lock, stopTimerData, [this]{ return searchState != Running; });
+#endif
         if (searchState == Running) searchState = Stopping;
     }
 }
-std::string Game::commonStatus() const {
-    std::stringstream g;
-    g.imbue(std::locale("de_DE"));
-    g << "D" << std::setfill('0') << std::setw(2) << depth-(eval.dMaxExt)
-      << " " << std::setfill(' ') << std::fixed << std::setprecision(1) << std::showpoint << std::setw(9) << duration_cast<milliseconds>(system_clock::now()-start).count()/1000.0
-      << "s " << std::setw(13) << getStats().node
-      << " ";
-    return g.str(); }
 
-void Game::infoTimer(milliseconds repeat) {
+void Game::commonStatus() {
+    Stats tempStats = getStats();
+    uint64_t ntemp = tempStats.node;
+    uint64_t t = CHRONO::duration_cast<CHRONO::milliseconds>(CHRONO::system_clock::now()-start).count();
+    std::stringstream g;
+    if (Options::humanreadable) {
+		g.imbue(std::locale("de_DE"));
+		g << "D" << std::setfill('0') << std::setw(2) << depth-(eval.dMaxExt)
+		  << " " << std::setfill(' ') << std::fixed << std::setprecision(1) << std::showpoint << std::setw(9) << CHRONO::duration_cast<CHRONO::milliseconds>(CHRONO::system_clock::now()-start).count()/1000.0
+		  << "s " << std::setw(13) << ntemp
+		  << " "
+		  << std::fixed << std::setprecision(2) << std::setw(5) << ntemp/(t*1000+1.0) << "/s "
+		  << getLine();
+		std::string str = g.str();
+		str.resize(80,' ');
+		std::cout << str << "\015" << std::flush;
+    } else {
+		g   << "info"
+            << " nodes " << ntemp
+            << " nps " << (1000*ntemp)/(t+1)
+			<< " time " << t;
+
+#ifndef LEAN_AND_MEAN
+        int newHashFull = (2000*tempStats.ttuse+1)/(2*tt->getEntries());
+        if (newHashFull != oldHashFull) {
+        	g  << " hashfull " << newHashFull;
+        	oldHashFull = newHashFull;
+        }
+#endif
+        int newDepth = depth - eval.dMaxExt;
+        int newScore = bestScore*color;
+        if (newDepth != oldDepth || newScore != oldScore) {
+        	g << " depth " << depth-eval.dMaxExt;
+            g << " pv " << tt->bestLine(*this)
+              << " score cp " << bestScore * color;
+            oldScore = newScore;
+        	oldDepth = newDepth;
+        }
+		if (currentMoveIndex != oldCurrentMoveIndex) {
+			g 	<< " currmove " << currentMove.algebraic()
+				<< " currmovenumber " << currentMoveIndex;
+			oldCurrentMoveIndex = currentMoveIndex; }
+        if (Options::currline) {
+            g << " currline " << getLine();
+        }
+        console->send(g.str());
+    }
+}
+
+void Game::infoTimer(CHRONO::milliseconds repeat) {
 #ifdef __linux__
     prctl(PR_SET_NAME, "hayabusa info");
 #endif
     UniqueLock<Mutex> lock(infoTimerMutex);
-    static int lastCurrentMoveIndex = 0;
     while(timerRunning) {
         infoTimerCond.wait(lock, [this]{ return searchState == Running; });
         if (!timerRunning) break;
+#ifdef __arm__
+        infoTimerCond.wait_for(lock, boost::convert(repeat), [this]{ return searchState != Running; });
+#else
         infoTimerCond.wait_for(lock, repeat, [this]{ return searchState != Running; });
+#endif
         if (searchState == Running) {
-            Stats tempStats = getStats();
-            uint64_t ntemp = tempStats.node;
-            uint64_t t = duration_cast<milliseconds>(system_clock::now()-start).count();
-            std::stringstream g;
-            if (!Options::humanreadable && !Options::quiet && (currentMoveIndex != lastCurrentMoveIndex)) {
-                g << "info currmove " << currentMove.algebraic() << " currmovenumber " << currentMoveIndex << std::endl;
-                lastCurrentMoveIndex = currentMoveIndex; }
-            if (Options::currline) {
-                g << "info currline " << getLine() << std::endl; }
-            if (Options::humanreadable) {
-                g << commonStatus()
-                  << std::fixed << std::setprecision(2) << std::setw(5) << getStats().node/(t*1000+1.0) << "/s "
-                  << getLine();
-                std::string str = g.str();
-                str.resize(80,' ');
-                std::cout << str << "\015" << std::flush; }
-            else {
-                g   << "info"
-                    << " nodes " << ntemp
-                    << " nps " << (1000*ntemp)/(t+1)
-                    << " hashfull " << (2000*tempStats.ttuse+1)/(2*tt->getEntries())
-                    ;
-                console->send(g.str());
+            commonStatus();
+         }
 #ifdef MYDEBUG
 #if 0
             g << std::endl;
@@ -99,7 +124,7 @@ void Game::infoTimer(milliseconds repeat) {
             g << " bmob3 " << eval.bmob3 / (eval.bmobn+0.1);
 #endif
 #endif
-        } } } }
+        } }
 
 Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSize):
     iMove(0),
@@ -137,7 +162,7 @@ Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSiz
     boards[0].wb.init();
     timerRunning = true;
     stopTimerThread = new Thread(&Game::stopThread, this);
-    infoTimerThread = new Thread(&Game::infoTimer, this, milliseconds(1000));
+    infoTimerThread = new Thread(&Game::infoTimer, this, CHRONO::milliseconds(1000));
 #ifdef QT_GUI_LIB
     statWidget = new StatWidget(*this);
     statWidget->show();
@@ -178,19 +203,18 @@ void Game::operator delete(void* p) {
     allocMutex.unlock();
     free(allocp); }
 
-std::string Game::status(system_clock::time_point now, int score) {
+std::string Game::status(CHRONO::system_clock::time_point now, int score) {
     unsigned d = depth - eval.dMaxExt;
     std::stringstream g;
-    milliseconds t = duration_cast<milliseconds>(now-start);
     if (Options::humanreadable) {
-        g << commonStatus()
-          << Score<White>::str(score) << " " << tt->bestLine(*this); }
+        g << Score<White>::str(score) << " " << tt->bestLine(*this); }
     else {
+    	CHRONO::milliseconds t = CHRONO::duration_cast<CHRONO::milliseconds>(now-start);
         g   << "info depth " << d << " time " << t.count()
             << " nodes " << getStats().node
             << " pv " << tt->bestLine(*this)
             << " score cp " << score* color
-            << " nps " << (1000*getStats().node)/(t.count()+1)
+
             ; }
 #ifdef QT_GUI_LIB
     emit(signalInfo(d, (uint64_t)(now-start).count(), getStats().node, QString::fromUtf8(Score<White>::str(score).c_str()), QString::fromStdString(tt->bestLine(*this))));
@@ -245,6 +269,7 @@ const Board& Game::setup(const std::string& str) {
         break;
     default:
         std::cerr << "color to move not understood, assuming white" << std::endl;
+        /* no break */
     case 'w':
     case 'W':
         color = White;
@@ -322,7 +347,10 @@ const Board& Game::setup(const std::string& str) {
             y--;
             break;
         default:
-            std::cerr << "Unknown char " << piecePlacement[p] << " in FEN import"; } }
+			std::cerr << "Unknown char " << piecePlacement[p] << " in FEN import";
+			break;
+		}
+	}
 
     for ( unsigned int p=0; p<(unsigned int)castling.length(); p++ )
         switch ( castling[p] ) {
@@ -379,7 +407,7 @@ const Board& Game::setup(const std::string& str) {
         if (m.data) {
             std::cerr << "Move " << tl["bm"].front() << " not recognized" << std::endl; }
         bm = m; }
-    if (getStats().ttuse) tt->agex();
+    tt->agex();
 
     rootPly = 0;
     board.positionalScore = eval(board, color);
@@ -391,9 +419,11 @@ Move Game::findMove(const std::string& ) const {
 
 void Game::go(const std::map<std::string, StringList>& param ) {
     goReadParam(param);
+#ifndef LEAN_AND_MEAN
     if (Options::splitDepth)
         goExecute<SharedScore>();
     else
+#endif
         goExecute(); }
 
 void Game::goReadParam(const std::map<std::string, StringList>& param ) {

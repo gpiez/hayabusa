@@ -42,7 +42,7 @@ void Evolution::init() {
 
 void Evolution::initFixed(int n) {
     nThread = 0;
-    maxThread = 8;
+    maxThread = 4;
     nIndiFixed = n;
     recalc.resize(n);
     minElo.resize(n);
@@ -71,8 +71,8 @@ void Evolution::setCurrentParameters(Parameters& p) {
 //     p["pawnDefense"] = 384;
 //     p["knight.value.opening"] = 290;
 //     p["bishop.value.opening"] = 310;
-    p["bishop.mobility.opening"] = 30;
-    p["knight.mobility.opening"] = 30;
+//    p["bishop.mobility.opening"] = 30;
+//    p["knight.mobility.opening"] = 30;
 
 }
 

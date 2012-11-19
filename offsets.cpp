@@ -18,7 +18,7 @@
 */
 #include "pch.h"
 
-#include "boardbase.h"
+#include "board.h"
 
 #define use(x) out << #x << " = $" << hex << offsetof(BoardBase, x) << '\n'
 int ld(unsigned int x) {
@@ -412,6 +412,9 @@ int main(int, char** argv) {
                 for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
                     p |= 1ULL << (x0+y0*nRows);
                 uint64_t dir0x = p;
+                uint64_t dir0b = p; 
+                if (x==0) dir0b |= 1ULL << (x+y*nRows);
+                
 
                 p=0; dx=0; dy=1;
                 for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
@@ -420,6 +423,8 @@ int main(int, char** argv) {
                 for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
                     p |= 1ULL << (x0+y0*nRows);
                 uint64_t dir2x = p;
+                uint64_t dir2b = p; 
+                if (y==0) dir2b |= 1ULL << (x+y*nRows);
 
                 p=0; dx=1; dy=1;
                 for (int x0=x+dx, y0=y+dy; x0>=0 && x0<=7 && y0>=0 && y0<=7; x0+=dx, y0+=dy)
@@ -461,9 +466,12 @@ int main(int, char** argv) {
                 std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << dir1x << ", 0x" << std::setw(16) << dir3x << " }, ";
                 std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << bits << ", 0x" << std::setw(16) << bits << " }, ";
                 std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << rbits << ", 0x" << std::setw(16) << rbits << " }, ";
-//             std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << nbits << ", ";
-//             std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << kbits << ", ";
-                std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << rbits2 << ", 0x" << std::setw(16) << rbits2 << " }}, ";
+                std::cout << "{ 0x" << std::hex << std::setw(16) << std::setfill('0') << rbits2 << ", 0x" << std::setw(16) << rbits2 << " }, ";
+                std::cout << " 0x" << std::hex << std::setw(16) << std::setfill('0') << dir0b << ",";
+                std::cout << " 0x" << std::hex << std::setw(16) << std::setfill('0') << dir2b ;//<< ",";
+//                 std::cout << " 0x" << std::hex << std::setw(16) << std::setfill('0') << dir1b << ",";
+//                 std::cout << " 0x" << std::hex << std::setw(16) << std::setfill('0') << dir3b << ",";
+                std::cout << "}, ";
 
                 if (x == 7)
                     std::cout << std::endl;

@@ -47,7 +47,7 @@ namespace boost {
 void tss_cleanup_implemented(void) {} }
 #endif
 
-// Do not initialize from thread local variables like stats and threadId  here, 
+// Do not initialize from thread local variables like stats and threadId  here,
 // they do not exist at this point
 WorkThread::WorkThread():
     parent(0),
@@ -72,8 +72,8 @@ void WorkThread::run() {
         UniqueLock <Mutex> lock(runningMutex);
         delete job;
         job = NULL;
-        --running; 
-        if (running == 0) stopped.notify_one();  //wake stop() function 
+        --running;
+        if (running == 0) stopped.notify_one();  //wake stop() function
         ASSERT(!job);
         if (jobs.size()>0 && running<nThreads) {
             ASSERT(!job);
@@ -85,7 +85,7 @@ void WorkThread::run() {
             ++running; }
         starting.wait(lock, [this] () { return job != 0; });   //starting is signalled by StartJob() or QJob()
         ASSERT(job);
-        stats.jobs++;
+        STATS(jobs);
         job->job();             //returning the result must have happened here.
     } }
 
@@ -130,7 +130,7 @@ void WorkThread::stop() {
 void WorkThread::stopAll() {
     UniqueLock<Mutex> l(runningMutex);
     for (auto th = threads.begin(); th !=threads.end(); ++th)
-        if ((*th)->job) (*th)->job->stop();    
+        if ((*th)->job) (*th)->job->stop();
     stopped.wait(l, [] { return running == 0; });    //waits until the end of the run loop is reached.
 }
 
@@ -183,7 +183,7 @@ void WorkThread::init() {
     for (unsigned int i=0; i<nWorkThreads; ++i) {
         WorkThread* th = new WorkThread();
         new Thread(&WorkThread::run, th);
-        threads.push_back(th); } 
+        threads.push_back(th); }
     //waits until initialized
     stopped.wait(lock, [] () { return running == 0; });
 

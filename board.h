@@ -21,7 +21,6 @@
 
 #include "move.h"
 #include "keyscore.h"
-#include <x86intrin.h>
 
 class Eval;
 class Game;
@@ -57,11 +56,11 @@ struct Board {
             uint64_t d1;
             uint64_t d3; };
         uint64_t d[4]; }
-        
+
         dpins[nColors],                                 // +272
         datt[nColors],                                  // +304 sum of all directed attacks, for each of the 4 main directions
         kingIncoming[nColors];                          // +336
-                                                        //  372 total size of core structure  
+                                                        //  372 total size of core structure
     struct MoveTemplateB {
         Move move;
         __v2di d13; } bsingle[nColors][2+8+1];                   //704
@@ -80,21 +79,25 @@ struct Board {
     unsigned matIndex;
     mutable int positionalScore;
     mutable int prevPositionalScore;
-    
+
     mutable int16_t* diff;
     mutable int psValue;
     mutable int estScore;
     mutable unsigned ply;
     mutable Move m;
     mutable Extension threatened;
-    
+
     struct Bits {
         __v2di mask02;
         __v2di mask13; // 1 KByte  antidiag : diagonal, excluding square
         __v2di doublebits; // 1 KByte    1<<sq  : 1<<sq
         __v2di doublereverse; // 1 KByte    1<<(sq^070)  : 1<<(sq^070)
         __v2di doublereverse2; // 1 KByte    1<<sq  : 1<<sq
-        char fill[48]; };
+        uint64_t mask0x;
+        uint64_t mask2x;
+//        uint64_t mask1x;
+//        uint64_t mask3x;
+        char fill[16]; };
     static const Bits bits[nSquares];
     static const uint64_t knightAttacks[nSquares+2];
     static const uint64_t pawnAttacks[nColors][nSquares+2];
@@ -118,7 +121,12 @@ struct Board {
     template<Pieces P>
     __v2di get2Pieces() const {
         static_assert(P>0 && P<=King, "Wrong Piece");
-        return _mm_load_si128((__m128i*)&pieces[P]); }
+#ifdef __SSE__
+        return _mm_load_si128((__m128i*)&pieces[P]);
+#else
+        return *(__v2di*) &pieces[P];
+#endif
+    }
     template<int C>
     uint64_t getPieces(unsigned int p) const {
         ASSERT(p <= King);
@@ -156,8 +164,8 @@ struct Board {
 
     inline __v2di build02Attack(const unsigned sq) const __attribute__((always_inline));
     inline __v2di build13Attack(const unsigned sq) const __attribute__((always_inline));
-    inline void build02Attack(const __v2di, __v2di& result0, __v2di& result1) const __attribute__((always_inline));
-    inline __v2di build13Attack(const __v2di) const;
+//    inline void build02Attack(const __v2di, __v2di& result0, __v2di& result1) const __attribute__((always_inline));
+//    inline __v2di build13Attack(const __v2di) const;
 //    uint64_t build02Attack(const uint64_t) const;
 //    uint64_t build13Attack(const uint64_t) const;
     inline uint64_t buildNAttack(uint64_t n) const;

@@ -23,17 +23,17 @@
 #include "console.h"
 
 // tcp server incurs some lag FEATURE move to search parameters
-static const std::chrono::milliseconds operatorTime = std::chrono::milliseconds(200);
-static const std::chrono::milliseconds minimumTime = std::chrono::milliseconds(100);
+static const CHRONO::milliseconds operatorTime = CHRONO::milliseconds(200);
+static const CHRONO::milliseconds minimumTime = CHRONO::milliseconds(100);
 
 template<Colors C, template <Colors> class T >
 Move Game::rootSearch(unsigned int endDepth) {
-    using namespace std::chrono;
+    using namespace CHRONO;
     start = system_clock::now();
 
 #ifdef QT_GUI_LIB
     while (!statWidget->tree);
-    
+
     statWidget->emptyTree();
 #endif
     isMain = true;
@@ -119,9 +119,7 @@ Move Game::rootSearch(unsigned int endDepth) {
             if (value > alpha0.v) {
                 alpha0.v = value.v;
                 bestMove = *ml;
-#ifdef USE_GENETIC
-                if (Options::quiet) bestScore = value.v;
-#endif
+                bestScore = value.v;
                 ml.nodesCount(WorkThread::stats.node - subnode);
                 ml.currentToFront(); } }
 #ifdef QT_GUI_LIB
@@ -135,11 +133,12 @@ Move Game::rootSearch(unsigned int endDepth) {
          * Other iterations
          */
         for (depth=eval.dMaxExt+2; depth<=endDepth; depth++) {
+            history.resize(depth + eval.dMaxCheckExt);
             ml.begin();
 //             ml.sort(bestMovesLimit);
             bestMove = currentMove = *ml;
             currentMoveIndex = 1;
-            if (!Options::humanreadable && !Options::quiet) {
+            if (!Options::humanreadable && Options::noisy) {
                 std::stringstream g;
                 g << "info depth " << depth-eval.dMaxExt;
                 console->send(g.str()); }
@@ -182,7 +181,7 @@ Move Game::rootSearch(unsigned int endDepth) {
                      */
 //TODO check if trying other moves first is an better option
                     now = system_clock::now();
-                    if (!Options::quiet) console->send(status(now, value.v) + " upperbound");
+                    if (Options::noisy) console->send(status(now, value.v) + " upperbound");
                     beta2.v = value.v;
                     alpha.v = value.v;
                     T<C> neginf(-infinity*C);
@@ -196,7 +195,7 @@ Move Game::rootSearch(unsigned int endDepth) {
                      * Fail-High at first root, research with high bound = beta and low bound = old high bound
                      */
                     now = system_clock::now();
-                    if (!Options::quiet) console->send(status(now, value.v) + " lowerbound");
+                    if (Options::noisy) console->send(status(now, value.v) + " lowerbound");
                     alpha.v = value.v;
                     if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                     T<(Colors)-C> beta3;
@@ -207,7 +206,7 @@ Move Game::rootSearch(unsigned int endDepth) {
                     if (searchState) break;
                     if (value >= beta3.v) {
                         now = system_clock::now();
-                        if (!Options::quiet) console->send(status(now, value.v) + " lowerbound");
+                        if (Options::noisy) console->send(status(now, value.v) + " lowerbound");
                         alpha.v = value.v;
                         if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                         limit<-C>() = -infinity*C;
@@ -221,18 +220,14 @@ Move Game::rootSearch(unsigned int endDepth) {
                 limit<-C>() = alpha.v;
                 limit<C>() = beta.v;
                 value.v = search4<(Colors)-C, trunk>(nextboard, depth-1, beta, alpha, ExtNot, NodePV NODE);
-#ifdef USE_GENETIC
-                if (Options::quiet) bestScore = value.v;
-#endif
+                bestScore = value.v;
                 if (searchState) break;
                 alpha.v = value.v; }
             ml.nodesCount(WorkThread::stats.node - subnode);
 
             now = system_clock::now();
-            if (!Options::quiet) console->send(status(now, alpha.v));
-#ifdef USE_GENETIC
-            else bestScore = alpha.v;
-#endif
+            bestScore = value.v;
+            if (Options::noisy) console->send(status(now, alpha.v));
             if (alpha >= infinity*C) break;
             if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
             if (abs(alpha.v) <= 1024)
@@ -262,7 +257,7 @@ Move Game::rootSearch(unsigned int endDepth) {
                     bestMove = *ml;
                     if (alpha >= beta2.v && searchState == Running) {
                         now = system_clock::now();
-                        if (!Options::quiet) console->send(status(now, alpha.v) + " lowerbound");
+                        if (Options::noisy) console->send(status(now, alpha.v) + " lowerbound");
                         if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                         T<(Colors)-C> beta3;
                         beta3.v  = alpha.v + eval.aspirationHigh2*C;
@@ -279,7 +274,7 @@ Move Game::rootSearch(unsigned int endDepth) {
                         alpha.v = value.v;
                         if (value >= beta3.v) {
                             now = system_clock::now();
-                            if (!Options::quiet) console->send(status(now, value.v) + " lowerbound");
+                            if (Options::noisy) console->send(status(now, value.v) + " lowerbound");
                             if (!infinite && now > softLimit && alpha > alpha0.v + C*eval.evalHardBudget) break;
                             limit<C>() = beta.v;
                             value.v = search4<(Colors)-C, trunk>(nextboard, depth-1, beta, alpha, ExtNot, NodePV NODE);
@@ -289,10 +284,8 @@ Move Game::rootSearch(unsigned int endDepth) {
                     ml.currentToFront();
                     beta2.v = alpha.v + eval.aspirationHigh*C;
                     now = system_clock::now();
-                    if (!Options::quiet) console->send(status(now, alpha.v));
-#ifdef USE_GENETIC
-                    else bestScore = alpha.v;
-#endif
+                    bestScore = value.v;
+                    if (Options::noisy) console->send(status(now, alpha.v));
                 }
 
                 if (alpha >= infinity*C) break;
@@ -312,8 +305,8 @@ Move Game::rootSearch(unsigned int endDepth) {
             alpha0.v = alpha.v;
             if (searchState) break; } // for depth
     } // if nMoves
+    commonStatus();
     console->send("bestmove "+bestMove.algebraic());
-
     LockGuard<Mutex> l2(infoTimerMutex);
     LockGuard<Mutex> l3(searchStateMutex);
     searchState = Stopped;

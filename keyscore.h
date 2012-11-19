@@ -11,8 +11,6 @@
 #include "constants.h"
 #include "packedscore.h"
 #include "compoundscore.h"
-#include "x86intrin.h"
-
 /*
  * update score:        every move      needed early
  * update key:          every move      needed late
@@ -21,6 +19,9 @@
  * update *material:    some cpatures   needed early
  * update *matscale:    rare            needed early
  */
+#ifndef __SSE__
+typedef short __attribute__((vector_size(16))) __v8hi;
+#endif
 #ifdef __SSE4_1__
 struct KeyScore {
     __v8hi vector;
@@ -59,7 +60,7 @@ struct KeyScore {
 #else
 union KeyScore {
     CompoundScore score() const {
-        return CompoundScore(vector);
+    	return CompoundScore(opening(), endgame());
     }
     void opening(int v) {
         m_score.opening = v;

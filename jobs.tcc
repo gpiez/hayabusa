@@ -73,10 +73,10 @@ void SearchJob<C,A,B>::job() {
         beta.max(ret);
         retval.max(ret, b.m); }
     else
-        ++WorkThread::stats.cancelJob;
+    	STATS(cancelJob);
     beta.setReady();
-    retval.setReady(); 
-    
+    retval.setReady();
+
 }
 
 template<Colors C>

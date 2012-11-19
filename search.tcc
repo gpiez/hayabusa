@@ -1,4 +1,4 @@
-/*  
+/*
     Copyright (C) 2011  Gunther Piez
 
     This program is free software: you can redistribute it and/or modify
@@ -59,9 +59,9 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
     ASSERT(P!=vein);
     ASSERT(P!=leaf);
     Score<C> value;
-#ifdef QT_GUI_LIB    
+	#ifdef QT_GUI_LIB
     NodeItem* node = parent;
-#endif
+	#endif
     if (doNull) {
         /*
          * Verify nullmove search. If it is <beta, dont't bother
@@ -80,7 +80,7 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
             tt->prefetchSubTable(nextboard.getZobrist());
             int temp = nextboard.fiftyMoves;
             nextboard.ply++;
-            if (isMain) line[nextboard.ply].data = 0;            
+            if (isMain) line[nextboard.ply].data = 0;
             nextboard.fiftyMoves = 0;
             if (eval.flags & 1)
             nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff;
@@ -90,10 +90,10 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
             nextboard.cep.enPassant = temp2;
             nextboard.ply--;
         } }
-    
+
     if (reduction) {
         if (eval.flags & 1)
-        nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff; 
+        nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff;
         const A alpha0(beta.v - C);
         value.v = search4<C, P>(nextboard, newDepth-reduction, alpha0, beta, ExtLMR, nextNT NODE);
         if (value >= beta.v) {
@@ -102,12 +102,12 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
     if (eval.flags & 1)
     nextboard.estScore = nextboard.psValue + nextboard.prevPositionalScore + *nextboard.diff;
     value.v = search4<C, P>(nextboard, newDepth, alpha, beta, ExtNot, nextNT NODE);
-#ifdef QT_GUI_LIB
+	#ifdef QT_GUI_LIB
     if (parent) {
         NodeItem::m.lock();
         parent->getParent()->moveToEnd(parent);
         NodeItem::m.unlock(); }
-#endif
+	#endif
     return value.v; }
 /*
  * Search with color C to move, executing a -C colored move m from a board prev.
@@ -121,9 +121,9 @@ int Game::search4(const ColoredBoard<C>& nextboard, const unsigned depth,
     ASSERT(P!=vein);
     ASSERT(P!=leaf);
     ASSERT(!(depth <= eval.dMaxCapture));
-#ifdef QT_GUI_LIB    
+	#ifdef QT_GUI_LIB
     NodeItem* node = parent;
-#endif
+	#endif
     bool unused;
 //     if (P == vein || depth <= eval.dMaxCapture)
 //         return search3<C,vein>(prev,m,depth,a.unshared(),b.unshared(),ply,extend,unused,nt NODE);
@@ -144,13 +144,13 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                   Extension extend, bool& nextMaxDepth, const NodeType nt NODEDEF ) {
     WorkThread::stats.node++;
 //     if (WorkThread::stats.node == 129221) asm("int3");
-#ifdef MYDEBUG
+	#ifdef MYDEBUG
     uint64_t __attribute__((unused)) localnode = WorkThread::stats.node;
-#endif
+	#endif
     if unlikely( WorkThread::stats.node > maxSearchNodes ) {
         searchState = Stopping;
         return 0; }
-#ifdef QT_GUI_LIB
+	#ifdef QT_GUI_LIB
     NodeItem* node = 0;
     if (NodeItem::nNodes < MAX_NODES && parent) {
         NodeItem::m.lock();
@@ -172,13 +172,13 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         node = new NodeItem(data, parent);
         NodeItem::nNodes++;
         NodeItem::m.unlock(); }
-#endif
+	#endif
     if (P != vein && P != leaf && unlikely(searchState != Running)) return 0;
-#ifdef QT_GUI_LIB
+	#ifdef QT_GUI_LIB
     if (node) node->gain = *b.diff;
     if (node) node->ps = b.psValue;
     if (node) node->real = 0;
-#endif
+	#endif
 
     /*
      * Extensions in leaf search
@@ -193,23 +193,23 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     // This is needed here because we might be in vein with ExtTestMate
     bool inCheck = b.template inCheck<C>();
     if (P==vein) {
-    	if (extend & ExtTestMate && inCheck) 
+    	if (extend & ExtTestMate && inCheck)
     		b.threatened = ExtCheck; }
-    
+
     else {
         uint64_t pMoves;
-    	if (unlikely(inCheck) && likely(depth > eval.dMaxCheckExt)) 
+    	if (unlikely(inCheck) && likely(depth > eval.dMaxCheckExt))
             b.threatened = ExtCheck;
     	else if (likely(depth > eval.dMinForkExt) && unlikely(popcount(b.isPieceHanging(eval)) > 1))
         	b.threatened = ExtFork;
-    	else if (likely(depth > eval.dMinPawnExt) 
+    	else if (likely(depth > eval.dMinPawnExt)
     	    && unlikely((pMoves = b.template getPieces<-C,Pawn>() & b.template getPins<(Colors)-C>() & rank<C,2>()))
     	    && ((pMoves = ( (  shift<-C*8  >(pMoves)               & ~b.occupied1)
                            | (shift<-C*8+1>(pMoves) & ~file<'a'>() &  b.template getOcc<C>())
                            | (shift<-C*8-1>(pMoves) & ~file<'h'>() &  b.template getOcc<C>()))
                          & ~b.template getAttacks<C,All>())))
             b.threatened = ExtPawnThreat;
-        else if (likely(depth > eval.dMinMateExt) && unlikely((b.swapped().template generateMateMoves<true, bool>()))) 
+        else if (likely(depth > eval.dMinMateExt) && unlikely((b.swapped().template generateMateMoves<true, bool>())))
             b.threatened = ExtMateThreat;
 //         if (eval.flags &1 && !b.threatened && depth > eval.dMinExtDisco)
 //             if (((ColoredBoard<(Colors)-C>*)&b) -> template generateDiscoveredCheck<true, bool>())
@@ -236,7 +236,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             if (node) node->bestEval = value.v;
             if (node) node->nodeType = NodePrecut2;
 #endif
-            WorkThread::stats.leafcut++;
+            STATS(leafcut);
             return value.v; } }
 
     ASSERT(P == vein || z == b.getZobrist());
@@ -261,53 +261,53 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     int posScore = 0xdeadbeaf;
     if (P != vein) {
         if (findRepetition(b, z, b.ply) || b.fiftyMoves >= 100) {
-#ifdef QT_GUI_LIB
+			#ifdef QT_GUI_LIB
             if (node) node->bestEval = 0;
             if (node) node->nodeType = NodeRepetition;
-#endif
+			#endif
             return 0; }
         st = tt->getSubTable(z);
         if unlikely(tt->retrieve(st, z, subentry)) {
-            WorkThread::stats.tthit++;
+        	STATS(tthit);
             ttDepth = subentry[::depth];
             posScore = tt2Score(subentry[::posScore]);
             Score<C> ttScore;
             ttScore.v = tt2Score(subentry[score]);
-            if unlikely (ttDepth >= depth 
-                || (ttScore>=infinity*C && subentry[loBound]) 
-                || (ttScore<=-infinity*C && subentry[hiBound])) {
+            if unlikely (ttDepth >= depth
+            || (ttScore>=infinity*C && subentry[loBound])
+            || (ttScore<=-infinity*C && subentry[hiBound])) {
                 if (P == leaf && depth <= eval.dMaxExt) {
                     nextMaxDepth = true; }
                     if unlikely(subentry[loBound] & subentry[hiBound]) {
 
 //                        stats.ttexact++;
-#ifdef QT_GUI_LIB
+						#ifdef QT_GUI_LIB
                         if (node) node->bestEval = ttScore.v;
                         if (node) node->nodeType = NodeTT;
-#endif
-                        return ttScore.v; } 
+						#endif
+                        return ttScore.v; }
                     else if unlikely(subentry[loBound]) {
                         alpha.max(ttScore.v);
-                        WorkThread::stats.ttalpha++;
+                        STATS(ttalpha);
                         if (alpha >= beta.v) {
-#ifdef QT_GUI_LIB
+							#ifdef QT_GUI_LIB
                             if (node) node->bestEval = ttScore.v;
                             if (node) node->nodeType = NodeTT;
-#endif
+							#endif
                             return ttScore.v; }
                         current.max(ttScore.v); }
                     else if (subentry[hiBound]) {
-                        WorkThread::stats.ttbeta++;
-                        beta.max(ttScore.v); 
+                    	STATS(ttbeta);
+                        beta.max(ttScore.v);
                         if (alpha >= beta.v) {
-#ifdef QT_GUI_LIB
+							#ifdef QT_GUI_LIB
                             if (node) node->bestEval = ttScore.v;
                             if (node) node->nodeType = NodeTT;
-#endif
+							#endif
                             return ttScore.v; } } }
 
                 current.m = Move(subentry[from], subentry[to], subentry[piece], subentry[capture], subentry[special]);
-#ifdef MYDEBUG
+				#ifdef MYDEBUG
                 if (current.m.piece()) {
                     if (current.m.isSpecial() && (current.m.piece()&7) <= Pawn) {
                         ASSERT((b.template getPieces<C,Pawn>() & 1ULL<<current.m.from()));
@@ -325,7 +325,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                             ASSERT((b.occupied1 & 1ULL<<current.m.to()) == 0);
                     }
                 }
-#endif                
+				#endif
             } }
     bool leafMaxDepth;
     if (P == leaf) leafMaxDepth=false;
@@ -334,20 +334,20 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         if (depth == eval.dMaxExt + 1) { //TODO fall back to qsearch instead of hard prune
             Score<C> fScore;
             fScore.v = b.estScore - C*eval.prune1 - !!b.m.capture()*C*eval.prune1c;
-#ifdef QT_GUI_LIB
+			#ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile1;
-#endif
+			#endif
 
             if (fScore >= beta.v && (fScore<limit<C>() || eval.allowLazyRoot)) {
                 return fScore.v; } }
         if (depth == eval.dMaxExt + 2) {
             Score<C> fScore;
             fScore.v = b.estScore - C*eval.prune2 - !!b.m.capture()*C*eval.prune2c;
-#ifdef QT_GUI_LIB
+			#ifdef QT_GUI_LIB
             if (node) node->bestEval = fScore.v;
             if (node) node->nodeType = NodeFutile2;
-#endif
+			#endif
             if (fScore >= beta.v && (fScore<limit<C>() || eval.allowLazyRoot)) {
                 return fScore.v; } }
         if (depth == eval.dMaxExt + 3) {
@@ -361,10 +361,10 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                     return v.v;
                 }
             }
-                 
+
         }
     }
-    
+
     if (0 && P==tree && !(extend & ExtFutility)) {
         if (depth >= 3+eval.dMaxExt) {
             int limit = -C*1000/(depth-eval.dMaxExt);
@@ -378,7 +378,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                     WorkThread::stats.node--;
                     return v.v;
                 }
-            }    
+            }
         }
     }
 
@@ -390,35 +390,35 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 //                depth = eval.dMaxExt + (depth-eval.dMaxExt)/4;
         } }
     if (mat.draw) {
-#ifdef QT_GUI_LIB
+		#ifdef QT_GUI_LIB
         if (node) node->bestEval = 0;
         if (node) node->nodeType = NodeEndgameEval;
-#endif
+		#endif
         return 0; }
 
     if (P==vein) {
         ASSERT(!(b.threatened & ~ExtCheck)); };
 
 
-    WorkThread::stats.eval++;
+    STATS(eval);
     int realScore;
     if (posScore == (signed)0xdeadbeaf)
         realScore = eval(b, wattack, battack, b.psValue, b.positionalScore);
     else {
         b.positionalScore = posScore;
         realScore = b.psValue + b.positionalScore; }
-    
+
 //        Options::debug = 0;
-#ifdef QT_GUI_LIB
+	#ifdef QT_GUI_LIB
     if (node) node->real = realScore;
     if (node) node->pos = b.positionalScore;
-#endif
+	#endif
     if (isMain & !b.m.isSpecial()) {
         int diff2 = b.positionalScore - b.prevPositionalScore;
-        *b.diff = (diff2 + *b.diff)/2; 
+        *b.diff = (diff2 + *b.diff)/2;
     }
     /*
-     * If we are in one of the q searches and are not threatened, 
+     * If we are in one of the q searches and are not threatened,
      * assume a stand pat score. Without this score we need to make sure to
      * generate *all* moves later in movelist.
      */
@@ -427,10 +427,10 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         alpha.max(realScore);
         current.max(realScore);
         if (current >= beta.v && !b.threatened) {
-            WorkThread::stats.leafcut++;
-#ifdef QT_GUI_LIB
+        	STATS(leafcut);
+			#ifdef QT_GUI_LIB
             if (node) node->nodeType = NodePrecut3;
-#endif
+			#endif
             goto storeAndExit; }
     }
 
@@ -444,24 +444,24 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                 // we have no moves, but the list wasn't generated as complete list
                 // assume a stand pat move score.
                 goto storeAndExit; }
-    	    
+
             if (inCheck) {
                 if (P==vein) ASSERT(b.threatened == ExtCheck);
                 if (P==vein) ASSERT(extend & ExtTestMate);
-#ifdef QT_GUI_LIB
+				#ifdef QT_GUI_LIB
                 if (node) node->nodeType = NodeMate;
                 if (node) node->bestEval = -infinity*C;
-#endif
-                current.v = -infinity*C; 
-                ASSERT(!current.m.isValid()); 
+				#endif
+                current.v = -infinity*C;
+                ASSERT(!current.m.isValid());
                 goto storeAndExit; }
             // stalemate
-#ifdef QT_GUI_LIB
+			#ifdef QT_GUI_LIB
             if (node) node->nodeType = NodeMate;
             if (node) node->bestEval = 0;
-#endif
+			#endif
             current.v = 0;
-            ASSERT(!current.m.isValid()); 
+            ASSERT(!current.m.isValid());
             goto storeAndExit; }
 
         bool unused __attribute__((unused));
@@ -471,7 +471,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             if (i.size() == 2) {
                 if (depth > eval.dMinDualExt)
                     leafExt = (Extension) (leafExt | ExtDualReply); }
-            else if (i.size() == 1) 
+            else if (i.size() == 1)
                 if (depth > eval.dMinSingleExt)
                     leafExt = (Extension) (leafExt | ExtSingleReply); }
         /*
@@ -508,16 +508,16 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             if (P==vein || (P==leaf && (i.isCapture() | i.isNonCapture()))
                         || (P==leaf && newDepth <= eval.dMaxCapture)) {
                 int nextPSValue = eval.calc(b.swapped() , nextboard.matIndex, nextboard.keyScore.vector);
-                int nextEstimatedScore = nextPSValue + b.positionalScore + C*eval.standardError;                
+                int nextEstimatedScore = nextPSValue + b.positionalScore + C*eval.standardError;
                 value.v = nextEstimatedScore;
                 if (value <= alpha.v) {
                     WorkThread::stats.node++;
 //                    if (WorkThread::stats.node ==  432) asm("int3");
-                    WorkThread::stats.leafcut++;
+                    STATS(leafcut);
                     // b.threatened is sysnonymous to "not having a stand pat score"
-                    // So, current may be -inf, even if a move is possible 
+                    // So, current may be -inf, even if a move is possible
                     if (b.threatened) current.max(value.v);
-#ifdef QT_GUI_LIB
+					#ifdef QT_GUI_LIB
                     int16_t diff = pe[6 + C*(i->piece() & 7)][i->from()][i->to()];
                     if (NodeItem::nNodes < MAX_NODES && node) {
                         NodeItem::m.lock();
@@ -534,7 +534,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                         data.flags = 0;
                         data.threadId = WorkThread::getThisThreadId();
                         data.nodes = 1;
-                
+
                         data.gain = diff;
                         data.error = eval.standardError;
                         data.ps = nextPSValue;
@@ -545,22 +545,22 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                         new NodeItem(data, node);
                         NodeItem::nNodes++;
                         NodeItem::m.unlock(); }
-#endif
-                    continue; } 
+					#endif
+                    continue; }
 //                if (P == leaf && (i.isCapture() | i.isNonCapture())
 //                    && !b.threatened
-//                    && !(extend & (ExtDualReply | ExtSingleReply)) 
+//                    && !(extend & (ExtDualReply | ExtSingleReply))
 //                    && !i->capture() && !i->isSpecial()) continue;
             }
             /*
-                prefetching is not very effective for core2, probably because each access
-                is completely random and causes not only a cache miss, but additionally a
-                tlb miss, which stalls the processor almost als long as the actual memory
-                access would without. It gets slightly more useful, if 2M pages are used.
-                Speed increase measured as 1-2% with 4k pages and ~5% witch 2M pages. 2M
-                alone increase the speed by ~2%.
-                For a core i7 the speed increase from prefetching is about 3%.
-            */
+             * prefetching is not very effective for core2, probably because each access
+             * is completely random and causes not only a cache miss, but additionally a
+             * tlb miss, which stalls the processor almost als long as the actual memory
+             * access would without. It gets slightly more useful, if 2M pages are used.
+             * Speed increase measured as 1-2% with 4k pages and ~5% witch 2M pages. 2M
+             * alone increase the speed by ~2%.
+             * For a core i7 the speed increase from prefetching is about 3%.
+             */
             if (P != vein) tt->prefetchSubTable(nextboard.keyScore.key() + b.cep.castling.data4 - C+1);
             nextboard.init(b, *i);
             nextboard.psValue = eval.calc(nextboard , nextboard.matIndex, nextboard.keyScore.vector);
@@ -614,7 +614,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             if (searchState != Running) break;
             nextNT = NodeFailHigh;
             alpha.max(value.v);
-            current.max(value.v, *i); 
+            current.max(value.v, *i);
         } while(current < beta.v && ++i);
 
         // if there are queued jobs started from _this_ node, do them first
@@ -652,16 +652,16 @@ storeAndExit:
         stored.set(hiBound, (current < origBeta.v) & (searchState == Running));
         stored.set(from, current.m.from());
         stored.set(to, current.m.to());
-        stored.set(capture, current.m.capture()); 
-        stored.set(piece, current.m.piece() & 7); 
+        stored.set(capture, current.m.capture());
+        stored.set(piece, current.m.piece() & 7);
         stored.set(special, current.m.isSpecial());
         stored.set(::posScore, score2tt(b.positionalScore));
         tt->store(st, stored); }
-#ifdef QT_GUI_LIB
+	#ifdef QT_GUI_LIB
     if (node) {
         node->bestEval = current.v;
         for (int i=0; i<node->childCount(); ++i)
             node->nodes += node->child(i)->nodes; }
-#endif
+	#endif
     return current.v; }
 #endif

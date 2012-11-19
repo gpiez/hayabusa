@@ -33,7 +33,7 @@ struct PackedScore {
     PackedScore operator / (int x) {
         return PackedScore{ opening / x, endgame / x };
     }
-
     T    opening;
-    T    endgame; };
+    T    endgame; 
+};
 #endif

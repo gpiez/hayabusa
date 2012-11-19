@@ -20,7 +20,8 @@
 #include "stringlist.h"
 #include "options.h"
 #include "bits.h"
-
+#include <bits/random.h>
+#include <bits/random.tcc>
 template<typename T>
 void printSigmoid(T& p, std::string str, int offset=0) {
     size_t n;
@@ -46,7 +47,7 @@ Eval::Init::Init(Eval& e):
     e.evalHardBudget = -20;
 
     if (Options::debug & DebugFlags::debugEval) {
-        printSigmoid(e.nAttackersTab, "nAttackersTab");
+//        printSigmoid(e.nAttackersTab, "nAttackersTab");
         printSigmoid(e.attackN, "attN");
         printSigmoid(e.attackTable2, "attTable2");
         printSigmoid2(e.pawnPasser22, "pass");
@@ -127,7 +128,7 @@ void Eval::Init::initPS(Pieces pIndex, Parameters::Piece& piece) {
         e.keyScore( pIndex, sq).opening(piece.value.opening + piece.hor.opening[xh] + piece.vert.opening[yo] + corner*piece.corner.opening);
         e.keyScore( pIndex, sq).endgame(piece.value.endgame + piece.hor.endgame[xh] + piece.vert.endgame[ye] + corner*piece.corner.endgame);
         if (pIndex == Pawn && y==6) {
-            e.keyScore(pIndex, sq).score(e.keyScore(pIndex, sq).score() + e.pawnPasser22[y-1]); 
+            e.keyScore(pIndex, sq).score(e.keyScore(pIndex, sq).score() + e.pawnPasser22[y-1]);
         }
         e.keyScore(-pIndex, sq ^ 070).score(-e.keyScore( pIndex, sq).score());
         print_debug(debugEval, "%4d %4d  ", e.keyScore(pIndex, sq).opening(), e.keyScore(pIndex, sq).endgame());
@@ -243,7 +244,7 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
 	int scaleIndex = scalemat - endgameMaterial + endgameTransitionSlope/2;
 	scaleIndex = std::max(0, std::min(scaleIndex, endgameTransitionSlope));
     m.scale = e.scale[scaleIndex];
-    
+
     if (b+n >= eb+en+2 && r+1 >= er) {
         int s = C*e.interpolate(m.scale, twoMinOneMaj);
         m.bias += s;
@@ -261,7 +262,7 @@ void Eval::Init::material(int r, int b, int q, int n, int p,
     m.bias += e.interpolate(m.scale, knightPerPawn*n*(p+ep-8)/16*C);
     m.bias += e.interpolate(m.scale, queenPerPawn*q*(p+ep-8)/16*C);
     m.bias += e.interpolate(m.scale, pawnPerPawn*p*(p-4)/16*C);
-    
+
     if (b == 1 && eb == 1 && q+r+n+eq+er+en == 0)
         m.recognized = KB_kb_;
 
@@ -375,7 +376,7 @@ void Eval::Init::material() {
 		int endgameScale = endgameTransitionSlope - i;
 		e.scale[i].opening = (0x7fff*i )/endgameTransitionSlope;
 		e.scale[i].endgame = (0x7fff*endgameScale )/endgameTransitionSlope;
-#ifdef MYDEBUG		
+#ifdef MYDEBUG
 		PackedScore<> test;
 		for (test.opening = -100; test.opening <= 100; test.opening += 1)
 			for (test.endgame = -100; test.endgame <= 0; test.endgame+=1) {
@@ -386,12 +387,12 @@ void Eval::Init::material() {
 				int sneg = -e.interpolate(e.scale[i], neg);
 				if ( s != sneg) {
 					std::cout << "sold:" << s << " snew:" << sneg << " o " << test.opening << " e " << test.endgame << " scale " << i << std::endl;
-					std::cout << this->e.scale[i].opening << "." << this->e.scale[i].endgame << ": " 
+					std::cout << this->e.scale[i].opening << "." << this->e.scale[i].endgame << ": "
 						<< this->e.scale[i].opening*test.opening + this->e.scale[i].endgame*test.endgame << " = "
 						<< (this->e.scale[i].opening*test.opening + this->e.scale[i].endgame*test.endgame + 0x4000)/32768.0 << std::endl;
 				}
 			}
-#endif		
+#endif
 	}
 
 	static constexpr Material defaultMaterial = {
@@ -660,9 +661,12 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     sigmoid(e.defenseN, knight.defense, knight.defense*2, 0, 3.0, 1);
     sigmoid(e.defenseQ, queen.defense, queen.defense*2, 0, 3.0, 1);
 
-    SETPARM(attackFirst);
-    SETPARM(attackSlope);
-    sigmoid(e.nAttackersTab, attackFirst, 256, 0, attackSlope, 1);
+    e.maxDefense = (rook.defense + knight.defense + bishop.defense + queen.defense)*e.pieceDefense
+        + kingShield.center[0]*3 * e.pawnDefense;
+    e.maxAttack = (2*rook.attack + 2*knight.attack + 2*bishop.attack + queen.attack + pawn.attack)*e.pieceAttack;
+//    SETPARM(attackFirst);
+//    SETPARM(attackSlope);
+//    sigmoid(e.nAttackersTab, attackFirst, 256, 0, attackSlope, 1);
 
     SETPARME(dMaxCapture);
     SETPARME(dMaxCheckExt);
@@ -727,7 +731,7 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
         e.rookSeventh[i].opening = e.rookSeventh[i-1].opening + rookSeventh.opening;
         e.rookSeventh[i].endgame = e.rookSeventh[i-1].endgame + rookSeventh.endgame;
         if (i>1) {
-            e.rookSeventh[i].opening = e.rookSeventh[i].opening + rookSeventh2.opening;            
+            e.rookSeventh[i].opening = e.rookSeventh[i].opening + rookSeventh2.opening;
             e.rookSeventh[i].endgame = e.rookSeventh[i].endgame + rookSeventh2.endgame;
         }
     }
@@ -743,7 +747,7 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     e.quantRound = (1<<quant)>>1;
     e.quantRoundNeg = ((1 + (1<<quant))>>1 ) - 1;
     SETPARM2(twoMinOneMaj);
-    twoMinOneMaj.endgame = twoMinOneMaj.opening; 
+    twoMinOneMaj.endgame = twoMinOneMaj.opening;
     SETPARM2(oneMinThreePawns);
     oneMinThreePawns.endgame = oneMinThreePawns.opening;
     SETPARM2(rookPerPawn);
@@ -765,7 +769,7 @@ void Eval::Init::setEvalParameters(const Parameters& p) {
     e.bishopTrapped.endgame = e.bishopTrapped.opening;
     SETPARME2(knightTrapped);
     e.knightTrapped.endgame = e.knightTrapped.opening;
-    
+
 #ifdef MYDEBUG
     ASSERT(!e.control.size());
 #endif

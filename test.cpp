@@ -41,7 +41,7 @@ void TestRootBoard::initTestCase() {
     strcpy(unittest, "unittest");
     static char* argv[] = { unittest, NULL };
     static int argc = 1;
-    c = new Console(argc, argv);
+    c = new Console();
     b = c->game; }
 
 void TestRootBoard::cmpMates(std::string bstr, std::string mstr) {
@@ -258,34 +258,35 @@ void TestRootBoard::generateCaptures() {
 
 }
 
+// TODO enable perft template in search
 void TestRootBoard::perft() {
 //      Zobrist::test();
     b->setup("5n1n/4kPPP/////pppK4/N1N5 w - - 0 1");
-    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 6));
+//    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 6));
     QCOMPARE( c->getAnswer(), std::string("71179139"));
 
     b->setup("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1");
-    WorkThread::findFree()->queueJob(0U, new RootPerftJob<Black>(*b, 6));
+//    WorkThread::findFree()->queueJob(0U, new RootPerftJob<Black>(*b, 6));
     QCOMPARE( c->getAnswer(), std::string("71179139"));
 
     b->setup("r3k2r/B1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1");
-    WorkThread::findFree()->queueJob(0U, new RootPerftJob<Black>(*b, 5));
+//    WorkThread::findFree()->queueJob(0U, new RootPerftJob<Black>(*b, 5));
     QCOMPARE( c->getAnswer(), std::string("176577789"));
 
     b->setup("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
-    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 7));
+//    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 7));
     QCOMPARE( c->getAnswer(), std::string("178633661"));
 
     b->setup("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 5));
+//    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 5));
     QCOMPARE( c->getAnswer(), std::string("193690690"));
 
     b->setup("rnbqk2r/pppp1Np1/8/2b4p/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 1");
-    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 6));
+//    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 6));
     QCOMPARE( c->getAnswer(), std::string("1273001810"));
 
     b->setup("4k2r/8/8/8/8/6nB/8/4K2R w Kk - 0 1");
-    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 8));
+//    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 8));
     QCOMPARE( c->getAnswer(), std::string("9941334384")); }
 
 QTEST_APPLESS_MAIN(TestRootBoard);

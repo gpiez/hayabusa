@@ -77,8 +77,6 @@ uint64_t Game::rootDivide(unsigned int depth) {
     delete pt;
     return sum; }
 
-void update(uint64_t& r, uint64_t v);
-
 template<Colors C, Phase P, typename ResultType> void Game::perft(ResultType& result, const ColoredBoard<(Colors)-C>& prev, Move m, unsigned int depth) {
     if (P == trunk && depth <= Options::splitDepth) {
         uint64_t n=0;

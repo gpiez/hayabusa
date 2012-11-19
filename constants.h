@@ -19,16 +19,53 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
+//#define EVOLUTION
+//#define EXTRA_STATS
 #include <cstdint>
+#if defined(__x86_64__)
 #include <x86intrin.h>
+#else
+#if defined(__arm__)
+#define LEAN_AND_MEAN
+/* SSE2 */
+typedef double __v2df __attribute__ ((__vector_size__ (16)));
+typedef long long __v2di __attribute__ ((__vector_size__ (16)));
+typedef int __v4si __attribute__ ((__vector_size__ (16)));
+typedef short __v8hi __attribute__ ((__vector_size__ (16)));
+typedef char __v16qi __attribute__ ((__vector_size__ (16)));
+
+/* The Intel API is flexible enough that we must allow aliasing with other
+   vector types, and their scalar components.  */
+typedef long long __m128i __attribute__ ((__vector_size__ (16), __may_alias__));
+typedef double __m128d __attribute__ ((__vector_size__ (16), __may_alias__));
+extern __inline __m128i __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+_mm_set_epi64x (long long __q1, long long __q0)
+{
+  return __extension__ (__m128i)(__v2di){ __q0, __q1 };
+}
+extern __inline __m128i __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+_mm_set1_epi64x (long long __A)
+{
+  return _mm_set_epi64x (__A, __A);
+}
+//#include <arm_neon.h>
+#endif
+#endif
 
 #ifndef NDEBUG
+#define MYDEBUG
 #include <iostream>
+#if defined(__x86_64__) || defined(__i386__)
 #define ASSERT(x) do { if (!(x)) { \
                 std::cerr << std::endl << "Assertion " << #x << " failed." << std::endl\
                 <<  __FILE__ << __PRETTY_FUNCTION__ << __LINE__ << std::endl; \
                 asm("int3"); \
 } } while(0)
+#else
+#include <assert.h>
+#define ASSERT(x) assert(x)
+#endif
+
 #define TRACE_DEBUG 1
 #else
 #define ASSERT(x)
@@ -46,6 +83,10 @@
 #define ALIGN_PAGE __attribute__((aligned(4096)))
 
 #define STR(x) #x
+
+#ifndef override
+#define override
+#endif
 
 #if __SIZEOF_LONG__ == 8
 #define likely(x) (__builtin_expect((x), 1))

@@ -18,7 +18,9 @@
 
 #include "parameters.h"
 #include "stringlist.h"
-#include <random>
+//#include <random>
+#include <bits/random.h>
+#include <bits/random.tcc>
 
 unsigned Parameters::maxIndex = 0;
 bool Parameters::parmsLocked = false;
@@ -97,7 +99,7 @@ void Parameters::add(std::string s, float value, float var, float max, float min
     base[ index[s] ] = Parm<float>(value, var, max, min); }
 
 void Parameters::init() {
-    Parameters::add("bishop.attack", 60);
+    Parameters::add("bishop.attack", 75);
     Parameters::add("bishop.corner.endgame", -8);
     Parameters::add("bishop.corner.opening", 0);
     Parameters::add("bishop.defense", 15);
@@ -120,7 +122,7 @@ void Parameters::init() {
     Parameters::add("king.attack", 40);
     Parameters::add("king.corner.endgame", 3);                      //20120312
     Parameters::add("king.corner.opening", 0);
-    Parameters::add("king.hor.inflection.endgame", 1.0);            
+    Parameters::add("king.hor.inflection.endgame", 1.0);
     Parameters::add("king.hor.inflection.opening", 2);
     Parameters::add("king.hor.value.endgame", -2);                  //20120309
     Parameters::add("king.hor.value.opening", -20);
@@ -130,10 +132,10 @@ void Parameters::init() {
     Parameters::add("king.vert.inflection.opening", 1);
     Parameters::add("king.vert.value.endgame", 4);                  //20120309
     Parameters::add("king.vert.value.opening", -24);
-    Parameters::add("knight.attack", 40);
+    Parameters::add("knight.attack", 75);
     Parameters::add("knight.corner.endgame", -12);                  //20120312
     Parameters::add("knight.corner.opening", 0);
-    Parameters::add("knight.defense", 15);
+    Parameters::add("knight.defense", 16);
     Parameters::add("knight.hor.inflection.endgame", 0.5);
     Parameters::add("knight.hor.inflection.opening", 0.5);
     Parameters::add("knight.hor.value.endgame", 0);                 //20120313
@@ -165,10 +167,10 @@ void Parameters::init() {
     Parameters::add("pawn.vert.inflection.opening", 6);
     Parameters::add("pawn.vert.value.endgame", 14);
     Parameters::add("pawn.vert.value.opening", 12);
-    Parameters::add("queen.attack", 80);
+    Parameters::add("queen.attack", 100);
     Parameters::add("queen.corner.endgame", 0);
     Parameters::add("queen.corner.opening", 0);
-    Parameters::add("queen.defense", 5);
+    Parameters::add("queen.defense", 10);
     Parameters::add("queen.hor.inflection.endgame", 1.5);
     Parameters::add("queen.hor.inflection.opening", 1.0);
     Parameters::add("queen.hor.value.endgame", 4);
@@ -185,7 +187,7 @@ void Parameters::init() {
     Parameters::add("queen.vert.inflection.opening", 0.5);
     Parameters::add("queen.vert.value.endgame", 4);
     Parameters::add("queen.vert.value.opening", 5);
-    Parameters::add("rook.attack", 110);
+    Parameters::add("rook.attack", 75);
     Parameters::add("rook.corner.endgame", 0);
     Parameters::add("rook.corner.opening", 0);
     Parameters::add("rook.defense", 10);
@@ -315,11 +317,11 @@ void Parameters::init() {
     Parameters::add("kingShieldOpenFile",   -10);
     Parameters::add("kingShieldHalfOpenFile",-25);
 
-    Parameters::add("pawnDefense", 384);
-    Parameters::add("pieceDefense", 150);
-    Parameters::add("pieceAttack", 125);
-    Parameters::add("attackFirst", 75);
-    Parameters::add("attackSlope", 1.0);
+    Parameters::add("pawnDefense", 100);
+    Parameters::add("pieceDefense", 60);
+    Parameters::add("pieceAttack", 85);
+//    Parameters::add("attackFirst", 75);
+//    Parameters::add("attackSlope", 1.0);
     Parameters::add("flags", 3);
     Parameters::add("attackTotal", 200);
 

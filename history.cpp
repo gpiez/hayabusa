@@ -50,13 +50,30 @@ const __v16qi History::sinctab[16] = {
 // }
 //
 void History::init() {
-    for (unsigned d=0; d<nMaxGameLength/32+4; ++d) { //FIXME find some way to init this fast, clearing 5M which are 98% unsused is not good
+    clear(0, nMaxGameLength/64);
+}
+
+void History::clear(unsigned start, unsigned end) {
+    size = end;
+    for (unsigned d=start; d<end; ++d) { //FIXME find some way to init this fast, clearing 5M which are 98% unsused is not good
         max[d] = maxHistory/2;   // initialize with this, to// avoid unused pos with a high
         for (unsigned i=1; i<=nPieces; ++i)
             init64(v[d][i]); } }
 
 void History::init64(uint8_t v[64]) {
-    _mm_stream_si128((__m128i*)v , zero);
-    _mm_stream_si128((__m128i*)v + 1, zero);
-    _mm_stream_si128((__m128i*)v + 2, zero);
-    _mm_stream_si128((__m128i*)v + 3, zero); }
+#ifdef __SSE2__
+    _mm_store_si128((__m128i*)v , zero);
+    _mm_store_si128((__m128i*)v + 1, zero);
+    _mm_store_si128((__m128i*)v + 2, zero);
+    _mm_store_si128((__m128i*)v + 3, zero);
+#else
+    for (unsigned i=0; i<64; ++i)
+    	v[i] = 0;
+#endif
+}
+
+void History::resize(unsigned ply) {
+    if unlikely(ply >= size) {
+        clear(ply, ply*2);
+    }
+}

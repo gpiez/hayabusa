@@ -133,6 +133,12 @@ private:
     int defenseB[8];
     int defenseQ[8];
     int defenseN[8];
+    
+    int maxDefense, maxAttack;
+    int castlingTempo;
+    int pawnDefense;
+    int pieceAttack;
+    int pieceDefense;
 
     int oppKingOwnPawn[7][8];
     int ownKingOwnPawn[7][8];
@@ -193,8 +199,8 @@ private:
         PackedScore<float> pawnConnPasser;
         PackedScore<float> pawnCandidate;
 
-        int attackFirst;
-        int attackSlope;
+//        int attackFirst;
+//        int attackSlope;
         int attackTotal;
 
         int endgameMaterial;
@@ -288,10 +294,6 @@ public:
     int prune2c;
     int prune3c;
     unsigned dMaxExtCheck;
-    int castlingTempo;
-    int pawnDefense;
-    int pieceAttack;
-    int pieceDefense;
     int tempo0;
     int tempo64;
     int sortPrev;
@@ -301,7 +303,7 @@ public:
     int quantRoundNeg;
     
     int attackTable2[1024];
-    int nAttackersTab[16];
+//    int nAttackersTab[16];
     int allowLazyRoot;
     int shield[01000], shieldMirrored[01000];       //indexed by 9 bits in front of the king
     Material material[maxIndex-minIndex+1];

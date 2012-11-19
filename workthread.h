@@ -38,6 +38,8 @@ extern uint64_t mobStat[nColors][nPieces+1][2][nSquares];
 union Stats {
     struct {
         uint64_t    node;
+#ifndef LEAN_AND_MEAN
+#define STATS(x) WorkThread::stats.x++
         uint64_t    internalNode;
         uint64_t    eval;
         uint64_t    ttuse;
@@ -56,7 +58,11 @@ union Stats {
         uint64_t    jobs;
         uint64_t    taken;
         uint64_t    notTaken;
-        uint64_t    cancelJob; };
+        uint64_t    cancelJob;
+#else
+#define STATS(x)
+#endif
+    };
     uint64_t data[]; };
 
 class WorkThread {
@@ -77,7 +83,7 @@ class WorkThread {
     unsigned* pThreadId;
     Stats* pStats;
     Job* job;
-    
+
     void stop();
     unsigned& getThreadId() {
         return *pThreadId; }

@@ -36,6 +36,7 @@ extern unsigned debug;
 extern bool currline;
 extern bool cpuTime;
 extern unsigned listenPort;
+extern bool noisy;
 }
 
 enum DebugFlags { debugSearch = 1, debugEval = 2, debugMobility = 4 };

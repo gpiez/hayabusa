@@ -60,7 +60,7 @@ unsigned Eval::estimate(const Move m, unsigned matIndex) const {
     if (m.isSpecial()) {
         unsigned piece = m.piece() & 7;
         if (piece == King) return matIndex;
-        else if (piece == Pawn) 
+        else if (piece == Pawn)
             matIndex -= ::matIndex[EI][Pawn];
         else {
             matIndex -= ::matIndex[CI][Pawn];
@@ -114,7 +114,7 @@ void Eval::estimate(const Move m, __v8hi& k, unsigned& matIndex) const {
 
 template<Colors C>
 unsigned Eval::evalKBPk(const Board& b) const {
-    if (((b.getPieces<C,Pawn>() & file<'a'>()) == b.getPieces<C,Pawn>() 
+    if (((b.getPieces<C,Pawn>() & file<'a'>()) == b.getPieces<C,Pawn>()
             && (b.getPieces<C,Bishop>() & (C==White ? darkSquares : ~darkSquares)))) {
         uint64_t front = b.getPieces<C,Pawn>();
         front |= front << 1;
@@ -190,7 +190,7 @@ unsigned Eval::recognizer(const ColoredBoard<C>& b, unsigned matreco) const {
     default:
         return 0;
     }
-    
+
 }
 template<Colors C> //FIXME reuse recognizer which was used in psScore
 int Eval::operator() (const ColoredBoard<C>& b, int& wap, int& bap, int psValue, int& posScore ) const {
@@ -222,9 +222,9 @@ int Eval::operator() (const ColoredBoard<C>& b, int& wap, int& bap, int psValue,
     default:
         posScore = operator()(b, C, wap, bap)
         + C*(tempo0 + (tempo64*popcount((b.template getAttacks<C,Rook>() | b.template getAttacks<C,Bishop>() | b.template getAttacks<C,Queen>() | b.template getAttacks<C,Knight>() | b.template getAttacks<C,King>()) & ~b.template getOcc<C>()) >> 6));
-        realScore = psValue + posScore; 
+        realScore = psValue + posScore;
     }
-#ifdef MYDEBUG
+#if defined(MYDEBUG) && !defined(__arm__)
     ColoredBoard<(Colors)-C> b2;
     for (int i=0; i<7; ++i) {
         b2.pieces[i][0] = __bswapq(b.pieces[i][1]);
@@ -252,10 +252,10 @@ int Eval::calc(const ColoredBoard<C>& b, unsigned matIndex, CompoundScore score)
 //    static CompoundScore cw;
 //    static int cb;
 //    static unsigned cd;
-//    
-//    if (matIndex == ci) 
+//
+//    if (matIndex == ci)
 //        return calcPS(cw, cb, cd, score);
-    
+
     unsigned ci = matIndex;
     if unlikely(material[ci].draw) return 0;
     CompoundScore cw = material[ci].scale;

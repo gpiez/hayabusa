@@ -42,7 +42,7 @@ extern __thread RepetitionKeys keys;
 
 enum Extension: unsigned {ExtNot = 0, ExtCheck = 1, ExtSingleReply = 2, ExtDualReply = 4,
                 ExtMateThreat = 8, ExtForkThreat = 16, ExtPawnThreat = 32,
-                ExtFork = 64, ExtTestMate = 128, ExtDiscoveredCheck = 256, 
+                ExtFork = 64, ExtTestMate = 128, ExtDiscoveredCheck = 256,
                 ExtFirstMove = 512, ExtFutility = 1024, ExtLMR = 2048 };
 
 enum Status { Running, Stopping, Stopped };
@@ -95,7 +95,7 @@ private:
     int nMoves;
     unsigned rootPly;
     std::string info;
-    std::chrono::system_clock::time_point start;
+    CHRONO::system_clock::time_point start;
     uint64_t stopTime;
     int wtime;
     int btime;
@@ -119,13 +119,19 @@ private:
     static Mutex allocMutex;
     Condition stopTimerCond;
 //    Mutex stopTimerMutex;
-    std::chrono::milliseconds stopTimerData;
+    CHRONO::milliseconds stopTimerData;
     bool timerRunning;
     Thread* stopTimerThread;
-    
+    int oldDepth;
+    uint64_t oldNodes;
+    int oldCurrentMoveIndex;
+    int oldScore;
+#ifndef LEAN_AND_MEAN
+    int oldHashFull;
+#endif
     template<Colors C> inline bool findRepetition(const ColoredBoard<C>& b, Key k, unsigned ply) const;
     inline void store(Key k, unsigned ply);
-    std::string status(std::chrono::system_clock::time_point, int);
+    std::string status(CHRONO::system_clock::time_point, int);
     template<int C> int limit() const {
         if (C==White) return whiteLimit;
         else return blackLimit; }
@@ -193,13 +199,13 @@ public:
     std::string getInfo() const;
     template<Colors C> inline void clone(const ColoredBoard<C>& b, const RepetitionKeys& other, unsigned ply) const;
     Move findMove(const std::string&) const;
-    void stopTimer(std::chrono::milliseconds hardlimit);
-    void infoTimer(std::chrono::milliseconds repeat);
+    void stopTimer(CHRONO::milliseconds hardlimit);
+    void infoTimer(CHRONO::milliseconds repeat);
     void clearHash();
     void ageHash();
     void setHashSize(size_t s);
     template<Colors C> int calcReduction(const ColoredBoard<C>& b, int movenr, Move m, int depth);
-    std::string commonStatus() const;
+    void commonStatus();
     void setTime(uint64_t wnanoseconds, uint64_t bnanoseconds);
     int getScore() const {
         return bestScore; }

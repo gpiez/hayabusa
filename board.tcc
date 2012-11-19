@@ -23,6 +23,7 @@
 #include "eval.h"
 #include "bits.h"
 
+#ifdef __SSE__
 //bit reflected low and high nibbles
 static const __v16qi swap16h = _mm_set_epi8( 0x0f, 0x07, 0x0b, 0x03, 0x0d, 0x05, 0x09, 0x01, 0x0e, 0x06, 0x0a, 0x02, 0x0c, 0x04, 0x08, 0x00 );
 static const __v16qi swap16l = _mm_set_epi8( 0xf0, 0x70, 0xb0, 0x30, 0xd0, 0x50, 0x90, 0x10, 0xe0, 0x60, 0xa0, 0x20, 0xc0, 0x40, 0x80, 0x00 );
@@ -32,7 +33,7 @@ static const __v2di nibmask= _mm_set1_epi8( 0xf );
 
 //byte swap upper and lower 64 bit words
 static const __v16qi swap16 = _mm_set_epi8( 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7 );
-
+#endif
 inline __v2di Board::build13Attack(const unsigned sq) const {
 #ifdef __SSSE3__
 
@@ -77,9 +78,13 @@ inline __v2di Board::build13Attack(const unsigned sq) const {
     flood5 |= flood5 >> 36 & e25;
     flood7 |= flood7 >> 28 & e27;
 
+#if defined(__SSE__)
     return _mm_set_epi64x( (flood7 >> 7 & ~file<'a'>()) | (flood3 << 7 & ~file<'h'>()),
                            (flood1 << 9 & ~file<'a'>()) | (flood5 >> 9 & ~file<'h'>()));
-
+#else
+    return (__v2di) { (flood1 << 9 & ~file<'a'>()) | (flood5 >> 9 & ~file<'h'>()),
+    				  (flood7 >> 7 & ~file<'a'>()) | (flood3 << 7 & ~file<'h'>()) };
+#endif
 #endif
 }
 #if 0
@@ -165,6 +170,7 @@ inline uint64_t Board::build13Attack(uint64_t flood1) const {
         );*/
 }
 #endif
+#if 0
 inline __v2di Board::build13Attack(__v2di flood1) const {
 
     __v2di flood3 = flood1, flood5 = flood1, flood7 = flood1;
@@ -202,7 +208,7 @@ inline __v2di Board::build13Attack(__v2di flood1) const {
 
     return ((_mm_slli_epi64(flood1, 9) | _mm_srli_epi64(flood7, 7) ) & _mm_set1_epi64x(~file<'a'>()))
            | ((_mm_slli_epi64(flood3, 7) | _mm_srli_epi64(flood5, 9) ) & _mm_set1_epi64x(~file<'h'>())); }
-
+#endif
 inline __v2di Board::build02Attack(const unsigned sq) const {
 #ifdef __SSSE3__
     __v2di maskedDirs = _mm_set1_epi64x(occupied1) & bits[sq].mask02;
@@ -222,14 +228,18 @@ inline __v2di Board::build02Attack(const unsigned sq) const {
     maskedDirs &= bits[sq].mask02;
     return maskedDirs;
 #else
-    uint64_t d0 = (occupied1 | 0x0101010101010101) & *(uint64_t*)&bits[sq].mask02;
-    uint64_t d2 = (occupied1 | 0xff) & ((uint64_t*)&bits[sq].mask02)[1];
-    __v2di maskedDir02 = _mm_set_epi64x(d2, d0);
-    d0 <<= ~sq; //63-sq;
-    d2 <<= ~sq; //63-sq;
-    uint64_t lo = rol(6, sq + bitr(d0));
-    uint64_t hi = rol(6, sq + bitr(d2));
-    maskedDir02 ^= maskedDir02 - _mm_set_epi64x(hi, lo);
+    uint64_t d0 = (occupied1 | 0x0101010101010101) & bits[sq].mask0x;
+    uint64_t d2 = (occupied1 | 0xff) & bits[sq].mask2x;
+    __v2di maskedDir02 = (__v2di) { d0, d2 };
+    d0 <<= 63-sq;
+    d2 <<= 63-sq;
+    uint64_t lo = 3ULL << sq - __builtin_clzll(d0); // bitr is never < 56 here
+    uint64_t hi = 3ULL << sq - __builtin_clzll(d2); // bitr is never < 56 here
+//    uint64_t lo = 3ULL << sq - __builtin_clz(d0 >> 32); // bitr is never < 56 here
+//    uint64_t hi = 3ULL << sq - __builtin_clz(d2 >> 32); // bitr is never < 56 here
+//    uint64_t lo = rol(6, sq + bitr(d0)); // bitr is never < 56 here
+//    uint64_t hi = rol(6, sq + bitr(d2));
+    maskedDir02 ^= maskedDir02 - (__v2di) { lo, hi };
     maskedDir02 &= bits[sq].mask02;
     return maskedDir02;
 #endif
@@ -273,6 +283,7 @@ inline uint64_t Board::build02Attack(uint64_t flood0) const {
     return (flood0 << 1 & ~file<'a'>()) | (flood4 >> 1 & ~file<'h'>())
            | flood2 << 8 | flood6 >> 8; }
 #endif
+#if 0
 inline void Board::build02Attack(__v2di flood0, __v2di& x02, __v2di& y02) const {
 
     __v2di flood2 = flood0, flood4 = flood0, flood6 = flood0;
@@ -312,7 +323,7 @@ inline void Board::build02Attack(__v2di flood0, __v2di& x02, __v2di& y02) const 
     __v2di res22 = _mm_slli_epi64(flood2, 8) | _mm_srli_epi64(flood6, 8);
     x02 = _mm_unpacklo_epi64(res00, res22);
     y02 = _mm_unpackhi_epi64(res00, res22); }
-
+#endif
 inline uint64_t Board::buildNAttack(uint64_t n) const {
     uint64_t n1 = (n<<1 & ~file<'a'>())
                   | (n>>1 & ~file<'h'>());
@@ -335,7 +346,11 @@ void Board::buildAttacks() {
     getAttacks<C, All>() = a;
 
     MoveTemplateB* bs = bsingle[CI];
+#ifdef __SSE__
     __v2di dir13 = _mm_set1_epi64x(0);
+#else
+    __v2di dir13 = { 0, 0 };
+#endif
     p = getPieces<C, Bishop>();
     while(p) {
         uint64_t sq = bit(p);
@@ -351,12 +366,17 @@ void Board::buildAttacks() {
     getAttacks<C, All>() |= a;
 
     MoveTemplateR* rs = rsingle[CI];
+#ifdef __SSE__
     __v2di dir02 = _mm_set1_epi64x(0);
+#else
+    __v2di dir02 = { 0, 0 };
+#endif
     p = getPieces<C, Rook>();
     while(p) {
         uint64_t sq = bit(p);
         p &= p-1;
         if (0 & p) {    //TODO why is the vector version slower?
+#if 0
             uint64_t sq2 = bit(p);
             __v2di a02, b02;
             build02Attack(_mm_set_epi64x(1ULL<<sq2, 1ULL<<sq), a02, b02);
@@ -366,7 +386,9 @@ void Board::buildAttacks() {
             rs[1].move = Move(sq2, 0, Rook);
             rs[1].d02 = b02;
             rs+=2;
-            dir02 |= a02 | b02; }
+            dir02 |= a02 | b02;
+#endif
+        }
         else {
             __v2di a02 = build02Attack(sq);
             rs->move = Move(sq, 0, Rook);
@@ -426,8 +448,19 @@ void Board::buildPins() {
     kingIncoming[CI].d02 = maskedDir02;
     __v2di dir02 = ~(maskedDir02 & datt[EI].d02);
     __v2di dir13 = ~(maskedDir13 & datt[EI].d13);
+#ifdef __SSE__
     __v2di dir20 = _mm_shuffle_epi32(dir02, 0x4e);
     __v2di dir31 = _mm_shuffle_epi32(dir13, 0x4e);
+#else
+    union {
+    	__v2di v2;
+    	uint64_t p2[2];
+    } converter;
+    converter.v2 = dir02;
+    __v2di dir20 = (__v2di) { converter.p2[1], converter.p2[0] };
+    converter.v2 = dir13;
+    __v2di dir31 = (__v2di) { converter.p2[1], converter.p2[0] };
+#endif
     dpins[CI].d02 = dir20 & dir13 & dir31;
     dpins[CI].d13 = dir31 & dir02 & dir20;
     __v2di pins2 = dpins[CI].d02 & dpins[CI].d13;
@@ -435,7 +468,12 @@ void Board::buildPins() {
     pins[CI] = _mm_cvtsi128_si64(_mm_unpackhi_epi64(pins2, pins2))
                & _mm_cvtsi128_si64(pins2);
 #else
+#ifdef __SSE__
     __v2di folded = _mm_unpackhi_epi64(pins2, pins2) & pins2;
+#else
+    converter.v2 = pins2;
+    __v2di folded = (__v2di) { converter.p2[0] & converter.p2[1], converter.p2[0] & converter.p2[1] };
+#endif
     pins[CI] = *(uint64_t*) &folded;
 #endif
 

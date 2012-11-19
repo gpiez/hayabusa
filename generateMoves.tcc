@@ -47,7 +47,7 @@ void ColoredBoard<C>::generateTargetMove(Move*& bad, uint64_t tobit ) const {
     /* Check for attacks from sliding pieces. Bishop/Rook/Queen attacks are
      * stored in single[], with a mov template matching the attack in move[]
      */
-    const __v2di zero = _mm_set1_epi64x(0);
+//    const __v2di zero = _mm_set1_epi64x(0);
 //     const __v2di d2 = _mm_set1_epi64x(tobit);
 
     if unlikely((getAttacks<C,Bishop>() & tobit)) {
@@ -57,7 +57,7 @@ void ColoredBoard<C>::generateTargetMove(Move*& bad, uint64_t tobit ) const {
             __v2di from2 = bits[m.from()].doublebits;
             __v2di pin13 = from2 & dpins[CI].d13;
             pin13 = pcmpeqq(pin13, zero);
-            pin13 = _mm_andnot_si128(pin13, bs->d13);
+            pin13 = ~pin13 & bs->d13;
             for (uint64_t a=tobit & fold(pin13); a; a&=a-1) {
                 Move n;
                 n.data = m.data + Move(0, bit(a), 0).data;
@@ -72,7 +72,7 @@ void ColoredBoard<C>::generateTargetMove(Move*& bad, uint64_t tobit ) const {
             __v2di from2 = bits[m.from()].doublebits;
             __v2di pin02 = from2 & dpins[CI].d02;
             pin02 = pcmpeqq(pin02, zero);
-            pin02 = _mm_andnot_si128(pin02, rs->d02);
+            pin02 = ~pin02 & rs->d02;
             for (uint64_t a=tobit & fold(pin02); a; a&=a-1) {
                 Move n;
                 n.data = m.data + Move(0, bit(a), 0).data;
@@ -89,8 +89,8 @@ void ColoredBoard<C>::generateTargetMove(Move*& bad, uint64_t tobit ) const {
             __v2di pin13 = from2 & dpins[CI].d13;
             pin02 = pcmpeqq(pin02, zero);
             pin13 = pcmpeqq(pin13, zero);
-            pin02 = _mm_andnot_si128(pin02, qs->d02);
-            pin13 = _mm_andnot_si128(pin13, qs->d13);
+            pin02 = ~pin02 & qs->d02;
+            pin13 = ~pin13 & qs->d13;
             for (uint64_t a=tobit & fold((pin02|pin13)); a; a&=a-1) {
                 Move n;
                 n.data = m.data + Move(0, bit(a), 0).data;
@@ -235,19 +235,19 @@ void ColoredBoard<C>::generateNonCap(Move*& good, Move*& bad) const {
      * a cost of a load+cmp+2*and here and a store+and earlier in buildattacks
      * per piece and twice that for the queen.
      */
-    const __v2di zero = _mm_set1_epi64x(0);
+//    const __v2di zero = _mm_set1_epi64x(0);
     for(const MoveTemplateQ* qs = qsingle[CI]; ; qs++) {
         Move m = qs->move;
         if (!m.data) break;
-        __v2di a02 = qs->d02;  
-        __v2di a13 = qs->d13; 
-        __v2di from2 = bits[m.from()].doublebits;  
-        __v2di pin02 = from2 & dpins[CI].d02; 
-        __v2di pin13 = from2 & dpins[CI].d13; 
+        __v2di a02 = qs->d02;
+        __v2di a13 = qs->d13;
+        __v2di from2 = bits[m.from()].doublebits;
+        __v2di pin02 = from2 & dpins[CI].d02;
+        __v2di pin13 = from2 & dpins[CI].d13;
         pin02 = pcmpeqq(pin02, zero);
         pin13 = pcmpeqq(pin13, zero);
-        pin02 = _mm_andnot_si128(pin02, a02);
-        pin13 = _mm_andnot_si128(pin13, a13);
+        pin02 = ~pin02 & a02;
+        pin13 = ~pin13 & a13;
         for (uint64_t a=fold(pin02|pin13) & ~occupied1; a; a &= a-1 ) {
             Move n;
             to = bit(a);
@@ -274,7 +274,7 @@ void ColoredBoard<C>::generateNonCap(Move*& good, Move*& bad) const {
         __v2di from2 = bits[m.from()].doublebits;
         __v2di pin02 = from2 & dpins[CI].d02;
         pin02 = pcmpeqq(pin02, zero);
-        pin02 = _mm_andnot_si128(pin02, a02);
+        pin02 = ~pin02 & a02;
         for (uint64_t a=fold(pin02) & ~occupied1; a; a &= a-1 ) {
             Move n;
             to = bit(a);
@@ -293,7 +293,7 @@ void ColoredBoard<C>::generateNonCap(Move*& good, Move*& bad) const {
         __v2di from2 = bits[m.from()].doublebits;
         __v2di pin13 = from2 & dpins[CI].d13;
         pin13 = pcmpeqq(pin13, zero);
-        pin13 = _mm_andnot_si128(pin13, a13);
+        pin13 = ~pin13 & a13;
         for (uint64_t a=fold(pin13) & ~occupied1; a; a &= a-1 ) {
             Move n;
             to = bit(a);

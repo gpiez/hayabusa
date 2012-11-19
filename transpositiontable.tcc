@@ -63,17 +63,18 @@ template<typename Entry, unsigned int assoc, typename Key>
 bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& ret ) const {
     uint32_t upperKey = k >> 32;
     for (unsigned int i = 0; i < assoc; ++i) {        //TODO compare all keys simultaniously suing sse
-        if (subTable->entries[i].upperKey == upperKey) 
+        if (subTable->entries[i].upperKey == upperKey)
         if (subTable->entries[i][key11] == (uint32_t)k >> (32-key11.size)) {        //only lock if a possible match is found
             ret = subTable->entries[i];
             return true; } }
     return false; }
 
+#ifdef __SSE4_1__
 inline bool compare128(__m128i a, __m128i b) {
     __m128i c = _mm_xor_si128(a, b);
     return _mm_testc_si128(zero, c);
 }
-
+#endif
 template<unsigned int assoc, typename Key>
 bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* subTable, const Board& b, PawnEntry& ret ) {
     unsigned int i=0;
@@ -104,21 +105,21 @@ bool TranspositionTable<PawnEntry, assoc, Key>::retrieve(Sub<PawnEntry, assoc>* 
 #pragma GCC diagnostic ignored "-Wtype-limits"
 template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
-    WorkThread::stats.ttstore++;
+    STATS(ttstore);
     // look if the position is already stored. if it is, but the new depth
     // isn't sufficient, don't write anything.
     for (unsigned int i = 0; i < assoc; ++i)         //TODO compare all keys simultaniously suing sse
         if (subTable->entries[i].upperKey == entry.upperKey) {
             if (entry[loBound] + entry[hiBound] >= subTable->entries[i][loBound] + subTable->entries[i][hiBound]
                 || entry[depth] >= subTable->entries[i][depth]) {
-                WorkThread::stats.ttoverwrite++;
-                WorkThread::stats.ttinsufficient--;
+                STATS(ttoverwrite);
+                STATS(ttinsufficient);
                 if (entry[depth] == subTable->entries[i][depth]/* && subTable->entries[i].score == entry.score*/)
                     if (   (subTable->entries[i][loBound] && entry[hiBound])
                             || (subTable->entries[i][hiBound] && entry[loBound])) {
                         entry.set2(hiBound, true);
                         entry.set2(loBound, true);
-                        WorkThread::stats.ttmerge++; }
+                        STATS(ttmerge); }
 
                 subTable->entries[i] = entry;
                 /*                unsigned j;
@@ -143,11 +144,11 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
                                     subTable->entries[j] = entry;
                                 }*/
             }
-            WorkThread::stats.ttinsufficient++;
+            STATS(ttinsufficient);
             return; }
 
     if (subTable->entries[assoc-1].upperKey == 0 || subTable->entries[assoc-1][aged])
-        WorkThread::stats.ttuse++;
+        STATS(ttuse);
     unsigned int i;
     for (i = 0; i < assoc-1; ++i)                // TODO possibly checking only assoc/2 and a LRU in retrieve would be better
         if (subTable->entries[i][aged] || entry[depth] >= subTable->entries[i][depth])
@@ -198,12 +199,15 @@ template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::resetStats() {
     auto& threads = WorkThread::getThreads();
     for (auto th = threads.begin(); th !=threads.end(); ++th) {
+#ifndef LEAN_AND_MEAN
         (*th)->getStats()->ttuse = 0;
         (*th)->getStats()->tthit = 0;
         (*th)->getStats()->ttalpha = 0;
         (*th)->getStats()->ttbeta = 0;
         (*th)->getStats()->ttoverwrite = 0;
-        (*th)->getStats()->ttstore = 0; } }
+        (*th)->getStats()->ttstore = 0;
+#endif
+    } }
 
 template<typename Entry, unsigned int assoc, typename Key>
 void Table<Entry, assoc, Key>::clear() {
@@ -281,7 +285,7 @@ std::string Table<Entry, assoc, Key>::bestLine(const Game& b) {
 inline int tt2Score(int s) {
     ASSERT(s < 0x800);
     ASSERT(s >= -0x800);
-    
+
     if (s < 0x400 && s > -0x400)
         return s;
     if (s > 0) {
@@ -300,7 +304,7 @@ inline int tt2Score(int s) {
 inline int score2tt(int s) {
     ASSERT(s < 0x8000);
     ASSERT(s >= -0x8000);
-    
+
     if (s < 0x400 && s > -0x400)
         return s;
     if (s > 0) {

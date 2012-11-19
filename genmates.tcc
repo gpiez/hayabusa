@@ -21,12 +21,13 @@
 
 #include "coloredboard.h"
 
-typedef unsigned int uint128_t __attribute__ ((mode(TI)));
 
 template<Colors C>
 uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t blockedEscapes, uint64_t undefended, /*uint64_t king, */unsigned k) const {
     uint64_t rescape = getAttacks<-C,King>() & ~(occupied[EI] | blockedEscapes);
     uint64_t rmate = checkingMoves & undefended & getAttacks<-C,King>();
+#if defined (__x86_64__)
+//    typedef unsigned int uint128_t __attribute__ ((mode(TI)));
     for (uint64_t possmate = rmate; unlikely(possmate); ) {
         uint64_t bit = possmate & -possmate;
         /*
@@ -44,22 +45,24 @@ uint64_t ColoredBoard<C>::generateRookMates( uint64_t checkingMoves, uint64_t bl
          * ..r..  .XX
          * If one bit in an escape square X is set, the mate on r is not possible
          */
-        uint128_t p = (uint128_t)bit * 0xa1b001b0a;
+        __uint128_t p = (__uint128_t)bit * 0xa1b001b0a;
         if ((uint64_t)(p >> 18) & rescape)
             rmate -= bit;
         possmate -= bit;
-    } 
-    //    if unlikely(rmate) {
-//            if (rescape & 0x30003)
-//                rmate &= ~(king<<1);
-//            if (rescape & 0x00505)
-//                rmate &= ~(king<<8);
-//            if (rescape & 0x60006)
-//                rmate &= ~(king>>1);
-//            if (rescape & 0x50500)
-//                rmate &= ~(king>>8); } }
-//        
-    
+    }
+#else
+	if unlikely(rmate) {
+		uint64_t king = 1ULL << k;
+		if (rescape & 0x30003)
+			rmate &= ~(king<<1);
+		if (rescape & 0x00505)
+			rmate &= ~(king<<8);
+		if (rescape & 0x60006)
+			rmate &= ~(king>>1);
+		if (rescape & 0x50500)
+			rmate &= ~(king>>8); }
+#endif
+
     rescape = ror(rescape, k-9);
     if unlikely(!(rescape & 0x70007))
         if (uint64_t p = kingIncoming[EI].d0 & checkingMoves & ~getAttacks<-C,All>()) {
@@ -176,7 +179,7 @@ haveNoMate:
     // promotion moves, always assuming queen promotions are counted as queen moves.
     // pawn promotions may only move if not pinned at all.
     uint64_t pMoves = getPieces<C,Pawn>() & rank<7>();
-    if unlikely(pMoves) { 
+    if unlikely(pMoves) {
         pMoves &= pins[CI];
         pMoves  = (shift<C* 8  >(pMoves)                & ~occupied1)
                 | (shift<C*8+1>(pMoves) & ~file<'a'>() &  occupied[EI])
@@ -243,6 +246,7 @@ haveNoMate:
             // are blocked, we need to test these squares too, otherwise
             // the queen will cover them
 
+#if defined(__x86_64__)
             for (uint64_t possmate = qmate; unlikely(possmate); ) {
                 uint64_t bit = possmate & -possmate;
                 /*
@@ -260,12 +264,28 @@ haveNoMate:
                  * ..q..  ..X
                  * If one bit in an escape square X is set, the mate on q is not possible
                  */
-                uint128_t p = (uint128_t)bit * 0xa1100110a;
+                __uint128_t p = (__uint128_t)bit * 0xa1100110a;
                 if ((uint64_t)(p >> 18) & oqescape)
                     qmate -= bit;
                 possmate -= bit;
             }
-            
+#else
+			if unlikely(qmate & king<<1) {
+				uint64_t qe0 = qescape & 0x10001;
+				if (qe0) qmate &= ~(king<<1); }
+
+			if unlikely(qmate & king<<8) {
+				uint64_t qe2 = qescape & 0x00005;
+				if (qe2) qmate &= ~(king<<8); }
+
+			if unlikely(qmate & king>>1) {
+				uint64_t qe4 = qescape & 0x40004;
+				if (qe4) qmate &= ~(king>>1); }
+
+			if unlikely(qmate & king>>8) {
+				uint64_t qe6 = qescape & 0x50000;
+				if (qe6) qmate &= ~(king>>8); }
+#endif
             if unlikely(qmate & king<<9) {
                 uint64_t k0 = ror((king << 1) & ~occupied1, k-9);
                 uint64_t k2 = ror((king << 8) & ~occupied1, k-9);
@@ -290,37 +310,6 @@ haveNoMate:
                 uint64_t qe7 = qescape & 0x60101 & ~(k6>>1) & ~(k0<<8);
                 if (qe7) qmate -= king>>7; }
 
-//            if unlikely(qmate & king<<1) {
-//                uint64_t qe0 = qescape & 0x10001;
-//                if (qe0)
-//                    qmate &= ~(king<<1);
-//                else {
-//                    uint64_t qse0 = qe0 & -qe0;
-//                    if (qse0 == qe0) qsingle |= qe0; } }
-//
-//            if unlikely(qmate & king<<8) {
-//                uint64_t qe2 = qescape & 0x00005;
-//                if (qe2)
-//                    qmate &= ~(king<<8);
-//                else {
-//                    uint64_t qse2 = qe2 & -qe2;
-//                    if (qse2 == qe2) qsingle |= qe2; } }
-//
-//            if unlikely(qmate & king>>1) {
-//                uint64_t qe4 = qescape & 0x40004;
-//                if (qe4)
-//                    qmate &= ~(king>>1);
-//                else {
-//                    uint64_t qse4 = qe4 & -qe4;
-//                    if (qse4 == qe4) qsingle |= qe4; } }
-//
-//            if unlikely(qmate & king>>8) {
-//                uint64_t qe6 = qescape & 0x50000;
-//                if (qe6)
-//                    qmate &= ~(king>>8);
-//                else {
-//                    uint64_t qse6 = qe6 & -qe6;
-//                    if (qse6 == qe6) qsingle |= qe6; } } 
             }
 
 //        uint64_t qmate2 = 0;
@@ -351,7 +340,7 @@ haveNoMate:
                     if (!(qescape & 0x60006))
                         qmate |= p & king >> 2 & ~(attNotEnemyKing>>1);
         }
-        
+
         if (!(qescape & 0x00500)) {
             if (uint64_t p=kingIncoming[EI].d2 & checkingMoves & ~(getAttacks<-C,All>()|xprot)) {
                 if (!(qescape & 0x00505)) {
@@ -378,7 +367,7 @@ haveNoMate:
                     if (!(qescape & 0x50500))
                         qmate |= p & king >> 020 & ~(attNotEnemyKing>>8);
         }
-        
+
 //        qmate2 &= checkingMoves & (kingIncoming[EI].d0 | kingIncoming[EI].d2) & ~(getAttacks<-C,All>()|xprot);
 //        qmate |= qmate2;
 
@@ -577,7 +566,7 @@ haveNoMate:
         unsigned from = bit(p);
         unsigned to = from + C*dirOffsets[2];
         if (!escape) {
-            *--*good = Move(from, to, Pawn); }            
+            *--*good = Move(from, to, Pawn); }
         else
             *(*bad)++ = Move(from, to, Pawn); }
     // pawn double steps
@@ -586,11 +575,11 @@ haveNoMate:
         unsigned from = bit(p);
         unsigned to = from + 2*C*dirOffsets[2];
         uint64_t escape = getAttacks<-C,King>() & ~occupied[EI] & ~getAttacks<C,All>();
-        if (!escape) { 
-            *--*good = Move(from, to, Pawn); } 
+        if (!escape) {
+            *--*good = Move(from, to, Pawn); }
         else
             *(*bad)++ = Move(from, to, Pawn); }
-    
+
     return (R)false; }
 
 template<Colors C>

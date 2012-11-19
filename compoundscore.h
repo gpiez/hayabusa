@@ -20,43 +20,29 @@
 #define COMPOUNDSCORE_H
 
 #include "packedscore.h"
-#include <x86intrin.h>
 
 /*
  * Stores game phase depended scores, like endgame score and opening score
  * Optimized for speed, it may require more space than the sum of the sizes
  * of the stored elements
  */
-struct CompoundScore {
 #ifdef __SSE2__
+struct CompoundScore {
     typedef __v8hi vector_t;
-#else
-    typedef short vector_t __attribute__((vector_size(4)));
-#endif
     vector_t data;
     CompoundScore() = default;
     CompoundScore(int opening, int endgame) {
         ASSERT(opening <= 0x7fff && opening >= -0x8000);
         ASSERT(endgame <= 0x7fff && endgame >= -0x8000);
-#ifdef __SSE2__
         data = _mm_insert_epi16(data, opening, 0);
         data = _mm_insert_epi16(data, endgame, 1);
-#else
-        data = (vector_t) {
-            (int16_t)opening, (int16_t)endgame };
-#endif
     }
     CompoundScore(vector_t init): data(init) {}
 
     // making this a non-reference and using an aligned load instead of the
     // unaligned slows down the _whole_ program 20%
     CompoundScore(const PackedScore<>& x) {
-#ifdef __SSE2__
         data = _mm_loadu_si128((__m128i*)&x) ;  // DON'T TOUCH
-#else
-        data = (vector_t) {
-            (int16_t)x.opening, (int16_t)x.endgame };;
-#endif
     }
     CompoundScore operator + (const CompoundScore& x) const {
         return data + x.data; }
@@ -65,9 +51,11 @@ struct CompoundScore {
     CompoundScore operator - () const {
         return CompoundScore(0,0) - *this; }
     int16_t opening() const {
-        return _mm_extract_epi16(data, 0); }
+        return _mm_extract_epi16(data, 0);
+    }
     int16_t endgame() const {
-        return _mm_extract_epi16(data, 1); }
+        return _mm_extract_epi16(data, 1);
+    }
     PackedScore<> packed() const {
         union {
             int         i;
@@ -106,4 +94,66 @@ struct CompoundScore {
 //         endgame = x;
 //     }
 };
+#else
+struct CompoundScore {
+    typedef short __attribute__((vector_size(4))) vector_t;
+    typedef short __attribute__((vector_size(16))) extern_vector_t;
+    vector_t data;
+    union Converter {
+    	extern_vector_t extern_vector;
+    	vector_t vector;
+    	short parts[2];
+    	PackedScore<> packed;
+    };
+    CompoundScore() = default;
+    CompoundScore(int opening, int endgame) {
+        ASSERT(opening <= 0x7fff && opening >= -0x8000);
+        ASSERT(endgame <= 0x7fff && endgame >= -0x8000);
+        Converter converter;
+        converter.parts[0] = opening;
+        converter.parts[1] = endgame;
+        data = converter.vector;
+    }
+    CompoundScore(extern_vector_t init) {
+    	Converter converter;
+    	converter.extern_vector = init;
+    	data = converter.vector;
+    }
+
+    // making this a non-reference and using an aligned load instead of the
+    // unaligned slows down the _whole_ program 20%
+    CompoundScore(const PackedScore<>& x) {
+        Converter converter;
+        converter.packed = x;
+        data = converter.vector;
+    }
+    CompoundScore operator + (const CompoundScore& x) const {
+    	CompoundScore temp;
+        temp.data = data + x.data;
+        return temp;
+    }
+    CompoundScore operator - (const CompoundScore& x) const {
+    	CompoundScore temp;
+        temp.data = data - x.data;
+        return temp;
+    }
+    CompoundScore operator - () const {
+        return CompoundScore(0,0) - *this; }
+    int16_t opening() const {
+        Converter converter;
+        converter.vector = data;
+        return converter.parts[0];
+    }
+    int16_t endgame() const {
+        Converter converter;
+        converter.vector = data;
+        return converter.parts[1];
+    }
+    PackedScore<> packed() const {
+        Converter converter;
+        converter.vector = data;
+        return converter.packed;
+    }
+};
+#endif
 #endif

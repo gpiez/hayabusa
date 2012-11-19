@@ -11,6 +11,7 @@ void History::good(Move m, unsigned ply) {
     ASSERT((m.piece() & 7) <= 6);
     ASSERT((m.piece() & 7));
     ASSERT((m.from() != m.to()));
+    ASSERT(ply < size);
     {
         uint8_t& h = v[ply][m.piece() & 7][m.to()];
         int& m  = max[ply];
@@ -19,12 +20,23 @@ void History::good(Move m, unsigned ply) {
             if likely(++m < maxHistory) h = m;
             else {
                 m = maxHistory/2;
+#ifdef __SSE2__
                 __v16qi mh2 = _mm_set1_epi8(maxHistory/2);
                 for (unsigned p=1; p<=nPieces; ++p)
                     for (unsigned sq=0; sq<nSquares; sq += 16) {
                         __v16qi* v16 = (__v16qi*)&v[ply][p][sq];
                         *v16 = _mm_subs_epu8(*v16, mh2); }
-                h = maxHistory/2; } } } }
+                h = maxHistory/2;
+#else
+                for (unsigned p=1; p<=nPieces; ++p)
+                    for (unsigned sq=0; sq<nSquares; sq++) {
+                    	if (v[ply][p][sq] >= maxHistory/2)
+                    		v[ply][p][sq] -= maxHistory/2;
+                    	else
+                    		v[ply][p][sq] = 0;
+                    }
+#endif
+        } } } }
 
 int History::get(Move m, unsigned ply) {
     int value = v[ply][m.piece() & 7][m.to()];
@@ -32,6 +44,7 @@ int History::get(Move m, unsigned ply) {
     return value; }
 
 void History::sort(Move* list, unsigned n, unsigned ply) {
+    ASSERT(ply < size);
     /*
      * Four groups of 16 counters for the 4 fourbit digits, which are the
      * keys for sorting. Counter group 3 is for the most significant nibble,
@@ -41,8 +54,8 @@ void History::sort(Move* list, unsigned n, unsigned ply) {
         uint8_t parts[16];
         __v16qi whole; } count0, count1;
 
-    __v16qi c0, c1;
-    c0 = c1 = _mm_set1_epi8(0);
+    __v16qi c0 = { 0 };
+    __v16qi c1 = { 0 };
 
     struct MoveScore {
         Move m;

@@ -19,12 +19,11 @@
 #include <pch.h>
 
 #include "console.h"
+#include "evolution.h"
 #include "board.h"
-#include "eval.h"
 #include "workthread.h"
 #include "parameters.h"
 #include "game.h"
-#include "evolution.h"
 #include "testpositions.h"
 #include "options.h"
 
@@ -33,12 +32,13 @@
 #include <sstream>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <signal.h>
 
 namespace Options {
 unsigned int        splitDepth = 777;
 int                 humanreadable = 0;
-uint64_t            hash = 0x1000000;
-uint64_t            pHash = 0x1000000;
+uint64_t            hash = 0x100000;
+uint64_t            pHash = 0x100000;
 bool                quiet = false;
 bool                preCutIfNotThreatened = false;
 bool                reduction = true;
@@ -46,12 +46,20 @@ bool                pruning = true;
 unsigned            debug = 0;
 bool                currline = false;
 unsigned            listenPort = 0;
+bool				noisy = false;
+}
+
+void sigpipe_handler(int c) {
+	exit(1);
 }
 
 Console console;
 
 Console::Console():
     newsockfd(0)
+#ifdef USE_GENETIC
+,    evolution(NULL)
+#endif
 {}
 
 void Console::init(int& argc, char** argv)
@@ -72,10 +80,6 @@ void Console::init(int& argc, char** argv)
     Eval::initTables();
     WorkThread::init();
     Parameters::init();
-#ifdef USE_GENETIC
-    evolution = new Evolution(this);
-    evolution->init();
-#endif
     game = new Game(this, defaultParameters, Options::hash, Options::pHash);
     game->setup();
 
@@ -93,10 +97,10 @@ void Console::init(int& argc, char** argv)
 
     dispatcher["perft"] = &Console::perft;
     dispatcher["divide"] = &Console::divide;
-    dispatcher["ordering"] = &Console::ordering;
-    dispatcher["eval"] = &Console::eval;
     dispatcher["port"] = &Console::port;
 #ifdef USE_GENETIC
+    dispatcher["ordering"] = &Console::ordering;
+    dispatcher["eval"] = &Console::eval;
     dispatcher["selfgame"] = &Console::selfgame;
     dispatcher["parmtest"] = &Console::parmtest;
     dispatcher["egtest"] = &Console::egtest;
@@ -116,10 +120,12 @@ int Console::exec() {
     return QApplication::exec(); }
 
 void Console::inputThread() {
+#else
+	signal(SIGPIPE, sigpipe_handler);
 #endif
     while(true) {
         std::string str;
-        std::getline(std::cin, str);
+        if (!std::getline(std::cin, str).good()) break;
 //        std::cerr << "input:" << str << std::endl;
 
 //         f << str;
@@ -127,6 +133,15 @@ void Console::inputThread() {
             str.erase(str.length()-1); }
         parse(str); }
 }
+
+#ifdef QT_GUI_LIB
+std::string Console::getAnswer() {
+    answer = "";
+    while(answer == "") {
+        QApplication::processEvents();
+        sleep(1); }
+    return answer; }
+#endif
 
 void Console::inputNetThread() {
     if (!Options::listenPort) return;
@@ -150,7 +165,7 @@ void Console::inputNetThread() {
     while (true) {
         clilen = sizeof(cli_addr);
         newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &clilen);
-        if (newsockfd < 0) {             
+        if (newsockfd < 0) {
             std::cerr << "ERROR on accept\n";
             newsockfd = 0;
             continue;
@@ -167,7 +182,7 @@ void Console::inputNetThread() {
                 }
                 std::string part(buffer);
                 str += part;
-            } 
+            }
             if (str.empty()) break;
 //            std::cerr << "got:" << str << std::endl;
             size_t strend = 0;
@@ -185,19 +200,12 @@ void Console::inputNetThread() {
             std::string substr = str.substr(0, strend);
             parse(substr);
             str.erase(0, strnext); }
-            
+
         close(newsockfd);
         newsockfd = 0;}
     close(sockfd);
 }
 
-//std::string Console::getAnswer() {
-//    answer = "";
-//    while(answer == "") {
-//        processEvents();
-//        sleep(1); }
-//    return answer; }
-//
 void Console::send(std::string str) {
     if (Options::quiet) return;
 //    std::cerr << "send:" << str << std::endl;
@@ -263,7 +271,7 @@ void Console::uci(StringList /*cmds*/) {
     StringList dates = split(date, " ");
     std::string time(__TIME__);
     StringList times = split(time, ":");
-    send("id name hayabusa-0.11.7-" 
+    send("id name hayabusa-0.11.7-"
         + dates[2] + "-" + dates[0] + "-" + dates[1] + "-"
         + times[0] + "-" + times[1]);
     send("id author Gunther Piez");
@@ -345,6 +353,7 @@ void Console::position(StringList cmds) {
         game->setup();
     else if (pos.count("fen")) {
         game->setup(pos["fen"].join(" ")); }
+#ifndef LEAN_AND_MEAN
     else if (pos.count("test")) {
         if (cmds.size() < 3) return;
         std::string search = pos["test"].join(" ");
@@ -353,13 +362,13 @@ void Console::position(StringList cmds) {
             if (pos.find(search) != pos.npos) {
                 game->setup(pos);
                 break; } } }
-
+#endif
     if (pos.count("moves")) {
         StringList moves = pos["moves"];
         for (auto imove = moves.begin(); imove != moves.end(); ++imove)
             tryMove(*imove);
 
-    } 
+    }
 }
 
 void Console::go(StringList cmds) {
@@ -384,11 +393,12 @@ void Console::quit(StringList /*cmds*/) {
 #endif
 }
 
-std::mutex nThreadMutex;
+#ifdef USE_GENETIC
+Mutex nThreadMutex;
 int nThread;
 int maxThread;
 double tested;
-std::condition_variable nThreadCond;
+Condition nThreadCond;
 std::vector<Game*> prb;
 std::vector<std::future<uint64_t> > results;
 
@@ -407,7 +417,7 @@ uint64_t orderingInit(Game* board, int i) {
         else
             result = board->depth - board->eval.dMaxExt; }
     {
-        std::lock_guard<std::mutex> lock(nThreadMutex);
+        LockGuard<Mutex> lock(nThreadMutex);
         --nThread;
         board->color = (Colors)0; }
     nThreadCond.notify_one();
@@ -429,7 +439,7 @@ uint64_t orderingTest(Game* board, int i) {
     else {
         result = 1; }
     {
-        std::lock_guard<std::mutex> lock(nThreadMutex);
+    	LockGuard<Mutex> lock(nThreadMutex);
         --nThread;
         board->color = (Colors)0; }
     nThreadCond.notify_one();
@@ -439,7 +449,7 @@ uint64_t orderingTest(Game* board, int i) {
 void tournament(uint64_t (*ordering)(Game*, int)) {
     for (unsigned int i = 0; testPositions[i]; ++i)  {
         {
-            std::unique_lock<std::mutex> lock(nThreadMutex);
+            UniqueLock<Mutex> lock(nThreadMutex);
             while (nThread >= maxThread)
                 nThreadCond.wait(lock);
             ++nThread; }
@@ -465,7 +475,7 @@ void Console::ordering(StringList cmds) {
         prb.push_back(rb); }
     Options::quiet = true;
     if (cmds.size() > 1 && cmds[1] == "init") {
-        std::thread th(tournament, orderingInit);
+        Thread th(tournament, orderingInit);
         th.detach();
         for (int i = 0; testPositions[i]; ++i) {
             while (!results[i].valid())
@@ -486,7 +496,6 @@ void Console::ordering(StringList cmds) {
 void Console::eval(StringList) {
     game->eval(game->currentBoard(), game->color); }
 
-#ifdef USE_GENETIC
 void Console::selfgame(StringList ) {
 //     Options::cpuTime = true;
     evolution->evolve();
@@ -497,6 +506,10 @@ void Console::selfgame(StringList ) {
 }
 
 void Console::egtest(StringList cmds) {
+    if (!evolution) {
+        evolution = new Evolution(this);
+        evolution->init();
+    }
     Options::quiet = true;
     if (cmds.size() == 7)
         evolution->parmTest(cmds[1], convert<float>(cmds[2]), convert<float>(cmds[3]), convert(cmds[4]), cmds[5], cmds[6]);
@@ -504,6 +517,10 @@ void Console::egtest(StringList cmds) {
         std::cerr << "expected \"egtest <name> <minimum value> <maximum value> <n> <pieces>\"" << std::endl; }
 
 void Console::parmtest(StringList cmds) {
+    if (!evolution) {
+        evolution = new Evolution(this);
+        evolution->init();
+    }
     Options::quiet = true;
     Options::listenPort = 0;
     if (cmds.size() == 5)
