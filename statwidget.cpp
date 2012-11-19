@@ -22,7 +22,7 @@
 #include "statwidget.h"
 #include "game.h"
 #include "transpositiontable.tcc"
-#include "console.h"
+#include "hayabusa.h"
 #include "workthread.h"
 #include "nodemodel.h"
 #include "nodedelegate.h"
@@ -182,7 +182,7 @@ void StatWidget::updateBoard() {
         QPainter pa( &boardPixmap );
         if (pa.isActive()) {
             pa.setPen(Qt::NoPen);
-    
+
             for ( int x=0; x<8; x++ )
                 for ( int y=0; y<8; y++ ) {
                     int type = rb.currentBoard().getPiece(x+(7-y)*8);
@@ -192,7 +192,7 @@ void StatWidget::updateBoard() {
                         pa.drawImage( x*size, y*size, wScaled[type-1] );
                     else if ( type < 0 )
                         pa.drawImage( x*size, y*size, bScaled[-type-1] ); } }
-    
+
         position->setPixmap(boardPixmap); }
 
     if (radioButtonPSQ->isChecked()) {
@@ -200,7 +200,7 @@ void StatWidget::updateBoard() {
         size = (qMin(ww1->height(), ww1->width()))/8;
         QPixmap pm(size*8, size*8);
         QPainter pa( &pm );
-        if (pa.isActive()) 
+        if (pa.isActive())
             for (int c=-1; c<=1; c+=2)
                 for (int p=Rook; p<=King; ++p) {
                     pm.fill(QColor(192, 192, 192, 255));
@@ -212,7 +212,7 @@ void StatWidget::updateBoard() {
                                 const int16_t& err = rb.pe[nPieces + c*p][i][x+(7-y)*8];
                                 ee = ee+err;
                             }
-                            ee +=128;    
+                            ee +=128;
                             if (ee > 255.0) ee = 255.0;
                             pa.setBrush(QBrush(pal[int(ee)]));
                             pa.drawRect(x*size,y*size,size,size); }
@@ -239,7 +239,7 @@ void StatWidget::updateBoard() {
                                         ee = 2*(rb.eval.getPS(c*p, x+(7-y)*8).calc(rb.currentBoard().material) - c*(int[]){0,450,300,925,300,100,0}[p]);
                                     else
                                         ee = rb.delta[nPieces + c*p][x+(7-y)*8][0];
-    
+
                                     if (ee > 127) ee = 127;
                                     if (ee<-128) ee = -128;
                                     pa.setBrush(QBrush(pal[ee+128]));

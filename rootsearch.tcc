@@ -20,7 +20,7 @@
 
 #include "search.tcc"
 #include "sortedmovelist.h"
-#include "console.h"
+#include "hayabusa.h"
 
 // tcp server incurs some lag FEATURE move to search parameters
 static const CHRONO::milliseconds operatorTime = CHRONO::milliseconds(200);

@@ -18,7 +18,7 @@
 */
 #include <pch.h>
 
-#include "console.h"
+#include "hayabusa.h"
 #include "evolution.h"
 #include "board.h"
 #include "workthread.h"
@@ -53,21 +53,36 @@ void sigpipe_handler(int c) {
 	exit(1);
 }
 
-Console console;
+namespace boost {
+	void throw_exception(std::exception const&) {
+		abort();
+	}
+}
 
-Console::Console():
+int main(int argc, char* argv[]) {
+#if defined(QT_GUI_LIB) || defined(QT_NETWORK_LIB)
+    Q_INIT_RESOURCE(hayabusa);
+    qRegisterMetaType<std::string>("std::string");
+#endif
+    console.init(argc, argv);
+    return console.exec();
+}
+
+Hayabusa console;
+
+Hayabusa::Hayabusa():
     newsockfd(0)
 #ifdef USE_GENETIC
 ,    evolution(NULL)
 #endif
 {}
 
-void Console::init(int& argc, char** argv)
+void Hayabusa::init(int& argc, char** argv)
 {
 #if defined(QT_GUI_LIB)
     app = new QApplication(argc, argv);
 #endif
-    new Thread(&Console::outputThread, this);
+    new Thread(&Hayabusa::outputThread, this);
     args.resize(argc);
     std::copy(argv+1, argv+argc, args.begin());
     if (args[0] == "debug") {
@@ -83,43 +98,43 @@ void Console::init(int& argc, char** argv)
     game = new Game(this, defaultParameters, Options::hash, Options::pHash);
     game->setup();
 
-    dispatcher["uci"] = &Console::uci;
-    dispatcher["debug"] = &Console::debug;
-    dispatcher["isready"] = &Console::isready;
-    dispatcher["setoption"] = &Console::setoption;
-    dispatcher["register"] = &Console::reg;
-    dispatcher["ucinewgame"] = &Console::ucinewgame;
-    dispatcher["position"] = &Console::position;
-    dispatcher["go"] = &Console::go;
-    dispatcher["stop"] = &Console::stop;
-    dispatcher["ponderhit"] = &Console::ponderhit;
-    dispatcher["quit"] = &Console::quit;
+    dispatcher["uci"] = &Hayabusa::uci;
+    dispatcher["debug"] = &Hayabusa::debug;
+    dispatcher["isready"] = &Hayabusa::isready;
+    dispatcher["setoption"] = &Hayabusa::setoption;
+    dispatcher["register"] = &Hayabusa::reg;
+    dispatcher["ucinewgame"] = &Hayabusa::ucinewgame;
+    dispatcher["position"] = &Hayabusa::position;
+    dispatcher["go"] = &Hayabusa::go;
+    dispatcher["stop"] = &Hayabusa::stop;
+    dispatcher["ponderhit"] = &Hayabusa::ponderhit;
+    dispatcher["quit"] = &Hayabusa::quit;
 
-    dispatcher["perft"] = &Console::perft;
-    dispatcher["divide"] = &Console::divide;
-    dispatcher["port"] = &Console::port;
+    dispatcher["perft"] = &Hayabusa::perft;
+    dispatcher["divide"] = &Hayabusa::divide;
+    dispatcher["port"] = &Hayabusa::port;
 #ifdef USE_GENETIC
-    dispatcher["ordering"] = &Console::ordering;
-    dispatcher["eval"] = &Console::eval;
-    dispatcher["selfgame"] = &Console::selfgame;
-    dispatcher["parmtest"] = &Console::parmtest;
-    dispatcher["egtest"] = &Console::egtest;
+    dispatcher["ordering"] = &Hayabusa::ordering;
+    dispatcher["eval"] = &Hayabusa::eval;
+    dispatcher["selfgame"] = &Hayabusa::selfgame;
+    dispatcher["parmtest"] = &Hayabusa::parmtest;
+    dispatcher["egtest"] = &Hayabusa::egtest;
 #endif
 }
 
-Console::~Console() {}
+Hayabusa::~Hayabusa() {}
 
-int Console::exec() {
+int Hayabusa::exec() {
     std::string argStr = args.join(" ");
     StringList cmdsList = split(argStr, ":");
     for(auto cmdStr = cmdsList.begin(); cmdStr != cmdsList.end(); ++cmdStr) {
         parse(simplified(*cmdStr)); }
-    new Thread(&Console::inputNetThread, this);
+    new Thread(&Hayabusa::inputNetThread, this);
 #if defined(QT_GUI_LIB)
-    new Thread(&Console::inputThread, this);
+    new Thread(&Hayabusa::inputThread, this);
     return QApplication::exec(); }
 
-void Console::inputThread() {
+void Hayabusa::inputThread() {
 #else
 	signal(SIGPIPE, sigpipe_handler);
 #endif
@@ -135,7 +150,7 @@ void Console::inputThread() {
 }
 
 #ifdef QT_GUI_LIB
-std::string Console::getAnswer() {
+std::string Hayabusa::getAnswer() {
     answer = "";
     while(answer == "") {
         QApplication::processEvents();
@@ -143,7 +158,7 @@ std::string Console::getAnswer() {
     return answer; }
 #endif
 
-void Console::inputNetThread() {
+void Hayabusa::inputNetThread() {
     if (!Options::listenPort) return;
     int sockfd;
     socklen_t clilen;
@@ -206,7 +221,7 @@ void Console::inputNetThread() {
     close(sockfd);
 }
 
-void Console::send(std::string str) {
+void Hayabusa::send(std::string str) {
     if (Options::quiet) return;
 //    std::cerr << "send:" << str << std::endl;
     {
@@ -218,7 +233,7 @@ void Console::send(std::string str) {
     __gthread_yield();
 }
 
-void Console::parse(std::string str) {
+void Hayabusa::parse(std::string str) {
 //    std::cerr << "parse:" << str << std::endl;
     if (!str.empty()) {
         StringList cmds = split(str, " ");
@@ -227,7 +242,7 @@ void Console::parse(std::string str) {
         else {
             tryMove(cmds[0]); } } }
 
-void Console::tryMove(std::string cmds) {
+void Hayabusa::tryMove(std::string cmds) {
     std::string mstr = toLower(cmds);
     if (mstr.length() < 4 || mstr.length() > 5) {
         send("command '" + mstr + "' not understood");
@@ -260,13 +275,13 @@ void Console::tryMove(std::string cmds) {
     if (game->doMove(m)) {
         send("move '" + mstr + "' illegal"); } }
 
-void Console::perft(StringList cmds) {
+void Hayabusa::perft(StringList cmds) {
     game->perft(convert(cmds[1])); }
 
-void Console::divide(StringList cmds) {
+void Hayabusa::divide(StringList cmds) {
     game->divide(convert(cmds[1])); }
 
-void Console::uci(StringList /*cmds*/) {
+void Hayabusa::uci(StringList /*cmds*/) {
     std::string date(__DATE__);
     StringList dates = split(date, " ");
     std::string time(__TIME__);
@@ -292,7 +307,7 @@ void Console::uci(StringList /*cmds*/) {
 #endif
     send("uciok"); }
 
-void Console::debug(StringList cmds) {
+void Hayabusa::debug(StringList cmds) {
     static const StringList tokens = StringList() << "eval" << "mobility" << "search";
         auto pos = cmds.parse(tokens);
     if (pos.count("eval")) Options::debug |= debugEval;
@@ -300,10 +315,10 @@ void Console::debug(StringList cmds) {
     if (pos.count("search")) Options::debug |= debugSearch; }
 
 // engine is always ready as soon as the command dispatcher is working.
-void Console::isready(StringList /*cmds*/) {
+void Hayabusa::isready(StringList /*cmds*/) {
     send("readyok"); }
 
-void Console::setoption(StringList cmds) {
+void Hayabusa::setoption(StringList cmds) {
     static const StringList tokens = StringList() << "name" << "value";
     std::map<std::string, StringList> o = cmds.parse(tokens);
     std::string name =  toLower(o["name"].join(" "));
@@ -338,13 +353,13 @@ void Console::setoption(StringList cmds) {
         else {
             std::cerr << "option " << name << " not understood"; } } }
 
-void Console::reg(StringList /*cmds*/) {}
+void Hayabusa::reg(StringList /*cmds*/) {}
 
-void Console::ucinewgame(StringList /*cmds*/) {
+void Hayabusa::ucinewgame(StringList /*cmds*/) {
     WorkThread::stopAll();
     game->clearHash(); }
 
-void Console::position(StringList cmds) {
+void Hayabusa::position(StringList cmds) {
     static const StringList tokens = StringList() << "startpos" << "fen" << "test" << "moves";
     if (cmds.size() < 2) return;
     auto pos = cmds.parse(tokens);
@@ -371,7 +386,7 @@ void Console::position(StringList cmds) {
     }
 }
 
-void Console::go(StringList cmds) {
+void Hayabusa::go(StringList cmds) {
     static const StringList tokens = StringList() << "searchmoves"
         << "ponder" << "wtime" << "btime" << "winc" << "binc" << "movestogo" << "depth"
         << "nodes" << "mate" << "movetime" << "infinite";
@@ -380,12 +395,12 @@ void Console::go(StringList cmds) {
 
     game->go(subCmds); }
 
-void Console::stop(StringList /*cmds*/) {
+void Hayabusa::stop(StringList /*cmds*/) {
     WorkThread::stopAll(); }
 
-void Console::ponderhit(StringList /*cmds*/) {}
+void Hayabusa::ponderhit(StringList /*cmds*/) {}
 
-void Console::quit(StringList /*cmds*/) {
+void Hayabusa::quit(StringList /*cmds*/) {
 #ifdef QT_GUI_LIB
     app->quit();
 #else
@@ -459,7 +474,7 @@ void tournament(uint64_t (*ordering)(Game*, int)) {
         free->color = (Colors)1;
         results[i]=std::async(std::launch::async, ordering, free, i); } }
 
-void Console::ordering(StringList cmds) {
+void Hayabusa::ordering(StringList cmds) {
 
     nThread = 0;
     maxThread = 8;
@@ -493,10 +508,10 @@ void Console::ordering(StringList cmds) {
             sum += log(results[i].get()); }
         std::cout << std::setw(20) << exp(sum/tested) << std::endl; } }
 
-void Console::eval(StringList) {
+void Hayabusa::eval(StringList) {
     game->eval(game->currentBoard(), game->color); }
 
-void Console::selfgame(StringList ) {
+void Hayabusa::selfgame(StringList ) {
 //     Options::cpuTime = true;
     evolution->evolve();
 //     Parameters a;
@@ -505,7 +520,7 @@ void Console::selfgame(StringList ) {
 //     sf.tournament();
 }
 
-void Console::egtest(StringList cmds) {
+void Hayabusa::egtest(StringList cmds) {
     if (!evolution) {
         evolution = new Evolution(this);
         evolution->init();
@@ -516,7 +531,7 @@ void Console::egtest(StringList cmds) {
     else
         std::cerr << "expected \"egtest <name> <minimum value> <maximum value> <n> <pieces>\"" << std::endl; }
 
-void Console::parmtest(StringList cmds) {
+void Hayabusa::parmtest(StringList cmds) {
     if (!evolution) {
         evolution = new Evolution(this);
         evolution->init();
@@ -537,7 +552,7 @@ void Console::parmtest(StringList cmds) {
     else
         std::cerr << "expected \"parmtest <name> <minimum value> <maximum value> <n>\"" << std::endl; }
 #endif
-void Console::outputThread() {
+void Hayabusa::outputThread() {
     setvbuf(stdout, NULL, _IOLBF, 0);
     UniqueLock<Mutex> lock(outputMutex);
     while(true) {
@@ -549,7 +564,7 @@ void Console::outputThread() {
 }
 
 template<>
-Console& Console::operator << (std::string out) {
+Hayabusa& Hayabusa::operator << (std::string out) {
     if (Options::quiet) return *this;
     LockGuard<Mutex> lock(outputMutex);
     outputData += out;
@@ -558,6 +573,6 @@ Console& Console::operator << (std::string out) {
     return *this;
 }
 
-void Console::port(StringList cmds) {
+void Hayabusa::port(StringList cmds) {
     Options::listenPort = convert<unsigned>(cmds[1]);
 }

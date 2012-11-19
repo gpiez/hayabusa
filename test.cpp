@@ -19,7 +19,7 @@
 #include "test.h"
 #include "game.h"
 #include "testpositions.h"
-#include "console.h"
+#include "hayabusa.h"
 #include "jobs.h"
 #include "game.tcc"
 #include "generateMoves.tcc"
@@ -41,7 +41,7 @@ void TestRootBoard::initTestCase() {
     strcpy(unittest, "unittest");
     static char* argv[] = { unittest, NULL };
     static int argc = 1;
-    c = new Console();
+    c = new Hayabusa();
     b = c->game; }
 
 void TestRootBoard::cmpMates(std::string bstr, std::string mstr) {
@@ -289,4 +289,4 @@ void TestRootBoard::perft() {
 //    WorkThread::findFree()->queueJob(0U, new RootPerftJob<White>(*b, 8));
     QCOMPARE( c->getAnswer(), std::string("9941334384")); }
 
-QTEST_APPLESS_MAIN(TestRootBoard);
+//QTEST_APPLESS_MAIN(TestRootBoard);

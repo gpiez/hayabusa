@@ -30,7 +30,7 @@
 #include "workthread.h"
 
 class Parameters;
-class Console;
+class Hayabusa;
 struct TTEntry;
 class PerftEntry;
 template<class T, unsigned int U, class U> class TranspositionTable;
@@ -145,7 +145,7 @@ public:
     Move line[nMaxGameLength];
     unsigned currentPly;
     unsigned int depth;
-    Console* console;
+    Hayabusa* console;
     Colors color;
     Move bestMove;
     bool infinite;
@@ -153,7 +153,7 @@ public:
 
     int16_t pe[nPieces*2+1][nSquares][nSquares];
 
-    Game(Console* c, const Parameters& p, uint64_t, uint64_t);
+    Game(Hayabusa* c, const Parameters& p, uint64_t, uint64_t);
 #ifdef QT_GUI_LIB
     virtual
 #endif

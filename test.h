@@ -20,7 +20,7 @@
 #define TEST_H_
 
 class Game;
-class Console;
+class Hayabusa;
 
 #include <QtCore>
 #include <Qt/QtTest>
@@ -28,7 +28,7 @@ class Console;
 class TestRootBoard: public QObject {
     Q_OBJECT
     Game* b;
-    Console* c;
+    Hayabusa* c;
     void cmpMates(std::string, std::string);
 private slots:
     void initTestCase();
@@ -40,7 +40,7 @@ private slots:
 class TestBoardBase: public QObject {
     Q_OBJECT
     Game* b;
-    Console* c;
+    Hayabusa* c;
 
 private slots:
     /*	void setPiece();

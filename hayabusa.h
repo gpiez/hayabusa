@@ -25,7 +25,7 @@ class WorkThread;
 class Game;
 class Evolution;
 
-class Console {
+class Hayabusa {
     friend class TestRootBoard;
     void perft(StringList);
     void divide(StringList);
@@ -65,20 +65,20 @@ class Console {
     std::string answer;
     bool debugMode;
     std::map<std::string, std::string> option;
-    std::map<std::string, void (Console::*)(StringList)> dispatcher;
+    std::map<std::string, void (Hayabusa::*)(StringList)> dispatcher;
     Mutex outputMutex;
     Condition outputCondition;
     std::string outputData;
     int newsockfd;
 public:
-    Console();
-    ~Console();
+    Hayabusa();
+    ~Hayabusa();
     void init(int& argc, char** argv);
     int exec();
     void send(std::string);
     void operator () (const char* fmt, ...);
     template<typename T>
-    Console& operator << (T out) {
+    Hayabusa& operator << (T out) {
         std::stringstream s;
         s << out;
         send(s.str());
@@ -87,5 +87,5 @@ public:
     std::string getAnswer();
 };
 
-extern Console console;
+extern Hayabusa console;
 #endif /* CONSOLE_H_ */

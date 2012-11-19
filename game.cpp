@@ -126,7 +126,7 @@ void Game::infoTimer(CHRONO::milliseconds repeat) {
 #endif
         } }
 
-Game::Game(Console* c, const Parameters& p, uint64_t hashSize, uint64_t phashSize):
+Game::Game(Hayabusa* c, const Parameters& p, uint64_t hashSize, uint64_t phashSize):
     iMove(0),
     wtime(300000),
     btime(300000),
