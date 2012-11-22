@@ -47,6 +47,7 @@ template<Colors C> struct Score {
     inline Score<C>& unshared() __attribute__((__always_inline__));
     inline const Score<C>& unshared() const __attribute__((__always_inline__));
     inline unsigned int isNotReady() const __attribute__((__always_inline__));
+    static std::string toString(int);
     void join() const {};
     void setReady() {};
     void setNotReady() {}; };

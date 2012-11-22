@@ -45,6 +45,7 @@ private:
     size_t size;
     size_t nEntries;
     bool usesHugePages;
+    unsigned lru;
 
 public:
     Table(uint64_t size);
@@ -64,8 +65,8 @@ public:
 #endif
     }
 
-    bool retrieve(const SubTable* subTable, Key k, Entry& ret, bool&) const ;
-    bool retrieve(const SubTable* subTable, Key k, Entry& ret) const ;
+//    bool retrieve(const SubTable* subTable, Key k, Entry& ret, bool&) const ;
+    bool retrieve(SubTable* subTable, Key k, Entry& ret);
     void store(SubTable* subTable, Entry entry);
     void unmark(SubTable* subTable) {
         subTable->entries[0].visited.reset(); }

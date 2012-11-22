@@ -28,6 +28,7 @@
 template<typename Entry, unsigned int assoc, typename Key>
 Table<Entry, assoc, Key>::Table(uint64_t size) :
     table(NULL),
+    lru(1),
     usesHugePages(false) {
     setSize(size); }
 
@@ -42,31 +43,47 @@ void Table<Entry, assoc, Key>::freeMemory() {
         table = NULL; } }
 
 // this is only called from tree
-template<typename Entry, unsigned int assoc, typename Key>
-bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& ret, bool& visited) const {
-    visited = subTable->entries[0].visited;
-    Key upperKey = k >> Entry::upperShift;
-    for (unsigned int i = 0; i < assoc; ++i) {        //TODO compare all keys simultaniously suing sse
-        if (subTable->entries[i].upperKey == upperKey) {        //only lock if a possible match is found
-            // found same entry again, move repetition
-            if (visited) {
-                ret.zero();
-                ret.loBound |= true;
-                ret.hiBound |= true;
-                ret.depth |= maxDepth-1; }
-            else {
-                ret = subTable->entries[i]; }
-            return true; } }
-    return false; }
+//template<typename Entry, unsigned int assoc, typename Key>
+//bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& ret, bool& visited) const {
+//    visited = subTable->entries[0].visited;
+//    Key upperKey = k >> Entry::upperShift;
+//    for (unsigned int i = 0; i < assoc; ++i) {
+//        if (subTable->entries[i].upperKey == upperKey) {        //only lock if a possible match is found
+//            // found same entry again, move repetition
+//            if (visited) {
+//                ret.zero();
+//                ret.loBound |= true;
+//                ret.hiBound |= true;
+//                ret.depth |= maxDepth-1; }
+//            else {
+//                ret = subTable->entries[i]; }
+//            return true; } }
+//    return false; }
 
 template<typename Entry, unsigned int assoc, typename Key>
-bool Table<Entry, assoc, Key>::retrieve(const SubTable* subTable, Key k, Entry& ret ) const {
+bool Table<Entry, assoc, Key>::retrieve(SubTable* subTable, Key k, Entry& ret ) {
     uint32_t upperKey = k >> 32;
-    for (unsigned int i = 0; i < assoc; ++i) {        //TODO compare all keys simultaniously suing sse
-        if (subTable->entries[i].upperKey == upperKey)
-        if (subTable->entries[i][key11] == (uint32_t)k >> (32-key11.size)) {        //only lock if a possible match is found
+    unsigned int i = 0;
+    while (i < assoc-lru) {        //TODO compare all keys simultaniously suing sse
+        if (subTable->entries[i].upperKey == upperKey
+                && subTable->entries[i][key11] == (uint32_t)k >> (32-key11.size)) {        //only lock if a possible match is found
             ret = subTable->entries[i];
-            return true; } }
+            return true; }
+        ++i; }
+    ASSERT(i==assoc-lru);
+    while (i < assoc) {
+        if (subTable->entries[i].upperKey == upperKey
+                && subTable->entries[i][key11] == (uint32_t)k >> (32-key11.size)) {        //only lock if a possible match is found
+            ret = subTable->entries[i];
+            unsigned j=i;
+            if (j>assoc-lru) {
+                subTable->entries[j] = subTable->entries[j-1];
+                while (--j>assoc-lru) subTable->entries[j] = subTable->entries[j-1];
+                ASSERT(j==assoc-lru);
+                subTable->entries[j] = ret;
+            }
+            return true; }
+        ++i; }
     return false; }
 
 #ifdef __SSE4_1__
@@ -110,8 +127,11 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
     // isn't sufficient, don't write anything.
     for (unsigned int i = 0; i < assoc; ++i)         //TODO compare all keys simultaniously suing sse
         if (subTable->entries[i].upperKey == entry.upperKey) {
-            if (entry[loBound] + entry[hiBound] >= subTable->entries[i][loBound] + subTable->entries[i][hiBound]
-                || entry[depth] >= subTable->entries[i][depth]) {
+//            if (entry[score] > infinity && subTable->entries[i][score] > entry[score]) {
+//                asm("int3\n");
+//            }
+            if (/*entry[loBound] + entry[hiBound] >= subTable->entries[i][loBound] + subTable->entries[i][hiBound]
+                ||*/ entry[depth] >= subTable->entries[i][depth]) {
                 STATS(ttoverwrite);
                 STATS(ttinsufficient);
                 if (entry[depth] == subTable->entries[i][depth]/* && subTable->entries[i].score == entry.score*/)
@@ -150,13 +170,17 @@ void Table<Entry, assoc, Key>::store(SubTable* subTable, Entry entry) {
     if (subTable->entries[assoc-1].upperKey == 0 || subTable->entries[assoc-1][aged])
         STATS(ttuse);
     unsigned int i;
-    for (i = 0; i < assoc-1; ++i)                // TODO possibly checking only assoc/2 and a LRU in retrieve would be better
-        if (subTable->entries[i][aged] || entry[depth] >= subTable->entries[i][depth])
+    for (i = 0; i < assoc-lru; ++i)
+        if (subTable->entries[i][aged] || entry[depth] > subTable->entries[i][depth])
             break;
-
-    for (unsigned j = assoc-1; j>i; --j) {
+    /*
+     * No depth entry with less depth, store in the first place of the LRU entries
+     */
+    unsigned j;
+    for (j = assoc-1; j>i; --j) {
         subTable->entries[j] = subTable->entries[j-1]; }
-    subTable->entries[i] = entry; }
+    ASSERT(j==i);
+    subTable->entries[j] = entry; }
 //#pragma GCC diagnostic pop
 
 template<unsigned int assoc, typename Key>

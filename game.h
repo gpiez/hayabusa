@@ -33,6 +33,7 @@ class Parameters;
 class Hayabusa;
 struct TTEntry;
 class PerftEntry;
+class SortedMoveList;
 template<class T, unsigned int U, class U> class TranspositionTable;
 template<class T> class Result;
 
@@ -141,7 +142,7 @@ private:
     void stopThread();
 public:
     Eval eval ALIGN_XMM;
-    static __thread History history;
+    static /*__thread*/ History history;
     Move line[nMaxGameLength];
     unsigned currentPly;
     unsigned int depth;
@@ -210,6 +211,7 @@ public:
     int getScore() const {
         return bestScore; }
     void goWait();
+    template<Colors C> void mateFinder(SortedMoveList&, CHRONO::system_clock::time_point, const ColoredBoard<C>&);
     template<Colors C> bool isDraw(const ColoredBoard<C>& b) const;
     unsigned getRootPly() const {
         return rootPly; } };

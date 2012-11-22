@@ -88,8 +88,7 @@ int Game::search9(const bool doNull, const unsigned reduction, const ColoredBoar
             if (nullvalue >= beta.v) return value.v;
             nextboard.fiftyMoves = temp;
             nextboard.cep.enPassant = temp2;
-            nextboard.ply--;
-        } }
+            nextboard.ply--; } }
 
     if (reduction) {
         if (eval.flags & 1)
@@ -256,7 +255,7 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
     A alpha(origAlpha);
     B beta(origBeta);
     ScoreMove<C,A> current;
-    current.v=(-infinity*C);
+    current.v=(-mateScore*C);
     current.m = {0,0,0 };
     int posScore = 0xdeadbeaf;
     if (P != vein) {
@@ -276,35 +275,34 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
             if unlikely (ttDepth >= depth
             || (ttScore>=infinity*C && subentry[loBound])
             || (ttScore<=-infinity*C && subentry[hiBound])) {
-                if (P == leaf && depth <= eval.dMaxExt) {
-                    nextMaxDepth = true; }
-                    if unlikely(subentry[loBound] & subentry[hiBound]) {
-
-//                        stats.ttexact++;
-						#ifdef QT_GUI_LIB
+                if (P == leaf && depth <= eval.dMaxExt)
+                    nextMaxDepth = true;
+                if unlikely(subentry[loBound] & subentry[hiBound]) {
+//                    STATS(ttexact);
+                    #ifdef QT_GUI_LIB
+                    if (node) node->bestEval = ttScore.v;
+                    if (node) node->nodeType = NodeTT;
+                    #endif
+                    return ttScore.v; }
+                else if unlikely(subentry[loBound]) {
+                    alpha.max(ttScore.v);
+                    STATS(ttalpha);
+                    if (alpha >= beta.v) {
+                        #ifdef QT_GUI_LIB
                         if (node) node->bestEval = ttScore.v;
                         if (node) node->nodeType = NodeTT;
-						#endif
+                        #endif
                         return ttScore.v; }
-                    else if unlikely(subentry[loBound]) {
-                        alpha.max(ttScore.v);
-                        STATS(ttalpha);
-                        if (alpha >= beta.v) {
-							#ifdef QT_GUI_LIB
-                            if (node) node->bestEval = ttScore.v;
-                            if (node) node->nodeType = NodeTT;
-							#endif
-                            return ttScore.v; }
-                        current.max(ttScore.v); }
-                    else if (subentry[hiBound]) {
-                    	STATS(ttbeta);
-                        beta.max(ttScore.v);
-                        if (alpha >= beta.v) {
-							#ifdef QT_GUI_LIB
-                            if (node) node->bestEval = ttScore.v;
-                            if (node) node->nodeType = NodeTT;
-							#endif
-                            return ttScore.v; } } }
+                    current.max(ttScore.v); }
+                else if (subentry[hiBound]) {
+                    STATS(ttbeta);
+                    beta.max(ttScore.v);
+                    if (alpha >= beta.v) {
+                        #ifdef QT_GUI_LIB
+                        if (node) node->bestEval = ttScore.v;
+                        if (node) node->nodeType = NodeTT;
+                        #endif
+                        return ttScore.v; } } }
 
                 current.m = Move(subentry[from], subentry[to], subentry[piece], subentry[capture], subentry[special]);
 				#ifdef MYDEBUG
@@ -450,9 +448,9 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
                 if (P==vein) ASSERT(extend & ExtTestMate);
 				#ifdef QT_GUI_LIB
                 if (node) node->nodeType = NodeMate;
-                if (node) node->bestEval = -infinity*C;
+                if (node) node->bestEval = -mateScore*C;
 				#endif
-                current.v = -infinity*C;
+                current.v = -mateScore*C;
                 ASSERT(!current.m.isValid());
                 goto storeAndExit; }
             // stalemate
@@ -613,6 +611,9 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
 
             if (searchState != Running) break;
             nextNT = NodeFailHigh;
+            if (value > infinity*C) {
+                value.v -= mateStep*C;
+            }
             alpha.max(value.v);
             current.max(value.v, *i);
         } while(current < beta.v && ++i);
@@ -628,35 +629,35 @@ int Game::search3(const ColoredBoard<C>& b, unsigned depth,
         current.join(); }
 storeAndExit:
     if (P != vein) {
-        TTEntry stored;
-        stored.bitfield = 0;
-        if (P == leaf) {
-            ASSERT(depth <= eval.dMaxExt);
-            if (!leafMaxDepth) //TODO dMinDual does not update hashMaxDepth correctly
-                stored.set(::depth, eval.dMaxExt);
-            else {
-                stored.set(::depth, depth);
-                nextMaxDepth = true; } }
-        else
-            stored.set(::depth, depth);
-
-
-        stored.upperKey = z >> 32;
-        stored.set(key11, (uint32_t)z >> (32-key11.size));
-        stored.set(score, score2tt(current.v));
-
-        stored.set(loBound, current > origAlpha.v);
-        if (current > origAlpha.v && current.m.capture() == 0 && current.m.piece()/* && !current.m.isSpecial()*/) {
+        bool isLoBound = current > origAlpha.v;
+        bool isHiBound = (current < origBeta.v) & (searchState == Running);
+        if (isLoBound && !isHiBound && current.m.capture() == 0 && current.m.piece()/* && !current.m.isSpecial()*/) {
             ASSERT(current.m.fromto());
             history.good(current.m, b.ply + rootPly); }
-        stored.set(hiBound, (current < origBeta.v) & (searchState == Running));
-        stored.set(from, current.m.from());
-        stored.set(to, current.m.to());
-        stored.set(capture, current.m.capture());
-        stored.set(piece, current.m.piece() & 7);
-        stored.set(special, current.m.isSpecial());
-        stored.set(::posScore, score2tt(b.positionalScore));
-        tt->store(st, stored); }
+        if (isLoBound | isHiBound) {
+            TTEntry stored;
+            stored.bitfield = 0;
+            if (P == leaf) {
+                ASSERT(depth <= eval.dMaxExt);
+                if (!leafMaxDepth) //TODO dMinDual does not update hashMaxDepth correctly
+                    stored.set(::depth, eval.dMaxExt);
+                else {
+                    stored.set(::depth, depth);
+                    nextMaxDepth = true; } }
+            else
+                stored.set(::depth, depth);
+            stored.upperKey = z >> 32;
+            stored.set(key11, (uint32_t)z >> (32-key11.size));
+            stored.set(score, score2tt(current.v));
+            stored.set(loBound, isLoBound);
+            stored.set(hiBound, isHiBound);
+            stored.set(from, current.m.from());
+            stored.set(to, current.m.to());
+            stored.set(capture, current.m.capture());
+            stored.set(piece, current.m.piece() & 7);
+            stored.set(special, current.m.isSpecial());
+            stored.set(::posScore, score2tt(b.positionalScore));
+            tt->store(st, stored); } }
 	#ifdef QT_GUI_LIB
     if (node) {
         node->bestEval = current.v;

@@ -11,8 +11,8 @@ void History::good(Move m, unsigned ply) {
     ASSERT((m.piece() & 7) <= 6);
     ASSERT((m.piece() & 7));
     ASSERT((m.from() != m.to()));
-    ASSERT(ply < size);
     {
+    	resize(ply);
         uint8_t& h = v[ply][m.piece() & 7][m.to()];
         int& m  = max[ply];
 
@@ -39,6 +39,7 @@ void History::good(Move m, unsigned ply) {
         } } } }
 
 int History::get(Move m, unsigned ply) {
+    ASSERT(ply < size);
     int value = v[ply][m.piece() & 7][m.to()];
     ASSERT(value >= 0);
     return value; }

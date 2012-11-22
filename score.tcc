@@ -68,7 +68,7 @@ template<Colors C> std::string Score<C>::str(int v) {
         s << (sign > 0 ? "+-":"-+");
     else {
         s << (sign > 0 ? "+M":"-M");
-        s << abs(v)-infinity;
+        s << (mateScore-abs(v))/mateStep;
         return s.str(); }
 
     s << std::fixed << std::setw(5) << std::setprecision(2) << abs(v)/100.0;
@@ -151,6 +151,18 @@ void SharedScore<C>::deleteChild(SharedScore<C>* child) const {
             --nChildren;
             children[i] = 0;
             return; } }
+
+template<Colors C>
+std::string Score<C>::toString(int score) {
+    std::stringstream ss;
+    if (score > infinity) {
+        ss << "mate " << (mateScore-score)/mateStep+1;
+    } else if  (score < -infinity) {
+        ss << "mate " << (-mateScore-score)/mateStep;
+    } else
+        ss << "cp " << score;
+    return ss.str();
+}
 
 template<Colors C>
 void SharedScore<C>::maximizeChildren(const int b) const {

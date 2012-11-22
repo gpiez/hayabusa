@@ -27,7 +27,7 @@
 #include <unistd.h>
 #endif
 
-__thread History Game::history;
+History Game::history;
 __thread RepetitionKeys keys;
 
 std::map<void*, void*> allocs;
@@ -64,7 +64,7 @@ void Game::commonStatus() {
 		  << std::fixed << std::setprecision(2) << std::setw(5) << ntemp/(t*1000+1.0) << "/s "
 		  << getLine();
 		std::string str = g.str();
-		str.resize(80,' ');
+		str.resize(100,' ');
 		std::cout << str << "\015" << std::flush;
     } else {
 		g   << "info"
@@ -82,9 +82,9 @@ void Game::commonStatus() {
         int newDepth = depth - eval.dMaxExt;
         int newScore = bestScore*color;
         if (newDepth != oldDepth || newScore != oldScore) {
-        	g << " depth " << depth-eval.dMaxExt;
+        	g << " depth " << newDepth;
             g << " pv " << tt->bestLine(*this)
-              << " score cp " << bestScore * color;
+              << " score " << Score<White>::toString(newScore);
             oldScore = newScore;
         	oldDepth = newDepth;
         }

@@ -37,7 +37,7 @@
 namespace Options {
 unsigned int        splitDepth = 777;
 int                 humanreadable = 0;
-uint64_t            hash = 0x100000;
+uint64_t            hash = 0x4000;
 uint64_t            pHash = 0x100000;
 bool                quiet = false;
 bool                preCutIfNotThreatened = false;
